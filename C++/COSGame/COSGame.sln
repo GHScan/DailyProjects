@@ -1,0 +1,38 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 9.00
+# Visual Studio 2005
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "COSGame", "COSGame\COSGame.vcproj", "{38B83EA0-07E0-4F45-A758-CA4787BA5A26}"
+	ProjectSection(ProjectDependencies) = postProject
+		{DF6519D0-91CB-4E4E-A7CD-16E237D87F11} = {DF6519D0-91CB-4E4E-A7CD-16E237D87F11}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "COSFoundationLib", "COSFoundationLib\COSFoundationLib.vcproj", "{DF6519D0-91CB-4E4E-A7CD-16E237D87F11}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "COSUnitTest", "COSUnitTest\COSUnitTest.vcproj", "{5273BDBE-A501-467B-A1A8-218B740D5FC1}"
+	ProjectSection(ProjectDependencies) = postProject
+		{DF6519D0-91CB-4E4E-A7CD-16E237D87F11} = {DF6519D0-91CB-4E4E-A7CD-16E237D87F11}
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{38B83EA0-07E0-4F45-A758-CA4787BA5A26}.Debug|Win32.ActiveCfg = Debug|Win32
+		{38B83EA0-07E0-4F45-A758-CA4787BA5A26}.Debug|Win32.Build.0 = Debug|Win32
+		{38B83EA0-07E0-4F45-A758-CA4787BA5A26}.Release|Win32.ActiveCfg = Release|Win32
+		{38B83EA0-07E0-4F45-A758-CA4787BA5A26}.Release|Win32.Build.0 = Release|Win32
+		{DF6519D0-91CB-4E4E-A7CD-16E237D87F11}.Debug|Win32.ActiveCfg = Debug|Win32
+		{DF6519D0-91CB-4E4E-A7CD-16E237D87F11}.Debug|Win32.Build.0 = Debug|Win32
+		{DF6519D0-91CB-4E4E-A7CD-16E237D87F11}.Release|Win32.ActiveCfg = Release|Win32
+		{DF6519D0-91CB-4E4E-A7CD-16E237D87F11}.Release|Win32.Build.0 = Release|Win32
+		{5273BDBE-A501-467B-A1A8-218B740D5FC1}.Debug|Win32.ActiveCfg = Debug|Win32
+		{5273BDBE-A501-467B-A1A8-218B740D5FC1}.Debug|Win32.Build.0 = Debug|Win32
+		{5273BDBE-A501-467B-A1A8-218B740D5FC1}.Release|Win32.ActiveCfg = Release|Win32
+		{5273BDBE-A501-467B-A1A8-218B740D5FC1}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

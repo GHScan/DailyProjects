@@ -1,0 +1,154 @@
+#! /usr/bin/env python 
+# coding=utf-8
+
+from urllib import *
+from urllib2 import *
+from cookielib import *
+import os, sys
+import atexit
+
+loginUrl = 'http://67.213.222.9-static.reverse.softlayer.com/login.php'
+pages = [ 
+'http://67.213.222.9-static.reverse.softlayer.com/read-htm-tid-2647737.html',
+'http://67.213.222.9-static.reverse.softlayer.com/read-htm-tid-2652941.html',
+'http://67.213.222.9-static.reverse.softlayer.com/read-htm-tid-2652006.html',
+]
+
+wkDir = 'comics'
+if not os.path.isdir(wkDir): 
+    os.mkdir(wkDir)
+os.chdir(wkDir)
+
+cookiesFile = 'cookies.txt'
+
+cj = MozillaCookieJar(cookiesFile)
+openner = build_opener(HTTPCookieProcessor(cj), HTTPHandler())
+openner.addheaders = [
+('User-Agent',r'Mozilla/5.0 (X11; U; Linux i686; en-US) AppleWebKit/534.16 (KHTML, like Gecko) Ubuntu/11.04 Chromium/10.0.648.205 Chrome/10.0.648.205 Safari/534.16'),
+('Referer', loginUrl),
+]
+
+# login or load cookies
+if os.path.isfile(cookiesFile):
+    cj.load(ignore_discard=True, ignore_expires=True)
+    print 'load cookies...'
+else:
+    postData = {
+    'pwuser':'xbscan',
+    'pwpwd':'xb19870615scan',
+    'lgt':'0',
+    'hideid':'0',
+    'cktime':'31536000',
+    'submit':'登录',
+    'step':'2',
+    }
+    f = openner.open(loginUrl, urlencode(postData))
+    f.read()
+    print 'login end...'
+
+# makesure save cookies
+def savecookies():
+    global cj
+    cj.save(ignore_discard=True, ignore_expires=True)
+    print 'save cookies...'
+atexit.register(savecookies)
+
+# delete empty files
+def deleteEmptyFiles():
+    for name in os.listdir('.'):
+        if os.path.isfile(name) and os.path.getsize(name) == 0:
+            os.remove(name)
+    print 'delete empty files...'
+atexit.register(deleteEmptyFiles)
+
+# download pages
+for i, page in enumerate(pages):
+    name = 'src_%d.html' % i
+    if os.path.isfile(name):
+        print '%s is existed...' % name
+    else:
+        f = openner.open(page)
+        file(name, 'w').write(f.read())
+        print 'download %s...' % name
+
+# process pages
+def processPage(srcUrl, destUrl):
+    import htmllib
+    import formatter
+    class Parser(htmllib.HTMLParser):
+        def __init__(self):
+            htmllib.HTMLParser.__init__(self, formatter.NullFormatter())
+            self.inside = False
+            self.images = []
+        def handle_image(self, src, alt, ismap, align, width, height):
+            htmllib.HTMLParser.handle_image(self, src, alt, ismap, align, width, height)
+            if self.inside:
+                self.images.append(src)
+        def unknown_starttag(self, tag, attrs):
+            htmllib.HTMLParser.unknown_starttag(self, tag, attrs)
+            if self.inside: return
+            if tag != 'div': return
+            if ('class', 'f14') not in attrs : return
+            if ('id', 'read_tpc') not in attrs: return
+            self.inside = True
+        def unknown_endtag(self, tag):
+            htmllib.HTMLParser.unknown_endtag(self, tag)
+            if self.inside and tag == 'div':
+                self.inside = False
+
+    p = Parser()
+    p.feed(file(srcUrl).read())
+    p.close()
+
+    with file(destName, 'w') as f:
+        for img in p.images:
+            f.write('<img src="%s"/>\n' % img)
+    
+
+for i in range(len(pages)):
+    srcName = 'src_%d.html' % i
+    destName = '%d.html' % i
+    if os.path.isfile(destName):
+        print '%s is existed...' % destName
+    else:
+        processPage(srcName, destName)
+        print '%s converted to %s...' % (srcName, destName)
+
+#rename
+for i in range(len(pages)):
+    srcName = 'src_%d.html' % i
+    destName = '%d.html' % i
+
+    s = file(srcName).read()
+    begin = end = -1
+    begin = s.find('<title>')
+    if begin != -1:
+        begin += 7
+        end = s.find('</title>', begin)
+    if begin != -1 and end != -1:
+        newName = s[begin:end]
+    else:
+        newName = '漫画%d' % i
+    begin = newName.find('|')
+    if begin != -1:
+        newName = newName[:begin]
+    newName = newName.strip()
+    newName = newName.decode('utf-8').encode(sys.getfilesystemencoding())
+    newName += '.html'
+
+    try:
+        file(newName, 'w').write(file(destName).read())
+    except:
+        file('漫画%d.html' % i, 'w').write(file(destName).read())
+
+# delete all temp files
+files = os.listdir('.')
+if cookiesFile in files:
+    files.remove(cookiesFile)
+if len(files) == 3 * len(pages):
+    print 'delete all temp files'
+    for i in range(len(pages)):
+        srcName = 'src_%d.html' % i
+        destName = '%d.html' % i
+        os.remove(srcName)
+        os.remove(destName)

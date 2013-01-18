@@ -1,0 +1,5 @@
+<RCC>
+  <qresource prefix="DlgLineCounter">
+    <file>Addin_LineCounter.ico</file>
+  </qresource>
+</RCC>

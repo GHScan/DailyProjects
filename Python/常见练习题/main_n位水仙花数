@@ -1,0 +1,10 @@
+#! /usr/bin/env python
+# coding=utf-8
+
+def shuixian(n):
+    for i in range(10**(n - 1), 10**n):
+        if sum(int(j)**n for j in str(i)) == i:
+            yield i
+
+for i in shuixian(3):
+    print i

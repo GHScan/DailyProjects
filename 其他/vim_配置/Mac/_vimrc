@@ -1,0 +1,60 @@
+colorscheme molokai
+
+set nocompatible
+
+set hlsearch
+set nowrap
+set history=500
+set number
+set go=
+set modeline
+
+set tabstop=4
+set shiftwidth=4
+set expandtab
+
+set textwidth=80            "行宽；如果不显示行号的话，设为78
+set formatoptions+=Mm       "支持中文字符；结合上个选项，可以用gq格式化中文文章
+
+set guifont=Monaco:h13
+
+set rtp+=/usr/local/go/misc/vim
+syntax on
+filetype plugin indent on
+
+set incsearch		" do incremental searching
+set showcmd			" display incomplete commands
+set cindent
+set autoindent
+set ignorecase			" ignore case
+set smartcase			" but don't ignore it, when search string contains uppercase letters
+set showmatch			" showmatch: Show the matching bracket for the last ')'?
+set fileformats=unix,mac,dos
+set completeopt=menu,longest,preview
+
+nnoremap <silent><F2>   :nohlsearch<CR>
+nnoremap <silent><F3>   :grep -R "\<<C-R>=expand("<cword>")<CR>\>" *<CR>
+nnoremap <silent><F4>   :ts <C-R>=expand("<cword>")<CR><CR>
+nnoremap <silent><F5>   :cp<CR>
+nnoremap <silent><F6>   :cn<CR>
+nnoremap <silent><F8>   :!./main<CR>
+
+set fileencodings=ucs-bom,utf-8,cp936,gb18030,big5,euc-jp,euc-kr,latin1
+
+"clang_complete 插件设置
+let clang_auto_select = 0 " 0-;1-自动选中第一项;2-自动选中第一项并插入
+let clang_complete_auto = 1 "遇到:或->时自动补全
+let clang_complete_copen = 0 "有错时自动打开quickfix窗口
+let clang_hl_errors = 1 "自动高亮错误行
+let clang_periodic_quickfix = 0 "周期性的更新quickfix窗口
+let clang_snippets = 0 "在函数调用括号内，遇到(和,时自动补全
+let clang_snippets_engine = "clang_complete" "未知
+let clang_conceal_snippets = 1 "利用vim7.3的自动隐藏功能隐藏<#和#>
+let clang_exec = "clang" "执行文件名
+let clang_user_options = "" "传给clang的用户组定义选项
+let clang_auto_user_options = "path, .clang_complete, gcc" "传给clang的用户选项来源
+let clang_use_library = 0 "使用libclang
+let clang_library_path = "" "libclang的路径
+let clang_sort_algo = "priority" "排序方法
+let clang_complete_macros = 1 "补全宏
+let clang_complete_patterns = 1 "补全代码块，如循环结构

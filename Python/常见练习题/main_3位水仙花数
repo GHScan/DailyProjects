@@ -1,0 +1,7 @@
+#! /usr/bin/env python
+# coding=utf-8
+
+for i in range(100, 1000):
+    a, b, c = [int(j) for j in str(i)]
+    if a**3 + b**3 + c**3 == i:
+        print i

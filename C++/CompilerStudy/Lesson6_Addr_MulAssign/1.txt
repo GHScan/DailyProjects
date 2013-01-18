@@ -1,0 +1,25 @@
+// nested []
+a[1], a[2], a[3] = 1, 2, 3;
+println(a[1], a[2], a[3]);
+a[1], a[3] = a[3], a[1];
+println(a[1], a[2], a[3]);
+a[3] = a[3] + a[2] + a[1];
+println(a[1], a[2], a[3]);
+println(a[a[a[1] - a[2]]]);
+a[a[1] - a[2]] = 30 - a[1] - a[2] - a[3];
+println(a[1], a[2], a[3]);
+println();
+
+// feb
+b[1], b[2] = 1, 1;
+println(b[1]);
+b[1], b[2] = b[2], b[1] + b[2];
+println(b[1]);
+b[1], b[2] = b[2], b[1] + b[2];
+println(b[1]);
+b[1], b[2] = b[2], b[1] + b[2];
+println(b[1]);
+b[1], b[2] = b[2], b[1] + b[2];
+println(b[1]);
+b[1], b[2] = b[2], b[1] + b[2];
+println(b[1]);

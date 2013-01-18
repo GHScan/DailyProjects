@@ -1,0 +1,84 @@
+#! /usr/bin/env python 
+# coding=utf-8
+
+import socket
+import select
+
+rSkts = []
+wSkts = []
+skt2TDDict = {}
+
+def clientThreadFactory(skt):
+    import time
+    
+    assert skt
+
+    while True:
+        rSkts.append(skt)
+        yield
+        rSkts.remove(skt)
+        msg = skt.recv(1024)
+
+        if msg: msg = msg.strip()
+        if not msg : break
+        if msg == 'close': break
+
+        print 'received msg from [%s]: %s' % (skt.getpeername(), msg)
+        skt.send('[%s] : %s\n' % (time.ctime(), msg))
+        wSkts.append(skt)
+        yield
+        wSkts.remove(skt)
+
+    print 'connection closed [%s]' % (skt.getpeername(),)
+    skt.close()
+    del skt2TDDict[skt]
+
+
+def serverThreadFactory(skt):
+
+    assert skt
+
+    print 'server started!'
+
+    while True:
+        rSkts.append(skt)
+        yield
+        rSkts.remove(skt)
+        clntSkt, addr = skt.accept()
+        print 'accept connection [%s]' % (addr,)
+
+        td = clientThreadFactory(clntSkt)
+        skt2TDDict[clntSkt] = td
+        next(td, None)
+    
+    skt.close()
+    print 'server closed'
+
+svr = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+svr.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+svr.bind(('', 2050))
+svr.listen(5)
+
+svrTD = serverThreadFactory(svr)
+skt2TDDict[svr] = svrTD
+next(svrTD, None)
+
+while True:
+    if not rSkts and not wSkts: 
+        break
+    print 'connection : ', len(skt2TDDict) - 1
+
+    try:
+        rdyRdSkts, rdyWtSkts, _ = select.select(
+                rSkts, wSkts, [])
+    except:
+        print 'force exit!'
+        break
+
+    for rdyRdSkt in rdyRdSkts:
+        next(skt2TDDict[rdyRdSkt], None)
+    for rdyWtSkt in rdyWtSkts:
+        next(skt2TDDict[rdyWtSkt], None)
+
+for skt in skt2TDDict:
+    skt.close()

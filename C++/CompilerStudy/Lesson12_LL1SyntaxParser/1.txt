@@ -1,0 +1,8 @@
+Exp -> Assign
+Assign -> "id" AssignOp Assign | "id" AssignOp Add
+AssignOp -> "+=" | "-=" | "*=" | "/=" | "%=" | "="
+Add -> Add AddOp Mul | Mul
+AddOp -> "+" | "-"
+Mul -> Mul MulOp Factor | Factor
+MulOp -> "*" | "/" | "%"
+Factor -> "(" Exp ")" | "id" | "number" | "string"

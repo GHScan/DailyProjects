@@ -1,0 +1,46 @@
+#! /bin/bash
+
+helpDir=man_pages
+main_file=./$helpDir/index.html
+cmds=`
+{
+    for j in ${PATH//:/ }
+    do
+        ls $j
+    done
+} | sort | uniq `
+
+
+rm -f -r $helpDir
+mkdir $helpDir
+
+echo "<head> <meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" /> " >> $main_file
+echo "<table border=\"1\"><tr><th>命令</th><th>描述</th></tr>" >> $main_file
+
+for i in $cmds
+do
+    echo "processing \"$i\"..."
+
+    file=./$helpDir/${i}.html
+
+    echo "<head> <meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" /> " >> $file
+    echo "<p><a href="index.html">返回目录</a></p>" >> $file
+    echo "<hr>" >> $file
+    echo "<pre>" >> $file
+
+    man $i >> $file 2>/dev/null && 
+    {
+        echo "</pre>" >> $file
+
+        describ=`sed -n -e '/NAME/ {n;p;q}' $file | cut -f 2 -d '-'`
+
+        echo "<tr>" >> $main_file
+        echo "<td><a href=\"$i.html\">$i</a></td>" >> $main_file
+        echo "<td>$describ</td>" >> $main_file
+        echo "</tr>" >> $main_file
+    } || 
+    rm $file
+
+done
+ 
+echo "</table>" >> $main_file

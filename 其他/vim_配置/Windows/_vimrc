@@ -1,0 +1,81 @@
+"set encoding=utf-8                  "内存中的内部统一编码用utf-8，兼容性好
+"set termencoding=cp936              "终端显示时转化为gbk.不过gvim不使用该设置
+""加载文件时的试探表，从前往后逐个检测，因此靠前的最严格而最后一个编码解码时最宽松
+set fileencodings=ucs-bom,utf-8,cp936,gb18030,big5,euc-jp,euc-kr,latin1
+"language messages zh_cn.utf-8       "提示消息用中文
+
+set nocompatible
+
+set rtp +=$GOROOT\misc\vim
+set rtp +=$GOROOT\src\pkg\github.com\nsf\gocode\vim
+filetype plugin indent on
+syn on
+" allow backspacing over everything in insert mode
+set backspace=indent,eol,start
+set nobackup		" DON'T keep a backup file
+
+set history=512		" keep 50 lines of command line history
+set ruler			" show the cursor position all the time
+set showcmd			" display incomplete commands
+set incsearch		" do incremental searching
+set tabstop=4
+
+set number				" line numbers
+set cindent
+set autoindent
+set mouse=a				" use mouse in xterm to scroll
+set scrolloff=5 		" 5 lines bevore and after the current line when scrolling
+set ignorecase			" ignore case
+set smartcase			" but don't ignore it, when search string contains uppercase letters
+set hid 				" allow switching buffers, which have unsaved changes
+set shiftwidth=4		" 4 characters for indenting
+set showmatch			" showmatch: Show the matching bracket for the last ')'?
+
+set nowrap				" don't wrap by default
+set completeopt=menu,longest,preview
+set confirm
+
+set go=                             "去掉菜单和工具栏
+set hlsearch                        "搜索的时候高亮匹配
+set expandtab                       "将tab替换成4个空格
+
+set textwidth=76                    "行宽；如果不显示行号，那设为78合适
+set formatoptions+=Mm               "中文支持；加上前一个选项，可以用gq排版文章了
+
+set guifont=Monaco:h10:cANSI      "设定字体和编码
+colorscheme molokai                 "配色风格
+
+"au guienter * simalt ~x             "启动的时候最大化主窗口
+"winpos 0 0                          "启动的时候最大化。比起上面的方案，这样显得启动更迅速！（视觉上的）
+"set lines=100 columns=1000
+
+"quickfix窗口翻页
+nnoremap <silent><F5> :cp<CR>  
+nnoremap <silent><F6> :cn<CR>
+
+set grepprg=grep\ -nH               "将:grep命令的执行者由原来的findstr换成grep
+nnoremap <F3> :grep -r "\<<C-R>=expand("<cword>")<CR>\>" *<CR>
+
+"去掉永久高亮
+nnoremap <silent><F2> :nohlsearch<CR>
+
+nnoremap <silent><F8> :!.\main.exe<CR>
+" imap jj			<Esc>
+
+"clang_complete 插件设置
+let clang_auto_select = 0 " 0-;1-自动选中第一项;2-自动选中第一项并插入
+let clang_complete_auto = 1 "遇到:或->时自动补全
+let clang_complete_copen = 0 "有错时自动打开quickfix窗口
+let clang_hl_errors = 1 "自动高亮错误行
+let clang_periodic_quickfix = 0 "周期性的更新quickfix窗口
+let clang_snippets = 0 "在函数调用括号内，遇到(和,时自动补全
+let clang_snippets_engine = "clang_complete" "未知
+let clang_conceal_snippets = 1 "利用vim7.3的自动隐藏功能隐藏<#和#>
+let clang_exec = "clang" "执行文件名
+let clang_user_options = "" "传给clang的用户组定义选项
+let clang_auto_user_options = "path, .clang_complete, gcc" "传给clang的用户选项来源
+let clang_use_library = 1 "使用libclang
+let clang_library_path = "" "libclang的路径
+let clang_sort_algo = "priority" "排序方法
+let clang_complete_macros = 1 "补全宏
+let clang_complete_patterns = 1 "补全代码块，如循环结构

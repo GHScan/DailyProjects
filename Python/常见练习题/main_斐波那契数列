@@ -1,0 +1,7 @@
+#! /usr/bin/env python
+# coding=utf-8
+
+a, b = 1, 1
+while b < 1000:
+    print b
+    a, b = a + b, a

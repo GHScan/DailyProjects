@@ -1,0 +1,77 @@
+#! /usr/bin/env python 
+# coding=utf-8
+
+def _createMIMEMsgFromUrl(url, charset):
+    import mimetypes
+    from email.mime.text import MIMEText
+    from email.mime.image import MIMEImage
+    from email.mime.audio import MIMEAudio
+    from email.mime.application import MIMEApplication
+    from email.mime.base import MIMEBase
+    import email.encoders
+    import sys
+    import os
+
+    fsUrl = url.decode(charset).encode(sys.getfilesystemencoding())
+    mimeType, encoding = mimetypes.guess_type(url)
+    mainType, subType = mimeType.split('/')
+    if mainType in ('text', 'image', 'audio', 'application'):
+        msgType = eval('MIME' + mainType.capitalize())
+        msg = msgType(file(fsUrl, 'rb').read(), subType)
+    else:
+        msg = MIMEBase(mainType, subType)
+        msg.set_payload(file(fsUrl, 'rb').read())
+        email.encoders.encode_base64(msg)
+    msg.add_header('Content-Disposition', 'attachment', 
+            filename = (charset, '', os.path.split(url)[1]))
+    return msg
+
+#serv形如qq.com,对应的服务器为smtp.qq.com
+#charset指示subject/content/attachment的编码
+def sendMail(serv, user, passwd, 
+        toList,
+        subject, content,
+        attachmentUrlList = None,
+        charset = 'utf-8',
+        output = None): 
+    from smtplib import SMTP
+    from email.header import Header
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+
+    assert serv, '必须指定服务器'
+    assert user, '必须指定帐号'
+    assert toList and hasattr(toList, '__iter__'), '必须指定目标'
+    assert subject, '必须指定主题'
+    assert content or attachmentUrlList, '必须指定内容'
+
+    fromAddr = '%s@%s' % (user, serv)
+
+    msg = MIMEMultipart()
+    msg['From'] = fromAddr
+    msg['To'] = ','.join(toList)
+    msg['Subject'] = Header(subject, charset)
+
+    if content:
+        subMsg = MIMEText(content, _charset=charset)
+        msg.attach(subMsg)
+
+    attachmentUrlList = attachmentUrlList or []
+    for url in attachmentUrlList:
+        subMsg = _createMIMEMsgFromUrl(url, charset)
+        msg.attach(subMsg)
+    
+    if output:
+        output.write(msg.as_string())
+    else:
+        smtpServ = SMTP('smtp.' + serv)
+        smtpServ.login(user, passwd)
+        smtpServ.sendmail(fromAddr, toList, msg.as_string())
+
+
+f = file('1', 'w')
+f = None
+sendMail('126.com', 'wyyxscan', 'wyyx19870615scan', ['wyyxscan@126.com'], '[4]测试python',
+'中国人九不能用python了吗',
+['/home/scan/桌面/测试图片.gif','/home/scan/桌面/测试图片2.gif'],
+output=f)

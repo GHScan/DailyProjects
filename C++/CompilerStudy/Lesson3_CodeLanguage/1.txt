@@ -1,0 +1,25 @@
+printNx {
+    local i 0;
+    local s '';
+    local t 0;
+for:
+    add i 1;
+    assign s '';
+    add s i;
+    add s 'x';
+    add s arg0;
+    add s '=';
+    assign t i;
+    mul t arg0;
+    add s t;
+    call print s;
+    lgoto i arg0 for;
+    call println;
+}
+main {
+    local i 0;
+for:
+    add i 1;
+    call printNx i;
+    lgoto i 9 for;
+}
