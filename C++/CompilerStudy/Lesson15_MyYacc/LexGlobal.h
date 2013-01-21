@@ -12,4 +12,7 @@ extern YYSTYPE yylval;
 extern int yyget_lineno();
 extern void yyset_lineno(int l);
 
+extern YYSTYPE& LRProductionHead();
+extern YYSTYPE* LRProductionBody();
+
 #endif

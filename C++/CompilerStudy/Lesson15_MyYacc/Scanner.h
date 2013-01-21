@@ -4,7 +4,6 @@
 struct Token
 {
     int type;
-    YYSTYPE value;
 };
 
 class Scanner

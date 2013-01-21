@@ -54,6 +54,17 @@ private:
     string m_name;
 };
 
+template<typename T>
+struct VectorBuilder
+{
+    vector<T> vec;
+    VectorBuilder& operator << (const T& val)
+    {
+        vec.push_back(val);
+        return *this;
+    }
+};
+
 #define _TO_STRING(s) #s
 #define TO_STRING(s) _TO_STRING(s)
 

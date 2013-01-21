@@ -44,19 +44,26 @@ all_deps = $(srcs:.cpp=.d)
 exist_deps = $(wildcard *.d)
 not_exist_deps = $(filter-out $(exist_deps),$(all_deps))
 
-.PHONY: all build rebuild rel_build rel_rebuild clean
+.PHONY: all build rebuild rel_build rel_rebuild clean yacc_gen lex_gen
 all: build
-build: $(target_file)
+build: yacc_gen lex_gen $(target_file)
 rebuild: clean
 	$(MAKE) build
 rel_build:
 	$(MAKE) build -e build_type=release
 rel_rebuild: clean
 	$(MAKE) rel_build
+yacc_gen: syntax.yy.cpp
+syntax.yy.cpp: syntax.y
+	python yacc.py syntax.y
+lex_gen: lex.yy.cpp
+lex.yy.cpp: lex.l
+	python lex.py lex.l
 
 clean:
 	rm -f $(objs) $(all_deps)
 	rm -f $(temp_files) main.exe main.dll
+	rm syntax.yy.* lex.yy.* CodeGen.h
 
 $(target_file): $(objs)
 	$(link) $(link_flags) -OUT:$(target_file) $^

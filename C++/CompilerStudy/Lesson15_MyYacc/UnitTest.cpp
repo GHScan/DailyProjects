@@ -48,5 +48,5 @@ void scannerTest()
 void unitTest()
 {
     // regParserTest();
-    scannerTest();
+    // scannerTest();
 }

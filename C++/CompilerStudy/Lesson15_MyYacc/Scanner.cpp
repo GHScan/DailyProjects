@@ -337,7 +337,6 @@ bool ScannerImpl::getNext(Token& token)
         yytextEnd[0] = 0;
 
         token.type = m_dfa->reg2Action[reg]();
-        token.value = yylval;
 
         yytextEnd[0] = bc;
         if (token.type > 0) return true;
