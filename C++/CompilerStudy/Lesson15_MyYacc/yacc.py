@@ -34,7 +34,7 @@ class Parser(object):
 
     def parseDefines(self):
         i = 0
-        prior = 1
+        prior = 2
         while i < len(self.m_lines):
             line = self.m_lines[i].strip()
             if not len(line):
@@ -52,7 +52,7 @@ class Parser(object):
                 strs = line.split(' ')
                 if strs[0] == '%token':
                     for k in strs[1:]:
-                        self.m_terms[k] = {'assoc':'l', 'prior':0}
+                        self.m_terms[k] = {'assoc':'l', 'prior':1}
                 elif strs[0] == '%left':
                     for k in strs[1:]:
                         self.m_terms[k] = {'assoc':'l', 'prior':prior}
@@ -126,9 +126,13 @@ class Parser(object):
         self.m_nonTerms.setdefault(nonTerm, []).append(l)
 
     def genCode(self):
+        extendTerm = '__0'
+        assert extendTerm not in self.m_terms
+        self.m_terms[extendTerm] = {'assoc':'l', 'prior':0}
+
         nonTerms = [item for item in self.m_nonTerms.iteritems()]
-        extendNonTerm = '0__' + self.m_firstNonTerm
-        nonTerms.insert(0, (extendNonTerm, [[self.m_firstNonTerm, None, None]]))
+        extendNonTerm = self.m_firstNonTerm + '__0'
+        nonTerms.insert(0, (extendNonTerm, [[self.m_firstNonTerm, extendTerm, extendTerm, None]]))
 
         def _cmpTerm(a, b):
             pa, pb = a[1]['prior'], b[1]['prior']
@@ -215,8 +219,8 @@ class Parser(object):
         self.m_cfile.write('\tbegin = s_table[sym - ESS_NonTerm_Begin][0];\n')
         self.m_cfile.write('\tend = s_table[sym - ESS_NonTerm_Begin][1];\n')
         self.m_cfile.write('}\n')
-        self.m_cfile.write('#define PRODUCT_ID_END %d\n' % productID)
-        self.m_cfile.write('#define PRODUCT_BODY_MAX_LEN %d\n' % productBodyMaxLen)
+        self.m_hfile.write('#define PRODUCT_ID_END %d\n' % productID)
+        self.m_hfile.write('#define PRODUCT_BODY_MAX_LEN %d\n' % productBodyMaxLen)
         # func: getProductHead
         self.m_hfile.write('ESyntaxSymbol getProductHead(int productID);\n')
         self.m_cfile.write('ESyntaxSymbol getProductHead(int productID)\n{\n')
@@ -254,8 +258,6 @@ class Parser(object):
                         self.m_cfile.write(' << ESS_%s' % sym)
                     else:
                         self.m_cfile.write(' << ESS_%s' % sym)
-                if productID2Head[pid] == extendNonTerm:
-                    self.m_cfile.write(' << ESS_Term_End')
                 self.m_cfile.write(').vec // ESS_%s\n' % productID2Head[pid])
             else:
                 self.m_cfile.write('\t\t<< (VectorBuilder()).vec\n')
