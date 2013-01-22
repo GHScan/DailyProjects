@@ -58,9 +58,10 @@ template<typename T>
 struct VectorBuilder
 {
     vector<T> vec;
-    VectorBuilder& operator << (const T& val)
+    template<typename U>
+    VectorBuilder& operator << (const U& val)
     {
-        vec.push_back(val);
+        vec.push_back(T(val));
         return *this;
     }
 };

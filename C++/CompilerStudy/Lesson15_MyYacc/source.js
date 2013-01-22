@@ -99,4 +99,5 @@ function main()
     printFeb2();
     print9x9();
     perform();
+    println('15-3*(2*2+(7-2)) = ', 15-3*(2*2+(7-2)));
 }

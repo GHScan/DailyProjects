@@ -1,22 +1,29 @@
 %{
-#define YYSTYPE string
-#include "LexGlobal.h"
+#define YY_NO_UNISTD_H
+
 #include "syntax.yy.h"
 
-%}
+int isatty(int n);
 
+#ifdef _MSC_VER
+#pragma warning(disable : 4267)
+#pragma warning(disable : 4244)
+#endif
+
+%}
 
 %%
 
 "//"[^\n]*\n {
     yyset_lineno(yyget_lineno() + 1);
-    // printf("comments : %s\n", yytext);
+    //printf("comments : %s\n", yytext);
 }
 "/*"([^\*]|\*[^/])*"*/" {
     int lineN = 0;
     for (int i = 0; i < yyleng; ++i) lineN += yytext[i] == '\n';
     yyset_lineno(yyget_lineno() + lineN);
-    // printf("comments : %s\n", yytext);
+
+    //printf("comments : %s\n", yytext);
 }
 
 \s {
@@ -26,48 +33,56 @@
 }
 
 "if" {
-    yylval = yytext;
     return ESS_IF;
 }
 "else" {
-    yylval = yytext;
     return ESS_ELSE;
 }
 "for" {
-    yylval = yytext;
     return ESS_FOR;
 }
 "while" {
-    yylval = yytext;
     return ESS_WHILE;
 }
 "do" { 
-    yylval = yytext;
     return ESS_DO;
 }
 "break" {
-    yylval = yytext;
     return ESS_BREAK;
 }
 "continue" {
-    yylval = yytext;
     return ESS_CONTINUE;
 }
 "return" {
-    yylval = yytext;
     return ESS_RETURN;
 }
 "local" {
-    yylval = yytext;
     return ESS_LOCAL;
 }
 "function" {
-    yylval = yytext;
     return ESS_FUNCTION;
 }
 
 \'[^\']*\' {
-    yylval = yytext;
+    string s(yytext + 1, yytext + yyleng - 1);
+    yylval.term.clear();
+    for (int i = 0; i < (int)s.size(); ++i) {
+        if (s[i] == '\\') {
+            switch (s[i + 1]) {
+                case 't':
+                    ++i;
+                    yylval.term.push_back('\t');
+                    continue;
+                case 'n':
+                    ++i;
+                    yylval.term.push_back('\n');
+                    continue;
+                default:
+                    break;
+            }
+        }
+        yylval.term.push_back(s[i]);
+    }
     return ESS_STRING;
 }
 [0-9]+ {
@@ -109,9 +124,7 @@
 }
 
 . {
-    yylval = yytext[0];
     return yytext[0];
 }
 
 %%
-

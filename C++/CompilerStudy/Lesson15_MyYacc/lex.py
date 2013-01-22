@@ -41,9 +41,11 @@ class Parser(object):
         fo.write('\n#endif\n')
 
         fnameImporter = 'CodeGen.h'
-        s = set(file(fnameImporter)) if os.path.isfile(fnameImporter) else set()
-        s.add('#include "%s"\n' % ofname)
-        file(fnameImporter, 'w').write(''.join(s))
+        l = list(file(fnameImporter)) if os.path.isfile(fnameImporter) else list()
+        include = '#include "%s"\n' % ofname
+        if include in l: l.remove(include)
+        l.append(include)
+        file(fnameImporter, 'w').write(''.join(l))
     def parseActions(self):
         ofname = self.m_fname + '.yy.cpp'
         fo = file(ofname, 'w')

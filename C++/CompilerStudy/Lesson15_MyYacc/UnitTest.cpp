@@ -4,6 +4,7 @@
 #include "UnitTest.h"
 #include "RegParser.h"
 #include "Scanner.h"
+#include "SyntaxParser.h"
 
 void regParserTest()
 {
@@ -45,8 +46,17 @@ void scannerTest()
     cout << "t count :" << n << endl;
 }
 
+void syntaxParserTest()
+{
+    puts("UnitTest----------> syntaxParserTest");
+    Scanner scanner(readFile("source.js"));
+    SyntaxParser parser(&scanner);
+    parser.parse();
+}
+
 void unitTest()
 {
     // regParserTest();
     // scannerTest();
+    // syntaxParserTest();
 }

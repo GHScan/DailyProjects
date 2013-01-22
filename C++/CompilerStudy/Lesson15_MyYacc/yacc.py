@@ -26,9 +26,11 @@ class Parser(object):
         self.m_cfile.write('#include "%s"' % (hfname))
         
         fnameImporter = 'CodeGen.h'
-        s = set(file(fnameImporter)) if os.path.isfile(fnameImporter) else set()
-        s.add('#include "%s"\n' % hfname)
-        file(fnameImporter, 'w').write(''.join(s))
+        l = list(file(fnameImporter)) if os.path.isfile(fnameImporter) else list()
+        include = '#include "%s"\n' % hfname
+        if include in l: l.remove(include)
+        l.append(include)
+        file(fnameImporter, 'w').write(''.join(l))
     def closeOFiles(self):
         self.m_hfile.write('\n#endif\n')
 
@@ -84,7 +86,8 @@ class Parser(object):
                     s += self.m_lines[i]
                     line = self.m_lines[i].strip()
                     if line[-1] == ';':
-                        if not re.search(r"[^']{", s) or re.search(r"[^']}\s*;", s):
+                        if not re.search(r"[^']{", s) or (
+                                re.subn(r"[^']{", '', s)[1] == re.subn(r"[^']}", '', s)[1]):
                             break
                     i += 1
                 self.parseNonTerm(s)
@@ -108,6 +111,13 @@ class Parser(object):
         action = action.group(0) if action else None
         if action:
             s = s[:len(s) - len(action)]
+            def _replaceDollar(m):
+                if m.group(1):
+                    return 'LRProductionHead()'
+                elif m.group(2):
+                    return 'LRProductionBody()[%d]' % (int(m.group(2)[1:]) - 1)
+                return m.group(0)
+            action = re.sub(r'(\$\$)|(\$\d+)', _replaceDollar, action)
         prec = re.search(r'%prec.+$', s)
         prec = prec.group(0) if prec else None
         if prec:
@@ -160,27 +170,27 @@ class Parser(object):
                 2**math.ceil(math.log(nonTermID - (1 << 16)) / math.log(2)))
         self.m_hfile.write('};\n\n')
         # func: isTerm, isNonTerm
-        self.m_hfile.write('inline bool isTerm(ESyntaxSymbol sym) { return sym >= ESS_Term_Begin && sym < ESS_Term_End; }\n')
-        self.m_hfile.write('inline bool isNonTerm(ESyntaxSymbol sym) { return sym >= ESS_NonTerm_Begin && sym < ESS_NonTerm_End; }\n')
+        self.m_hfile.write('inline bool isTerm(int sym) { return sym >= ESS_Term_Begin && sym < ESS_Term_End; }\n')
+        self.m_hfile.write('inline bool isNonTerm(int sym) { return sym >= ESS_NonTerm_Begin && sym < ESS_NonTerm_End; }\n')
         # func: toString
-        self.m_hfile.write('const char * toString(ESyntaxSymbol sym);\n')
-        self.m_cfile.write('const char * toString(ESyntaxSymbol sym)\n{\n')
-        self.m_cfile.write('\tstatic const char *s_termTable[] = {\n')
+        self.m_hfile.write('string toString(int sym);\n')
+        self.m_cfile.write('string toString(int sym)\n{\n')
+        self.m_cfile.write('\tstatic string s_termTable[] = {\n')
         for term in sortedTerm:
             self.m_cfile.write('\t\t"%s",\n' % term[0])
         self.m_cfile.write('\t};\n')
-        self.m_cfile.write('\tstatic const char *s_nonTermTable[] = {\n')
+        self.m_cfile.write('\tstatic string s_nonTermTable[] = {\n')
         for nonTerm, _ in nonTerms:
             self.m_cfile.write('\t\t"%s",\n' % nonTerm)
         self.m_cfile.write('\t};\n')
         self.m_cfile.write('\tif (isTerm(sym)) return s_termTable[sym - ESS_Term_Begin];\n')
         self.m_cfile.write('\telse if (isNonTerm(sym)) return s_nonTermTable[sym - ESS_NonTerm_Begin];\n')
-        self.m_cfile.write('\telse if (sym < ESS_Term_Begin) { static string s_s; s_s = format("\'%c\'", sym); return s_s.c_str(); }\n')
+        self.m_cfile.write('\telse if (sym < ESS_Term_Begin) return format("\'%c\'", sym); \n')
         self.m_cfile.write('\telse { ASSERT(0); return ""; }\n')
         self.m_cfile.write('}\n')
         # func: getTermPriority()
-        self.m_hfile.write('int getTermPriority(ESyntaxSymbol sym);\n')
-        self.m_cfile.write('int getTermPriority(ESyntaxSymbol sym)\n{\n')
+        self.m_hfile.write('int getTermPriority(int sym);\n')
+        self.m_cfile.write('int getTermPriority(int sym)\n{\n')
         self.m_cfile.write('\tstatic int s_table[] = {\n')
         for k, prop in sortedTerm:
             self.m_cfile.write('\t\t%d,\n' % prop['prior'])
@@ -189,8 +199,8 @@ class Parser(object):
         self.m_cfile.write('\treturn s_table[sym - ESS_Term_Begin];\n')
         self.m_cfile.write('}\n')
         # func: getTermAssoc
-        self.m_hfile.write('char getTermAssoc(ESyntaxSymbol sym);\n')
-        self.m_cfile.write('char getTermAssoc(ESyntaxSymbol sym)\n{\n')
+        self.m_hfile.write('char getTermAssoc(int sym);\n')
+        self.m_cfile.write('char getTermAssoc(int sym)\n{\n')
         self.m_cfile.write('\tstatic char s_table[] = {\n')
         for k, prop in sortedTerm:
             self.m_cfile.write('\t\t\'%c\',\n' % prop['assoc'])
@@ -199,8 +209,8 @@ class Parser(object):
         self.m_cfile.write('\treturn s_table[sym - ESS_Term_Begin];\n')
         self.m_cfile.write('}\n')
         # func: getNonTermProductRange
-        self.m_hfile.write('void getNonTermProductRange(ESyntaxSymbol sym, int &begin, int &end);\n')
-        self.m_cfile.write('void getNonTermProductRange(ESyntaxSymbol sym, int &begin, int &end)\n{\n')
+        self.m_hfile.write('void getNonTermProductRange(int sym, int &begin, int &end);\n')
+        self.m_cfile.write('void getNonTermProductRange(int sym, int &begin, int &end)\n{\n')
         self.m_cfile.write('\tstatic int s_table[][2] = {\n')
         productID2Data = dict()
         productID2Head = dict()
@@ -222,9 +232,9 @@ class Parser(object):
         self.m_hfile.write('#define PRODUCT_ID_END %d\n' % productID)
         self.m_hfile.write('#define PRODUCT_BODY_MAX_LEN %d\n' % productBodyMaxLen)
         # func: getProductHead
-        self.m_hfile.write('ESyntaxSymbol getProductHead(int productID);\n')
-        self.m_cfile.write('ESyntaxSymbol getProductHead(int productID)\n{\n')
-        self.m_cfile.write('\tstatic ESyntaxSymbol s_table[PRODUCT_ID_END] = {\n');
+        self.m_hfile.write('int getProductHead(int productID);\n')
+        self.m_cfile.write('int getProductHead(int productID)\n{\n')
+        self.m_cfile.write('\tstatic int s_table[PRODUCT_ID_END] = {\n');
         for pid in range(productID):
             self.m_cfile.write('\t\tESS_%s,\n' % productID2Head[pid])
         self.m_cfile.write('\t};\n')
@@ -232,14 +242,14 @@ class Parser(object):
         self.m_cfile.write('\treturn s_table[productID];\n')
         self.m_cfile.write('}\n')
         # func: getProductConflictToken
-        self.m_hfile.write('ESyntaxSymbol getProductConflictToken(int productID);\n')
-        self.m_cfile.write('ESyntaxSymbol getProductConflictToken(int productID)\n{\n')
-        self.m_cfile.write('\tstatic ESyntaxSymbol s_table[] = {\n')
+        self.m_hfile.write('int getProductConflictToken(int productID);\n')
+        self.m_cfile.write('int getProductConflictToken(int productID)\n{\n')
+        self.m_cfile.write('\tstatic int s_table[] = {\n')
         for pid, v in productID2Data.iteritems():
             if v[-2]:
                 self.m_cfile.write('\t\tESS_%s,\n' % v[-2])
             else:
-                self.m_cfile.write('\t\t(ESyntaxSymbol)-1,\n')
+                self.m_cfile.write('\t\t-1,\n')
         self.m_cfile.write('\t};\n')
         self.m_cfile.write('\tASSERT(productID >= 0 && productID < PRODUCT_ID_END);\n')
         self.m_cfile.write('\treturn s_table[productID];\n')
@@ -260,7 +270,8 @@ class Parser(object):
                         self.m_cfile.write(' << ESS_%s' % sym)
                 self.m_cfile.write(').vec // ESS_%s\n' % productID2Head[pid])
             else:
-                self.m_cfile.write('\t\t<< (VectorBuilder()).vec\n')
+                self.m_cfile.write('\t\t<< (VectorBuilder<int>()).vec // EES_%s\n' 
+                        % productID2Head[pid])
         self.m_cfile.write('\t).vec;\n')
         self.m_cfile.write('\tASSERT(productID >= 0 && productID < PRODUCT_ID_END);\n')
         self.m_cfile.write('\treturn s_table[productID];\n')
@@ -269,9 +280,11 @@ class Parser(object):
         for pid, v in productID2Data.iteritems():
             if not v[-1]: continue
             self.m_cfile.write('static void productionAction_%d_%s()\n{\n' % (pid, productID2Head[pid]))
+            self.m_cfile.write('\t%s = %s;\n' % ('LRProductionHead()', 'LRProductionBody()[0]'))
             self.m_cfile.write(v[-1])
             self.m_cfile.write('\n}\n')
-        self.m_cfile.write('static void productionAction_default(){}\n')
+        self.m_cfile.write('static void productionAction_default(){ %s = %s;}\n' 
+                % ('LRProductionHead()', 'LRProductionBody()[0]'))
         self.m_hfile.write('void (*getProductionAction(int productID))();\n')
         self.m_cfile.write('void (*getProductionAction(int productID))()\n{\n')
         self.m_cfile.write('\tstatic void (*s_table[])() = {\n')

@@ -19,33 +19,32 @@ static string productBodyToString(int pid)
 {
     string r = toString(getProductHead(pid)) + " : ";
     for (auto sym : getProductBody(pid)) {
-        r += toString(sym);
-        r += " ";
+        r += toString(sym) + " ";
     }
     r += ";";
     return r;
 }
 
-static vector<ESyntaxSymbol> initTermList()
+static vector<int> initTermList()
 {
-    set<ESyntaxSymbol> r;
+    set<int> r;
     for (int pid = 0; pid < PRODUCT_ID_END; ++pid) {
         auto& body = getProductBody(pid);
         for (auto sym : body) {
             if (!isNonTerm(sym)) r.insert(sym);
         }
     }
-    return vector<ESyntaxSymbol>(r.begin(), r.end());
+    return vector<int>(r.begin(), r.end());
 }
-static vector<ESyntaxSymbol> initNonTermList()
+static vector<int> initNonTermList()
 {
-    vector<ESyntaxSymbol> r;
-    for (auto i = ESS_NonTerm_Begin; i < ESS_NonTerm_End; ++i) {
+    vector<int> r;
+    for (auto i = ESS_NonTerm_Begin; i < ESS_NonTerm_End; ++(int&)i) {
         r.push_back(i);
     }
     return r;
 }
-static vector<ESyntaxSymbol> initSymbolList()
+static vector<int> initSymbolList()
 {
     auto r = initTermList();
     auto r2 = initNonTermList();
@@ -67,20 +66,20 @@ struct Action
     };
     Action(): type(T_Null), value(0){}
     Action(Type t, int val): type(t), value(val){}
-    Type type : 2;
-    int value : 30;
+    Type type : 4;
+    int value : 28;
 };
 class ActionTable
 {
 public:
-    Action getAction(int state, ESyntaxSymbol term);
+    Action getAction(int state, int term);
     void setStateCount(int cnt);
-    void setAction(int state, ESyntaxSymbol term, Action act);
+    void setAction(int state, int term, Action act);
 private:
     vector<map<int, Action> > m_charTable;
     vector<Action> m_termTable;
 };
-Action ActionTable::getAction(int state, ESyntaxSymbol term)
+Action ActionTable::getAction(int state, int term)
 {
     if (term < ESS_Term_Begin) {
         return m_charTable[state][term];
@@ -94,7 +93,7 @@ void ActionTable::setStateCount(int cnt)
     m_charTable.resize(cnt);
     m_termTable.resize(cnt * ESS_Term_Ceil);
 }
-void ActionTable::setAction(int state, ESyntaxSymbol term, Action act)
+void ActionTable::setAction(int state, int term, Action act)
 {
     if (term < ESS_Term_Begin) {
         m_charTable[state][term] = act;
@@ -107,23 +106,23 @@ void ActionTable::setAction(int state, ESyntaxSymbol term, Action act)
 class GotoTable
 {
 public:
-    int getNextState(int state, ESyntaxSymbol sym);
+    int getNextState(int state, int nonTerm);
     void setStateCount(int cnt);
-    void setNextState(int state, ESyntaxSymbol sym, int nstate);
+    void setNextState(int state, int nonTerm, int nstate);
 private:
     vector<int> m_nonTermTable;
 };
-int GotoTable::getNextState(int state, ESyntaxSymbol sym)
+int GotoTable::getNextState(int state, int nonTerm)
 {
-    return m_nonTermTable[state * ESS_NonTerm_Ceil + sym];
+    return m_nonTermTable[state * ESS_NonTerm_Ceil + (nonTerm - ESS_NonTerm_Begin)];
 }
 void GotoTable::setStateCount(int cnt)
 {
     m_nonTermTable.resize(cnt * ESS_NonTerm_Ceil, -1);
 }
-void GotoTable::setNextState(int state, ESyntaxSymbol sym, int nstate)
+void GotoTable::setNextState(int state, int nonTerm, int nstate)
 {
-    m_nonTermTable[state * ESS_NonTerm_Ceil + sym] = nstate;
+    m_nonTermTable[state * ESS_NonTerm_Ceil + (nonTerm - ESS_NonTerm_Begin)] = nstate;
 }
 
 class LALRParser
@@ -171,7 +170,7 @@ struct LR0ItemCollectionFamily
 {
     vector<LR0ItemCollection> ID2Collection;
     map<LR0ItemCollection, int> collection2ID;
-    map<int, map<ESyntaxSymbol, int> > transMap;
+    map<int, map<int, int> > transMap;
     void build();
 private:
     void closure(LR0ItemCollection &col);
@@ -192,15 +191,16 @@ void LR0ItemCollectionFamily::build()
     while (!unhandled.empty()) {
         int ID = *unhandled.begin();
         unhandled.erase(unhandled.begin());
-        auto& col = ID2Collection[ID];
         for (auto sym : g_symolList) {
             LR0ItemCollection newCol;
+            auto& col = ID2Collection[ID];
             for (auto item : col) {
                 auto &body = getProductBody(item.productID);
                 if (item.pos < body.size() && body[item.pos] == sym) {
                     newCol.insert(LR0Item(item.productID, item.pos + 1));
                 }
             }
+            if (newCol.empty()) continue;
             int newID;
             if (insertCollection(newCol, newID)) {
                 unhandled.insert(newID);
@@ -217,7 +217,7 @@ void LR0ItemCollectionFamily::closureItem(LR0Item item, LR0ItemCollection& col)
     if (item.pos >= body.size()) return;
     if (!isNonTerm(body[item.pos])) return;
     int pbegin, pend;
-    getNonTermProductRange(body[item.pos], begin, end);
+    getNonTermProductRange(body[item.pos], pbegin, pend);
     for (int pid = pbegin; pid < pend; ++pid) {
         closureItem(LR0Item(pid, 0), col);
     }
@@ -245,31 +245,47 @@ void LR0ItemCollectionFamily::removeCore()
     for (int i = 0; i < (int)ID2Collection.size(); ++i) {
         LR0ItemCollection col;
         for (auto item : ID2Collection[i]) {
-            if (isImportantLR0Item(item)) col.insert(item);
+            if (isImportantLR0Item(item.productID, item.pos)) col.insert(item);
         }
         ID2Collection[i] = col;
         collection2ID[col] = i;
     }
 }
 //////////
-struct LR1Item
+struct LR1Point
 {
     int state : 15;
     int productID : 10;
     int pos : 7;
-    LR1Item(int _state, int _productID, int _pos): state(_state), productID(_productID), pos(_pos){}
-    bool operator == (const LR1Item& o) { return (int&)*this == (int&)o;}
-    bool operator < (const LR1Item& o) { return (int&)*this < (int&)o;}
+    LR1Point(int _state, int _productID, int _pos): state(_state), productID(_productID), pos(_pos){}
+    bool operator == (const LR1Point& o) const { return (int&)*this == (int&)o;}
+    bool operator < (const LR1Point& o) const { return (int&)*this < (int&)o;}
+};
+static_assert(PRODUCT_ID_END < (1 << 10), "See LR1Point.productID");
+static_assert(PRODUCT_BODY_MAX_LEN < (1 << 7), "See LR1Point.pos");
+
+struct LR1Item
+{
+    int productID : 10;
+    int pos : 7;
+    int term : 15;
+    LR1Item(int _pid, int _pos, int _term): productID(_pid), pos(_pos), term(_term){}
+    bool operator == (const LR1Item& o) const { return (int&)*this == (int&)o;}
+    bool operator < (const LR1Item& o) const { return (int&)*this < (int&)o;}
 };
 typedef set<LR1Item> LR1ItemCollection;
 static_assert(PRODUCT_ID_END < (1 << 10), "See LR1Item.productID");
 static_assert(PRODUCT_BODY_MAX_LEN < (1 << 7), "See LR1Item.pos");
+static_assert(ESS_Term_End < (1 << 15), "See LR1Item.term");
 
 //////////
 static void mergeAction(Action &dact, Action sact, const LR0ItemCollectionFamily& family)
 {
     if (sact.type == Action::T_Null) ASSERT(0);
-    else if(sact.type == Action::T_Shift) ASSERT(0);
+    else if(sact.type == Action::T_Shift) {
+        if (dact.type == Action::T_Null) dact = sact;
+        else ASSERT(0);
+    }
     else if (sact.type == Action::T_Reduce) {
         if (dact.type == Action::T_Null) dact = sact;
         else if (dact.type == Action::T_Shift) {
@@ -280,8 +296,8 @@ static void mergeAction(Action &dact, Action sact, const LR0ItemCollectionFamily
                     else ASSERT(0); // ???
                 }
             }
-            int sterm = getProductConflictToken(sact.value);
-            int dterm = getProductConflictToken(shiftPid);
+            auto sterm = getProductConflictToken(sact.value);
+            auto dterm = getProductConflictToken(shiftPid);
             if (sterm == -1 || dterm == -1) {
                 ASSERT1(0, "shift & reduce conflict -" + productBodyToString(sact.value) + " & " + productBodyToString(shiftPid));
             }
@@ -294,8 +310,8 @@ static void mergeAction(Action &dact, Action sact, const LR0ItemCollectionFamily
 
         }
         else if (dact.type == Action::T_Reduce) {
-            int sterm = getProductConflictToken(sact.value);
-            int dterm = getProductConflictToken(dact.value);
+            auto sterm = getProductConflictToken(sact.value);
+            auto dterm = getProductConflictToken(dact.value);
             if (sterm == -1 || dterm == -1) {
                 ASSERT1(0, "reduce & reduce conflict -" + productBodyToString(sact.value) + " & " + productBodyToString(dact.value));
             }
@@ -311,24 +327,159 @@ static void mergeAction(Action &dact, Action sact, const LR0ItemCollectionFamily
     else ASSERT(0);
 }
 
+class SyntaxSymbolAttributeCache
+{
+public:
+    static SyntaxSymbolAttributeCache* instance();
+    bool isNullable(int sym);
+    const set<int>& getFirst(int sym);
+    set<int> getFirst(const int *begin, const int *end);
+    const set<int>& getFollow(int sym);
+    set<int> getFollow(int *begin, int *end);
+private:
+    map<int, bool> m_nullable;
+    map<int, set<int> > m_first;
+    map<int, set<int> > m_follow;
+};
+SyntaxSymbolAttributeCache* SyntaxSymbolAttributeCache::instance() 
+{
+    static SyntaxSymbolAttributeCache s_ins;
+    return &s_ins;
+}
+bool SyntaxSymbolAttributeCache::isNullable(int sym)
+{
+    if (!isNonTerm(sym)) return false;
+    if (m_nullable.count(sym) > 0) return m_nullable[sym];
+    bool &b = m_nullable[sym];
+    int pbegin, pend;
+    getNonTermProductRange(sym, pbegin, pend);
+    for (int pid = pbegin; pid < pend; ++pid) {
+        auto &body = getProductBody(pid);
+        bool nullable = true;
+        for (auto i : body) {
+            if (!isNullable(i)) {
+                nullable = false;
+                break;
+            }
+        }
+        if (nullable) {
+            b = true;
+            break;
+        }
+    }
+    return b;
+}
+const set<int>& SyntaxSymbolAttributeCache::getFirst(int sym)
+{
+    if (m_first.count(sym) > 0) return m_first[sym];
+    set<int> &set = m_first[sym];
+    if (isNonTerm(sym)) {
+        int pbegin, pend;
+        getNonTermProductRange(sym, pbegin, pend);
+        for (int pid = pbegin; pid < pend; ++pid) {
+            auto& body = getProductBody(pid);
+            if (body.empty()) continue;
+            auto sub = getFirst(&body[0], &body[0] + body.size());
+            set.insert(sub.begin(), sub.end());
+        }
+    }
+    else {
+        set.insert(sym);
+    }
+    return set;
+}
+set<int> SyntaxSymbolAttributeCache::getFirst(const int *begin, const int *end)
+{
+    set<int> r;
+    for (; begin != end; ++begin) {
+        auto &set = getFirst(*begin);
+        r.insert(set.begin(), set.end());
+        if (!isNullable(*begin)) break;
+    }
+    return r;
+}
+//const set<int>& SyntaxSymbolAttributeCache::getFollow(int sym)
+//{
+//}
+//set<int> SyntaxSymbolAttributeCache::getFollow(int *begin, int *end)
+//{
+//}
+
+static void closureLR1Item(LR1Item item, LR1ItemCollection& col)
+{
+    if (!col.insert(item).second) return;
+    auto& body = getProductBody(item.productID);
+    if (item.pos >= body.size()) return;
+    if (!isNonTerm(body[item.pos])) return;
+    set<int> first;
+    {
+        vector<int> seq(body.begin() + item.pos + 1, body.end());
+        seq.push_back(item.term);
+        first = SyntaxSymbolAttributeCache::instance()->getFirst(&seq[0], &seq[0] + seq.size());
+    }
+    int pbegin, pend;
+    getNonTermProductRange(body[item.pos], pbegin, pend);
+    for (int pid = pbegin; pid < pend; ++pid) {
+        for (auto term : first) {
+            closureLR1Item(LR1Item(pid, 0, term), col);
+        }
+    }
+}
+
 void LALRParser::build()
 {
     LR0ItemCollectionFamily LR0Family;
     LR0Family.build();
 
-    map<LR1Item, set<ESyntaxSymbol> > item2Terms;
-    map<LR1Item, set<LR1Item> > item2items;
-    set<LR1Item> unhandled;
+    map<LR1Point, set<int> > point2Terms;
+    map<LR1Point, set<LR1Point> > point2Points;
+    set<LR1Point> unhandled;
 
-    // TODO - calc item2Terms, item2items
-    item2Terms
+    // TODO - calc point2Terms, point2Points
+    for (int state = 0; state < (int)LR0Family.ID2Collection.size(); ++state) {
+        for (auto item : LR0Family.ID2Collection[state]) {
+            LR1Point pt0(state, item.productID, item.pos);
+            LR1ItemCollection col;
+            {
+                closureLR1Item(LR1Item(item.productID, item.pos, ESS_Term_End), col);
+            }
+            for (auto _item : col) {
+                if (isImportantLR0Item(_item.productID, _item.pos)) {
+                    LR1Point pt1(state, _item.productID, _item.pos);
+                    if (_item.term == ESS_Term_End) { 
+                        point2Points[pt0].insert(pt1);
+                    }
+                    else {
+                        point2Terms[pt1].insert(_item.term);
+                        unhandled.insert(pt1);
+                    }
+                    auto &body = getProductBody(_item.productID);
+                    if (_item.pos >= body.size()) continue;
+                    LR1Point pt2(LR0Family.transMap[state][body[_item.pos]], _item.productID, _item.pos + 1);
+                    point2Points[pt1].insert(pt2);
+                }
+                else {
+                    auto &body = getProductBody(_item.productID);
+                    if (_item.pos >= body.size()) continue;
+                    LR1Point pt2(LR0Family.transMap[state][body[_item.pos]], _item.productID, _item.pos + 1);
+                    if (_item.term == ESS_Term_End) {
+                        point2Points[pt0].insert(pt2);
+                    }
+                    else {
+                        point2Terms[pt2].insert(_item.term);
+                        unhandled.insert(pt2);
+                    }
+                }
+            }
+        }
+    }
 
     while (!unhandled.empty()) {
-        LR1Item item = *unhandled.begin();
+        LR1Point point = *unhandled.begin();
         unhandled.erase(unhandled.begin());
-        auto& terms = item2Terms[item];
-        for (auto ditem : item2items[item]) {
-            auto& dterms = item2Terms[ditem].size();
+        auto& terms = point2Terms[point];
+        for (auto ditem : point2Points[point]) {
+            auto& dterms = point2Terms[ditem];
             auto osize = dterms.size();
             dterms.insert(terms.begin(), terms.end());
             if (dterms.size() != osize) {
@@ -337,10 +488,10 @@ void LALRParser::build()
         }
     }
 
-    m_gotoTable.setStateCount(LR0Family.ID2Collection.size());
-    m_actionTable.setStateCount(LR0Family.ID2Collection.size());
+    m_gotoTable.setStateCount((int)LR0Family.ID2Collection.size());
+    m_actionTable.setStateCount((int)LR0Family.ID2Collection.size());
 
-    for (int state = 0; state < (int)LR0Family.size(); ++state) {
+    for (int state = 0; state < (int)LR0Family.ID2Collection.size(); ++state) {
         for (auto term : g_termList) {
             Action act;
             {
@@ -352,7 +503,7 @@ void LALRParser::build()
             for (auto item : LR0Family.ID2Collection[state]) {
                 auto& body = getProductBody(item.productID);
                 if (item.pos != body.size()) continue;
-                auto& terms = item2Terms[LR1Item(state, item.productID, item.pos)];
+                auto& terms = point2Terms[LR1Point(state, item.productID, item.pos)];
                 if (terms.count(term) == 0) continue;
                 mergeAction(act, Action(Action::T_Reduce, item.productID), LR0Family);
             }
@@ -409,7 +560,7 @@ bool SyntaxParserImpl::parse()
             Action act = actionTable->getAction(stateStack.back(), t.type);
             if (act.type == Action::T_Shift) {
                 if (t.type == ESS_Term_Begin) { 
-                    stateStack.pop_back();
+                    stateStack.clear();
                     break;
                 }
                 stateStack.push_back(act.value);
@@ -420,11 +571,11 @@ bool SyntaxParserImpl::parse()
                 auto& body = getProductBody(act.value);
                 YYSTYPE head;
                 g_lrproductionHead = &head;
-                g_lrproductionBody = &valueStack[valueStack.size() - body.size()];
+                g_lrproductionBody = body.empty() ? &head : &valueStack[valueStack.size() - body.size()];
                 getProductionAction(act.value)();
                 valueStack.erase(valueStack.end() - body.size(), valueStack.end());
                 valueStack.push_back(head);
-                stateStack.erase(stateStack.end() - body.size());
+                stateStack.erase(stateStack.end() - body.size(), stateStack.end());
                 int nstate = gotoTable->getNextState(stateStack.back(), getProductHead(act.value));
                 stateStack.push_back(nstate);
             }
