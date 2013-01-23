@@ -1,5 +1,6 @@
 %{
 #include "Runtime.h"
+#include "ByteCode.h"
 #include "AST.h"
 #include "Scanner.h"
 #include "SyntaxParser.h"
@@ -79,17 +80,18 @@ Funcs : Funcs Func
       | Func
       ;
 Func : FUNCTION ID '(' Opt_IDTuple ')' '{' Opt_Stmts '}' {
-        auto func = new ASTFunction();
-        GlobalEnvironment::instance()->registerFunc($2.term, FunctionPtr(func));
         auto block = new StmtNode_Block();
-        func->stmt.reset(block);
+        StmtNodePtr stmt(block);
+        int argc = 0;
         for (auto &exp: static_cast<ExpNode_Container*>($4.exp.get())->toExpList()) {
             auto v = static_cast<ExpNode_Variable*>(exp.get());
             block->stmts.push_back(StmtNodePtr(new StmtNode_Local(v->name)));
-            ++func->argc;
+            ++argc;
         }
         auto v = static_cast<StmtNode_Container*>($7.stmt.get())->toStmtList();
         block->stmts.insert(block->stmts.end(), v.begin(), v.end());
+        GlobalEnvironment::instance()->registerFunc($2.term, FunctionPtr(
+            new ByteCodeFunction(argc, new ByteCodeSeq(stmt))));
      }
      ;
 

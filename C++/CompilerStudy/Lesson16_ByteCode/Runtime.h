@@ -3,9 +3,6 @@
 
 #include "pch.h"
 
-struct IStmtNode;
-typedef shared_ptr<IStmtNode> StmtNodePtr;
-
 class Value
 {
 public:
@@ -25,9 +22,15 @@ public:
         m_type(o.m_type), m_value(o.m_value)
     {
         if (m_type == T_String) {
-            m_value.str = new char[strlen(m_value.str) + 1];
+            m_value.str = (char*)malloc(strlen(m_value.str) + 1);
             strcpy(m_value.str, o.m_value.str);
         }
+    }
+    Value(Value&& o):
+        m_type(o.m_type), m_value(o.m_value)
+    {
+        o.m_type = T_Null;
+        o.m_value.i = 0;
     }
     Value& operator = (const Value& o)
     {
@@ -35,9 +38,15 @@ public:
         swap(t);
         return *this;
     }
+    Value& operator = (Value&& o)
+    {
+        Value t(std::forward<Value&&>(o));
+        swap(t);
+        return *this;
+    }
     ~Value()
     {
-        if (m_type == T_String) delete[] m_value.str;
+        if (m_type == T_String) free(m_value.str);
     }
 
     bool operator == (const Value& o) const
@@ -55,6 +64,10 @@ public:
                 return false;
         }
     }
+    bool operator != (const Value& o) const
+    {
+        return !(*this == o);
+    }
     bool operator < (const Value& o) const
     {
         if (m_type != o.m_type) return false;
@@ -70,52 +83,67 @@ public:
                 return false;
         }
     }
-    Value operator + (const Value& o) const
+    bool operator > (const Value& o) const
+    {
+        return o < *this;
+    }
+    bool operator <= (const Value& o) const
+    {
+        return !(*this > o);
+    }
+    bool operator >= (const Value& o) const
+    {
+        return !(*this < o);
+    }
+
+    Value& operator += (const Value& o)
     {
         if (m_type == T_String) {
-            return createString(string(m_value.str) + o.toString());
+            string r = o.toString();
+            m_value.str = (char*)realloc(m_value.str, strlen(m_value.str) + r.size() + 1);
+            strcat(m_value.str, r.c_str());
         }
         else if (m_type == T_Int) {
             ASSERT(o.m_type == T_Int);
-            return createInt(m_value.i + o.m_value.i);
+            m_value.i += o.m_value.i;
         }
-        else {
-            ASSERT(0);
-            return Value();
-        }
+        else ASSERT(0);
+        return *this;
     }
-    Value operator - (const Value& o) const
+    Value& operator -= (const Value& o)
     {
         ASSERT(m_type == T_Int && o.m_type == T_Int);
-        return createInt(m_value.i - o.m_value.i);
+        m_value.i -= o.m_value.i;
+        return *this;
     }
-    Value operator * (const Value& o) const
+    Value& operator *= (const Value& o)
     {
         if (m_type == T_String) {
+            ASSERT(o.m_type == T_Int);
             string r = m_value.str;
+            m_value.str = (char*)realloc(m_value.str, r.size() * o.m_value.i + 1);
             for (int i = 1; i < o.m_value.i; ++i) {
-                r += m_value.str;
+                strcat(m_value.str, r.c_str());
             }
-            return createString(r);
         }
         else if (m_type == T_Int) {
             ASSERT(o.m_type == T_Int);
-            return createInt(m_value.i * o.m_value.i);
+            m_value.i *= o.m_value.i;
         }
-        else {
-            ASSERT(0);
-            return Value();
-        }
+        else ASSERT(0);
+        return *this;
     }
-    Value operator / (const Value& o) const
+    Value& operator /= (const Value& o)
     {
         ASSERT(m_type == T_Int && o.m_type == T_Int);
-        return createInt(m_value.i / o.m_value.i);
+        m_value.i /= o.m_value.i;
+        return *this;
     }
-    Value operator % (const Value& o) const
+    Value& operator %= (const Value& o)
     {
         ASSERT(m_type == T_Int && o.m_type == T_Int);
-        return createInt(m_value.i % o.m_value.i);
+        m_value.i %= o.m_value.i;
+        return *this;
     }
 
     void swap(Value& o)
@@ -147,12 +175,18 @@ public:
         ASSERT(m_type == T_Int);
         return m_value.i != 0;
     }
+    Value& _not()
+    {
+        ASSERT(m_type == T_Int);
+        m_value.i = !m_value.i;
+        return *this;
+    }
 
     static Value createString(const string& s)
     {
         Value v;
         v.m_type = T_String;
-        v.m_value.str = new char[s.size() + 1];
+        v.m_value.str = (char*)malloc(s.size() + 1);
         strcpy(v.m_value.str, s.c_str());
         return v;
     }
@@ -177,10 +211,33 @@ private:
         int i;
     }m_value;
 };
+inline Value operator + (const Value& l, const Value& r)
+{
+    return Value(l) += r;
+}
+inline Value operator - (const Value& l, const Value& r)
+{
+    return Value(l) -= r;
+}
+inline Value operator * (const Value& l, const Value& r)
+{
+    return Value(l) *= r;
+}
+inline Value operator / (const Value& l, const Value& r)
+{
+    return Value(l) /= r;
+}
+inline Value operator % (const Value& l, const Value& r)
+{
+    return Value(l) %= r;
+}
 
-struct IFunction;
+struct IFunction
+{
+    virtual ~IFunction(){}
+    virtual Value call(const vector<Value>& args) = 0;
+};
 typedef shared_ptr<IFunction> FunctionPtr;
-
 class GlobalEnvironment
 {
 public:
@@ -189,93 +246,65 @@ public:
         static GlobalEnvironment s_ins;
         return &s_ins;
     }
-    const Value& getValue(const string& name) { return m_vars[name]; }
-    void setValue(const string& name, const Value& val){ m_vars[name] = val;}
-    const FunctionPtr& getFunc(const string& name) { return m_funcMap[name]; }
-    void registerFunc(const string& name, const FunctionPtr& func) 
+    void registerFunc(const string& name, FunctionPtr func)
     {
         ASSERT(m_funcMap.count(name) == 0);
         m_funcMap[name] = func;
     }
-    vector<string> getFuncNames() const 
+    const FunctionPtr& getFunc(const string& name)
     {
-        vector<string> r;
-        for (auto &p : m_funcMap) r.push_back(p.first);
-        return r;
+        return m_funcMap[name];
     }
 private:
     GlobalEnvironment(){}
 private:
-    map<string, Value> m_vars;
     map<string, FunctionPtr> m_funcMap;
 };
+
 class StackFrame
 {
 public:
-    void beginBlock()
+    StackFrame(const vector<Value>& args): m_locals(args), ip(0){}
+    Value& local(int i)
     {
-        m_blocks.push_back(map<string, Value>());
-    }
-    void endBlock()
-    {
-        m_blocks.pop_back();
-    }
-    void declareLocal(const string& name)
-    {
-        m_blocks.back()[name] = Value();
-    }
-    void setValue(const string& name, const Value& val)
-    {
-        for (int i = (int)m_blocks.size() - 1; i >= 0; --i) {
-            auto iter = m_blocks[i].find(name);
-            if (iter != m_blocks[i].end())  {
-                iter->second = val;
-                return;
-            }
+        if (i >= m_locals.size()) {
+            m_locals.resize(i + 1);
         }
-        GlobalEnvironment::instance()->setValue(name, val);
+        return m_locals[i];
     }
-    const Value& getValue(const string& name)
-    {
-        for (int i = (int)m_blocks.size() - 1; i >= 0; --i) {
-            auto iter = m_blocks[i].find(name);
-            if (iter != m_blocks[i].end())  {
-                return iter->second;
-            }
-        }
-        return GlobalEnvironment::instance()->getValue(name);
-    }
+    int ip;
+    Value retValue;
+    vector<Value> evalStack;
 private:
-    vector<map<string, Value> > m_blocks;
+    vector<Value> m_locals;
 };
 
-struct IFunction
-{
-    virtual ~IFunction(){}
-    virtual Value call(const vector<Value>& args) = 0;
-};
 class CFunction:
     public IFunction
 {
-public:
-    typedef Value (*FuncT)(const vector<Value>& args);
-    CFunction(FuncT f): func(f){}
 private:
+    typedef Value(*FuncT)(const vector<Value>& args);
+public:
+    CFunction(FuncT f): m_func(f){}
     virtual Value call(const vector<Value>& args)
     {
-        return func(args);
+        return m_func(args);
     }
-    FuncT func;
+private:
+    FuncT m_func;
 };
-class ASTFunction:
+
+class ByteCodeSeq;
+class ByteCodeFunction:
     public IFunction
 {
 public:
-    ASTFunction(): argc(0){}
-    StmtNodePtr stmt;
-    int argc;
-private:
+    ByteCodeFunction(int argc, ByteCodeSeq *seq): m_seq(seq), m_argc(argc){}
+    ~ByteCodeFunction();
     virtual Value call(const vector<Value>& args);
+private:
+    ByteCodeSeq *m_seq;
+    int m_argc;
 };
 
 #endif
