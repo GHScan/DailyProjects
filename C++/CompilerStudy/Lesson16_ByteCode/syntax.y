@@ -256,7 +256,7 @@ Term : STRING { $$ = new ExpNode_Constant(Value::createString($1.term)); }
             $$ = new ExpNode_Assign($2.term, 
                 ExpNodePtr(new ExpNode_BinaryOp($1.term.substr(1), 
                     ExpNodePtr(new ExpNode_Variable($2.term)), 
-                    ExpNodePtr(new ExpNode_Constant(Value::createInt(1))))));
+                    ExpNodePtr(new ExpNode_Constant(Value::INT_1)))));
         }
         else ASSERT(0);
      }

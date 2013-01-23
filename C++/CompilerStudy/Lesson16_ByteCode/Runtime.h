@@ -70,18 +70,20 @@ public:
     }
     bool operator < (const Value& o) const
     {
-        if (m_type != o.m_type) return false;
-        switch (m_type) {
-            case T_String:
-                return strcmp(m_value.str, o.m_value.str) < 0;
-            case T_Int:
-                return m_value.i < o.m_value.i;
-            case T_Null:
-                return false;
-            default:
-                ASSERT(0);
-                return false;
+        if (m_type == o.m_type) {
+            switch (m_type) {
+                case T_String:
+                    return strcmp(m_value.str, o.m_value.str) < 0;
+                case T_Int:
+                    return m_value.i < o.m_value.i;
+                case T_Null:
+                    return false;
+                default:
+                    ASSERT(0);
+                    return false;
+            }
         }
+        return m_type < o.m_type;
     }
     bool operator > (const Value& o) const
     {
@@ -204,6 +206,8 @@ public:
         v.m_value.i = b ? 1 : 0;
         return v;
     }
+    static Value INT_0;
+    static Value INT_1;
 private:
     Type m_type;
     union {
@@ -255,6 +259,12 @@ public:
     {
         return m_funcMap[name];
     }
+    vector<string> getFuncNames() const
+    {
+        vector<string> r;
+        for (auto &p : m_funcMap) r.push_back(p.first);
+        return r;
+    }
 private:
     GlobalEnvironment(){}
 private:
@@ -301,6 +311,7 @@ class ByteCodeFunction:
 public:
     ByteCodeFunction(int argc, ByteCodeSeq *seq): m_seq(seq), m_argc(argc){}
     ~ByteCodeFunction();
+    const ByteCodeSeq* getCodeSeq() const { return m_seq; }
     virtual Value call(const vector<Value>& args);
 private:
     ByteCodeSeq *m_seq;

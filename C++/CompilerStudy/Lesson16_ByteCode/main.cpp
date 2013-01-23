@@ -7,6 +7,9 @@
 #include "Runtime.h"
 #include "ByteCode.h"
 
+Value Value::INT_0 = Value::createInt(0);
+Value Value::INT_1 = Value::createInt(1);
+
 ByteCodeFunction::~ByteCodeFunction()
 {
     delete m_seq;
@@ -43,6 +46,18 @@ void registerBuildin()
     g->registerFunc("clock", FunctionPtr(new CFunction(&buildin_clock)));
 }
 
+void disassemblyAll(const string& fname)
+{
+    ofstream fo(fname.c_str());
+    GlobalEnvironment* g = GlobalEnvironment::instance();
+    for (auto fname : g->getFuncNames()) {
+        if (ByteCodeFunction *f = dynamic_cast<ByteCodeFunction*>(g->getFunc(fname).get())) {
+            fo << "Func - " << fname << ":\n";
+            f->getCodeSeq()->disassembly(fo);
+        }
+    }
+}
+
 void parseFile(const char *fname);
 
 int main(int argc, char *argv[])
@@ -56,6 +71,7 @@ int main(int argc, char *argv[])
     {
         registerBuildin();
         for (int i = 1; i < argc; ++i) parseFile(argv[i]);
+        disassemblyAll("disall.txt");
         GlobalEnvironment::instance()->getFunc("main")->call(vector<Value>());
     }
     catch (const exception& e) {

@@ -52,7 +52,7 @@ public:
     int getLocal(const string& name)
     {
         int r = -1;
-        for (int i = m_blockNames.size() - 1; i >= 0; --i) {
+        for (int i = (int)m_blockNames.size() - 1; i >= 0; --i) {
             if (m_blockNames[i].count(name)) {
                 r = m_blockNames[i][name];
                 break;
@@ -104,7 +104,7 @@ struct ByteCodeOp<EBC_ClearEvalStack>
     }
     static void disassembly(int code, ostream& so)
     {
-        so << format("ClearLocal") << endl;
+        so << format("clearLocal");
     }
 };
 template<>
@@ -118,12 +118,12 @@ struct ByteCodeOp<EBC_Jump>
     static void execute(int code, StackFrame *frame)
     {
         int ip = code & 0xffffff;
-        frame->ip = ip;
+        frame->ip = ip - 1;
     }
     static void disassembly(int code, ostream& so)
     {
         int ip = code & 0xffffff;
-        so << format("Jump %d", ip) << endl;
+        so << format("jump %d", ip);
     }
 };
 template<>
@@ -140,12 +140,12 @@ struct ByteCodeOp<EBC_NJump>
         auto& evalStack = frame->evalStack;
         bool b = evalStack.back().toBoolean();
         evalStack.pop_back();
-        if (b) frame->ip = ip;
+        if (b) frame->ip = ip - 1;
     }
     static void disassembly(int code, ostream& so)
     {
         int ip = code & 0xffffff;
-        so << format("NJump %d", ip) << endl;
+        so << format("njump %d", ip);
     }
 };
 template<>
@@ -162,7 +162,7 @@ struct ByteCodeOp<EBC_SetReturn>
     }
     static void disassembly(int code, ostream& so)
     {
-        so << format("SetReturn") << endl;
+        so << format("setReturn");
     }
 };
 template<>
@@ -184,7 +184,7 @@ struct ByteCodeOp<EBC_WriteLocal>
     static void disassembly(int code, ostream& so)
     {
         int ID = code & 0xffffff;
-        so << format("WriteLocal %d", ID) << endl;
+        so << format("writeLocal %d", ID);
     }
 };
 template<>
@@ -205,7 +205,7 @@ struct ByteCodeOp<EBC_ReadLocal>
     static void disassembly(int code, ostream& so)
     {
         int ID = code & 0xffffff;
-        so << format("ReadLocal %d", ID) << endl;
+        so << format("readLocal %d", ID);
     }
 };
 template<>
@@ -225,7 +225,7 @@ struct ByteCodeOp<EBC_ReadConstant>
     static void disassembly(int code, ostream& so)
     {
         int ID = code & 0xffffff;
-        so << format("ReadConstant %s", ConstantTable::instance()->get(ID).toString().c_str()) << endl;
+        so << format("readConstant %s", ConstantTable::instance()->get(ID).toString().c_str());
     }
 };
 template<>
@@ -280,7 +280,7 @@ struct ByteCodeOp<EBC_ArithmeticOp>
     static void disassembly(int code, ostream& so)
     {
         int op = code & 0xffffff;
-        so << format("Arithmetic %s", op2string(op).c_str()) << endl;
+        so << format("arithmetic %s", op2string(op).c_str());
     }
 };
 template<>
@@ -341,7 +341,7 @@ struct ByteCodeOp<EBC_RelationOp>
     static void disassembly(int code, ostream& so)
     {
         int op = code & 0xffffff;
-        so << format("RelationOp %s", op2string(op).c_str()) << endl;
+        so << format("relationOp %s", op2string(op).c_str());
     }
 };
 template<>
@@ -357,7 +357,7 @@ struct ByteCodeOp<EBC_Not>
     }
     static void disassembly(int code, ostream& so)
     {
-        so << format("Not") << endl;
+        so << format("not");
     }
 };
 template<>
@@ -368,7 +368,7 @@ struct ByteCodeOp<EBC_Call>
         int ID = ConstantTable::instance()->add(Value::createString(name));
         ASSERT(ID < (1 << 16));
         ASSERT(argc < (1 << 8));
-        return (EBC_Call << 24) | (ID << 16) | argc;
+        return (EBC_Call << 24) | (ID << 8) | argc;
     }
     static void execute(int code, StackFrame *frame)
     {
@@ -388,7 +388,7 @@ struct ByteCodeOp<EBC_Call>
     {
         int ID = (code >> 8) & 0xffff;
         int argc = code & 0xff;
-        so << format("Call %s, %d", ConstantTable::instance()->get(ID).toString().c_str(), argc) << endl;
+        so << format("call %s, %d", ConstantTable::instance()->get(ID).toString().c_str(), argc);
     }
 };
 
@@ -411,7 +411,7 @@ struct ByteCodeOp<EBC_Push>
     static void disassembly(int code, ostream& so)
     {
         int off = -(code & 0xffffff);
-        so << format("Push %d", off) << endl;
+        so << format("push %d", off);
     }
 };
 
@@ -432,7 +432,7 @@ struct ByteCodeOp<EBC_Pop>
     static void disassembly(int code, ostream& so)
     {
         int n = code & 0xffffff;
-        so << format("Pop %d", n) << endl;
+        so << format("pop %d", n);
     }
 };
 //////////
@@ -592,7 +592,7 @@ l_continue:
             jump l1
 l_break: 
          */
-        int jump_l1, njump_l2, jump_break;
+        int njump_l2, jump_break;
         if (node->s1) {
             (ExpNodeVisitor_CodeEmittor(m_codes, m_symTable, node->s1));
             EMIT0(EBC_ClearEvalStack);
@@ -602,7 +602,7 @@ l_break:
             ExpNodeVisitor_CodeEmittor(m_codes, m_symTable, node->s2);
         }
         else {
-            EMIT(EBC_ReadConstant, Value::createInt(1));
+            EMIT(EBC_ReadConstant, Value::INT_1);
         }
         PRE_EMIT(njump_l2);
         PRE_EMIT(jump_break);
@@ -680,9 +680,11 @@ ByteCodeSeq::ByteCodeSeq(StmtNodePtr stmt)
     SymbolTable symTable;
     StmtNodeVisitor_CodeEmittor(m_codes, &symTable, stmt);
 }
-void ByteCodeSeq::disassembly(ostream& so)
+void ByteCodeSeq::disassembly(ostream& so) const
 {
-    for (auto code : m_codes) {
+    for (int ip = 0; ip < (int)m_codes.size(); ++ip) {
+        so << format("\t%-3d : ", ip);
+        auto code = m_codes[ip];
         switch (code >> 24) {
             case EBC_ClearEvalStack: ByteCodeOp<EBC_ClearEvalStack>::disassembly(code, so); break;
             case EBC_Jump: ByteCodeOp<EBC_Jump>::disassembly(code, so); break;
@@ -699,6 +701,7 @@ void ByteCodeSeq::disassembly(ostream& so)
             case EBC_Pop: ByteCodeOp<EBC_Pop>::disassembly(code, so); break;
             default: ASSERT(0);
         }
+        so << endl;
     }
 }
 void ByteCodeSeq::run(StackFrame* frame)
@@ -721,5 +724,6 @@ void ByteCodeSeq::run(StackFrame* frame)
             case EBC_Pop: ByteCodeOp<EBC_Pop>::execute(code, frame); break;
             default: ASSERT(0);
         }
+        ++frame->ip;
     }
 }

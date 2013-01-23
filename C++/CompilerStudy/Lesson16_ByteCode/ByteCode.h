@@ -9,7 +9,7 @@ class ByteCodeSeq
 {
 public:
     ByteCodeSeq(StmtNodePtr stmt);
-    void disassembly(ostream& so);
+    void disassembly(ostream& so) const;
     void run(StackFrame* frame);
 private:
     vector<int> m_codes;

@@ -1,4 +1,3 @@
-use_cpp0x=1
 build_dll=0
 macro_defs=
 include_dirs=
