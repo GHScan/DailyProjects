@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <time.h>
+#include <string.h>
 
 #include <iostream>
 #include <algorithm>

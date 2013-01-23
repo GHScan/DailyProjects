@@ -435,14 +435,11 @@ void LALRParser::build()
     map<LR1Point, set<LR1Point> > point2Points;
     set<LR1Point> unhandled;
 
-    // TODO - calc point2Terms, point2Points
     for (int state = 0; state < (int)LR0Family.ID2Collection.size(); ++state) {
         for (auto item : LR0Family.ID2Collection[state]) {
             LR1Point pt0(state, item.productID, item.pos);
             LR1ItemCollection col;
-            {
-                closureLR1Item(LR1Item(item.productID, item.pos, ESS_Term_End), col);
-            }
+            closureLR1Item(LR1Item(item.productID, item.pos, ESS_Term_End), col);
             for (auto _item : col) {
                 if (isImportantLR0Item(_item.productID, _item.pos)) {
                     LR1Point pt1(state, _item.productID, _item.pos);
