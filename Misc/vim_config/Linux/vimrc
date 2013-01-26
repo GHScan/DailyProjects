@@ -14,7 +14,10 @@ set expandtab
 set textwidth=76            "行宽；如果不显示行号的话，设为78
 set formatoptions+=Mm       "支持中文字符；结合上个选项，可以用gq格式化中文文章
 
+set guifont=Ubuntu\ Mono\ 12
+
 set completeopt=menu,longest,preview
+
 filetype plugin indent on
 
 nnoremap <silent><F2>   :nohlsearch<CR>
