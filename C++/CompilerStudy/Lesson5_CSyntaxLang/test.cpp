@@ -368,7 +368,7 @@ int main()
 {
     try{
         GlobalEnvironment g;
-        parseFile("1.txt", g);
+        parseFile("source.js", g);
         registerBuildinFunctions(g);
         runMain(g);
     }
