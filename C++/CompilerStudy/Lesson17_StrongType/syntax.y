@@ -1,15 +1,20 @@
 %{
-#include "lex.yy.c_"
 
 #ifdef _MSC_VER
 #pragma warning(disable : 4065)
 #endif
 
+#define YYSTYPE string
+extern set<string> g_userDefineTypes;
+#include "lex.yy.c_"
 
 %}
 
-%token IF FOR WHILE DO BREAK CONTINUE RETURN T_STRING T_INT TRUE FALSE STRUCT
-%token INT STRING ID
+%token SWITCH IF FOR WHILE DO BREAK CONTINUE RETURN STRUCT CASE DEFAULT
+%token TRUE FALSE
+%token T_VOID T_INT T_CHAR
+%token T_ADT
+%token INT LITERAL ID
 
 %nonassoc LOWER_THAN_ELSE
 %nonassoc ELSE
@@ -17,16 +22,16 @@
 %left LOG_OP 
 %left REL_OP
 %left ADD_OP
-%left MUL_OP
-%nonassoc NOT_OP
-%nonassoc INC_OP
+%left STAR_OP DIV_OP MOD_OP
+%nonassoc NOT_OP INC_OP
+%nonassoc POINTER_AFIELD_OP AFIELD_OP
 
 %%
 
-Program : Program TopMost
-        | TopMost
+Program : Program GlobalDefine
+        | GlobalDefine
         ;
-TopMost : Struct
+GlobalDefine : Struct
         | Func
         ;
 
@@ -36,14 +41,20 @@ Fields: Fields Field
 Field: Declare ';'
      ;
 
-Struct : STRUCT ID '{' Fields '}' ';'
+Struct : STRUCT ID '{' Fields '}' ';' {
+       g_userDefineTypes.insert($2);
+       }
        ;
-Func : Type ID '(' Opt_DeclareList ')' '{' Stmts '}'
+Func : SingleType ID '(' Opt_DeclareList ')' '{' Opt_Stmts '}' 
 
+Opt_Stmts: Stmts
+         |
+         ;
 Stmts : Stmts Stmt
       |  Stmt
       ;
-Stmt : DeclareMul ';'
+Stmt : Define
+     | Switch
      | '{' Stmts '}'
      | Opt_Exp ';'
      | BREAK ';'
@@ -56,6 +67,18 @@ Stmt : DeclareMul ';'
      | FOR '(' Stmt Opt_Exp';' Opt_Exp ')' Stmt
     ;
 
+Switch : SWITCH '(' Exp ')' '{' CaseOrDefaultList '}'
+       ;
+CaseOrDefaultList: CaseOrDefaultList CaseOrDefault
+                 | CaseOrDefault
+                 ;
+CaseOrDefault: Case
+             | Default
+             ;
+Case : CASE Constants ':' Opt_Stmts 
+     ;
+Default: DEFAULT ':' Opt_Stmts
+     ;
 
 ExpList : ExpList ',' Exp
      | Exp
@@ -83,7 +106,9 @@ Rel : Rel REL_OP Add
 Add : Add ADD_OP Mul
     | Mul
     ;
-Mul : Mul MUL_OP Term
+Mul : Mul STAR_OP Term
+    | Mul DIV_OP Term
+    | Mul MOD_OP Term
     | Term
     ;
 Term : '(' Exp ')'
@@ -92,27 +117,35 @@ Term : '(' Exp ')'
      | NOT_OP Term
      | ID
      | INT
-     | STRING
+     | LITERAL
      | TRUE
      | FALSE
      | ArrayAccess
-     | Unref
-     ;
-LVal : ID
-     | ArrayAccess
-     | Unref
+     | STAR_OP Term %prec NOT_OP
+     | '&' Term %prec NOT_OP
+     | '(' SingleType ')' Term %prec NOT_OP
+     | Term POINTER_AFIELD_OP ID
+     | Term AFIELD_OP ID 
      ;
 
-Unref : '*' Term
-      ;
+LVal : ID
+     | ArrayAccess
+     | STAR_OP Term
+     | Term POINTER_AFIELD_OP ID
+     | Term AFIELD_OP ID 
+     ;
+
 ArrayAccess : ArrayAccess '[' Exp ']'
            | ID '[' Exp ']'
            ;
  
-DeclareMul : DeclareMul_L ID
-         ;
-DeclareMul_L : Type 
-           | DeclareMul_L ID ','
+Define : Type InitVarList ';'
+       ;
+InitVarList : InitVarList ',' InitVar
+            | InitVar
+            ;
+InitVar : ID
+        | ID ASSIGN_OP Assign
         ;
 
 Opt_DeclareList : DeclareList
@@ -123,19 +156,30 @@ DeclareList : Declare
             ;
 Declare : Type ID
         ;
-Type : TermType 
-     | TermType '*'
-     | Array
+Type : SingleType 
+     | ArrayType
      ;
-Array : Array '[' INT ']'
-      | BuildinType '[' INT ']'
+ArrayType : ArrayType '[' INT ']'
+      | SingleType '[' INT ']'
       ;
-TermType : BuildinType
-     | ID
-     ;
-BuildinType : T_STRING
+SingleType: DecorateUserdefineType
+          | DecorateBuildinType
+          ;
+DecorateUserdefineType: UserdefineType
+                      | UserdefineType STAR_OP
+                      ;
+UserdefineType : T_ADT
+           ;
+DecorateBuildinType : BuildinType
+                    | BuildinType STAR_OP
+                    ;
+BuildinType : T_CHAR
             | T_INT
+            | T_VOID
             ;
+Constants: LITERAL
+         | INT
+         ;
 
 %%
 
@@ -154,3 +198,4 @@ void parseFile(const char *fname)
     }
 }
 
+set<string> g_userDefineTypes;
