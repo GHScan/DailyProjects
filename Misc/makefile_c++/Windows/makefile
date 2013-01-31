@@ -1,3 +1,5 @@
+.PHONY: all build rebuild rel_build rel_rebuild clean build_actions clean_actions
+all: build
 include makefile_var
 
 build_type = debug
@@ -44,9 +46,7 @@ all_deps = $(srcs:.cpp=.d)
 exist_deps = $(wildcard *.d)
 not_exist_deps = $(filter-out $(exist_deps),$(all_deps))
 
-.PHONY: all build rebuild rel_build rel_rebuild clean
-all: build
-build: $(target_file)
+build: build_actions $(target_file)
 rebuild: clean
 	$(MAKE) build
 rel_build:
@@ -54,7 +54,7 @@ rel_build:
 rel_rebuild: clean
 	$(MAKE) rel_build
 
-clean:
+clean: clean_actions
 	rm -f $(objs) $(all_deps)
 	rm -f $(temp_files) main.exe main.dll
 
