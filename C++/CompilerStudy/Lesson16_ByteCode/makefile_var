@@ -1,5 +1,19 @@
+use_cpp0x=1
 build_dll=0
 macro_defs=
 include_dirs=
 lib_dirs=
 lib_files=
+
+.PHONY: lex_gen yacc_gen
+
+build_actions: lex_gen yacc_gen
+yacc_gen: syntax.yy.cpp
+syntax.yy.cpp: yacc.py syntax.y 
+	python yacc.py syntax.y
+lex_gen: lex.yy.cpp
+lex.yy.cpp: lex.py lex.l
+	python lex.py lex.l
+
+clean_actions:
+	rm -f syntax.yy.* lex.yy.* CodeGen.h disall.txt
