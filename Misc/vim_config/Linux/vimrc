@@ -14,7 +14,7 @@ set expandtab
 set textwidth=76            "行宽；如果不显示行号的话，设为78
 set formatoptions+=Mm       "支持中文字符；结合上个选项，可以用gq格式化中文文章
 
-set guifont=Ubuntu\ Mono\ 12
+set guifont=Monaco\ 10
 
 set completeopt=menu,longest,preview
 
@@ -29,39 +29,6 @@ nnoremap <silent><F8>   :!./main<CR>
 :command CDC cd %:p:h
 
 set fileencodings=ucs-bom,utf-8,cp936,gb18030,big5,euc-jp,euc-kr,latin1
-
-" taglist插件的设置
-let Tlist_Auto_Highlight_Tag = 1    "自动高亮当前的tag
-let Tlist_Auto_Open = 0             "vim启动的时候自动打开taglist窗口
-let Tlist_Auto_Update = 1           "自动更新taglist
-let Tlist_Close_On_Select = 0       "当选择了一个tag时，自动关闭taglist窗口
-let Tlist_Compact_Format = 0        "0表示显示较少的信息
-"let Tlist_Ctags_Cmd = 'd:\tools\ctags.exe' "ctags的路径
-let Tlist_Display_Prototype = 1     "显示tag的原型
-let Tlist_Display_Tag_Scope = 1     "显示名空间
-let Tlist_Enable_Fold_Column = 1    "显示折叠图标
-let Tlist_Exit_OnlyWindow = 1       "只剩下taglist窗口时，退出
-let Tlist_File_Fold_Auto_Close = 0  "对于非活跃文件，自动关闭其折叠。因为启用了Tlist_Show_On_File选项，因此这里设为0
-let Tlist_GainFocus_On_ToggleOpen = 0 "taglist窗口打开时，焦点仍然在原窗口
-let Tlist_Highlight_Tag_On_BufEnter = 1 "当编辑窗口中光标位于一个tag上时，taglist滚动列表到该tag并高亮
-let Tlist_Inc_Winwidth = 0          "垂直taglist窗口打开时，vim窗口自动增宽这个值。ms-windows上必须为0。
-let Tlist_Max_Submenu_Items = 25    "如果tag数超过了这个值，将被放入多个子菜单中
-let Tlist_Max_Tag_Length = 10       "取头几个字符作为tag名
-let Tlist_Process_File_Always = 0   "即使taglist窗口已经关闭了，仍然处理文件
-let Tlist_Show_Menu = 0             "将当前文件的tag显示在菜单tags中。
-let Tlist_Show_One_File = 1         "只显示当前文件的tag
-let Tlist_Sort_Type = "order"       "tag排序的方式，name-按名称排序，order-按出现在文件中的顺序排序
-let Tlist_Use_Horiz_Window = 0      "使用水平taglist窗口
-let Tlist_Use_Right_Window = 0      "使用右边窗口
-let Tlist_Use_SingleClick = 0       "单击跳转到tag
-let Tlist_WinHeight = 10            "窗口高度
-let Tlist_WinWidth = 30             "窗口宽度
-
-" winmanager插件设置
-"let loaded_winmanager = 1  "如果不适用该插件，取消本行注释
-let g:winManagerWindowLayout = 'TagList|FileExplorer'   "|用于分组，组内的各窗口用,分割；不同的组可以同时显示，同一组任意时刻只能显示一个窗口
-let g:persistentBehaviour = 0   "只有winmanager的窗口是退出
-cnoremap <silent> wm WMToggle<cr>           "普通模式下的wm表示开关winmanager窗口
 
 "clang_complete 插件设置
 let clang_auto_select = 0 " 0-;1-自动选中第一项;2-自动选中第一项并插入
