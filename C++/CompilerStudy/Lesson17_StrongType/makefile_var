@@ -4,3 +4,17 @@ macro_defs=
 include_dirs=
 lib_dirs=
 lib_files=
+
+.PHONY: yacc_gen lex_gen
+
+build_actions: yacc_gen lex_gen
+yacc_gen: syntax.yy.c_
+syntax.yy.c_: syntax.y
+	bison -vdo syntax.yy.c_ syntax.y
+	printf '#include "pch.h"\n#include "syntax.yy.c_"' > syntax.yy.cpp
+lex_gen: lex.yy.c_
+lex.yy.c_: lex.l
+	flex -o lex.yy.c_ lex.l
+
+clean_actions:
+	rm -f syntax.yy.* lex.yy.*
