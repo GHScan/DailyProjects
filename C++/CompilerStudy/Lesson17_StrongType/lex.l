@@ -96,37 +96,48 @@ void onTokenFound();
     onTokenFound();
     return STRUCT;
 }
+"sizeof" {
+    return SIZEOF;
+}
 
 
 \"[^\"]*\" {
     onTokenFound();
+    yylval = string(yytext, yytext + yyleng);
     return LITERAL;
 }
 \-?[0-9]+ {
     onTokenFound();
+    yylval = string(yytext, yytext + yyleng);
     return INT;
 }
 [_a-zA-Z][_a-zA-Z0-9]* {
     onTokenFound();
     yylval = string(yytext, yytext + yyleng);
-    if (g_userDefineTypes.count(yylval) > 0) return T_ADT;
+    if (TypeSystem::instance()->getType(yylval.get<string>())) {
+        return T_ADT;
+    }
     return ID;
 }
 
 [\+\-\*\/\%]?\= {
     onTokenFound();
+    yylval = string(yytext, yytext + yyleng);
     return ASSIGN_OP;
 }
 "&&"|"||" {
     onTokenFound();
+    yylval = string(yytext, yytext + yyleng);
     return LOG_OP;
 }
 \<|\>|"!="|"=="|"<="|">=" {
     onTokenFound();
+    yylval = string(yytext, yytext + yyleng);
     return REL_OP;
 }
 [\+\-] {
     onTokenFound();
+    yylval = string(yytext, yytext + yyleng);
     return ADD_OP;
 }
 \* {
@@ -143,6 +154,7 @@ void onTokenFound();
 }
 "++"|"--" {
     onTokenFound();
+    yylval = string(yytext, yytext + yyleng);
     return INC_OP;
 }
 \! {

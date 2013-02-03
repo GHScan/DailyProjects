@@ -4,14 +4,21 @@
 #pragma warning(disable : 4065)
 #endif
 
-#define YYSTYPE string
-extern set<string> g_userDefineTypes;
+#include "AST.h"
+#include "Any.h"
+#include "SymbolTable.h"
+#include "TypeSystem.h"
+#define YYSTYPE Any
 #include "lex.yy.c_"
+
+typedef pair<IType*, string> DeclarePair;
+typedef vector<DeclarePair> DeclarePairVec;
 
 %}
 
 %token SWITCH IF FOR WHILE DO BREAK CONTINUE RETURN STRUCT CASE DEFAULT
 %token TRUE FALSE
+%token SIZEOF
 %token T_VOID T_INT T_CHAR
 %token T_ADT
 %token INT LITERAL ID
@@ -35,17 +42,38 @@ GlobalDefine : Struct
         | Func
         ;
 
-Fields: Fields Field
-      | Field
+Struct : STRUCT ID '{' Fields '}' ';' {
+            auto vec = $4.get<shared_ptr<DeclarePairVec> >();
+            StructType *type = new StructType();
+            SymbolTablePtr table(new SymbolTable(NULL));
+            for (int i = vec->size() - 1; i >= 0; --i) {
+                auto _type = (*vec)[i].first;
+                auto _fieldName = (*vec)[i].second;
+                type->fields.push_back(_type);
+                table->addSymbol(_fieldName, _type);
+            }
+            TypeSystem::instance()->addType($2.get<string>(), type);
+            SymbolTableManager::instance()->addTypeTable(type, table);
+       }
+       ;
+
+Fields: Fields Field {
+            auto p = $1.get<shared_ptr<DeclarePairVec> >();
+            $$ = p;
+            p->push_back($2.get<DeclarePair>());
+      }
+      | Field {
+            auto p = shared_ptr<DeclarePairVec>(new DeclarePairVec());
+            $$ = p;
+            p->push_back($1.get<DeclarePair>());
+        }
       ;
 Field: Declare ';'
      ;
 
-Struct : STRUCT ID '{' Fields '}' ';' {
-       g_userDefineTypes.insert($2);
-       }
-       ;
-Func : SingleType ID '(' Opt_DeclareList ')' '{' Opt_Stmts '}' 
+Func : SingleType ID '(' Opt_DeclareList ')' '{' Opt_Stmts '}'  {
+            auto args = $4.get<shared_ptr<DeclarePairVec> >();
+         }
 
 Opt_Stmts: Stmts
          |
@@ -112,6 +140,8 @@ Mul : Mul STAR_OP Term
     | Term
     ;
 Term : '(' Exp ')'
+     | SIZEOF '(' Exp ')'
+     | SIZEOF '(' Type ')'
      | Call
      | INC_OP ID
      | NOT_OP Term
@@ -149,36 +179,70 @@ InitVar : ID
         ;
 
 Opt_DeclareList : DeclareList
-                | 
+                | {
+                $$ = shared_ptr<DeclarePairVec>(new DeclarePairVec());
+                }
                 ;
-DeclareList : Declare 
-            | DeclareList ',' Declare
+DeclareList : Declare {
+                auto p = shared_ptr<DeclarePairVec>(new DeclarePairVec());
+                $$ = p;
+                p->push_back($1.get<DeclarePair>());
+            }
+            | DeclareList ',' Declare {
+                auto p = $1.get<shared_ptr<DeclarePairVec> >();
+                $$ = p;
+                p->push_back($3.get<DeclarePair>());
+            }
             ;
-Declare : Type ID
+Declare : Type ID {
+        $$ = DeclarePair($1.get<IType*>(), $2.get<string>());
+        }
         ;
+
 Type : SingleType 
      | ArrayType
      ;
-ArrayType : ArrayType '[' INT ']'
-      | SingleType '[' INT ']'
+ArrayType : ArrayType '[' INT ']' {
+          $$ = TypeSystem::instance()->getArray($1.get<IType*>(), atoi($3.get<string>().c_str()));
+          }
+      | SingleType '[' INT ']' {
+            $$ = TypeSystem::instance()->getArray($1.get<IType*>(), atoi($3.get<string>().c_str()));
+        }
       ;
 SingleType: DecorateUserdefineType
           | DecorateBuildinType
           ;
 DecorateUserdefineType: UserdefineType
-                      | UserdefineType STAR_OP
+                      | UserdefineType STAR_OP {
+                    $$ = TypeSystem::instance()->getPointer($1.get<IType*>());
+                }
                       ;
-UserdefineType : T_ADT
+UserdefineType : T_ADT {
+               $$ = TypeSystem::instance()->getType($1.get<string>());
+               }
            ;
 DecorateBuildinType : BuildinType
-                    | BuildinType STAR_OP
+                    | BuildinType STAR_OP {
+                    $$ = TypeSystem::instance()->getPointer($1.get<IType*>());
+                    }
                     ;
-BuildinType : T_CHAR
-            | T_INT
-            | T_VOID
+BuildinType : T_CHAR {
+            $$ = TypeSystem::instance()->getType("char");
+            }
+            | T_INT {
+            $$ = TypeSystem::instance()->getType("int");
+        }
+            | T_VOID {
+            $$ = TypeSystem::instance()->getType("void");
+        }
             ;
-Constants: LITERAL
-         | INT
+Constants: LITERAL {
+             $$ = ExpNodePtr(new ExpNode_ConstantString($1.get<string>()));
+         }
+         | INT {
+            $$ = new ExpNodePtr(new ExpNode_ConstantInt(
+                atoi($1.get<string>().c_str())));
+        }
          ;
 
 %%
@@ -198,4 +262,3 @@ void parseFile(const char *fname)
     }
 }
 
-set<string> g_userDefineTypes;
