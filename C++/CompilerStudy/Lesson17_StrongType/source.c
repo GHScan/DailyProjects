@@ -3,6 +3,7 @@
  *
  * */
 
+int g_i, g_i2 = 1;
 void test1_AndOr()
 {
     print("----------{ test1_AndOr : ");
@@ -37,7 +38,6 @@ void test2_While()
 void test3_switch()
 {
     int n = 0;
-    for (int i = 0; i <= 10; ++i) {
         switch (n) {
             case 0: case 2: case 4: case 6: case 8:
                 n -= i;
@@ -46,6 +46,8 @@ void test3_switch()
             default:
                 n -= i;
         }
+    for (int i; ; );
+    for (int i = 0; i <= 10; ++i) {
     }
     assert(n == -5);
 }

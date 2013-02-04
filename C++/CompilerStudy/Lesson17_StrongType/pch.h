@@ -36,6 +36,7 @@ class Exception:
 public:
     Exception(const string& s): m_s(s)
     {
+        assert(0);
     }
     ~Exception() throw(){}
     const char* what() const throw()

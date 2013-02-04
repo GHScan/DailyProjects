@@ -8,6 +8,7 @@
 #include "Any.h"
 #include "SymbolTable.h"
 #include "TypeSystem.h"
+#include "Runtime.h"
 #define YYSTYPE Any
 #include "lex.yy.c_"
 
@@ -18,6 +19,25 @@ typedef pair<string, ExpNodePtr> AssignPair;
 typedef vector<AssignPair> AssignPairVec;
 typedef shared_ptr<AssignPairVec> AssignPairVecPtr;
 typedef pair<IType*, AssignPairVecPtr> TypeAssignPairVecPtr;
+typedef pair<ExpNodePtr, StmtNodePtr> ExpStmtPair;
+typedef vector<ExpStmtPair> ExpStmtPairVec;
+typedef shared_ptr<ExpStmtPairVec> ExpStmtPairVecPtr;
+
+// TODO: Bug, if StmtNode_Container is exist in final AST...
+struct StmtNode_Container:
+    public IStmtNode
+{
+    vector<StmtNodePtr> stmts;
+    virtual void acceptVisitor(IStmtNodeVisitor *v) {}
+};
+static void insertIntoBlock(const StmtNodePtr &node, StmtNode_Block* block)
+{
+    if (node == NULL) return;
+    if (auto c = dynamic_cast<StmtNode_Container*>(node.get())) {
+        for (auto p : c->stmts) insertIntoBlock(p, block);
+    }
+    else block->stmts.push_back(node);
+}
 
 %}
 
@@ -45,7 +65,20 @@ Program : Program GlobalDefine
         ;
 GlobalDefine : Struct
         | Func
-        | Define
+        | Define {
+            auto typeVec = $1.get<TypeAssignPairVecPtr>();
+            auto type = typeVec.first;
+            auto vec = typeVec.second;
+            auto block = dynamic_cast<StmtNode_Block*>(GlobalEnvironment::instance()->getFuncPreMain()->getStmt().get());
+            auto table = SymbolTableManager::instance()->global();
+            for (auto nameExp : *vec) {
+                table->addSymbol(nameExp.first, type);
+            }
+            for (auto nameExp : *vec) {
+                block->stmts.push_back(StmtNodePtr(new StmtNode_Exp(ExpNodePtr(
+                    new ExpNode_Assign(ExpNodePtr(new ExpNode_Variable(nameExp.first)), nameExp.second)))));
+            }
+        }
         ;
 
 Struct : STRUCT ID '{' Fields '}' ';' {
@@ -78,30 +111,117 @@ Field: Declare ';'
      ;
 
 Func : Type ID '(' Opt_DeclareList ')' '{' Opt_Stmts '}'  {
-            // FIXME: Here should be SingleType not Type...
             auto args = $4.get<shared_ptr<DeclarePairVec> >();
+
+            auto block = new StmtNode_Block();
+            for (auto arg : *args) {
+                block->stmts.push_back(StmtNodePtr(new StmtNode_DefineLocal(arg.second, arg.first)));
+            }
+            insertIntoBlock($7.get<StmtNodePtr>(), block);
+
+            IType *type = NULL;
+            {
+                vector<IType*> argsT;
+                for (auto arg : *args) argsT.push_back(arg.first);
+                type = TypeSystem::instance()->getFunc($1.get<IType*>(), argsT);
+            }
+            GlobalEnvironment::instance()->registerFunction($2.get<string>(),
+                FunctionPtr(new ASTFunction(StmtNodePtr(block), type)));
          }
 
 Opt_Stmts: Stmts
-         |
+         | {
+        $$ = StmtNodePtr(new StmtNode_Container());
+        }
          ;
-Stmts : Stmts Stmt
-      |  Stmt
+Stmts : Stmts Stmt {
+        auto c = dynamic_cast<StmtNode_Container*>($1.get<StmtNodePtr>().get());
+        c->stmts.push_back($2.get<StmtNodePtr>());
+        $$ = $1;
+      }
+      |  Stmt {
+        auto c = new StmtNode_Container();
+        c->stmts.push_back($1.get<StmtNodePtr>());
+        $$ = StmtNodePtr(c);
+        }
       ;
-Stmt : Define
+Stmt : Define {
+        auto c = new StmtNode_Container();
+        StmtNodePtr p(c);
+        auto typeVec = $1.get<TypeAssignPairVecPtr>();
+        auto type = typeVec.first;
+        auto vec = typeVec.second;
+        for (auto nameExp : *vec) {
+            c->stmts.push_back(StmtNodePtr(new StmtNode_DefineLocal(nameExp.first, type)));
+        }
+        for (auto nameExp : *vec) {
+            if (nameExp.second) {
+                c->stmts.push_back(StmtNodePtr(new StmtNode_Exp(ExpNodePtr(
+                    new ExpNode_Assign(ExpNodePtr(new ExpNode_Variable(nameExp.first)), nameExp.second)))));
+            }
+        }
+        if (c->stmts.empty()) $$ = StmtNodePtr();
+        else $$ = p;
+     }
      | Switch
-     | '{' Stmts '}'
-     | Opt_Exp ';'
-     | BREAK ';'
-     | CONTINUE ';'
-     | RETURN Opt_Exp ';'
-     | IF '(' Exp ')' Stmt ELSE Stmt 
-     | IF '(' Exp ')' Stmt %prec LOWER_THAN_ELSE
-     | WHILE '(' Exp ')' Stmt
-     | DO Stmt WHILE '(' Exp ')' ';'
+     | '{' Opt_Stmts '}' {
+        auto block = new StmtNode_Block();
+        StmtNodePtr p(block);
+        insertIntoBlock($2.get<StmtNodePtr>(), block);
+        if (block->stmts.empty()) $$ = StmtNodePtr();
+        else $$ = p;
+    }
+     | Opt_Exp ';' {
+        auto exp = $1.get<ExpNodePtr>();
+        if (exp) $$ = StmtNodePtr(new StmtNode_Exp(exp));
+        else $$ = StmtNodePtr();
+    }
+     | BREAK ';' {
+        $$ = StmtNodePtr(new StmtNode_Break());
+    }
+     | CONTINUE ';' {
+        $$ = StmtNodePtr(new StmtNode_Continue());
+    }
+     | RETURN Opt_Exp ';' {
+        $$ = StmtNodePtr(new StmtNode_Return($2.get<ExpNodePtr>()));
+    }
+     | IF '(' Exp ')' Stmt ELSE Stmt {
+        $$ = StmtNodePtr(new StmtNode_IfElse(
+            $3.get<ExpNodePtr>(), $5.get<StmtNodePtr>(), $7.get<StmtNodePtr>()));
+    }
+     | IF '(' Exp ')' Stmt %prec LOWER_THAN_ELSE {
+        $$ = StmtNodePtr(new StmtNode_IfElse(
+            $3.get<ExpNodePtr>(), $5.get<StmtNodePtr>(), StmtNodePtr()));
+    }
+     | WHILE '(' Exp ')' Stmt {
+        $$ = StmtNodePtr(new StmtNode_For(
+            ExpNodePtr(), $3.get<ExpNodePtr>(), ExpNodePtr(), $5.get<StmtNodePtr>()));
+    }
+     | DO Stmt WHILE '(' Exp ')' ';' {
+        auto c = new StmtNode_Container();
+        c->stmts.push_back($2.get<StmtNodePtr>());
+        c->stmts.push_back(StmtNodePtr(new StmtNode_For(
+            ExpNodePtr(), $5.get<ExpNodePtr>(), ExpNodePtr(), $2.get<StmtNodePtr>())));
+        $$ = StmtNodePtr(c);
+    }
      | FOR '(' Stmt Opt_Exp';' Opt_Exp ')' Stmt {
-     $$ = StmtNodePtr(new StmtNode_For(
-         $3.get<StmtNodePtr>(), $4.get<ExpNodePtr>(), $6.get<ExpNodePtr>(), $8.get<StmtNodePtr>()));
+        auto stmt1 = $3.get<StmtNodePtr>();
+        if (auto define = dynamic_cast<StmtNode_Container*>(stmt1.get())) {
+            auto block = new StmtNode_Block();
+            insertIntoBlock(stmt1, block);
+            block->stmts.push_back(StmtNodePtr(new StmtNode_For(
+                ExpNodePtr(), $4.get<ExpNodePtr>(), $6.get<ExpNodePtr>(), $8.get<StmtNodePtr>())));
+            $$ = StmtNodePtr(block);
+        }
+        else {
+            auto exp1 = ExpNodePtr();
+            if (auto stmtExp = dynamic_cast<StmtNode_Exp*>(stmt1.get())) {
+                exp1 = stmtExp->exp;
+            }
+            else ASSERT(stmt1 == NULL);
+            $$ = StmtNodePtr(new StmtNode_For(
+                exp1, $4.get<ExpNodePtr>(), $6.get<ExpNodePtr>(), $8.get<StmtNodePtr>()));
+        }
      }
     ;
 
@@ -135,17 +255,58 @@ InitVal : ID {
         }
         ;
 
-Switch : SWITCH '(' Exp ')' '{' CaseOrDefaultList '}'
+Switch : SWITCH '(' Exp ')' '{' CaseOrDefaultList '}' {
+            auto stmt = new StmtNode_Switch($3.get<ExpNodePtr>());
+            StmtNodePtr lastBlock;
+            auto vec = $6.get<ExpStmtPairVecPtr>();
+            reverse(vec->begin(), vec->end());
+            for (auto p : *vec) {
+                auto block = new StmtNode_Block();
+                StmtNodePtr pblock(block);
+                insertIntoBlock(p.second, block);
+                if (block->stmts.empty()) {
+                    if (lastBlock == NULL) continue;
+                }
+                else lastBlock = pblock;
+
+                if (auto expInt = dynamic_cast<ExpNode_ConstantInt*>(p.first.get())) {
+                    stmt->caseMap[expInt->value] = lastBlock;
+                }
+                else if (auto expLiteral = dynamic_cast<ExpNode_ConstantLiteral*>(p.first.get())) {
+                    ASSERT(0);
+                }
+                else {
+                    ASSERT(stmt->defaultStmt == NULL);
+                    stmt->defaultStmt = lastBlock;
+                }
+            }
+            ASSERT(!stmt->caseMap.empty());
+            $$ = StmtNodePtr(stmt);
+       }
        ;
-CaseOrDefaultList: CaseOrDefaultList CaseOrDefault
-                 | CaseOrDefault
+CaseOrDefaultList: CaseOrDefaultList CaseOrDefault {
+                    auto p = $1.get<ExpStmtPairVecPtr>();
+                    p->push_back($2.get<ExpStmtPair>());
+                    $$ = p;
+                 }
+                 | CaseOrDefault {
+                auto p = ExpStmtPairVecPtr(new ExpStmtPairVec());
+                p->push_back($1.get<ExpStmtPair>());
+                $$ = p;
+                }
                  ;
 CaseOrDefault: Case
              | Default
              ;
-Case : CASE Constants ':' Opt_Stmts 
+Case : CASE Constants ':' Opt_Stmts {
+        $$ = ExpStmtPair($2.get<ExpNodePtr>(), $4.get<StmtNodePtr>());
+     }
      ;
-Default: DEFAULT ':' Opt_Stmts
+Default: DEFAULT ':' Opt_Stmts {
+        $$ = ExpStmtPair(
+            ExpNodePtr(new ExpNode_Variable("default")),
+            $3.get<StmtNodePtr>());
+       }
      ;
 
 Call: ID '(' Opt_ExpList ')' {
@@ -246,7 +407,7 @@ Term : '(' Exp ')' {
      }
      | LITERAL {
      auto s = $1.get<string>();
-     $$ = ExpNodePtr(new ExpNode_ConstantString(s.substr(1, s.size() - 2)));
+     $$ = ExpNodePtr(new ExpNode_ConstantLiteral(s.substr(1, s.size() - 2)));
      }
      | TRUE {
      $$ = ExpNodePtr(new ExpNode_ConstantInt(1));
@@ -359,10 +520,10 @@ BuildinType : T_CHAR {
             ;
 Constants: LITERAL {
              auto s = $1.get<string>();
-             $$ = ExpNodePtr(new ExpNode_ConstantString(s.substr(1, s.size() - 2)));
+             $$ = ExpNodePtr(new ExpNode_ConstantLiteral(s.substr(1, s.size() - 2)));
          }
          | INT {
-            $$ = new ExpNodePtr(new ExpNode_ConstantInt(
+            $$ = ExpNodePtr(new ExpNode_ConstantInt(
                 atoi($1.get<string>().c_str())));
         }
          ;

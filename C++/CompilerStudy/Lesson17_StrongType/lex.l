@@ -184,7 +184,7 @@ int yywrap()
 {
     return 1;
 }
-static int g_column, g_line = 1;
+int g_column, g_line = 1;
 void yyerror(const char *msg)
 {
     printf("sytnax error %d,%d : %s\n", g_line, g_column, msg);

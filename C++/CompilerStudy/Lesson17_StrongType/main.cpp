@@ -39,9 +39,9 @@ void registerFunctionSymbol(const string& name, RetT(*f)())
     TypeSystem* ts = TypeSystem::instance();
     IType *retT = CType2ScriptType<RetT>::get(ts);
     vector<IType*> argT = {};
-    SymbolTableManager::instance()->global()->addSymbol(name, ts->getFunc(retT, argT));
-    GlobalEnvironment::instance()->registerFunction(name, FunctionPtr(
-                new CFunction0<RetT>(f)));
+    IType *ftype = ts->getFunc(retT, argT);
+    SymbolTableManager::instance()->global()->addSymbol(name, ftype);
+    GlobalEnvironment::instance()->registerFunction(name, FunctionPtr(new CFunction0<RetT>(f, ftype)));
 }
 template<typename RetT, typename ArgT0>
 void registerFunctionSymbol(const string& name, RetT(*f)(ArgT0))
@@ -49,9 +49,9 @@ void registerFunctionSymbol(const string& name, RetT(*f)(ArgT0))
     TypeSystem* ts = TypeSystem::instance();
     IType *retT = CType2ScriptType<RetT>::get(ts);
     vector<IType*> argT = {CType2ScriptType<ArgT0>::get(ts)};
-    SymbolTableManager::instance()->global()->addSymbol(name, ts->getFunc(retT, argT));
-    GlobalEnvironment::instance()->registerFunction(name, FunctionPtr(
-                new CFunction1<RetT, ArgT0>(f)));
+    IType *ftype = ts->getFunc(retT, argT);
+    SymbolTableManager::instance()->global()->addSymbol(name, ftype);
+    GlobalEnvironment::instance()->registerFunction(name, FunctionPtr(new CFunction1<RetT, ArgT0>(f, ftype)));
 }
 template<typename RetT, typename ArgT0, typename ArgT1>
 void registerFunctionSymbol(const string& name, RetT(*f)(ArgT0, ArgT1))
@@ -59,9 +59,9 @@ void registerFunctionSymbol(const string& name, RetT(*f)(ArgT0, ArgT1))
     TypeSystem* ts = TypeSystem::instance();
     IType *retT = CType2ScriptType<RetT>::get(ts);
     vector<IType*> argT = {CType2ScriptType<ArgT0>::get(ts), CType2ScriptType<ArgT1>::get(ts)};
-    SymbolTableManager::instance()->global()->addSymbol(name, ts->getFunc(retT, argT));
-    GlobalEnvironment::instance()->registerFunction(name, FunctionPtr(
-                new CFunction2<RetT, ArgT0, ArgT1>(f)));
+    IType *ftype = ts->getFunc(retT, argT);
+    SymbolTableManager::instance()->global()->addSymbol(name, ftype);
+    GlobalEnvironment::instance()->registerFunction(name, FunctionPtr(new CFunction2<RetT, ArgT0, ArgT1>(f, ftype)));
 }
 
 static int buildin_clock()

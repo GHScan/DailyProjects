@@ -5,7 +5,7 @@
 struct IType;
 //////////
 struct ExpNode_ConstantInt ;
-struct ExpNode_ConstantString ;
+struct ExpNode_ConstantLiteral ;
 struct ExpNode_Variable ;
 struct ExpNode_Conversion ;
 struct ExpNode_BinaryOp ;
@@ -21,7 +21,7 @@ struct IExpNodeVisitor
 {
     virtual ~IExpNodeVisitor() {}
     virtual void visit(ExpNode_ConstantInt* node) = 0;
-    virtual void visit(ExpNode_ConstantString* node) = 0;
+    virtual void visit(ExpNode_ConstantLiteral* node) = 0;
     virtual void visit(ExpNode_Variable* node) = 0;
     virtual void visit(ExpNode_Conversion* node) = 0;
     virtual void visit(ExpNode_BinaryOp* node) = 0;
@@ -48,11 +48,11 @@ struct ExpNode_ConstantInt:
     ExpNode_ConstantInt(int v): value(v){}
     virtual void acceptVisitor(IExpNodeVisitor *v) { v->visit(this); }
 };
-struct ExpNode_ConstantString:
+struct ExpNode_ConstantLiteral:
     public IExpNode
 {
     string str;
-    ExpNode_ConstantString(const string& s): str(s){}
+    ExpNode_ConstantLiteral(const string& s): str(s){}
     virtual void acceptVisitor(IExpNodeVisitor *v) { v->visit(this); }
 };
 struct ExpNode_Variable:
@@ -267,11 +267,11 @@ struct StmtNode_Return:
 struct StmtNode_For:
     public IStmtNode
 {
-    StmtNodePtr s1;
+    ExpNodePtr s1;
     ExpNodePtr s2;
     ExpNodePtr s3;
     StmtNodePtr body;
-    StmtNode_For(const StmtNodePtr& _s1, const ExpNodePtr& _s2, const ExpNodePtr& _s3, const StmtNodePtr& _body): 
+    StmtNode_For(const ExpNodePtr& _s1, const ExpNodePtr& _s2, const ExpNodePtr& _s3, const StmtNodePtr& _body): 
         s1(_s1), s2(_s2), s3(_s3), body(_body){}
     virtual void acceptVisitor(IStmtNodeVisitor *v) { v->visit(this); }
 };

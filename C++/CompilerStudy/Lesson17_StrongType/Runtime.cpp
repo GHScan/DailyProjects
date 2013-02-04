@@ -2,6 +2,7 @@
 #include "pch.h"
 
 #include "AST.h"
+#include "TypeSystem.h"
 #include "Runtime.h"
 
 class ExpNodeVisitor_Eval:
@@ -16,7 +17,7 @@ private:
     virtual void visit(ExpNode_ConstantInt* node)
     {
     }
-    virtual void visit(ExpNode_ConstantString* node)
+    virtual void visit(ExpNode_ConstantLiteral* node)
     {
     }
     virtual void visit(ExpNode_Variable* node)
@@ -95,14 +96,24 @@ private:
     Thread *m_thread;
 };
 
-ASTFunction::ASTFunction(StmtNodePtr stmt):m_stmt(stmt){}
+ASTFunction::ASTFunction(StmtNodePtr stmt, IType *type):
+    m_stmt(stmt), m_type(type) {}
 void ASTFunction::call(Thread *thread)
 {
     StmtNodeVisitor_Executor visitor(thread, m_stmt);
 }
 
+GlobalEnvironment::GlobalEnvironment():
+    m_funcPreMain(new ASTFunction(
+                StmtNodePtr(new StmtNode_Block()), 
+                TypeSystem::instance()->getFunc(
+                    TypeSystem::instance()->getType("void"), vector<IType*>())))
+{
+}
+
 void run()
 {
     Thread mainThread;
+    GlobalEnvironment::instance()->getFuncPreMain()->call(&mainThread);
     GlobalEnvironment::instance()->getFunc("main")->call(&mainThread);
 }

@@ -44,6 +44,7 @@ struct IFunction
 {
     virtual ~IFunction(){}
     virtual void call(Thread* thread) = 0;
+    virtual IType* getType() = 0;
 };
 typedef shared_ptr<IFunction> FunctionPtr;
 
@@ -51,11 +52,13 @@ class ASTFunction:
     public IFunction
 {
 public:
-    ASTFunction(StmtNodePtr stmt);
-private:
+    ASTFunction(StmtNodePtr stmt, IType *type);
+    StmtNodePtr& getStmt() { return m_stmt; }
     virtual void call(Thread* thread);
+    virtual IType* getType(){ return m_type; }
 private:
     StmtNodePtr m_stmt;
+    IType *m_type;
 };
 
 template<typename RetT, typename ArgT0, typename ArgT1, typename ArgT2>
@@ -65,8 +68,7 @@ class CFunction3:
 private:
     typedef RetT(*FuncT)(ArgT0, ArgT1, ArgT2);
 public:
-    CFunction3(FuncT f): m_f(f){}
-private:
+    CFunction3(FuncT f, IType *type): m_f(f), m_type(type){}
     virtual void call(Thread* thread)
     {
         char *base = thread->frameBase();
@@ -75,8 +77,10 @@ private:
         char *arg2 = (ArgT1*)arg1 + 1;
         (RetT&)*base = m_f((ArgT0&)*arg0, (ArgT1&)*arg1, (ArgT2&)*arg2);
     }
+    virtual IType* getType(){ return m_type; }
 private:
     FuncT m_f;
+    IType *m_type;
 };
 template<typename RetT>
 class CFunction0:
@@ -85,15 +89,16 @@ class CFunction0:
 private:
     typedef RetT(*FuncT)();
 public:
-    CFunction0(FuncT f): m_f(f){}
-private:
+    CFunction0(FuncT f, IType *type): m_f(f), m_type(type){}
     virtual void call(Thread* thread)
     {
         char *base = thread->frameBase();
         (RetT&)*base = m_f();
     }
+    virtual IType* getType(){ return m_type; }
 private:
     FuncT m_f;
+    IType *m_type;
 };
 template<typename RetT, typename ArgT0>
 class CFunction1:
@@ -102,16 +107,17 @@ class CFunction1:
 private:
     typedef RetT(*FuncT)(ArgT0);
 public:
-    CFunction1(FuncT f): m_f(f){}
-private:
+    CFunction1(FuncT f, IType *type): m_f(f), m_type(type){}
     virtual void call(Thread* thread)
     {
         char *base = thread->frameBase();
         char *arg0 = (char*)((RetT*)base + 1);
         (RetT&)*base = m_f((ArgT0&)*arg0);
     }
+    virtual IType* getType(){ return m_type; }
 private:
     FuncT m_f;
+    IType *m_type;
 };
 template<typename RetT, typename ArgT0, typename ArgT1>
 class CFunction2:
@@ -120,8 +126,7 @@ class CFunction2:
 private:
     typedef RetT(*FuncT)(ArgT0, ArgT1);
 public:
-    CFunction2(FuncT f): m_f(f){}
-private:
+    CFunction2(FuncT f, IType *type): m_f(f), m_type(type){}
     virtual void call(Thread* thread)
     {
         char *base = thread->frameBase();
@@ -129,31 +134,31 @@ private:
         char *arg1 = (ArgT0*)arg0 + 1;
         (RetT&)*base = m_f((ArgT0&)*arg0, (ArgT1&)*arg1);
     }
+    virtual IType* getType(){ return m_type; }
 private:
     FuncT m_f;
+    IType *m_type;
 };
 
 class GlobalEnvironment
 {
 public:
-    GlobalEnvironment():
-        m_funcPreMain(StmtNodePtr(new StmtNode_Block()))
+    static GlobalEnvironment* instance()
     {
+        static GlobalEnvironment s_ins;
+        return &s_ins;
     }
+
+    GlobalEnvironment();
     void registerFunction(const string& name, FunctionPtr func)
     {
         ASSERT(m_funcs.count(name) == 0);
         m_funcs[name] = func;
     }
     FunctionPtr getFunc(const string& name) { return m_funcs[name]; }
-    static GlobalEnvironment* instance()
-    {
-        static GlobalEnvironment s_ins;
-        return &s_ins;
-    }
-    ASTFunction* getFuncPreMain() { return &m_funcPreMain; }
+    ASTFunction* getFuncPreMain() { return dynamic_cast<ASTFunction*>(m_funcPreMain.get()); }
 private:
-    ASTFunction m_funcPreMain;
+    FunctionPtr m_funcPreMain;
     map<string, FunctionPtr> m_funcs;
 };
 
