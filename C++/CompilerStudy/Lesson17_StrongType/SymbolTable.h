@@ -31,6 +31,18 @@ private:
 };
 typedef shared_ptr<SymbolTable> SymbolTablePtr;
 
+class SymbolTableStack
+{
+public:
+    void push();
+    void pop();
+
+    void addSymbol(const string& name, IType *type);
+    const SymbolDescrib* getSymbol(const string& name);
+private:
+    vector<SymbolTablePtr> m_stack;
+};
+
 class SymbolTableManager
 {
 public:
@@ -46,6 +58,7 @@ public:
     }
 
     const SymbolTablePtr& global() { return m_global;}
+    SymbolTableStack* stack() { return &m_stack;}
     void addTypeTable(IType *type, const SymbolTablePtr& table)
     {
         m_typeTables[type] = table;
@@ -53,19 +66,8 @@ public:
     const SymbolTablePtr& getTypeTable(IType *type) { return m_typeTables[type]; }
 private:
     SymbolTablePtr m_global;
+    SymbolTableStack m_stack;
     map<IType*, SymbolTablePtr> m_typeTables;
-};
-
-class SymbolTableStack
-{
-public:
-    void push();
-    void pop();
-
-    void addSymbol(const string& name, IType *type);
-    const SymbolDescrib* getSymbol(const string& name);
-private:
-    vector<SymbolTablePtr> m_stack;
 };
 
 #endif

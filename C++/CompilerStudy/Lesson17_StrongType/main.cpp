@@ -70,7 +70,7 @@ static int buildin_clock()
 }
 static int buildin_assert(int b)
 {
-    assert(b);
+    ASSERT(0);
 }
 static int buildin_print(int i)
 {

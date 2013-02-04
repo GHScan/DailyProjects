@@ -13,6 +13,7 @@
 
 typedef pair<IType*, string> DeclarePair;
 typedef vector<DeclarePair> DeclarePairVec;
+typedef vector<ExpNodePtr> ExpNodePtrVec;
 
 %}
 
@@ -40,6 +41,7 @@ Program : Program GlobalDefine
         ;
 GlobalDefine : Struct
         | Func
+        | Define
         ;
 
 Struct : STRUCT ID '{' Fields '}' ';' {
@@ -71,7 +73,8 @@ Fields: Fields Field {
 Field: Declare ';'
      ;
 
-Func : SingleType ID '(' Opt_DeclareList ')' '{' Opt_Stmts '}'  {
+Func : Type ID '(' Opt_DeclareList ')' '{' Opt_Stmts '}'  {
+            // FIXME: Here should be SingleType not Type...
             auto args = $4.get<shared_ptr<DeclarePairVec> >();
          }
 
@@ -95,6 +98,15 @@ Stmt : Define
      | FOR '(' Stmt Opt_Exp';' Opt_Exp ')' Stmt
     ;
 
+Define : Type InitVars ';'
+       ;
+InitVars : InitVars ',' InitVal
+         | InitVal
+         ;
+InitVal : ID
+        | ID ASSIGN_OP Assign
+        ;
+
 Switch : SWITCH '(' Exp ')' '{' CaseOrDefaultList '}'
        ;
 CaseOrDefaultList: CaseOrDefaultList CaseOrDefault
@@ -108,76 +120,162 @@ Case : CASE Constants ':' Opt_Stmts
 Default: DEFAULT ':' Opt_Stmts
      ;
 
-ExpList : ExpList ',' Exp
-     | Exp
-     ;
-Opt_ExpList : ExpList
-         | 
-         ;
-Call: ID '(' Opt_ExpList ')'
+Call: ID '(' Opt_ExpList ')' {
+    $$ = ExpNodePtr(new ExpNode_Call(
+        $1.get<string>(), *$3.get<shared_ptr<ExpNodePtrVec> >()));
+    }
     ; 
+Opt_ExpList : ExpList
+         | {
+             $$ = shared_ptr<ExpNodePtrVec>(new ExpNodePtrVec());
+         }
+         ;
+ExpList : ExpList ',' Exp {
+         auto p = $1.get<shared_ptr<ExpNodePtrVec> >();
+         $$ = p;
+         p->push_back($3.get<ExpNodePtr>());
+        }
+     | Exp {
+     auto p = shared_ptr<ExpNodePtrVec>(new ExpNodePtrVec());
+     $$ = p;
+     p->push_back($1.get<ExpNodePtr>());
+     }
+     ;
 
 Opt_Exp: Exp
-       |
+       | {
+       $$ = ExpNodePtr();
+       }
        ;
 Exp : Assign
     ;
-Assign : LVal ASSIGN_OP Assign
+Assign : LVal ASSIGN_OP Assign {
+       auto r = $3.get<ExpNodePtr>();
+       auto op = $2.get<string>();
+       if (op != "=") {
+           r = ExpNodePtr(new ExpNode_BinaryOp($1.get<ExpNodePtr>(), r, ExpNode_BinaryOp::string2op(op.substr(0, 1))));
+       }
+       $$ = ExpNodePtr(new ExpNode_Assign($1.get<ExpNodePtr>(), r));
+       }
        | Log
        ;
-Log : Log LOG_OP Rel
+Log : Log LOG_OP Rel {
+    $$ = ExpNodePtr(new ExpNode_BinaryOp(
+        $1.get<ExpNodePtr>(), 
+        $3.get<ExpNodePtr>(),
+        ExpNode_BinaryOp::string2op($2.get<string>())));
+    }
     | Rel
     ;
-Rel : Rel REL_OP Add
+Rel : Rel REL_OP Add {
+    $$ = ExpNodePtr(new ExpNode_BinaryOp(
+        $1.get<ExpNodePtr>(), 
+        $3.get<ExpNodePtr>(),
+        ExpNode_BinaryOp::string2op($2.get<string>())));
+    }
     | Add
     ;
-Add : Add ADD_OP Mul
+Add : Add ADD_OP Mul {
+    $$ = ExpNodePtr(new ExpNode_BinaryOp(
+        $1.get<ExpNodePtr>(), 
+        $3.get<ExpNodePtr>(),
+        ExpNode_BinaryOp::string2op($2.get<string>())));
+    }
     | Mul
     ;
-Mul : Mul STAR_OP Term
-    | Mul DIV_OP Term
-    | Mul MOD_OP Term
+Mul : Mul STAR_OP Term {
+    $$ = ExpNodePtr(new ExpNode_BinaryOp($1.get<ExpNodePtr>(), $3.get<ExpNodePtr>(), ExpNode_BinaryOp::BO_Mul));
+    }
+    | Mul DIV_OP Term {
+    $$ = ExpNodePtr(new ExpNode_BinaryOp($1.get<ExpNodePtr>(), $3.get<ExpNodePtr>(), ExpNode_BinaryOp::BO_Div));
+    }
+    | Mul MOD_OP Term  {
+    $$ = ExpNodePtr(new ExpNode_BinaryOp($1.get<ExpNodePtr>(), $3.get<ExpNodePtr>(), ExpNode_BinaryOp::BO_Mod));
+    }
     | Term
     ;
-Term : '(' Exp ')'
-     | SIZEOF '(' Exp ')'
-     | SIZEOF '(' Type ')'
-     | Call
-     | INC_OP ID
-     | NOT_OP Term
-     | ID
-     | INT
-     | LITERAL
-     | TRUE
-     | FALSE
+Term : '(' Exp ')' {
+     $$ = $2;
+     }
+     | SIZEOF '(' Exp ')' {
+     $$ = ExpNodePtr(new ExpNode_ConstantInt($3.get<ExpNodePtr>()->type->getSize()));
+     }
+     | SIZEOF '(' Type ')' {
+     $$ = ExpNodePtr(new ExpNode_ConstantInt($3.get<IType*>()->getSize()));
+     }
+     | Call 
+     | INC_OP ID {
+     auto id = ExpNodePtr(new ExpNode_Variable($2.get<string>()));
+     $$ = ExpNodePtr(new ExpNode_UnaryOp(id, ExpNode_UnaryOp::string2op($1.get<string>())));
+     }
+     | NOT_OP Term {
+     $$ = ExpNodePtr(new ExpNode_UnaryOp($2.get<ExpNodePtr>(), ExpNode_UnaryOp::UO_Not));
+     }
+     | ID {
+     $$ = ExpNodePtr(new ExpNode_Variable($1.get<string>()));
+     }
+     | INT {
+     $$ = ExpNodePtr(new ExpNode_ConstantInt(atoi($1.get<string>().c_str())));
+     }
+     | LITERAL {
+     auto s = $1.get<string>();
+     $$ = ExpNodePtr(new ExpNode_ConstantString(s.substr(1, s.size() - 2)));
+     }
+     | TRUE {
+     $$ = ExpNodePtr(new ExpNode_ConstantInt(1));
+     }
+     | FALSE {
+     $$ = ExpNodePtr(new ExpNode_ConstantInt(0));
+     }
      | ArrayAccess
-     | STAR_OP Term %prec NOT_OP
-     | '&' Term %prec NOT_OP
-     | '(' SingleType ')' Term %prec NOT_OP
-     | Term POINTER_AFIELD_OP ID
-     | Term AFIELD_OP ID 
+     | STAR_OP Term %prec NOT_OP {
+     $$ = ExpNodePtr(new ExpNode_Unref($2.get<ExpNodePtr>()));
+     }
+     | '&' Term %prec NOT_OP {
+     $$ = ExpNodePtr(new ExpNode_Addr($2.get<ExpNodePtr>()));
+     }
+     | '(' SingleType ')' Term %prec NOT_OP {
+     $$ = ExpNodePtr(new ExpNode_Conversion($4.get<ExpNodePtr>(), $2.get<IType*>()));
+     }
+     | Term POINTER_AFIELD_OP ID {
+     // TODO: assert pointer
+     $$ = ExpNodePtr(new ExpNode_Field($1.get<ExpNodePtr>(), $3.get<string>()));
+     }
+     | Term AFIELD_OP ID {
+     // TODO: assert not pointer
+     $$ = ExpNodePtr(new ExpNode_Field($1.get<ExpNodePtr>(), $3.get<string>()));
+     }
      ;
 
-LVal : ID
+LVal : ID {
+     $$ = ExpNodePtr(new ExpNode_Variable($1.get<string>()));
+     }
      | ArrayAccess
-     | STAR_OP Term
-     | Term POINTER_AFIELD_OP ID
-     | Term AFIELD_OP ID 
+     | STAR_OP Term {
+     $$ = ExpNodePtr(new ExpNode_Unref($2.get<ExpNodePtr>()));
+     }
+     | Term POINTER_AFIELD_OP ID {
+     // TODO: assert pointer
+     $$ = ExpNodePtr(new ExpNode_Field($1.get<ExpNodePtr>(), $3.get<string>()));
+     }
+     | Term AFIELD_OP ID {
+     // TODO: assert not pointer
+     $$ = ExpNodePtr(new ExpNode_Field($1.get<ExpNodePtr>(), $3.get<string>()));
+     }
      ;
 
-ArrayAccess : ArrayAccess '[' Exp ']'
-           | ID '[' Exp ']'
+ArrayAccess : ArrayAccess '[' Exp ']' {
+            $$ = ExpNodePtr(new ExpNode_ArrayElem(
+                $1.get<ExpNodePtr>(),
+                $3.get<ExpNodePtr>()));
+            }
+           | ID '[' Exp ']' {
+           $$ = ExpNodePtr(new ExpNode_ArrayElem(
+                ExpNodePtr(new ExpNode_Variable($1.get<string>())),
+                $3.get<ExpNodePtr>()));
+           }
            ;
  
-Define : Type InitVarList ';'
-       ;
-InitVarList : InitVarList ',' InitVar
-            | InitVar
-            ;
-InitVar : ID
-        | ID ASSIGN_OP Assign
-        ;
-
 Opt_DeclareList : DeclareList
                 | {
                 $$ = shared_ptr<DeclarePairVec>(new DeclarePairVec());
@@ -257,6 +355,7 @@ void parseFile(const char *fname)
         yyparse();
     } 
     catch (const exception&) {
+        yyerror("Parsing exception!");
         fclose(f);
         throw;
     }

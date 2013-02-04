@@ -57,14 +57,16 @@ struct ExpNode_ConstantString:
 struct ExpNode_Variable:
     public IExpNode
 {
-    const char *name;
-    ExpNode_Variable(const string& _name);
+    bool isGlobal;
+    int offset;
+    ExpNode_Variable(const string& name);
     virtual void acceptVisitor(IExpNodeVisitor *v) { v->visit(this); }
 };
 struct ExpNode_Conversion:
     public IExpNode
 {
     ExpNodePtr left;
+    ExpNode_Conversion(const ExpNodePtr& _left, IType* type);
     virtual void acceptVisitor(IExpNodeVisitor *v) { v->visit(this); }
 };
 struct ExpNode_BinaryOp:
@@ -87,8 +89,10 @@ struct ExpNode_BinaryOp:
         BO_And,
         BO_Or,
     };
+    static BinOp string2op(const string& str);
     BinOp op;
     ExpNodePtr left, right;
+    ExpNode_BinaryOp(const ExpNodePtr& _left, const ExpNodePtr& _right, BinOp _op);
     virtual void acceptVisitor(IExpNodeVisitor *v) { v->visit(this); }
 };
 struct ExpNode_UnaryOp:
@@ -97,28 +101,35 @@ struct ExpNode_UnaryOp:
     enum UnaryOp
     {
         UO_Not,
+        UO_Inc,
+        UO_Dec,
     };
+    static UnaryOp string2op(const string& str);
     UnaryOp op;
     ExpNodePtr left;
+    ExpNode_UnaryOp(const ExpNodePtr& _left, UnaryOp _op);
     virtual void acceptVisitor(IExpNodeVisitor *v) { v->visit(this); }
 };
 struct ExpNode_Addr:
     public IExpNode
 {
     ExpNodePtr left;
+    ExpNode_Addr(const ExpNodePtr& _left);
     virtual void acceptVisitor(IExpNodeVisitor *v) { v->visit(this); }
 };
 struct ExpNode_Unref:
     public IExpNode
 {
     ExpNodePtr left;
+    ExpNode_Unref(const ExpNodePtr& _left);
     virtual void acceptVisitor(IExpNodeVisitor *v) { v->visit(this); }
 };
 struct ExpNode_Field:
     public IExpNode
 {
+    ExpNodePtr left;
     const char *fieldName;
-    explicit ExpNode_Field(const string& _fieldName);
+    ExpNode_Field(const ExpNodePtr& _left, const string& _fieldName);
     virtual void acceptVisitor(IExpNodeVisitor *v) { v->visit(this); }
 };
 struct ExpNode_ArrayElem:
@@ -126,14 +137,15 @@ struct ExpNode_ArrayElem:
 {
     ExpNodePtr left;
     ExpNodePtr right;
+    ExpNode_ArrayElem(const ExpNodePtr& _left, const ExpNodePtr& _right);
     virtual void acceptVisitor(IExpNodeVisitor *v) { v->visit(this); }
 };
 struct ExpNode_Call:
     public IExpNode
 {
     const char *name;
-    ExpNodePtr args;
-    explicit ExpNode_Call(const string& _name);
+    vector<ExpNodePtr> args;
+    explicit ExpNode_Call(const string& _name, const vector<ExpNodePtr>& _args);
     virtual void acceptVisitor(IExpNodeVisitor *v) { v->visit(this); }
 };
 struct ExpNode_Assign:
@@ -141,13 +153,14 @@ struct ExpNode_Assign:
 {
     ExpNodePtr left;
     ExpNodePtr right;
+    ExpNode_Assign(const ExpNodePtr& _left, const ExpNodePtr& _right);
     virtual void acceptVisitor(IExpNodeVisitor *v) { v->visit(this); }
 };
 
 //////////
 struct StmtNode_Exp ;
 struct StmtNode_Block ;
-struct StmtNode_Define ;
+struct StmtNode_DefineLocal ;
 struct StmtNode_Break ;
 struct StmtNode_Continue ;
 struct StmtNode_Return ;
@@ -159,7 +172,7 @@ struct IStmtNodeVisitor
     virtual ~IStmtNodeVisitor() {}
     virtual void visit(StmtNode_Exp* node) = 0;
     virtual void visit(StmtNode_Block* node) = 0;
-    virtual void visit(StmtNode_Define* node) = 0;
+    virtual void visit(StmtNode_DefineLocal* node) = 0;
     virtual void visit(StmtNode_Break* node) = 0;
     virtual void visit(StmtNode_Continue* node) = 0;
     virtual void visit(StmtNode_Return* node) = 0;
@@ -179,20 +192,22 @@ struct StmtNode_Exp:
     public IStmtNode
 {
     ExpNodePtr exp;
+    StmtNode_Exp(const ExpNodePtr& _exp);
     virtual void acceptVisitor(IStmtNodeVisitor *v) { v->visit(this); }
 };
 struct StmtNode_Block:
     public IStmtNode
 {
     vector<StmtNodePtr> stmts;
+    StmtNode_Block(const vector<StmtNodePtr>& _stmts);
     virtual void acceptVisitor(IStmtNodeVisitor *v) { v->visit(this); }
 };
-struct StmtNode_Define:
+struct StmtNode_DefineLocal:
     public IStmtNode
 {
     const char *name;
     IType *type;
-    StmtNode_Define(const string& _name, IType *_type);
+    StmtNode_DefineLocal(const string& _name, IType *_type);
     virtual void acceptVisitor(IStmtNodeVisitor *v) { v->visit(this); }
 };
 struct StmtNode_Break:
@@ -231,7 +246,7 @@ struct StmtNode_Switch:
     public IStmtNode
 {
     ExpNodePtr exp;
-    // TODO: to support the string case !
+    // TODO: to support the literal case !
     map<int, StmtNodePtr> caseMap; 
     StmtNodePtr defaultStmt;
     virtual void acceptVisitor(IStmtNodeVisitor *v) { v->visit(this); }

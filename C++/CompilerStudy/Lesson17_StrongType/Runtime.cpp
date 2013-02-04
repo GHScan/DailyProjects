@@ -67,7 +67,7 @@ private:
     virtual void visit(StmtNode_Block* node)
     {
     }
-    virtual void visit(StmtNode_Define* node)
+    virtual void visit(StmtNode_DefineLocal* node)
     {
     }
     virtual void visit(StmtNode_Break* node)

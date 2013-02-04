@@ -60,13 +60,13 @@ public:
     template<typename T>
     T& get()
     {
-        assert(&typeid(T) == m_holder->info);
+        ASSERT(&typeid(T) == m_holder->info);
         return *(T*)m_holder->getPtr();
     }
     template<typename T>
     T& get() const
     {
-        assert(&typeid(T) == m_holder->info);
+        ASSERT(&typeid(T) == m_holder->info);
         return *(T*)m_holder->getPtr();
     }
 private:
