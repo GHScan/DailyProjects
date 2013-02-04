@@ -1,11 +1,12 @@
 # What things we will do?
-1. Tow turn of parsing
+1. Two turn of parsing
     + Turn 1: For struct, add new named type to type system, and create private
     symbol table for each struct; For global variables, create new entry of global
     symbol table; For functions, add entry to global symbol table, and build the
-    abstract syntax tree
+    abstract syntax tree(While building the AST, we will not do the type
+    checking and symbol table access.)
     + Trun 2: For each function, emit the byte code base on the AST, and perform
-    the semantic analysis (type checking and nested symbol table mask) at the same
+    the semantic analysis (type checking and nested symbol table access) at the same
     time
 2. Runtime for strong type system
 3. Type system 

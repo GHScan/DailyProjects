@@ -14,6 +14,10 @@
 typedef pair<IType*, string> DeclarePair;
 typedef vector<DeclarePair> DeclarePairVec;
 typedef vector<ExpNodePtr> ExpNodePtrVec;
+typedef pair<string, ExpNodePtr> AssignPair;
+typedef vector<AssignPair> AssignPairVec;
+typedef shared_ptr<AssignPairVec> AssignPairVecPtr;
+typedef pair<IType*, AssignPairVecPtr> TypeAssignPairVecPtr;
 
 %}
 
@@ -95,16 +99,40 @@ Stmt : Define
      | IF '(' Exp ')' Stmt %prec LOWER_THAN_ELSE
      | WHILE '(' Exp ')' Stmt
      | DO Stmt WHILE '(' Exp ')' ';'
-     | FOR '(' Stmt Opt_Exp';' Opt_Exp ')' Stmt
+     | FOR '(' Stmt Opt_Exp';' Opt_Exp ')' Stmt {
+     $$ = StmtNodePtr(new StmtNode_For(
+         $3.get<StmtNodePtr>(), $4.get<ExpNodePtr>(), $6.get<ExpNodePtr>(), $8.get<StmtNodePtr>()));
+     }
     ;
 
-Define : Type InitVars ';'
+Define : Type InitVars ';' {
+       $$ = TypeAssignPairVecPtr($1.get<IType*>(), $2.get<AssignPairVecPtr>());
+       }
        ;
-InitVars : InitVars ',' InitVal
-         | InitVal
+InitVars : InitVars ',' InitVal {
+             auto p = $1.get<AssignPairVecPtr>();
+             $$ = p;
+             p->push_back($3.get<AssignPair>());
+         }
+         | InitVal {
+             auto p = AssignPairVecPtr(new AssignPairVec());
+             $$ = p;
+             p->push_back($1.get<AssignPair>());
+         }
          ;
-InitVal : ID
-        | ID ASSIGN_OP Assign
+InitVal : ID {
+        $$ = AssignPair($1.get<string>(), ExpNodePtr());
+        }
+        | ID ASSIGN_OP Assign {
+        auto r = $3.get<ExpNodePtr>();
+        auto op = $2.get<string>();
+        if (op != "=") {
+            r = ExpNodePtr(new ExpNode_BinaryOp(
+                    ExpNodePtr(new ExpNode_Variable($1.get<string>())), r,
+                    ExpNode_BinaryOp::string2op(op.substr(0, 1))));
+        }
+        $$ = AssignPair($1.get<string>(), r);
+        }
         ;
 
 Switch : SWITCH '(' Exp ')' '{' CaseOrDefaultList '}'
@@ -121,8 +149,7 @@ Default: DEFAULT ':' Opt_Stmts
      ;
 
 Call: ID '(' Opt_ExpList ')' {
-    $$ = ExpNodePtr(new ExpNode_Call(
-        $1.get<string>(), *$3.get<shared_ptr<ExpNodePtrVec> >()));
+    $$ = ExpNodePtr(new ExpNode_Call($1.get<string>(), *$3.get<shared_ptr<ExpNodePtrVec> >()));
     }
     ; 
 Opt_ExpList : ExpList
@@ -198,7 +225,7 @@ Term : '(' Exp ')' {
      $$ = $2;
      }
      | SIZEOF '(' Exp ')' {
-     $$ = ExpNodePtr(new ExpNode_ConstantInt($3.get<ExpNodePtr>()->type->getSize()));
+     $$ = ExpNodePtr(new ExpNode_Sizeof($3.get<ExpNodePtr>()));
      }
      | SIZEOF '(' Type ')' {
      $$ = ExpNodePtr(new ExpNode_ConstantInt($3.get<IType*>()->getSize()));
@@ -238,12 +265,10 @@ Term : '(' Exp ')' {
      $$ = ExpNodePtr(new ExpNode_Conversion($4.get<ExpNodePtr>(), $2.get<IType*>()));
      }
      | Term POINTER_AFIELD_OP ID {
-     // TODO: assert pointer
-     $$ = ExpNodePtr(new ExpNode_Field($1.get<ExpNodePtr>(), $3.get<string>()));
+     $$ = ExpNodePtr(new ExpNode_Field($1.get<ExpNodePtr>(), $3.get<string>(), false));
      }
      | Term AFIELD_OP ID {
-     // TODO: assert not pointer
-     $$ = ExpNodePtr(new ExpNode_Field($1.get<ExpNodePtr>(), $3.get<string>()));
+     $$ = ExpNodePtr(new ExpNode_Field($1.get<ExpNodePtr>(), $3.get<string>(), true));
      }
      ;
 
@@ -255,12 +280,10 @@ LVal : ID {
      $$ = ExpNodePtr(new ExpNode_Unref($2.get<ExpNodePtr>()));
      }
      | Term POINTER_AFIELD_OP ID {
-     // TODO: assert pointer
-     $$ = ExpNodePtr(new ExpNode_Field($1.get<ExpNodePtr>(), $3.get<string>()));
+     $$ = ExpNodePtr(new ExpNode_Field($1.get<ExpNodePtr>(), $3.get<string>(), false));
      }
      | Term AFIELD_OP ID {
-     // TODO: assert not pointer
-     $$ = ExpNodePtr(new ExpNode_Field($1.get<ExpNodePtr>(), $3.get<string>()));
+     $$ = ExpNodePtr(new ExpNode_Field($1.get<ExpNodePtr>(), $3.get<string>(), true));
      }
      ;
 
@@ -335,7 +358,8 @@ BuildinType : T_CHAR {
         }
             ;
 Constants: LITERAL {
-             $$ = ExpNodePtr(new ExpNode_ConstantString($1.get<string>()));
+             auto s = $1.get<string>();
+             $$ = ExpNodePtr(new ExpNode_ConstantString(s.substr(1, s.size() - 2)));
          }
          | INT {
             $$ = new ExpNodePtr(new ExpNode_ConstantInt(

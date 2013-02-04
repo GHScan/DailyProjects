@@ -136,6 +136,10 @@ private:
 class GlobalEnvironment
 {
 public:
+    GlobalEnvironment():
+        m_funcPreMain(StmtNodePtr(new StmtNode_Block()))
+    {
+    }
     void registerFunction(const string& name, FunctionPtr func)
     {
         ASSERT(m_funcs.count(name) == 0);
@@ -147,7 +151,9 @@ public:
         static GlobalEnvironment s_ins;
         return &s_ins;
     }
+    ASTFunction* getFuncPreMain() { return &m_funcPreMain; }
 private:
+    ASTFunction m_funcPreMain;
     map<string, FunctionPtr> m_funcs;
 };
 

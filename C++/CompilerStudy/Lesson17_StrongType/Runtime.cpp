@@ -49,6 +49,9 @@ private:
     virtual void visit(ExpNode_Assign* node)
     {
     }
+    virtual void visit(ExpNode_Sizeof* node)
+    {
+    }
 private:
     Thread *m_thread;
 };
