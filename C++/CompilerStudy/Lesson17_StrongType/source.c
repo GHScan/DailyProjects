@@ -49,23 +49,30 @@ void test3_switch()
     }
     assert(n == -5);
 }
-struct Record
+struct Student
 {
     char* name;
     int id;
 };
 void test4_struct()
 {
-    Record r;
+    Student r;
     r.id = 5;
     r.name = "ABC";
-    print("Record : ", r.id, r.name);
+    print("Student : ", r.id, r.name);
 
-    Record *p = &r;
+    Student *p = &r;
     p->name = (char*)malloc();
     strcpy(p->name, "yes");
-    print("Record : ", p->id, p->name);
+    print("Student : ", p->id, p->name);
     free(p->name);
+}
+void test5_sizeof()
+{
+    int i = 0;
+    assert(sizeof(i) == sizeof(int));
+    int[2][5] a;
+    assert(sizeof(a) == 40);
 }
 
 void perform1_prime()
@@ -121,6 +128,8 @@ int main()
     test1_AndOr();
     test2_While();
     test3_switch();
+    test4_struct();
+    test5_sizeof();
 
     perform1_prime();
     perform2_loop3();

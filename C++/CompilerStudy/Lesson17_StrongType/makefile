@@ -1,3 +1,6 @@
+.PHONY: all build rebuild rel_build rel_rebuild clean update_pch build_actions clean_actions
+all: build
+
 include makefile_var
 
 build_type = debug
@@ -27,27 +30,15 @@ exist_deps = $(wildcard *.d)
 not_exist_deps = $(filter-out $(exist_deps), $(all_deps))
 pch_file =pch.h
 
-.PHONY: all build rebuild rel_build rel_rebuild clean update_pch
-all: build
-build: yacc_gen lex_gen update_pch main
+build: build_actions update_pch main
 rebuild: clean
 	$(MAKE) build
 rel_build: 
 	$(MAKE) build -e build_type=release
 rel_rebuild: clean
 	$(MAKE) rel_build
-clean:
+clean: clean_actions
 	rm -f main $(objs) $(all_deps) $(pch_file).gch
-	rm -f syntax.yy.cpp syntax.yy.h_ syntax.yy.c_ lex.yy.c_ syntax.yy.output
-
-yacc_gen: syntax.yy.c_
-syntax.yy.c_: syntax.y
-	bison -vdo syntax.yy.c_ syntax.y
-	printf '#include "pch.h"\n#include "syntax.yy.c_"' > syntax.yy.cpp
-
-lex_gen: lex.yy.c_
-lex.yy.c_: lex.l
-	flex -o lex.yy.c_ lex.l
 update_pch: $(pch_file).gch
 
 main: $(objs)
