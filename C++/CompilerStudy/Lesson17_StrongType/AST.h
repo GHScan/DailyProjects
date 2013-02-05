@@ -260,8 +260,6 @@ struct StmtNode_Continue:
 struct StmtNode_Return:
     public IStmtNode
 {
-    ExpNodePtr exp;
-    StmtNode_Return(const ExpNodePtr& _exp): exp(_exp){}
     virtual void acceptVisitor(IStmtNodeVisitor *v) { v->visit(this); }
 };
 struct StmtNode_For:

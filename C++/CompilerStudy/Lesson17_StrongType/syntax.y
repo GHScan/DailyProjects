@@ -69,7 +69,7 @@ GlobalDefine : Struct
             auto typeVec = $1.get<TypeAssignPairVecPtr>();
             auto type = typeVec.first;
             auto vec = typeVec.second;
-            auto block = dynamic_cast<StmtNode_Block*>(GlobalEnvironment::instance()->getFuncPreMain()->getStmt().get());
+            auto block = dynamic_cast<StmtNode_Block*>(CodeManager::instance()->getFuncPreMain()->getStmt().get());
             auto table = SymbolTableManager::instance()->global();
             for (auto nameExp : *vec) {
                 table->addSymbol(nameExp.first, type);
@@ -114,6 +114,7 @@ Func : Type ID '(' Opt_DeclareList ')' '{' Opt_Stmts '}'  {
             auto args = $4.get<shared_ptr<DeclarePairVec> >();
 
             auto block = new StmtNode_Block();
+            block->stmts.push_back(StmtNodePtr(new StmtNode_DefineLocal("return", $1.get<IType*>())));
             for (auto arg : *args) {
                 block->stmts.push_back(StmtNodePtr(new StmtNode_DefineLocal(arg.second, arg.first)));
             }
@@ -125,7 +126,7 @@ Func : Type ID '(' Opt_DeclareList ')' '{' Opt_Stmts '}'  {
                 for (auto arg : *args) argsT.push_back(arg.first);
                 type = TypeSystem::instance()->getFunc($1.get<IType*>(), argsT);
             }
-            GlobalEnvironment::instance()->registerFunction($2.get<string>(),
+            CodeManager::instance()->registerFunction($2.get<string>(),
                 FunctionPtr(new ASTFunction(StmtNodePtr(block), type)));
          }
 
@@ -183,7 +184,15 @@ Stmt : Define {
         $$ = StmtNodePtr(new StmtNode_Continue());
     }
      | RETURN Opt_Exp ';' {
-        $$ = StmtNodePtr(new StmtNode_Return($2.get<ExpNodePtr>()));
+        auto exp = $2.get<ExpNodePtr>();
+        if (exp) {
+            auto c = new StmtNode_Container();
+            c->stmts.push_back(StmtNodePtr(new StmtNode_Exp(ExpNodePtr(
+                new ExpNode_Assign(ExpNodePtr(new ExpNode_Variable("return")), exp)))));
+            c->stmts.push_back(StmtNodePtr(new StmtNode_Return()));
+            $$ = StmtNodePtr(c);
+        }
+        else $$ = StmtNodePtr(new StmtNode_Return());
     }
      | IF '(' Exp ')' Stmt ELSE Stmt {
         $$ = StmtNodePtr(new StmtNode_IfElse(

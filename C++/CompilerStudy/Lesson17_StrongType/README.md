@@ -28,7 +28,8 @@
     + Symbol description including type, index, offset
     + Each struct has a table, and global envrionment also do.
     + Symbol table chain, used inside function.
-    
+6. Support 32bits only (Means, pointer will be 4 byte length.)
+
 # What things we will do in the next version (+1)? 
 1. Type system
     + Operator overload.(We must consider the alias of function name.)

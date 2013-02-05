@@ -2,49 +2,97 @@
 #ifndef RUNTIME_H
 #define RUNTIME_H
 
-class Thread
+class ByteCodeSeq;
+typedef shared_ptr<ByteCodeSeq> ByteCodeSeqPtr;
+struct FunctionType;
+
+class RuntimeEnv
 {
 public:
-    Thread(): m_top(0)
+    RuntimeEnv(): m_top(0), pc(0)
     {
-    }
-    void pushFrame()
-    {
-        m_frameTops.push_back(m_top);
-    }
-    void popFrame()
-    {
-        m_top = m_frameTops.back();
-        m_frameTops.pop_back();
     }
 
-    int top()
+    int pc;
+
+    void pushFrame(int retArgSize)
     {
-        return m_top;
+        m_frameBases.push_back(m_top - retArgSize);
+        m_pcs.push_back(pc);
+        pc = 0;
     }
-    int frameBottom() { return m_frameTops.empty() ? 0 : m_frameTops.back();}
-    char *threadBase() { return &m_stackDatas[0];}
-    char *frameBase() { return threadBase() + frameBottom();}
-    void pushValue(int size)
+    void popFrame(int retSize)
     {
-        m_top += size;
-        m_stackDatas.resize(m_top);
+        pc = m_pcs.back();
+        m_pcs.pop_back();
+        m_top = m_frameBases.back() + retSize;
+        m_frameBases.pop_back();
     }
-    void popValue(int size)
+    void reserveFrame(int frameSize)
     {
-        m_top -= size;
+        m_top = m_frameBases.back() + frameSize;
+        m_data.resize(m_top);
+    }
+    char* frameBase()
+    {
+        return &m_data[m_frameBases.back()];
+    }
+    template<typename T>
+    T& localVariable(int off)
+    {
+        return (T&)m_data[m_frameBases.back() + off];
+    }
+
+    template<typename T>
+    void pushValue(T v)
+    {
+        m_data.resize(m_top + sizeof(T));
+        (T&)m_data[m_top] = v;
+        m_top += sizeof(T);
+    }
+    template<typename T>
+    void popValue()
+    {
+        m_top -= sizeof(T);
+    }
+    template<typename T>
+    void popValue(T& v)
+    {
+        m_top -= sizeof(T);
+        v = (T&)m_data[m_top];
+    }
+    template<typename T>
+    T& topValue(int idx)
+    {
+        assert(idx < 0);
+        return (T&)m_data[m_top + idx * sizeof(T)];
+    }
+
+    void reserveGlobal(int size)
+    {
+        m_globalData.resize(size);
+    }
+    template<typename T>
+    T& globalVariable(int off)
+    {
+        return (T&)m_data[off];
+    }
+    char *globalBase()
+    {
+        return &m_globalData[0];
     }
 private:
-    vector<char> m_stackDatas;
-    vector<int> m_frameTops;
+    vector<int> m_pcs;
+    vector<char> m_globalData;
+    vector<char> m_data;
+    vector<int> m_frameBases;
     int m_top;
 };
 
 struct IFunction
 {
     virtual ~IFunction(){}
-    virtual void call(Thread* thread) = 0;
-    virtual IType* getType() = 0;
+    virtual void call(RuntimeEnv *env) = 0;
 };
 typedef shared_ptr<IFunction> FunctionPtr;
 
@@ -54,11 +102,12 @@ class ASTFunction:
 public:
     ASTFunction(StmtNodePtr stmt, IType *type);
     StmtNodePtr& getStmt() { return m_stmt; }
-    virtual void call(Thread* thread);
-    virtual IType* getType(){ return m_type; }
+    void emitCode();
+    virtual void call(RuntimeEnv *env);
 private:
     StmtNodePtr m_stmt;
-    IType *m_type;
+    ByteCodeSeqPtr m_codeSeq;
+    FunctionType *m_type;
 };
 
 template<typename RetT, typename ArgT0, typename ArgT1, typename ArgT2>
@@ -68,19 +117,18 @@ class CFunction3:
 private:
     typedef RetT(*FuncT)(ArgT0, ArgT1, ArgT2);
 public:
-    CFunction3(FuncT f, IType *type): m_f(f), m_type(type){}
-    virtual void call(Thread* thread)
+    CFunction3(FuncT f, IType *type): m_f(f), m_type(dynamic_cast<FunctionType*>(type)){}
+    virtual void call(RuntimeEnv *env)
     {
-        char *base = thread->frameBase();
-        char *arg0 = (RetT*)base + 1;
-        char *arg1 = (ArgT0*)arg0 + 1;
-        char *arg2 = (ArgT1*)arg1 + 1;
+        char *base = env->frameBase();
+        char *arg0 = (char*)((RetT*)base + 1);
+        char *arg1 = (char*)((ArgT0*)arg0 + 1);
+        char *arg2 = (char*)((ArgT1*)arg1 + 1);
         (RetT&)*base = m_f((ArgT0&)*arg0, (ArgT1&)*arg1, (ArgT2&)*arg2);
     }
-    virtual IType* getType(){ return m_type; }
 private:
     FuncT m_f;
-    IType *m_type;
+    FunctionType *m_type;
 };
 template<typename RetT>
 class CFunction0:
@@ -89,16 +137,15 @@ class CFunction0:
 private:
     typedef RetT(*FuncT)();
 public:
-    CFunction0(FuncT f, IType *type): m_f(f), m_type(type){}
-    virtual void call(Thread* thread)
+    CFunction0(FuncT f, IType *type): m_f(f), m_type(dynamic_cast<FunctionType*>(type)){}
+    virtual void call(RuntimeEnv *env)
     {
-        char *base = thread->frameBase();
+        char *base = env->frameBase();
         (RetT&)*base = m_f();
     }
-    virtual IType* getType(){ return m_type; }
 private:
     FuncT m_f;
-    IType *m_type;
+    FunctionType *m_type;
 };
 template<typename RetT, typename ArgT0>
 class CFunction1:
@@ -107,17 +154,16 @@ class CFunction1:
 private:
     typedef RetT(*FuncT)(ArgT0);
 public:
-    CFunction1(FuncT f, IType *type): m_f(f), m_type(type){}
-    virtual void call(Thread* thread)
+    CFunction1(FuncT f, IType *type): m_f(f), m_type(dynamic_cast<FunctionType*>(type)){}
+    virtual void call(RuntimeEnv *env)
     {
-        char *base = thread->frameBase();
+        char *base = env->frameBase();
         char *arg0 = (char*)((RetT*)base + 1);
-        (RetT&)*base = m_f((ArgT0&)*arg0);
+        (RetT&)*base = m_f((ArgT0&)arg0);
     }
-    virtual IType* getType(){ return m_type; }
 private:
     FuncT m_f;
-    IType *m_type;
+    FunctionType *m_type;
 };
 template<typename RetT, typename ArgT0, typename ArgT1>
 class CFunction2:
@@ -126,30 +172,29 @@ class CFunction2:
 private:
     typedef RetT(*FuncT)(ArgT0, ArgT1);
 public:
-    CFunction2(FuncT f, IType *type): m_f(f), m_type(type){}
-    virtual void call(Thread* thread)
+    CFunction2(FuncT f, IType *type): m_f(f), m_type(dynamic_cast<FunctionType*>(type)){}
+    virtual void call(RuntimeEnv *env)
     {
-        char *base = thread->frameBase();
-        char *arg0 = (RetT*)base + 1;
-        char *arg1 = (ArgT0*)arg0 + 1;
+        char *base = env->frameBase();
+        char *arg0 = (char*)((RetT*)base + 1);
+        char *arg1 = (char*)((ArgT0*)arg0 + 1);
         (RetT&)*base = m_f((ArgT0&)*arg0, (ArgT1&)*arg1);
     }
-    virtual IType* getType(){ return m_type; }
 private:
     FuncT m_f;
-    IType *m_type;
+    FunctionType *m_type;
 };
 
-class GlobalEnvironment
+class CodeManager
 {
 public:
-    static GlobalEnvironment* instance()
+    static CodeManager* instance()
     {
-        static GlobalEnvironment s_ins;
+        static CodeManager s_ins;
         return &s_ins;
     }
 
-    GlobalEnvironment();
+    CodeManager();
     void registerFunction(const string& name, FunctionPtr func)
     {
         ASSERT(m_funcs.count(name) == 0);
@@ -157,32 +202,10 @@ public:
     }
     FunctionPtr getFunc(const string& name) { return m_funcs[name]; }
     ASTFunction* getFuncPreMain() { return dynamic_cast<ASTFunction*>(m_funcPreMain.get()); }
+    void emitAll();
 private:
     FunctionPtr m_funcPreMain;
     map<string, FunctionPtr> m_funcs;
 };
-
-class StringPool
-{
-public:
-    static StringPool* instance()
-    {
-        static StringPool s_ins;
-        return &s_ins;
-    }
-
-    const char* get(const string& s)
-    {
-        auto iter = m_pool.lower_bound(s);
-        if (iter == m_pool.end() || *iter != s) {
-            return m_pool.insert(iter, s)->c_str();
-        }
-        return iter->c_str();
-    }
-private:
-    set<string> m_pool;
-};
-
-void run();
 
 #endif
