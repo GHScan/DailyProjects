@@ -10,3 +10,4 @@
 	interactive = auto
 	showbranch = auto
 	status = auto
+    ui = auto
