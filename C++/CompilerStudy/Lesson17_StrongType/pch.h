@@ -2,6 +2,7 @@
 #define PCH_H
 
 #include <assert.h>
+#include <string.h>
 
 #include <algorithm>
 #include <memory>

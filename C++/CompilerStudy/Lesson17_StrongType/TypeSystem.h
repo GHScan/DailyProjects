@@ -31,7 +31,8 @@ struct FunctionType:
 {
     IType *retT;
     vector<IType*> argsT;
-    FunctionType(IType *_retT, const vector<IType*>& _argsT): retT(_retT), argsT(_argsT){}
+    bool isVarLengOfArg;
+    FunctionType(IType *_retT, const vector<IType*>& _argsT): retT(_retT), argsT(_argsT), isVarLengOfArg(false){}
     virtual int getSize() { return sizeof(void*); }
 };
 struct PointerType:

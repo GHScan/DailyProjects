@@ -97,9 +97,10 @@ static void registerBuildin()
 static void runMain()
 {
     RuntimeEnv env;
-    env->reserveGlobal(SymbolTableManager::global()->getOffest());
-    CodeManager::instance()->getFuncPreMain()->call(&env);
-    CodeManager::instance()->getFunc("main")->call(&env);
+    env.reserveGlobal(SymbolTableManager::instance()->global()->getOffset());
+    CodeManager::instance()->emitAll();
+    //CodeManager::instance()->getFuncPreMain()->call(&env);
+    //CodeManager::instance()->getFunc("main")->call(&env);
 }
 
 void parseFile(const char *fname);
