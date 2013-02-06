@@ -550,7 +550,72 @@ l2:
     }
     virtual void visit(StmtNode_Switch* node) 
     {
-        ASSERT(0);
+        /*
+         exp
+         jump l_cmp
+l_case1:
+        stmt1
+        jump l_end
+l_case2:
+        stmt2
+        jump l_end
+        ...
+l_caseN:
+        stmtN
+        jump l_end
+l_cmp:
+        push -1
+        push v1
+        equal
+        jumpN l_case1
+        push -1
+        push v2
+        equal
+        jumpN l_case2
+        ...
+l_end:
+        popvalue
+         * */
+        {
+            vector<int> codes;
+            ExpNodeVisitor_CodeGen codeGen(codes, node->exp);
+            codeGen.toRval();
+            codeGen.tryImplicitConvertTo(TypeSystem::instance()->getType("int"));
+            ASSERT(codeGen.getType() == TypeSystem::instance()->getType("int"));
+            m_codes.insert(m_codes.end(), codes.begin(), codes.end());
+        }
+        int jumpCmp = m_codes.size();
+        m_codes.push_back(0);
+
+        vector<int> lcases;
+        vector<int> jumpEnds;
+        for (auto p : node->caseMap) {
+            lcases.push_back(m_codes.size());
+            p.second->acceptVisitor(this);
+            jumpEnds.push_back(m_codes.size());
+            m_codes.push_back(0);
+        }
+
+        m_codes[jumpCmp] = ByteCode_SizeIndepend<BCT_Jump>::emit(m_codes.size());
+
+        int idx = 0;
+        for (auto p : node->caseMap) {
+            m_codes.push_back(ByteCode_SizeDepend<BCT_PushI, 4>::emit(-1));
+            if (isLargeInt(p.first)) {
+                m_codes.push_back(ByteCode_SizeIndepend<BCT_PushIntLarge>::emit(p.first));
+            }
+            else {
+                m_codes.push_back(ByteCode_SizeIndepend<BCT_PushInt>::emit(p.first));
+            }
+            m_codes.push_back(ByteCode_SizeDepend<BCT_Equal, 4>::emit());
+            m_codes.push_back(ByteCode_SizeIndepend<BCT_JumpN>::emit(lcases[idx]));
+            ++idx;
+        }
+
+        for (auto off : jumpEnds) {
+            m_codes[off] = ByteCode_SizeIndepend<BCT_Jump>::emit(m_codes.size());
+        }
+        m_codes.push_back(ByteCode_SizeDepend<BCT_PopN, 4>::emit(1));
     }
 private:
     vector<int> &m_codes;
