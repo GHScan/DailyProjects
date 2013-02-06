@@ -26,8 +26,8 @@ public:
 private:
     SymbolTable *m_parent;
     int m_off;
-    map<string, SymbolDescrib*> m_name2Symbol;
-    vector<SymbolDescrib> m_id2Symbol;
+    map<string, SymbolDescrib> m_name2Symbol;
+    vector<SymbolDescrib*> m_id2Symbol;
 };
 typedef shared_ptr<SymbolTable> SymbolTablePtr;
 

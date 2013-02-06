@@ -11,6 +11,7 @@ class RuntimeEnv
 public:
     RuntimeEnv(): m_top(0), pc(0)
     {
+        m_data.resize(1024 * 1024);
     }
 
     int pc;
@@ -31,7 +32,6 @@ public:
     void reserveFrame(int frameSize)
     {
         m_top = m_frameBases.back() + frameSize;
-        m_data.resize(m_top);
     }
     char* frameBase()
     {
@@ -46,7 +46,6 @@ public:
     template<typename T>
     void pushValue(T v)
     {
-        m_data.resize(m_top + sizeof(T));
         (T&)m_data[m_top] = v;
         m_top += sizeof(T);
     }
@@ -159,7 +158,7 @@ public:
     {
         char *base = env->frameBase();
         char *arg0 = (char*)((RetT*)base + 1);
-        (RetT&)*base = m_f((ArgT0&)arg0);
+        (RetT&)*base = m_f((ArgT0&)*arg0);
     }
 private:
     FuncT m_f;

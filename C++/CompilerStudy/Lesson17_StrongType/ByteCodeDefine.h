@@ -37,6 +37,7 @@ enum ByteCodeType
     BCT_Equal,
     BCT_Greater,
     BCT_GreaterEq,
+    BCT_Not,
 };
 // Size independ
 template<int n>
@@ -508,8 +509,7 @@ struct ByteCode_SizeDepend<BCT_Inc, bits>: public Bytes2Type<bits>
     }
     static void execute(int code, RuntimeEnv *env)
     {
-        Type *v; env->popValue(v);
-        ++*v;
+        ++*env->topValue<Type*>(-1);
     }
     static void disassemble(int code, ostream& so)
     {
@@ -525,8 +525,7 @@ struct ByteCode_SizeDepend<BCT_Dec, bits>: public Bytes2Type<bits>
     }
     static void execute(int code, RuntimeEnv *env)
     {
-        Type *v; env->popValue(v);
-        --*v;
+        --*env->topValue<Type*>(-1);
     }
     static void disassemble(int code, ostream& so)
     {
@@ -622,6 +621,23 @@ struct ByteCode_SizeDepend<BCT_GreaterEq, bits>: public Bytes2Type<bits>
         env->popValue(r);
         env->popValue(l);
         env->pushValue(int(l >= r));
+    }
+    static void disassemble(int code, ostream& so)
+    {
+    }
+};
+template<int bits>
+struct ByteCode_SizeDepend<BCT_Not, bits>: public Bytes2Type<bits>
+{
+    typedef typename Bytes2Type<bits>::Type Type;
+    static int emit()
+    {
+        return Bytes2Type<bits>::E_CodeMask | (BCT_Not << 24);
+    }
+    static void execute(int code, RuntimeEnv *env)
+    {
+        Type v; env->popValue(v);
+        env->pushValue(int(!v));
     }
     static void disassemble(int code, ostream& so)
     {

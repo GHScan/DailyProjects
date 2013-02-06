@@ -23,7 +23,7 @@ void ASTFunction::emitCode()
 CodeManager::CodeManager()
 {
     auto ts = TypeSystem::instance();
-    auto p = new ASTFunction(StmtNodePtr(new StmtNode_Block()), ts->getFunc(ts->getType("void"), vector<IType*>()));
+    auto p = new ASTFunction(StmtNodePtr(new StmtNode_Block()), ts->getFunc(ts->getType("int"), vector<IType*>()));
     m_funcPreMain.reset(p);
 }
 

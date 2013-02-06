@@ -6,19 +6,19 @@
 void SymbolTable::addSymbol(const string& name, IType *type)
 {
     SymbolDescrib describ = {(int)m_id2Symbol.size(), m_off, type};
-    m_id2Symbol.push_back(describ);
-    m_name2Symbol[name] = &m_id2Symbol.back();
+    m_name2Symbol[name] = describ;
+    m_id2Symbol.push_back(&m_name2Symbol[name]);
     m_off += type->getSize();
 }
 const SymbolDescrib* SymbolTable::getSymbol(const string& name)
 {
-    if (m_name2Symbol.count(name) > 0) return m_name2Symbol[name];
+    if (m_name2Symbol.count(name) > 0) return &m_name2Symbol[name];
     if (m_parent == NULL) return NULL;
     else return m_parent->getSymbol(name);
 }
 const SymbolDescrib* SymbolTable::getSymbol(int idx)
 {
-    return &m_id2Symbol[idx];
+    return m_id2Symbol[idx];
 }
 
 void SymbolTableStack::push()

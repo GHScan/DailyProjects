@@ -72,19 +72,44 @@ void registerFunctionSymbol(const string& name, RetT(*f)(ArgT0, ArgT1))
     CodeManager::instance()->registerFunction(name, FunctionPtr(new CFunction2<RetT, ArgT0, ArgT1>(f, ftype)));
 }
 
+template<typename RetT>
+RetT callFromC(IFunction *func, RuntimeEnv* env)
+{
+    TypeSystem* ts = TypeSystem::instance();
+    IType *retT = CType2ScriptType<RetT>::get(ts);
+    vector<IType*> argT = {};
+    IType *ftype = ts->getFunc(retT, argT);
+
+    int retSize = retT->getSize();
+    int retArgSize = retSize;
+    env->pushValue(RetT());
+
+    env->pushFrame(retArgSize);
+    func->call(env);
+    env->popFrame(retSize);
+
+    RetT r;
+    env->popValue(r);
+    return r;
+}
+
 static int buildin_clock()
 {
     return clock();
 }
 static int buildin_assert(int b)
 {
-    ASSERT(0);
+    assert(b);
 }
-static int buildin_print(char *fmt, int i)
+
+// TODO: var args
+static int buildin_print(int i)
 {
+    cout << i << '\t';
 }
-static int buildin_println(char *fmt, int i)
+static int buildin_println(int i)
 {
+    cout << i << '\n';
 }
 
 static void registerBuildin()
@@ -99,12 +124,19 @@ static void runMain()
     RuntimeEnv env;
     env.reserveGlobal(SymbolTableManager::instance()->global()->getOffset());
     CodeManager::instance()->emitAll();
-    CodeManager::instance()->getFuncPreMain()->call(&env);
-    CodeManager::instance()->getFunc("main")->call(&env);
+    callFromC<int>(CodeManager::instance()->getFuncPreMain(), &env);
+    callFromC<int>(CodeManager::instance()->getFunc("main").get(), &env);
 }
 
 void parseFile(const char *fname);
 
+// TODO: 
+// sub op and minus op
+// test -char, implement strcp ...
+// test -malloc, free
+// test -switch
+// test -array
+// test -struct
 int main(int argc, char *argv[])
 {
     if (argc == 1) {

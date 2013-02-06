@@ -23,12 +23,14 @@ typedef pair<ExpNodePtr, StmtNodePtr> ExpStmtPair;
 typedef vector<ExpStmtPair> ExpStmtPairVec;
 typedef shared_ptr<ExpStmtPairVec> ExpStmtPairVecPtr;
 
-// TODO: Bug, if StmtNode_Container is exist in final AST...
 struct StmtNode_Container:
     public IStmtNode
 {
     vector<StmtNodePtr> stmts;
-    virtual void acceptVisitor(IStmtNodeVisitor *v) {}
+    virtual void acceptVisitor(IStmtNodeVisitor *v) 
+    {
+        for (auto stmt : stmts) stmt->acceptVisitor(v);
+    }
 };
 static void insertIntoBlock(const StmtNodePtr &node, StmtNode_Block* block)
 {
@@ -114,6 +116,7 @@ Func : Type ID '(' Opt_DeclareList ')' '{' Opt_Stmts '}'  {
             auto args = $4.get<shared_ptr<DeclarePairVec> >();
 
             auto block = new StmtNode_Block();
+            StmtNodePtr pblock(block);
             block->stmts.push_back(StmtNodePtr(new StmtNode_DefineLocal("return", $1.get<IType*>())));
             for (auto arg : *args) {
                 block->stmts.push_back(StmtNodePtr(new StmtNode_DefineLocal(arg.second, arg.first)));
@@ -126,8 +129,10 @@ Func : Type ID '(' Opt_DeclareList ')' '{' Opt_Stmts '}'  {
                 for (auto arg : *args) argsT.push_back(arg.first);
                 type = TypeSystem::instance()->getFunc($1.get<IType*>(), argsT);
             }
-            CodeManager::instance()->registerFunction($2.get<string>(),
-                FunctionPtr(new ASTFunction(StmtNodePtr(block), type)));
+            CodeManager::instance()->registerFunction($2.get<string>(), FunctionPtr(new ASTFunction(pblock, type)));
+
+            auto table = SymbolTableManager::instance()->global();
+            table->addSymbol($2.get<string>(), type);
          }
 
 Opt_Stmts: Stmts
