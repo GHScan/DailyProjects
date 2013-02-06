@@ -265,12 +265,12 @@ struct StmtNode_Return:
 struct StmtNode_For:
     public IStmtNode
 {
-    ExpNodePtr s1;
-    ExpNodePtr s2;
-    ExpNodePtr s3;
+    ExpNodePtr exp1;
+    ExpNodePtr exp2;
+    ExpNodePtr exp3;
     StmtNodePtr body;
-    StmtNode_For(const ExpNodePtr& _s1, const ExpNodePtr& _s2, const ExpNodePtr& _s3, const StmtNodePtr& _body): 
-        s1(_s1), s2(_s2), s3(_s3), body(_body){}
+    StmtNode_For(const ExpNodePtr& _exp1, const ExpNodePtr& _exp2, const ExpNodePtr& _exp3, const StmtNodePtr& _body): 
+        exp1(_exp1), exp2(_exp2), exp3(_exp3), body(_body){}
     virtual void acceptVisitor(IStmtNodeVisitor *v) { v->visit(this); }
 };
 struct StmtNode_IfElse:

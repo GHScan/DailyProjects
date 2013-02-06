@@ -99,8 +99,8 @@ static void runMain()
     RuntimeEnv env;
     env.reserveGlobal(SymbolTableManager::instance()->global()->getOffset());
     CodeManager::instance()->emitAll();
-    //CodeManager::instance()->getFuncPreMain()->call(&env);
-    //CodeManager::instance()->getFunc("main")->call(&env);
+    CodeManager::instance()->getFuncPreMain()->call(&env);
+    CodeManager::instance()->getFunc("main")->call(&env);
 }
 
 void parseFile(const char *fname);

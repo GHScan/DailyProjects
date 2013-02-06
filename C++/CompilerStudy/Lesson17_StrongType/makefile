@@ -12,13 +12,13 @@ CXXFLAGS += $(foreach i,$(include_dirs),-I '$(i)')
 CXXFLAGS += $(foreach i,$(lib_dirs),-L '$(i)')
 CXXFLAGS += $(foreach i,$(lib_files),-l '$(i)')
 ifeq ($(use_cpp0x),1)
-CXXFLAGS += -std=c++0x	
+CXXFLAGS += -std=c++0x
 endif
 ifeq ($(build_dll),1)
 CXXFLAGS += -shared -fPIC
 endif
 ifeq ($(build_type),debug)
-CXXFLAGS += -g
+CXXFLAGS += -g 
 else
 CXXFLAGS += -O3 -DNDEBUG
 endif

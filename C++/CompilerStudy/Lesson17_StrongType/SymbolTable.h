@@ -36,6 +36,7 @@ class SymbolTableStack
 public:
     void push();
     void pop();
+    int getOffset();
 
     void addSymbol(const string& name, IType *type);
     const SymbolDescrib* getSymbol(const string& name);

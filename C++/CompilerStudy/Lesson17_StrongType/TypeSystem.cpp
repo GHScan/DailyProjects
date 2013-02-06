@@ -4,7 +4,7 @@
 
 TypeSystem::TypeSystem()
 {
-    addType("void", new SimpleType(1));
+    addType("void", new SimpleType(4));
     addType("char", new SimpleType(1));
     addType("int", new SimpleType(4));
 }

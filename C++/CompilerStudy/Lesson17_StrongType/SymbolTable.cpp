@@ -38,3 +38,7 @@ const SymbolDescrib* SymbolTableStack::getSymbol(const string& name)
 {
     return m_stack.back()->getSymbol(name);
 }
+int SymbolTableStack::getOffset()
+{
+    return m_stack.back()->getOffset();
+}
