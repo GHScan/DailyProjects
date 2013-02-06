@@ -33,8 +33,5 @@ plugins=(git github svn vi-mode python gnu-utils mercurial)
 
 source $ZSH/oh-my-zsh.sh
 
-# Customize to your needs...
-export PATH=/opt/local/bin:/opt/local/sbin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/X11/bin
-
 set -o vi
 export EDITOR=vim
