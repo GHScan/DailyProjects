@@ -41,6 +41,26 @@ static void insertIntoBlock(const StmtNodePtr &node, StmtNode_Block* block)
     else block->stmts.push_back(node);
 }
 
+string parseSourceLiteral(const string& s)
+{
+    string r;
+    for (int i = 1; i < s.size() - 1; ++i) {
+        if (s[i] == '\\') {
+            switch (s[i + 1]) {
+                case 't': r.push_back('\t'); break;
+                case 'a': r.push_back('\a'); break;
+                case 'n': r.push_back('\n'); break;
+                case 'r': r.push_back('\r'); break;
+                case '\\':r.push_back('\\'); break;
+                default: ASSERT(0); break;
+            }
+            ++i;
+        }
+        else r.push_back(s[i]);
+    }
+    return r;
+}
+
 %}
 
 %token SWITCH IF FOR WHILE DO BREAK CONTINUE RETURN STRUCT CASE DEFAULT
@@ -129,7 +149,7 @@ Func : Type ID '(' Opt_DeclareList ')' '{' Opt_Stmts '}'  {
                 for (auto arg : *args) argsT.push_back(arg.first);
                 type = TypeSystem::instance()->getFunc($1.get<IType*>(), argsT);
             }
-            CodeManager::instance()->registerFunction($2.get<string>(), FunctionPtr(new ASTFunction(pblock, type)));
+            CodeManager::instance()->registerFunction($2.get<string>(), FunctionPtr(new ASTFunction(pblock)));
 
             auto table = SymbolTableManager::instance()->global();
             table->addSymbol($2.get<string>(), type);
@@ -421,7 +441,7 @@ Term : '(' Exp ')' {
      }
      | LITERAL {
      auto s = $1.get<string>();
-     $$ = ExpNodePtr(new ExpNode_ConstantLiteral(s.substr(1, s.size() - 2)));
+     $$ = ExpNodePtr(new ExpNode_ConstantLiteral(parseSourceLiteral(s)));
      }
      | TRUE {
      $$ = ExpNodePtr(new ExpNode_ConstantInt(1));
@@ -534,7 +554,7 @@ BuildinType : T_CHAR {
             ;
 Constants: LITERAL {
              auto s = $1.get<string>();
-             $$ = ExpNodePtr(new ExpNode_ConstantLiteral(s.substr(1, s.size() - 2)));
+             $$ = ExpNodePtr(new ExpNode_ConstantLiteral(parseSourceLiteral(s)));
          }
          | INT {
             $$ = ExpNodePtr(new ExpNode_ConstantInt(

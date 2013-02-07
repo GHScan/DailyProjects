@@ -6,8 +6,8 @@
 #include "Runtime.h"
 #include "ByteCode.h"
 
-ASTFunction::ASTFunction(StmtNodePtr stmt, IType *type):
-    m_stmt(stmt), m_type(dynamic_cast<FunctionType*>(type))
+ASTFunction::ASTFunction(StmtNodePtr stmt):
+    m_stmt(stmt)
 {
 }
 void ASTFunction::call(RuntimeEnv *env)
@@ -23,7 +23,7 @@ void ASTFunction::emitCode()
 CodeManager::CodeManager()
 {
     auto ts = TypeSystem::instance();
-    auto p = new ASTFunction(StmtNodePtr(new StmtNode_Block()), ts->getFunc(ts->getType("int"), vector<IType*>()));
+    auto p = new ASTFunction(StmtNodePtr(new StmtNode_Block()));
     m_funcPreMain.reset(p);
 }
 

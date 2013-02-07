@@ -24,6 +24,14 @@ struct CType2ScriptType<T*>
         return ts->getPointer(CType2ScriptType<T>::get(ts));
     }
 };
+template<typename T>
+struct CType2ScriptType<T const>
+{
+    static IType* get(TypeSystem* ts)
+    {
+        return CType2ScriptType<T>::get(ts);
+    }
+};
 template<>
 struct CType2ScriptType<int>
 {
@@ -49,7 +57,7 @@ void registerFunctionSymbol(const string& name, RetT(*f)())
     vector<IType*> argT = {};
     IType *ftype = ts->getFunc(retT, argT);
     SymbolTableManager::instance()->global()->addSymbol(name, ftype);
-    CodeManager::instance()->registerFunction(name, FunctionPtr(new CFunction0<RetT>(f, ftype)));
+    CodeManager::instance()->registerFunction(name, FunctionPtr(new CFunction0<RetT>(f)));
 }
 template<typename RetT, typename ArgT0>
 void registerFunctionSymbol(const string& name, RetT(*f)(ArgT0))
@@ -59,7 +67,7 @@ void registerFunctionSymbol(const string& name, RetT(*f)(ArgT0))
     vector<IType*> argT = {CType2ScriptType<ArgT0>::get(ts)};
     IType *ftype = ts->getFunc(retT, argT);
     SymbolTableManager::instance()->global()->addSymbol(name, ftype);
-    CodeManager::instance()->registerFunction(name, FunctionPtr(new CFunction1<RetT, ArgT0>(f, ftype)));
+    CodeManager::instance()->registerFunction(name, FunctionPtr(new CFunction1<RetT, ArgT0>(f)));
 }
 template<typename RetT, typename ArgT0, typename ArgT1>
 void registerFunctionSymbol(const string& name, RetT(*f)(ArgT0, ArgT1))
@@ -69,7 +77,17 @@ void registerFunctionSymbol(const string& name, RetT(*f)(ArgT0, ArgT1))
     vector<IType*> argT = {CType2ScriptType<ArgT0>::get(ts), CType2ScriptType<ArgT1>::get(ts)};
     IType *ftype = ts->getFunc(retT, argT);
     SymbolTableManager::instance()->global()->addSymbol(name, ftype);
-    CodeManager::instance()->registerFunction(name, FunctionPtr(new CFunction2<RetT, ArgT0, ArgT1>(f, ftype)));
+    CodeManager::instance()->registerFunction(name, FunctionPtr(new CFunction2<RetT, ArgT0, ArgT1>(f)));
+}
+void registerVarLengFunctionSymbol(const string& name, CVarlengFunction::FuncT f)
+{
+    TypeSystem* ts = TypeSystem::instance();
+    IType *retT = CType2ScriptType<int>::get(ts);
+    vector<IType*> argT = {CType2ScriptType<const char*>::get(ts)};
+    IType *ftype = ts->getFunc(retT, argT);
+    dynamic_cast<FunctionType*>(ftype)->isVarLengOfArg = true;
+    SymbolTableManager::instance()->global()->addSymbol(name, ftype);
+    CodeManager::instance()->registerFunction(name, FunctionPtr(new CVarlengFunction(f)));
 }
 
 template<typename RetT>
@@ -102,22 +120,44 @@ static int buildin_assert(int b)
     assert(b);
 }
 
-// TODO: var args
-static int buildin_print(int i)
+static int buildin_printf(const char *fmt, char *args)
 {
-    cout << i << '\t';
-}
-static int buildin_println(int i)
-{
-    cout << i << '\n';
+    while (*fmt) {
+        string buf;
+        if (*fmt == '%') {
+            while (strchr("dsc", *fmt) == NULL) buf.push_back(*fmt++);
+            ASSERT(*fmt);
+            buf.push_back(*fmt);
+            switch (*fmt) {
+                case 'c':
+                    printf(buf.c_str(), *((char*&)args)++);
+                    break;
+                case 'd':
+                    printf(buf.c_str(), *((int*&)args)++);
+                    break;
+                case 's':
+                    printf(buf.c_str(), *((char**&)args)++);
+                    break;
+                case '%':
+                    putchar('%');
+                    break;
+                default:
+                    break;
+            }
+            ++fmt;
+        }
+        else {
+            while (*fmt && *fmt != '%') buf.push_back(*fmt++);
+            printf("%s", buf.c_str());
+        }
+    }
 }
 
 static void registerBuildin()
 {
     registerFunctionSymbol("clock", &buildin_clock);
     registerFunctionSymbol("assert", &buildin_assert);
-    registerFunctionSymbol("print", &buildin_print);
-    registerFunctionSymbol("println", &buildin_println);
+    registerVarLengFunctionSymbol("printf", &buildin_printf);
 }
 static void runMain()
 {

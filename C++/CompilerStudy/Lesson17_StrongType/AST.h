@@ -286,7 +286,6 @@ struct StmtNode_Switch:
     public IStmtNode
 {
     ExpNodePtr exp;
-    // TODO: to support the literal case !
     map<int, StmtNodePtr> caseMap; 
     StmtNodePtr defaultStmt;
     StmtNode_Switch(const ExpNodePtr& _exp): exp(_exp){}

@@ -99,14 +99,13 @@ class ASTFunction:
     public IFunction
 {
 public:
-    ASTFunction(StmtNodePtr stmt, IType *type);
+    ASTFunction(StmtNodePtr stmt);
     StmtNodePtr& getStmt() { return m_stmt; }
     void emitCode();
     virtual void call(RuntimeEnv *env);
 private:
     StmtNodePtr m_stmt;
     ByteCodeSeqPtr m_codeSeq;
-    FunctionType *m_type;
 };
 
 template<typename RetT, typename ArgT0, typename ArgT1, typename ArgT2>
@@ -116,7 +115,7 @@ class CFunction3:
 private:
     typedef RetT(*FuncT)(ArgT0, ArgT1, ArgT2);
 public:
-    CFunction3(FuncT f, IType *type): m_f(f), m_type(dynamic_cast<FunctionType*>(type)){}
+    CFunction3(FuncT f): m_f(f){}
     virtual void call(RuntimeEnv *env)
     {
         char *base = env->frameBase();
@@ -127,7 +126,6 @@ public:
     }
 private:
     FuncT m_f;
-    FunctionType *m_type;
 };
 template<typename RetT>
 class CFunction0:
@@ -136,7 +134,7 @@ class CFunction0:
 private:
     typedef RetT(*FuncT)();
 public:
-    CFunction0(FuncT f, IType *type): m_f(f), m_type(dynamic_cast<FunctionType*>(type)){}
+    CFunction0(FuncT f): m_f(f){}
     virtual void call(RuntimeEnv *env)
     {
         char *base = env->frameBase();
@@ -144,7 +142,6 @@ public:
     }
 private:
     FuncT m_f;
-    FunctionType *m_type;
 };
 template<typename RetT, typename ArgT0>
 class CFunction1:
@@ -153,7 +150,7 @@ class CFunction1:
 private:
     typedef RetT(*FuncT)(ArgT0);
 public:
-    CFunction1(FuncT f, IType *type): m_f(f), m_type(dynamic_cast<FunctionType*>(type)){}
+    CFunction1(FuncT f): m_f(f){}
     virtual void call(RuntimeEnv *env)
     {
         char *base = env->frameBase();
@@ -162,7 +159,6 @@ public:
     }
 private:
     FuncT m_f;
-    FunctionType *m_type;
 };
 template<typename RetT, typename ArgT0, typename ArgT1>
 class CFunction2:
@@ -171,7 +167,7 @@ class CFunction2:
 private:
     typedef RetT(*FuncT)(ArgT0, ArgT1);
 public:
-    CFunction2(FuncT f, IType *type): m_f(f), m_type(dynamic_cast<FunctionType*>(type)){}
+    CFunction2(FuncT f): m_f(f){}
     virtual void call(RuntimeEnv *env)
     {
         char *base = env->frameBase();
@@ -181,7 +177,24 @@ public:
     }
 private:
     FuncT m_f;
-    FunctionType *m_type;
+};
+
+class CVarlengFunction:
+    public IFunction
+{
+public:
+    typedef int(*FuncT)(const char *fmt, char *args);
+public:
+    CVarlengFunction(FuncT f): m_f(f){}
+    virtual void call(RuntimeEnv *env)
+    {
+        char *base = env->frameBase();
+        char *arg0 = (char*)((int*)base + 1);
+        char *argN = (char*)((const char**)arg0 + 1);
+        (int&)*base = m_f((const char*&)*arg0, argN);
+    }
+private:
+    FuncT m_f;
 };
 
 class CodeManager

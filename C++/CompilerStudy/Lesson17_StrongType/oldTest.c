@@ -1,6 +1,6 @@
 int echo(int b)
 {
-    println(b);
+    printf("%d\n", b);
     return b;
 }
 void testAnd()
@@ -23,9 +23,9 @@ void printPrime(int n)
                 break;
             }
         }
-        if (flag) print(i);
+        if (flag) printf("%d\t", i);
     }
-    println(0);
+    printf("\n");
 }
 int factorial(int n)
 {
@@ -36,12 +36,12 @@ void printFeb1()
 {
     int i = 1, j = 1;
     while (i < 100) {
-        print(j);
+        printf("%d\t", j);
         int t = i;
         i = i + j;
         j = t;
     }
-    println(0);
+    printf("\n");
 }
 int feb2(int n)
 {
@@ -51,25 +51,23 @@ int feb2(int n)
 }
 void printFeb2()
 {
-    for (int i = 1; i <= 10; ++i) print(feb2(i));
-    println(0);
+    for (int i = 1; i <= 10; ++i) printf("%d\t", feb2(i));
+    printf("\n");
 }
 void print9x9()
 {
     for (int i = 1; i <= 9; ++i) {
         for (int j = 1; j <= i; ++j) {
-            print(i);
-            print(j);
-            print(i * j);
+            printf("%dx%d=%-2d ", j, i, i * j);
         }
-        println(0);
+        printf("\n");
     }
 }
 void perform()
 {
     int start = clock();
     for (int i = 0; i < 100000; ++i);
-    println(clock() - start);
+    printf("perform: %d \n", clock() - start);
 }
 int main() 
 {
@@ -77,12 +75,12 @@ int main()
     testAnd(); // test for comment too
     testOr();
     printPrime(30); 
-    println(factorial(10));
+    printf("%d\n", factorial(10));
     printFeb1();
     printFeb2();
     print9x9();
     perform();
     int a = 30 - 5;
-    println(15 - 3*(2*2+(7 - 2)));
+    printf("%d\n", 15 - 3*(2*2+(7 - 2)));
 }
 
