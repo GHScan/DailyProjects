@@ -84,6 +84,7 @@ struct ExpNode_BinaryOp:
         BO_Less,
         BO_LessEq,
         BO_Equal,
+        BO_NotEqual,
         BO_Greater,
         BO_GreaterEq,
 
@@ -101,6 +102,7 @@ struct ExpNode_BinaryOp:
         else if (str == "<") return BO_Less;
         else if (str == "<=") return BO_LessEq;
         else if (str == "==") return BO_Equal;
+        else if (str == "!=") return BO_NotEqual;
         else if (str == ">") return BO_Greater;
         else if (str == ">=") return BO_GreaterEq;
 

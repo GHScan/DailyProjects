@@ -11,13 +11,13 @@ void printPrime(int n)
         }
         if (flag) ;
     }
-    println(clock() - start);
+    printf("printPrime: %d\n", clock() - start);
 }
 void perform()
 {
     int start = clock();
     for (int i = 0; i < 1000000; ++i);
-    println(clock() - start);
+    printf("perform: %d\n", clock() - start);
 }
 void perform2()
 {
@@ -25,12 +25,24 @@ void perform2()
     for (int i = 0; i < 100; ++i)
     for (int j = 0; j < 1000; ++j)
     for (int k = 0; k < 1000; ++k);
-    println(clock() - start);
+    printf("perform2: %d\n", clock() - start);
+}
+int feb(int n)
+{
+    if (n <= 2) return 1;
+    return feb(n - 1) + feb(n - 2);
+}
+void perform3()
+{
+    int start = clock();
+    for (int i = 0; i < 30; ++i) feb(i);
+    printf("perform3: %d\n", clock() - start);
 }
 int main() 
 {
     printPrime(10000); 
     perform();
     perform2();
+    perform3();
 }
 

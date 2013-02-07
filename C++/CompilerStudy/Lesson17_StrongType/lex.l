@@ -106,7 +106,7 @@ void onTokenFound();
     yylval = string(yytext, yytext + yyleng);
     return LITERAL;
 }
-\-?[0-9]+ {
+[0-9]+ {
     onTokenFound();
     yylval = string(yytext, yytext + yyleng);
     return INT;

@@ -35,6 +35,7 @@ enum ByteCodeType
     BCT_Less,
     BCT_LessEq,
     BCT_Equal,
+    BCT_NotEqual,
     BCT_Greater,
     BCT_GreaterEq,
     BCT_Not,
@@ -583,6 +584,25 @@ struct ByteCode_SizeDepend<BCT_Equal, bits>: public Bytes2Type<bits>
         env->popValue(r);
         env->popValue(l);
         env->pushValue(int(l == r));
+    }
+    static void disassemble(int code, ostream& so)
+    {
+    }
+};
+template<int bits>
+struct ByteCode_SizeDepend<BCT_NotEqual, bits>: public Bytes2Type<bits>
+{
+    typedef typename Bytes2Type<bits>::Type Type;
+    static int emit()
+    {
+        return Bytes2Type<bits>::E_CodeMask | (BCT_NotEqual << 24);
+    }
+    static void execute(int code, RuntimeEnv *env)
+    {
+        Type l, r;
+        env->popValue(r);
+        env->popValue(l);
+        env->pushValue(int(l != r));
     }
     static void disassemble(int code, ostream& so)
     {

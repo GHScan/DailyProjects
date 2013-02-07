@@ -50,7 +50,7 @@ struct CType2ScriptType<char>
 };
 
 template<typename RetT>
-void registerFunctionSymbol(const string& name, RetT(*f)())
+void registerFunction(const string& name, RetT(*f)())
 {
     TypeSystem* ts = TypeSystem::instance();
     IType *retT = CType2ScriptType<RetT>::get(ts);
@@ -60,7 +60,7 @@ void registerFunctionSymbol(const string& name, RetT(*f)())
     CodeManager::instance()->registerFunction(name, FunctionPtr(new CFunction0<RetT>(f)));
 }
 template<typename RetT, typename ArgT0>
-void registerFunctionSymbol(const string& name, RetT(*f)(ArgT0))
+void registerFunction(const string& name, RetT(*f)(ArgT0))
 {
     TypeSystem* ts = TypeSystem::instance();
     IType *retT = CType2ScriptType<RetT>::get(ts);
@@ -70,7 +70,7 @@ void registerFunctionSymbol(const string& name, RetT(*f)(ArgT0))
     CodeManager::instance()->registerFunction(name, FunctionPtr(new CFunction1<RetT, ArgT0>(f)));
 }
 template<typename RetT, typename ArgT0, typename ArgT1>
-void registerFunctionSymbol(const string& name, RetT(*f)(ArgT0, ArgT1))
+void registerFunction(const string& name, RetT(*f)(ArgT0, ArgT1))
 {
     TypeSystem* ts = TypeSystem::instance();
     IType *retT = CType2ScriptType<RetT>::get(ts);
@@ -79,7 +79,7 @@ void registerFunctionSymbol(const string& name, RetT(*f)(ArgT0, ArgT1))
     SymbolTableManager::instance()->global()->addSymbol(name, ftype);
     CodeManager::instance()->registerFunction(name, FunctionPtr(new CFunction2<RetT, ArgT0, ArgT1>(f)));
 }
-void registerVarLengFunctionSymbol(const string& name, CVarlengFunction::FuncT f)
+void registerVarLengFunction(const string& name, CVarlengFunction::FuncT f)
 {
     TypeSystem* ts = TypeSystem::instance();
     IType *retT = CType2ScriptType<int>::get(ts);
@@ -119,20 +119,28 @@ static int buildin_assert(int b)
 {
     assert(b);
 }
+static void* buildin_malloc(int n)
+{
+    return malloc(n);
+}
+static int buildin_free(void *p)
+{
+    free(p);
+}
 
 static int buildin_printf(const char *fmt, char *args)
 {
     while (*fmt) {
         string buf;
         if (*fmt == '%') {
-            while (strchr("dsc", *fmt) == NULL) buf.push_back(*fmt++);
-            ASSERT(*fmt);
             buf.push_back(*fmt);
-            switch (*fmt) {
+            while (strchr("cdxs%", *++fmt) == NULL) buf.push_back(*fmt);
+            buf.push_back(*fmt);
+            switch (*fmt++) {
                 case 'c':
                     printf(buf.c_str(), *((char*&)args)++);
                     break;
-                case 'd':
+                case 'd': case 'x':
                     printf(buf.c_str(), *((int*&)args)++);
                     break;
                 case 's':
@@ -144,7 +152,6 @@ static int buildin_printf(const char *fmt, char *args)
                 default:
                     break;
             }
-            ++fmt;
         }
         else {
             while (*fmt && *fmt != '%') buf.push_back(*fmt++);
@@ -155,9 +162,11 @@ static int buildin_printf(const char *fmt, char *args)
 
 static void registerBuildin()
 {
-    registerFunctionSymbol("clock", &buildin_clock);
-    registerFunctionSymbol("assert", &buildin_assert);
-    registerVarLengFunctionSymbol("printf", &buildin_printf);
+    registerFunction("clock", &buildin_clock);
+    registerFunction("assert", &buildin_assert);
+    registerFunction("malloc", &buildin_malloc);
+    registerFunction("free", &buildin_free);
+    registerVarLengFunction("printf", &buildin_printf);
 }
 static void runMain()
 {
@@ -170,13 +179,6 @@ static void runMain()
 
 void parseFile(const char *fname);
 
-// TODO: 
-// sub op and minus op
-// test -char, implement strcp ...
-// test -malloc, free
-// test -switch
-// test -array
-// test -struct
 int main(int argc, char *argv[])
 {
     if (argc == 1) {

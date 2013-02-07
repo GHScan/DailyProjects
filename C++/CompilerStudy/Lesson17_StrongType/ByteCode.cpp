@@ -151,6 +151,7 @@ l_end:
                 ASSERT(node->op == ExpNode_BinaryOp::BO_Less ||
                         node->op == ExpNode_BinaryOp::BO_LessEq ||
                         node->op == ExpNode_BinaryOp::BO_Equal ||
+                        node->op == ExpNode_BinaryOp::BO_NotEqual ||
                         node->op == ExpNode_BinaryOp::BO_Greater ||
                         node->op == ExpNode_BinaryOp::BO_GreaterEq);
             }
@@ -204,6 +205,11 @@ l_end:
                         ByteCode_SizeDepend<BCT_Equal, 1>::emit() : ByteCode_SizeDepend<BCT_Equal, 4>::emit());
                 m_type = TypeSystem::instance()->getType("int");
                 break;
+            case ExpNode_BinaryOp::BO_NotEqual:
+                m_codes.push_back(m_type->getSize() == 1 ?
+                        ByteCode_SizeDepend<BCT_NotEqual, 1>::emit() : ByteCode_SizeDepend<BCT_NotEqual, 4>::emit());
+                m_type = TypeSystem::instance()->getType("int");
+                break;
             case ExpNode_BinaryOp::BO_Greater:
                 m_codes.push_back(m_type->getSize() == 1 ?
                         ByteCode_SizeDepend<BCT_Greater, 1>::emit() : ByteCode_SizeDepend<BCT_Greater, 4>::emit());
@@ -233,16 +239,36 @@ l_end:
         else if (node->op == ExpNode_UnaryOp::UO_Inc) {
             node->left->acceptVisitor(this);
             ASSERT(m_lval);
-            m_codes.push_back(m_type->getSize() == 1 ?
-                    ByteCode_SizeDepend<BCT_Inc, 1>::emit() :
-                    ByteCode_SizeDepend<BCT_Inc, 4>::emit());
+            if (auto ptype = dynamic_cast<PointerType*>(m_type)) {
+                m_codes.push_back(ByteCode_SizeDepend<BCT_PushI, 4>::emit(-1));
+                m_codes.push_back(ByteCode_SizeDepend<BCT_PushI, 4>::emit(-1));
+                m_codes.push_back(ByteCode_SizeDepend<BCT_ReadAddr, 4>::emit());
+                m_codes.push_back(ByteCode_SizeIndepend<BCT_PushInt>::emit(ptype->refType->getSize()));
+                m_codes.push_back(ByteCode_SizeDepend<BCT_Add, 4>::emit());
+                m_codes.push_back(ByteCode_SizeDepend<BCT_WriteAddr, 4>::emit());
+            }
+            else {
+                m_codes.push_back(m_type->getSize() == 1 ?
+                        ByteCode_SizeDepend<BCT_Inc, 1>::emit() :
+                        ByteCode_SizeDepend<BCT_Inc, 4>::emit());
+            }
         }
         else if (node->op == ExpNode_UnaryOp::UO_Dec) {
             node->left->acceptVisitor(this);
             ASSERT(m_lval);
-            m_codes.push_back(m_type->getSize() == 1 ?
-                    ByteCode_SizeDepend<BCT_Dec, 1>::emit() :
-                    ByteCode_SizeDepend<BCT_Dec, 4>::emit());
+            if (auto ptype = dynamic_cast<PointerType*>(m_type)) {
+                m_codes.push_back(ByteCode_SizeDepend<BCT_PushI, 4>::emit(-1));
+                m_codes.push_back(ByteCode_SizeDepend<BCT_PushI, 4>::emit(-1));
+                m_codes.push_back(ByteCode_SizeDepend<BCT_ReadAddr, 4>::emit());
+                m_codes.push_back(ByteCode_SizeIndepend<BCT_PushInt>::emit(ptype->refType->getSize()));
+                m_codes.push_back(ByteCode_SizeDepend<BCT_Sub, 4>::emit());
+                m_codes.push_back(ByteCode_SizeDepend<BCT_WriteAddr, 4>::emit());
+            }
+            else {
+                m_codes.push_back(m_type->getSize() == 1 ?
+                        ByteCode_SizeDepend<BCT_Dec, 1>::emit() :
+                        ByteCode_SizeDepend<BCT_Dec, 4>::emit());
+            }
         }
     }
     virtual void visit(ExpNode_Addr* node)
@@ -289,9 +315,34 @@ l_end:
     virtual void visit(ExpNode_ArrayElem* node)
     {
         node->left->acceptVisitor(this);
-        ASSERT(m_lval);
+
+        if (auto ptype = dynamic_cast<PointerType*>(m_type)) {
+            toRval();
+
+            if (auto p = dynamic_cast<ExpNode_ConstantInt*>(node->right.get())) {
+                m_addrOff += p->value * ptype->refType->getSize();
+            }
+            else {
+                clearAddrOff();
+
+                ExpNodeVisitor_CodeGen rcodeGen(m_codes, node->right);
+                rcodeGen.toRval();
+                rcodeGen.tryImplicitConvertTo(TypeSystem::instance()->getType("int"));
+                ASSERT(rcodeGen.m_type == TypeSystem::instance()->getType("int"));
+                rcodeGen.m_codes.push_back(ByteCode_SizeIndepend<BCT_PushInt>::emit(ptype->refType->getSize()));
+                rcodeGen.m_codes.push_back(ByteCode_SizeDepend<BCT_Mul, 4>::emit());
+
+                m_codes.push_back(ByteCode_SizeDepend<BCT_Add, 4>::emit());
+            }
+
+            m_lval = true;
+            m_type = ptype->refType;
+            return;
+        }
+
         auto atype = dynamic_cast<ArrayType*>(m_type);
         ASSERT(atype != NULL);
+        ASSERT(m_lval);
 
         if (auto p = dynamic_cast<ExpNode_ConstantInt*>(node->right.get())) {
             m_addrOff += p->value * atype->elemType->getSize();
@@ -300,6 +351,7 @@ l_end:
             clearAddrOff();
 
             ExpNodeVisitor_CodeGen rcodeGen(m_codes, node->right);
+            rcodeGen.toRval();
             rcodeGen.tryImplicitConvertTo(TypeSystem::instance()->getType("int"));
             ASSERT(rcodeGen.m_type == TypeSystem::instance()->getType("int"));
             rcodeGen.m_codes.push_back(ByteCode_SizeIndepend<BCT_PushInt>::emit(atype->elemType->getSize()));
@@ -380,9 +432,18 @@ public:
     {
         if (m_lval) {
             clearAddrOff();
-            m_codes.push_back(m_type->getSize() == 1 ?
-                    ByteCode_SizeDepend<BCT_ReadAddr, 1>::emit() :
-                    ByteCode_SizeDepend<BCT_ReadAddr, 4>::emit());
+            if (auto atype = dynamic_cast<ArrayType*>(m_type)) {
+                m_type = atype->elemType;
+                while (atype = dynamic_cast<ArrayType*>(m_type)) {
+                    m_type = atype->elemType;
+                }
+                m_type = TypeSystem::instance()->getPointer(m_type);
+            }
+            else {
+                m_codes.push_back(m_type->getSize() == 1 ?
+                        ByteCode_SizeDepend<BCT_ReadAddr, 1>::emit() :
+                        ByteCode_SizeDepend<BCT_ReadAddr, 4>::emit());
+            }
             m_lval = false;
         }
     }
@@ -592,6 +653,7 @@ l_cmp:
         equal
         jumpN l_case2
         ...
+        defaultStmt
 l_end:
         popvalue
          * */
@@ -627,6 +689,10 @@ l_end:
             m_codes.push_back(ByteCode_SizeDepend<BCT_Equal, 4>::emit());
             m_codes.push_back(ByteCode_SizeIndepend<BCT_JumpN>::emit(lcases[idx]));
             ++idx;
+        }
+
+        if (node->defaultStmt != NULL) {
+            node->defaultStmt->acceptVisitor(this);
         }
 
         for (auto off : jumpEnds) {
@@ -675,6 +741,7 @@ struct SizeDependByteCodeDispatcher
             case BCT_Less: ByteCode_SizeDepend<BCT_Less, bits>::disassemble(code, so); break;
             case BCT_LessEq: ByteCode_SizeDepend<BCT_LessEq, bits>::disassemble(code, so); break;
             case BCT_Equal: ByteCode_SizeDepend<BCT_Equal, bits>::disassemble(code, so); break;
+            case BCT_NotEqual: ByteCode_SizeDepend<BCT_NotEqual, bits>::disassemble(code, so); break;
             case BCT_Greater: ByteCode_SizeDepend<BCT_Greater, bits>::disassemble(code, so); break;
             case BCT_GreaterEq: ByteCode_SizeDepend<BCT_GreaterEq, bits>::disassemble(code, so); break;
             case BCT_Not: ByteCode_SizeDepend<BCT_Not, bits>::disassemble(code, so); break;
@@ -702,6 +769,7 @@ struct SizeDependByteCodeDispatcher
             case BCT_Less: ByteCode_SizeDepend<BCT_Less, bits>::execute(code, env); break;
             case BCT_LessEq: ByteCode_SizeDepend<BCT_LessEq, bits>::execute(code, env); break;
             case BCT_Equal: ByteCode_SizeDepend<BCT_Equal, bits>::execute(code, env); break;
+            case BCT_NotEqual: ByteCode_SizeDepend<BCT_NotEqual, bits>::execute(code, env); break;
             case BCT_Greater: ByteCode_SizeDepend<BCT_Greater, bits>::execute(code, env); break;
             case BCT_GreaterEq: ByteCode_SizeDepend<BCT_GreaterEq, bits>::execute(code, env); break;
             case BCT_Not: ByteCode_SizeDepend<BCT_Not, bits>::execute(code, env); break;

@@ -77,7 +77,7 @@ string parseSourceLiteral(const string& s)
 %left REL_OP
 %left ADD_OP
 %left STAR_OP DIV_OP MOD_OP
-%nonassoc NOT_OP INC_OP
+%nonassoc NOT_OP INC_OP 
 %nonassoc POINTER_AFIELD_OP AFIELD_OP
 
 %%
@@ -97,8 +97,10 @@ GlobalDefine : Struct
                 table->addSymbol(nameExp.first, type);
             }
             for (auto nameExp : *vec) {
-                block->stmts.push_back(StmtNodePtr(new StmtNode_Exp(ExpNodePtr(
-                    new ExpNode_Assign(ExpNodePtr(new ExpNode_Variable(nameExp.first)), nameExp.second)))));
+                if (nameExp.second != NULL) {
+                    block->stmts.push_back(StmtNodePtr(new StmtNode_Exp(ExpNodePtr(
+                        new ExpNode_Assign(ExpNodePtr(new ExpNode_Variable(nameExp.first)), nameExp.second)))));
+                }
             }
         }
         ;
@@ -106,6 +108,7 @@ GlobalDefine : Struct
 Struct : STRUCT ID '{' Fields '}' ';' {
             auto vec = $4.get<shared_ptr<DeclarePairVec> >();
             StructType *type = new StructType();
+            TypeSystem::instance()->addType($2.get<string>(), type);
             SymbolTablePtr table(new SymbolTable(NULL));
             for (int i = vec->size() - 1; i >= 0; --i) {
                 auto _type = (*vec)[i].first;
@@ -113,7 +116,6 @@ Struct : STRUCT ID '{' Fields '}' ';' {
                 type->fields.push_back(_type);
                 table->addSymbol(_fieldName, _type);
             }
-            TypeSystem::instance()->addType($2.get<string>(), type);
             SymbolTableManager::instance()->addTypeTable(type, table);
        }
        ;
@@ -403,7 +405,7 @@ Add : Add ADD_OP Mul {
         $3.get<ExpNodePtr>(),
         ExpNode_BinaryOp::string2op($2.get<string>())));
     }
-    | Mul
+    | Mul 
     ;
 Mul : Mul STAR_OP Term {
     $$ = ExpNodePtr(new ExpNode_BinaryOp($1.get<ExpNodePtr>(), $3.get<ExpNodePtr>(), ExpNode_BinaryOp::BO_Mul));
@@ -436,6 +438,11 @@ Term : '(' Exp ')' {
      | ID {
      $$ = ExpNodePtr(new ExpNode_Variable($1.get<string>()));
      }
+     | ADD_OP INT {
+        auto i = atoi($2.get<string>().c_str());
+        if ($1.get<string>() == "-") i = -i;
+        $$ = ExpNodePtr(new ExpNode_ConstantInt(i));
+    }
      | INT {
      $$ = ExpNodePtr(new ExpNode_ConstantInt(atoi($1.get<string>().c_str())));
      }
@@ -491,6 +498,11 @@ ArrayAccess : ArrayAccess '[' Exp ']' {
            $$ = ExpNodePtr(new ExpNode_ArrayElem(
                 ExpNodePtr(new ExpNode_Variable($1.get<string>())),
                 $3.get<ExpNodePtr>()));
+           }
+           | '(' Exp ')' '[' Exp ']' {
+           $$ = ExpNodePtr(new ExpNode_ArrayElem(
+                $2.get<ExpNodePtr>(),
+                $5.get<ExpNodePtr>()));
            }
            ;
  
