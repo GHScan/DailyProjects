@@ -7,6 +7,7 @@
 #include "Runtime.h"
 #include "SymbolTable.h"
 #include "TypeSystem.h"
+#include "ByteCode.h"
 
 template<typename T>
 struct CType2ScriptType
@@ -168,11 +169,26 @@ static void registerBuildin()
     registerFunction("free", &buildin_free);
     registerVarLengFunction("printf", &buildin_printf);
 }
+static void genDisassemble(const string& fname)
+{
+    ofstream fo(fname.c_str());
+
+    fo << "_global:\n";
+    CodeManager::instance()->getFuncPreMain()->getCodeSeq()->disassemble(fo);
+
+    for (auto name : CodeManager::instance()->getFuncNames()) {
+        if (auto p = dynamic_cast<ASTFunction*>(CodeManager::instance()->getFunc(name).get())) {
+            fo << name << ":\n";
+            p->getCodeSeq()->disassemble(fo);
+        }
+    }
+}
 static void runMain()
 {
     RuntimeEnv env;
     env.reserveGlobal(SymbolTableManager::instance()->global()->getOffset());
     CodeManager::instance()->emitAll();
+    genDisassemble("disall.txt");
     callFromC<int>(CodeManager::instance()->getFuncPreMain(), &env);
     callFromC<int>(CodeManager::instance()->getFunc("main").get(), &env);
 }

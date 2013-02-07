@@ -101,6 +101,7 @@ class ASTFunction:
 public:
     ASTFunction(StmtNodePtr stmt);
     StmtNodePtr& getStmt() { return m_stmt; }
+    ByteCodeSeqPtr& getCodeSeq() { return m_codeSeq; }
     void emitCode();
     virtual void call(RuntimeEnv *env);
 private:
@@ -215,6 +216,12 @@ public:
     FunctionPtr getFunc(const string& name) { return m_funcs[name]; }
     ASTFunction* getFuncPreMain() { return dynamic_cast<ASTFunction*>(m_funcPreMain.get()); }
     void emitAll();
+    vector<string> getFuncNames()
+    {
+        vector<string> r;
+        for (auto p : m_funcs) r.push_back(p.first);
+        return r;
+    }
 private:
     FunctionPtr m_funcPreMain;
     map<string, FunctionPtr> m_funcs;

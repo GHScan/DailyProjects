@@ -58,6 +58,7 @@ struct ByteCode_SizeIndepend<BCT_Convert4To1>
     }
     static void disassemble(int code, ostream& so)
     {
+        so << format("conv 4->1");
     }
 };
 template<>
@@ -82,6 +83,7 @@ struct ByteCode_SizeIndepend<BCT_Convert1To4>
     }
     static void disassemble(int code, ostream& so)
     {
+        so << format("conv 1->4");
     }
 };
 static bool isLargeInt(int i)
@@ -108,6 +110,8 @@ struct ByteCode_SizeIndepend<BCT_PushInt>
     }
     static void disassemble(int code, ostream& so)
     {
+        int i = code & 0x7fffff;
+        so << format("pushInt %d", (code >> 23) & 1 ? -i : i);
     }
 };
 template<>
@@ -126,6 +130,7 @@ struct ByteCode_SizeIndepend<BCT_PushIntLarge>
     }
     static void disassemble(int code, ostream& so)
     {
+        so << format("pushInt %d", ConstantPool::instance()->getInt(code & 0xffffff));
     }
 };
 template<>
@@ -143,6 +148,7 @@ struct ByteCode_SizeIndepend<BCT_PushLiteral>
     }
     static void disassemble(int code, ostream& so)
     {
+        so << format("pushStr '%s'", ConstantPool::instance()->getString(code & 0xffffff));
     }
 };
 template<>
@@ -159,6 +165,7 @@ struct ByteCode_SizeIndepend<BCT_Jump>
     }
     static void disassemble(int code, ostream& so)
     {
+        so << format("jmp %d", (code & 0xffffff) + 1);
     }
 };
 template<>
@@ -176,6 +183,7 @@ struct ByteCode_SizeIndepend<BCT_JumpZ>
     }
     static void disassemble(int code, ostream& so)
     {
+        so << format("jz %d", (code & 0xffffff) + 1);
     }
 };
 template<>
@@ -193,6 +201,7 @@ struct ByteCode_SizeIndepend<BCT_JumpN>
     }
     static void disassemble(int code, ostream& so)
     {
+        so << format("jnz %d", (code & 0xffffff) + 1);
     }
 };
 template<>
@@ -216,6 +225,10 @@ struct ByteCode_SizeIndepend<BCT_Call>
     }
     static void disassemble(int code, ostream& so)
     {
+        const char *name = ConstantPool::instance()->getString((code >> 12) & 0xfff);
+        int numID = ConstantPool::instance()->getInt(code & 0xfff);
+        int retSize = numID >> 24, retArgSize = numID & 0xffffff;
+        so << format("call '%s', %d, %d", name, retSize, retArgSize);
     }
 };
 template<>
@@ -232,6 +245,7 @@ struct ByteCode_SizeIndepend<BCT_PushLocalAddr>
     }
     static void disassemble(int code, ostream& so)
     {
+        so << format("pushLAddr %d", (code & 0xffffff));
     }
 };
 template<>
@@ -248,6 +262,7 @@ struct ByteCode_SizeIndepend<BCT_PushGlobalAddr>
     }
     static void disassemble(int code, ostream& so)
     {
+        so << format("pushGAddr %d", (code & 0xffffff));
     }
 };
 //////////
@@ -288,6 +303,7 @@ struct ByteCode_SizeDepend<BCT_ReadAddr, bits>: public Bytes2Type<bits>
     }
     static void disassemble(int code, ostream& so)
     {
+        so << format("readAddr(%d)", bits);
     }
 };
 template<int bits>
@@ -306,6 +322,7 @@ struct ByteCode_SizeDepend<BCT_WriteAddr, bits>: public Bytes2Type<bits>
     }
     static void disassemble(int code, ostream& so)
     {
+        so << format("writeAddr(%d)", bits);
     }
 };
 template<int bits>
@@ -324,6 +341,7 @@ struct ByteCode_SizeDepend<BCT_PushLocal, bits>: public Bytes2Type<bits>
     }
     static void disassemble(int code, ostream& so)
     {
+        so << format("pushL(%d) %d", bits, code & 0xffffff);
     }
 };
 template<int bits>
@@ -342,6 +360,7 @@ struct ByteCode_SizeDepend<BCT_PushGlobal, bits>: public Bytes2Type<bits>
     }
     static void disassemble(int code, ostream& so)
     {
+        so << format("pushG(%d) %d", bits, code & 0xffffff);
     }
 };
 template<int bits>
@@ -360,6 +379,7 @@ struct ByteCode_SizeDepend<BCT_PopLocal, bits>: public Bytes2Type<bits>
     }
     static void disassemble(int code, ostream& so)
     {
+        so << format("popL(%d) %d", bits, code & 0xffffff);
     }
 };
 template<int bits>
@@ -378,6 +398,7 @@ struct ByteCode_SizeDepend<BCT_PopGlobal, bits>: public Bytes2Type<bits>
     }
     static void disassemble(int code, ostream& so)
     {
+        so << format("popG(%d) %d", bits, code & 0xffffff);
     }
 };
 template<int bits>
@@ -395,6 +416,7 @@ struct ByteCode_SizeDepend<BCT_PushI, bits>: public Bytes2Type<bits>
     }
     static void disassemble(int code, ostream& so)
     {
+        so << format("pushPrev(%d) %d", bits, -(code & 0xffffff));
     }
 };
 template<int bits>
@@ -413,6 +435,7 @@ struct ByteCode_SizeDepend<BCT_PopN, bits>: public Bytes2Type<bits>
     }
     static void disassemble(int code, ostream& so)
     {
+        so << format("popN(%d) %d", bits, code & 0xffffff);
     }
 };
 template<int bits>
@@ -430,6 +453,7 @@ struct ByteCode_SizeDepend<BCT_Add, bits>: public Bytes2Type<bits>
     }
     static void disassemble(int code, ostream& so)
     {
+        so << format("add(%d)", bits);
     }
 };
 template<int bits>
@@ -447,6 +471,7 @@ struct ByteCode_SizeDepend<BCT_Sub, bits>: public Bytes2Type<bits>
     }
     static void disassemble(int code, ostream& so)
     {
+        so << format("sub(%d)", bits);
     }
 };
 template<int bits>
@@ -464,6 +489,7 @@ struct ByteCode_SizeDepend<BCT_Mul, bits>: public Bytes2Type<bits>
     }
     static void disassemble(int code, ostream& so)
     {
+        so << format("mul(%d)", bits);
     }
 };
 template<int bits>
@@ -481,6 +507,7 @@ struct ByteCode_SizeDepend<BCT_Div, bits>: public Bytes2Type<bits>
     }
     static void disassemble(int code, ostream& so)
     {
+        so << format("div(%d)", bits);
     }
 };
 template<int bits>
@@ -498,6 +525,7 @@ struct ByteCode_SizeDepend<BCT_Mod, bits>: public Bytes2Type<bits>
     }
     static void disassemble(int code, ostream& so)
     {
+        so << format("mod(%d)", bits);
     }
 };
 template<int bits>
@@ -514,6 +542,7 @@ struct ByteCode_SizeDepend<BCT_Inc, bits>: public Bytes2Type<bits>
     }
     static void disassemble(int code, ostream& so)
     {
+        so << format("inc(%d)", bits);
     }
 };
 template<int bits>
@@ -530,6 +559,7 @@ struct ByteCode_SizeDepend<BCT_Dec, bits>: public Bytes2Type<bits>
     }
     static void disassemble(int code, ostream& so)
     {
+        so << format("dec(%d)", bits);
     }
 };
 template<int bits>
@@ -549,6 +579,7 @@ struct ByteCode_SizeDepend<BCT_Less, bits>: public Bytes2Type<bits>
     }
     static void disassemble(int code, ostream& so)
     {
+        so << format("less(%d)", bits);
     }
 };
 template<int bits>
@@ -568,6 +599,7 @@ struct ByteCode_SizeDepend<BCT_LessEq, bits>: public Bytes2Type<bits>
     }
     static void disassemble(int code, ostream& so)
     {
+        so << format("lessEq(%d)", bits);
     }
 };
 template<int bits>
@@ -587,6 +619,7 @@ struct ByteCode_SizeDepend<BCT_Equal, bits>: public Bytes2Type<bits>
     }
     static void disassemble(int code, ostream& so)
     {
+        so << format("equal(%d)", bits);
     }
 };
 template<int bits>
@@ -606,6 +639,7 @@ struct ByteCode_SizeDepend<BCT_NotEqual, bits>: public Bytes2Type<bits>
     }
     static void disassemble(int code, ostream& so)
     {
+        so << format("nEqual(%d)", bits);
     }
 };
 template<int bits>
@@ -625,6 +659,7 @@ struct ByteCode_SizeDepend<BCT_Greater, bits>: public Bytes2Type<bits>
     }
     static void disassemble(int code, ostream& so)
     {
+        so << format("greater(%d)", bits);
     }
 };
 template<int bits>
@@ -644,6 +679,7 @@ struct ByteCode_SizeDepend<BCT_GreaterEq, bits>: public Bytes2Type<bits>
     }
     static void disassemble(int code, ostream& so)
     {
+        so << format("greaterEq(%d)", bits);
     }
 };
 template<int bits>
@@ -661,6 +697,7 @@ struct ByteCode_SizeDepend<BCT_Not, bits>: public Bytes2Type<bits>
     }
     static void disassemble(int code, ostream& so)
     {
+        so << format("not(%d)", bits);
     }
 };
 

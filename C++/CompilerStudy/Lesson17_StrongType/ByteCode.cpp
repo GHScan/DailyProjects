@@ -782,6 +782,7 @@ void ByteCodeSeq::disassemble(ostream& so)
 {
     for (int i = 0; i < (int)m_codes.size(); ++i) {
         int code = m_codes[i];
+        so << format("\t%3d: ", i + 1);
         switch ((code >> 24) & 0xff) {
             case BCT_Convert4To1: ByteCode_SizeIndepend<BCT_Convert4To1>::disassemble(code, so); break;
             case BCT_Convert1To4: ByteCode_SizeIndepend<BCT_Convert1To4>::disassemble(code, so); break;
@@ -800,6 +801,7 @@ void ByteCodeSeq::disassemble(ostream& so)
                      break;
                  }
         }
+        so << '\n';
     }
 }
 void ByteCodeSeq::execute(RuntimeEnv *env)

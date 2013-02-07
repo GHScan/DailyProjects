@@ -17,4 +17,4 @@ lex.yy.c_: lex.l
 	flex -o lex.yy.c_ lex.l
 
 clean_actions:
-	rm -f syntax.yy.* lex.yy.*
+	rm -f syntax.yy.* lex.yy.* disall.txt
