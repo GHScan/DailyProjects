@@ -105,10 +105,12 @@ GlobalDefine : Struct
         }
         ;
 
-Struct : STRUCT ID '{' Fields '}' ';' {
-            auto vec = $4.get<shared_ptr<DeclarePairVec> >();
+Struct : STRUCT ID {
             StructType *type = new StructType();
             TypeSystem::instance()->addType($2.get<string>(), type);
+       } '{' Fields '}' ';' {
+            auto vec = $5.get<shared_ptr<DeclarePairVec> >();
+            StructType *type = dynamic_cast<StructType*>(TypeSystem::instance()->getType($2.get<string>()));
             SymbolTablePtr table(new SymbolTable(NULL));
             for (int i = vec->size() - 1; i >= 0; --i) {
                 auto _type = (*vec)[i].first;
