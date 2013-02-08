@@ -74,4 +74,6 @@ private:
     map<string, IType*> m_type2Func;
 };
 
+#define TYPE(s) TypeSystem::instance()->getType(s)
+
 #endif

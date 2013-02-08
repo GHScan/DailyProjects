@@ -64,14 +64,6 @@ struct ByteCode_SizeIndepend<BCT_Convert4To1>
 template<>
 struct ByteCode_SizeIndepend<BCT_Convert1To4>
 {
-    static bool canImplicitConvert(IType *s, IType *d)
-    {
-        if (d == TypeSystem::instance()->getType("int") &&
-                s == TypeSystem::instance()->getType("char")) {
-            return true;
-        }
-        return false;
-    }
     static int emit()
     {
         return (BCT_Convert1To4 << 24);

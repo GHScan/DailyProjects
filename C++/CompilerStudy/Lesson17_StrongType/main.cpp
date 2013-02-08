@@ -38,7 +38,7 @@ struct CType2ScriptType<int>
 {
     static IType* get(TypeSystem* ts)
     {
-        return ts->getType("int");
+        return TYPE("int");
     }
 };
 template<>
@@ -46,7 +46,7 @@ struct CType2ScriptType<char>
 {
     static IType* get(TypeSystem* ts)
     {
-        return ts->getType("char");
+        return TYPE("char");
     }
 };
 

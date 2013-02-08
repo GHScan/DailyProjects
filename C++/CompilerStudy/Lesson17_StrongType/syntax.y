@@ -557,13 +557,13 @@ DecorateBuildinType : BuildinType
                     }
                     ;
 BuildinType : T_CHAR {
-            $$ = TypeSystem::instance()->getType("char");
+            $$ = TYPE("char");
             }
             | T_INT {
-            $$ = TypeSystem::instance()->getType("int");
+            $$ = TYPE("int");
         }
             | T_VOID {
-            $$ = TypeSystem::instance()->getType("void");
+            $$ = TYPE("void");
         }
             ;
 Constants: LITERAL {

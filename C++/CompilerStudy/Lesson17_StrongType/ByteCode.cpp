@@ -78,13 +78,13 @@ private:
     virtual void visit(ExpNode_ConstantInt* node)
     {
         EMIT_PUSH_INT(node->value);
-        m_type = TypeSystem::instance()->getType("int");
+        m_type = TYPE("int");
         m_lval = false;
     }
     virtual void visit(ExpNode_ConstantLiteral* node)
     {
         EMIT_SI(BCT_PushLiteral, node->str);
-        m_type = TypeSystem::instance()->getPointer(TypeSystem::instance()->getType("char"));
+        m_type = TypeSystem::instance()->getPointer(TYPE("char"));
         m_lval = false;
     }
     virtual void visit(ExpNode_Variable* node)
@@ -122,8 +122,8 @@ l_end:
              * */
             node->left->acceptVisitor(this);
             toRval();
-            tryImplicitConvertTo(TypeSystem::instance()->getType("int"));
-            ASSERT(m_type == TypeSystem::instance()->getType("int"));
+            tryImplicitConvertTo(TYPE("int"));
+            ASSERT(m_type == TYPE("int"));
             EMIT_SD_N(BCT_PushI, 4, -1);
 
             int jump;
@@ -133,8 +133,8 @@ l_end:
             {
                 ExpNodeVisitor_CodeGen codeGen(m_codes, node->right);
                 codeGen.toRval();
-                codeGen.tryImplicitConvertTo(TypeSystem::instance()->getType("int"));
-                ASSERT(codeGen.m_type == TypeSystem::instance()->getType("int"));
+                codeGen.tryImplicitConvertTo(TYPE("int"));
+                ASSERT(codeGen.m_type == TYPE("int"));
             }
 
             if (node->op == ExpNode_BinaryOp::BO_And) {
@@ -181,12 +181,12 @@ l_end:
             case ExpNode_BinaryOp::BO_Mul: EMIT_SD_T0(BCT_Mul, m_type); break;
             case ExpNode_BinaryOp::BO_Div: EMIT_SD_T0(BCT_Div, m_type); break;
             case ExpNode_BinaryOp::BO_Mod: EMIT_SD_T0(BCT_Mod, m_type); break;
-            case ExpNode_BinaryOp::BO_Less: EMIT_SD_T0(BCT_Less, m_type); m_type = TypeSystem::instance()->getType("int"); break;
-            case ExpNode_BinaryOp::BO_LessEq: EMIT_SD_T0(BCT_LessEq, m_type); m_type = TypeSystem::instance()->getType("int"); break;
-            case ExpNode_BinaryOp::BO_Equal: EMIT_SD_T0(BCT_Equal, m_type); m_type = TypeSystem::instance()->getType("int"); break;
-            case ExpNode_BinaryOp::BO_NotEqual: EMIT_SD_T0(BCT_NotEqual, m_type); m_type = TypeSystem::instance()->getType("int"); break;
-            case ExpNode_BinaryOp::BO_Greater: EMIT_SD_T0(BCT_Greater, m_type); m_type = TypeSystem::instance()->getType("int"); break;
-            case ExpNode_BinaryOp::BO_GreaterEq: EMIT_SD_T0(BCT_GreaterEq, m_type); m_type = TypeSystem::instance()->getType("int"); break;
+            case ExpNode_BinaryOp::BO_Less: EMIT_SD_T0(BCT_Less, m_type); m_type = TYPE("int"); break;
+            case ExpNode_BinaryOp::BO_LessEq: EMIT_SD_T0(BCT_LessEq, m_type); m_type = TYPE("int"); break;
+            case ExpNode_BinaryOp::BO_Equal: EMIT_SD_T0(BCT_Equal, m_type); m_type = TYPE("int"); break;
+            case ExpNode_BinaryOp::BO_NotEqual: EMIT_SD_T0(BCT_NotEqual, m_type); m_type = TYPE("int"); break;
+            case ExpNode_BinaryOp::BO_Greater: EMIT_SD_T0(BCT_Greater, m_type); m_type = TYPE("int"); break;
+            case ExpNode_BinaryOp::BO_GreaterEq: EMIT_SD_T0(BCT_GreaterEq, m_type); m_type = TYPE("int"); break;
             default: ASSERT(0); break;
         }
     }
@@ -196,7 +196,7 @@ l_end:
             node->left->acceptVisitor(this);
             toRval();
             EMIT_SD_T0(BCT_Not, m_type);
-            m_type = TypeSystem::instance()->getType("int");
+            m_type = TYPE("int");
         }
         else if (node->op == ExpNode_UnaryOp::UO_Inc) {
             node->left->acceptVisitor(this);
@@ -285,8 +285,8 @@ l_end:
 
                 ExpNodeVisitor_CodeGen rcodeGen(m_codes, node->right);
                 rcodeGen.toRval();
-                rcodeGen.tryImplicitConvertTo(TypeSystem::instance()->getType("int"));
-                ASSERT(rcodeGen.m_type == TypeSystem::instance()->getType("int"));
+                rcodeGen.tryImplicitConvertTo(TYPE("int"));
+                ASSERT(rcodeGen.m_type == TYPE("int"));
                 EMIT_PUSH_INT(ptype->refType->getSize());
                 EMIT_SD_N0(BCT_Mul, 4);
                 EMIT_SD_N0(BCT_Add, 4);
@@ -309,8 +309,8 @@ l_end:
 
             ExpNodeVisitor_CodeGen rcodeGen(m_codes, node->right);
             rcodeGen.toRval();
-            rcodeGen.tryImplicitConvertTo(TypeSystem::instance()->getType("int"));
-            ASSERT(rcodeGen.m_type == TypeSystem::instance()->getType("int"));
+            rcodeGen.tryImplicitConvertTo(TYPE("int"));
+            ASSERT(rcodeGen.m_type == TYPE("int"));
             EMIT_PUSH_INT(atype->elemType->getSize());
             EMIT_SD_N0(BCT_Mul, 4);
             EMIT_SD_N0(BCT_Add, 4);
@@ -368,7 +368,7 @@ l_end:
         vector<int> codes;
         ExpNodeVisitor_CodeGen v(codes, node->left);
         EMIT_PUSH_INT(v.m_type->getSize());
-        m_type = TypeSystem::instance()->getType("int");
+        m_type = TYPE("int");
         m_lval = false;
     }
 public:
@@ -406,8 +406,8 @@ public:
     }
     void tryImplicitConvertTo(IType *type)
     {
-        if (type == TypeSystem::instance()->getType("int") &&
-                m_type == TypeSystem::instance()->getType("char")) {
+        if (type == TYPE("int") &&
+                m_type == TYPE("char")) {
             forceConvertTo(type);
         }
     }
@@ -512,8 +512,8 @@ l_break:
         if (node->exp2 != NULL) {
             ExpNodeVisitor_CodeGen codeGen(m_codes, node->exp2);
             codeGen.toRval();
-            codeGen.tryImplicitConvertTo(TypeSystem::instance()->getType("int"));
-            ASSERT(codeGen.getType() == TypeSystem::instance()->getType("int"));
+            codeGen.tryImplicitConvertTo(TYPE("int"));
+            ASSERT(codeGen.getType() == TYPE("int"));
         }
         else EMIT_PUSH_INT(1);
 
@@ -554,8 +554,8 @@ l2:
         {
             ExpNodeVisitor_CodeGen codeGen(m_codes, node->exp);
             codeGen.toRval();
-            codeGen.tryImplicitConvertTo(TypeSystem::instance()->getType("int"));
-            ASSERT(codeGen.getType() == TypeSystem::instance()->getType("int"));
+            codeGen.tryImplicitConvertTo(TYPE("int"));
+            ASSERT(codeGen.getType() == TYPE("int"));
         }
 
         int jumpZ;
@@ -608,8 +608,8 @@ l_end:
         {
             ExpNodeVisitor_CodeGen codeGen(m_codes, node->exp);
             codeGen.toRval();
-            codeGen.tryImplicitConvertTo(TypeSystem::instance()->getType("int"));
-            ASSERT(codeGen.getType() == TypeSystem::instance()->getType("int"));
+            codeGen.tryImplicitConvertTo(TYPE("int"));
+            ASSERT(codeGen.getType() == TYPE("int"));
         }
         int jumpCmp;
         EMIT_PREJUMP(jumpCmp);
