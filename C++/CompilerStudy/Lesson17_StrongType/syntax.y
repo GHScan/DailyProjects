@@ -112,7 +112,7 @@ Struct : STRUCT ID {
             auto vec = $5.get<shared_ptr<DeclarePairVec> >();
             StructType *type = dynamic_cast<StructType*>(TypeSystem::instance()->getType($2.get<string>()));
             SymbolTablePtr table(new SymbolTable(NULL));
-            for (int i = vec->size() - 1; i >= 0; --i) {
+            for (int i = 0; i < vec->size(); ++i) {
                 auto _type = (*vec)[i].first;
                 auto _fieldName = (*vec)[i].second;
                 type->fields.push_back(_type);
@@ -286,7 +286,7 @@ InitVal : ID {
         auto op = $2.get<string>();
         if (op != "=") {
             r = ExpNodePtr(new ExpNode_BinaryOp(
-                    ExpNodePtr(new ExpNode_Variable($1.get<string>())), r,
+                    ExpNodePtr(new ExpNode_Variable($1.get<string>(), false)), r,
                     ExpNode_BinaryOp::string2op(op.substr(0, 1))));
         }
         $$ = AssignPair($1.get<string>(), r);
@@ -438,7 +438,7 @@ Term : '(' Exp ')' {
      $$ = ExpNodePtr(new ExpNode_UnaryOp($2.get<ExpNodePtr>(), ExpNode_UnaryOp::UO_Not));
      }
      | ID {
-     $$ = ExpNodePtr(new ExpNode_Variable($1.get<string>()));
+     $$ = ExpNodePtr(new ExpNode_Variable($1.get<string>(), false));
      }
      | ADD_OP INT {
         auto i = atoi($2.get<string>().c_str());

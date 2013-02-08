@@ -74,7 +74,7 @@ public:
     template<typename T>
     T& globalVariable(int off)
     {
-        return (T&)m_data[off];
+        return (T&)m_globalData[off];
     }
     char *globalBase()
     {

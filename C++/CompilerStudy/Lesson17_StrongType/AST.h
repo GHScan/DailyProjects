@@ -59,7 +59,8 @@ struct ExpNode_Variable:
     public IExpNode
 {
     string name;
-    ExpNode_Variable(const string& _name): name(_name){}
+    bool lval;
+    ExpNode_Variable(const string& _name, bool _lval = true): name(_name), lval(_lval) {}
     virtual void acceptVisitor(IExpNodeVisitor *v) { v->visit(this); }
 };
 struct ExpNode_Conversion:

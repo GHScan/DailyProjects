@@ -89,19 +89,27 @@ private:
     }
     virtual void visit(ExpNode_Variable* node)
     {
-        if (auto symbol = SymbolTableManager::instance()->stack()->getSymbol(node->name)) {
-            m_type = symbol->type;
-            EMIT_SI(BCT_PushLocalAddr, symbol->off);
+        auto symbol = SymbolTableManager::instance()->stack()->getSymbol(node->name);
+        bool isGlobal = false;
+        if (symbol == NULL) {
+            symbol = SymbolTableManager::instance()->global()->getSymbol(node->name);
+            isGlobal = true;
+        }
+        ASSERT(symbol != NULL);
+        m_type = symbol->type;
+        m_addrOff = 0;
+        m_lval = node->lval || 
+            dynamic_cast<ArrayType*>(m_type) != NULL ||
+            dynamic_cast<StructType*>(m_type) != NULL;
+
+        if (m_lval) {
+            if (isGlobal) EMIT_SI(BCT_PushGlobalAddr, symbol->off);
+            else EMIT_SI(BCT_PushLocalAddr, symbol->off);
         }
         else {
-            if (auto symbol = SymbolTableManager::instance()->global()->getSymbol(node->name)) {
-                m_type = symbol->type;
-                EMIT_SI(BCT_PushGlobalAddr, symbol->off);
-            }
-            else ASSERT(0);
+            if (isGlobal) EMIT_SD_T(BCT_PushGlobal, m_type, symbol->off);
+            else EMIT_SD_T(BCT_PushLocal, m_type, symbol->off);
         }
-        m_lval = true;
-        m_addrOff = 0;
     }
     virtual void visit(ExpNode_Conversion* node)
     {
@@ -236,8 +244,8 @@ l_end:
     virtual void visit(ExpNode_Field* node)
     {
         node->left->acceptVisitor(this);
-        ASSERT(m_lval);
         if (node->dot) {
+            ASSERT(m_lval);
             auto stype = dynamic_cast<StructType*>(m_type);
             ASSERT(stype != NULL);
             auto table = SymbolTableManager::instance()->getTypeTable(stype);
@@ -253,8 +261,7 @@ l_end:
             toRval();
             auto table = SymbolTableManager::instance()->getTypeTable(stype);
             auto symbol = table->getSymbol(node->fieldName);
-            EMIT_PUSH_INT(symbol->off);
-            EMIT_SD_N0(BCT_Add, 4);
+            m_addrOff += symbol->off;
             m_lval = true;
             m_type = symbol->type;
         }
@@ -323,6 +330,29 @@ l_end:
     }
     virtual void visit(ExpNode_Assign* node) 
     {
+        if (auto var = dynamic_cast<ExpNode_Variable*>(node->left.get())) {
+            auto symbol = SymbolTableManager::instance()->stack()->getSymbol(var->name);
+            bool isGlobal = false;
+            if (symbol == NULL) {
+                symbol = SymbolTableManager::instance()->global()->getSymbol(var->name);
+                isGlobal = true;
+            }
+            ASSERT(symbol != NULL);
+            m_type = symbol->type;
+            m_addrOff = 0;
+            m_lval = false;
+
+            ExpNodeVisitor_CodeGen rcodeGen(m_codes, node->right);
+            rcodeGen.toRval();
+            rcodeGen.tryImplicitConvertTo(m_type);
+            ASSERT(m_type == rcodeGen.m_type);
+            EMIT_SD_T(BCT_PushI, m_type, -1);
+
+            if (isGlobal) EMIT_SD_T(BCT_PopGlobal, m_type, symbol->off);
+            else EMIT_SD_T(BCT_PopLocal, m_type, symbol->off);
+            return;
+        }
+
         node->left->acceptVisitor(this);
         ASSERT(m_lval);
         clearAddrOff();
@@ -378,8 +408,7 @@ public:
     }
     void tryImplicitConvertTo(IType *type)
     {
-        if (type == TYPE("int") &&
-                m_type == TYPE("char")) {
+        if (type == TYPE("int") && m_type == TYPE("char")) {
             forceConvertTo(type);
         }
     }
