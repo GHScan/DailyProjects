@@ -30,6 +30,14 @@ void printList(Node* n)
     }
     printf("\n");
 }
+void deleteList(Node *n)
+{
+    while (n != NULL) {
+        Node *p = n;
+        n = n->next;
+        free(p);
+    }
+}
 int main()
 {
     Node *l = insertFront(0, NULL);
@@ -39,4 +47,5 @@ int main()
     printList(l);
     l = reverseList(l);
     printList(l);
+    deleteList(l);
 }

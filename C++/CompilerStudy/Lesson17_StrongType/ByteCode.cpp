@@ -198,7 +198,8 @@ l_end:
             EMIT_SD_T0(BCT_Not, m_type);
             m_type = TYPE("int");
         }
-        else if (node->op == ExpNode_UnaryOp::UO_Inc) {
+        else if (node->op == ExpNode_UnaryOp::UO_Inc || 
+                node->op == ExpNode_UnaryOp::UO_Dec) {
             node->left->acceptVisitor(this);
             ASSERT(m_lval);
             if (auto ptype = dynamic_cast<PointerType*>(m_type)) {
@@ -206,28 +207,16 @@ l_end:
                 EMIT_SD_N(BCT_PushI, 4, -1);
                 EMIT_SD_N0(BCT_ReadAddr, 4);
                 EMIT_PUSH_INT(ptype->refType->getSize());
-                EMIT_SD_N0(BCT_Add, 4);
+                if (node->op == ExpNode_UnaryOp::UO_Inc) EMIT_SD_N0(BCT_Add, 4);
+                else EMIT_SD_N0(BCT_Sub, 4);
                 EMIT_SD_N0(BCT_WriteAddr, 4);
             }
             else {
-                EMIT_SD_T0(BCT_Inc, m_type);
+                if (node->op == ExpNode_UnaryOp::UO_Inc) EMIT_SD_T0(BCT_Inc, m_type);
+                else EMIT_SD_T0(BCT_Dec, m_type);
             }
         }
-        else if (node->op == ExpNode_UnaryOp::UO_Dec) {
-            node->left->acceptVisitor(this);
-            ASSERT(m_lval);
-            if (auto ptype = dynamic_cast<PointerType*>(m_type)) {
-                EMIT_SD_N(BCT_PushI, 4, -1);
-                EMIT_SD_N(BCT_PushI, 4, -1);
-                EMIT_SD_N0(BCT_ReadAddr, 4);
-                EMIT_PUSH_INT(ptype->refType->getSize());
-                EMIT_SD_N0(BCT_Sub, 4);
-                EMIT_SD_N0(BCT_WriteAddr, 4);
-            }
-            else {
-                EMIT_SD_T0(BCT_Dec, m_type);
-            }
-        }
+        else ASSERT(0);
     }
     virtual void visit(ExpNode_Addr* node)
     {
@@ -276,25 +265,8 @@ l_end:
 
         if (auto ptype = dynamic_cast<PointerType*>(m_type)) {
             toRval();
-
-            if (auto p = dynamic_cast<ExpNode_ConstantInt*>(node->right.get())) {
-                m_addrOff += p->value * ptype->refType->getSize();
-            }
-            else {
-                clearAddrOff();
-
-                ExpNodeVisitor_CodeGen rcodeGen(m_codes, node->right);
-                rcodeGen.toRval();
-                rcodeGen.tryImplicitConvertTo(TYPE("int"));
-                ASSERT(rcodeGen.m_type == TYPE("int"));
-                EMIT_PUSH_INT(ptype->refType->getSize());
-                EMIT_SD_N0(BCT_Mul, 4);
-                EMIT_SD_N0(BCT_Add, 4);
-            }
-
             m_lval = true;
-            m_type = ptype->refType;
-            return;
+            m_type = TypeSystem::instance()->getArray(ptype->refType, 1);
         }
 
         auto atype = dynamic_cast<ArrayType*>(m_type);
@@ -461,9 +433,7 @@ private:
     {
         auto tableStack = SymbolTableManager::instance()->stack();
         tableStack->push();
-        for (auto stmt : node->stmts) {
-            stmt->acceptVisitor(this);
-        }
+        for (auto stmt : node->stmts) stmt->acceptVisitor(this);
         tableStack->pop();
     }
     virtual void visit(StmtNode_DefineLocal* node) 
