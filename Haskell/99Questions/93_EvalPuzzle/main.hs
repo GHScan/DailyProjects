@@ -41,7 +41,7 @@ getTreeStr pPrior (BinOp op l r) = if curProir<pPrior then '(':raws++")" else ra
 
 genEqual l = concatMap genAt [1..length l - 1]
     where
-    genAt i = [ls++'=':rs|(lv,ls)<-toValStrList left,(rv,rs)<-toValStrList right,lv==rv]
+    genAt i = [getTreeStr 0 lt++'=':getTreeStr 0 rt|(lt,lv)<-toValTreeList left,(rt,rv)<-toValTreeList right,lv==rv]
         where
         (left,right) = splitAt i l
-        toValStrList l = map (\t->(getTreeVal t, getTreeStr 0 t)) $buildTreeList l
+        toValTreeList l = map (\t->(t,getTreeVal t)) $ buildTreeList l
