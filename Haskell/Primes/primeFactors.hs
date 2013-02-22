@@ -14,4 +14,4 @@ primeList = 2:_primeList [2]
     _primeList l = nextP:_primeList (l++[nextP])
         where
         isPrime n = all ((/=0).mod n) $ takeWhile (<=floor (sqrt $ fromIntegral n)) l
-        nextP = head$ filter isPrime [last l + 1..]
+        nextP = head [x|x<-[last l+1..],odd x,isPrime x]
