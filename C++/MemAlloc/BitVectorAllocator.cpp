@@ -50,7 +50,7 @@ bool LayeredBitVector::hasMoreFree() const
 }
 void LayeredBitVector::mask(int i, bool b)
 {
-    int idx = m_bits.size() / 2 + i / INT_BIT_COUNT;
+    int idx = (int)m_bits.size() / 2 + i / INT_BIT_COUNT;
     int mask = 1 << (i % INT_BIT_COUNT);
     if (b) m_bits[idx] |= mask;
     else m_bits[idx] &= ~mask;
@@ -63,7 +63,7 @@ int LayeredBitVector::getFreeIdx() const
 {
     assert(hasMoreFree());
     int idx = 1;
-    while (idx < m_bits.size() / 2) {
+    while (idx < (int)m_bits.size() / 2) {
         idx *= 2;
         if (m_bits[idx] == -1) ++idx;
     }
@@ -77,7 +77,7 @@ int LayeredBitVector::getFreeIdx() const
     char cbits = p[i];
     for (int j = 0; j < 8; ++j) {
         if (((cbits >> j) & 1) == 0) {
-            return (idx - m_bits.size() / 2) * INT_BIT_COUNT + i * 8 + j;
+            return (idx - (int)m_bits.size() / 2) * INT_BIT_COUNT + i * 8 + j;
         }
     }
     assert(0);
@@ -111,7 +111,7 @@ BitVectorBlock::BitVectorBlock(int entrySize, int blockSize):
 }
 BitVectorBlock::~BitVectorBlock()
 {
-    free(m_block);
+    ::free(m_block);
 }
 void* BitVectorBlock::alloc()
 {
@@ -123,10 +123,10 @@ void* BitVectorBlock::alloc()
 }
 bool BitVectorBlock::free(void *p)
 {
-    int off = (char*)p - m_block;
+    int off = int((char*)p - m_block);
     if (off < 0 || off >= m_blockByteSize) return false;
 
-    int idx = ((char*)p - m_block) / m_entrySize;
+    int idx = int((char*)p - m_block) / m_entrySize;
     m_bitvec.mask(idx, false);
     return true;
 }
