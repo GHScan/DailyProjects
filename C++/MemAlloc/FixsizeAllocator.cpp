@@ -27,7 +27,7 @@ SizeNAllocator::SizeNAllocator(int entrySize, int blockSize):
 }
 SizeNAllocator::~SizeNAllocator()
 {
-    for (auto p : m_blocks) ::free(p);
+    for (auto &p : m_blocks) ::free(p);
 }
 void* SizeNAllocator::alloc()
 {
@@ -59,18 +59,15 @@ void SizeNAllocator::allocBlock()
 
 FixsizeAllocator::FixsizeAllocator()
 {
-    {
-        int ns[] = {4,8,16,24,32,40,48,64,80,96,128};
-        for (auto sz : ns) m_sizeNs.push_back(sz);
-    }
-
-    for (auto sz : m_sizeNs) {
+    int sa[] = {4,8,16,24,32,40,48,64,80,96,128};
+    for (auto sz : sa) {
+        m_sizeNs.push_back(sz);
         m_sizeNAllocators.push_back(new SizeNAllocator(sz, (1<<20)/sz));
     }
 }
 FixsizeAllocator::~FixsizeAllocator()
 {
-    for (auto p : m_sizeNAllocators) delete p;
+    for (auto &p : m_sizeNAllocators) delete p;
 }
 void* FixsizeAllocator::malloc(int size)
 {

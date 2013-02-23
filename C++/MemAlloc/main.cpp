@@ -3,11 +3,14 @@
 #include <time.h>
 
 #include "FixsizeAllocator.h"
+#include "BitVectorAllocator.h"
 
 static void* alloc0(int sz) { return ::malloc(sz);}
 static void free0(void *p){ ::free(p);}
 static void* alloc1(int sz) { return FixsizeAllocator::instance()->malloc(sz);}
 static void free1(void *p){ FixsizeAllocator::instance()->free(p);}
+static void* alloc2(int sz) { return BitVectorAllocator::instance()->alloc(sz);}
+static void free2(void *p){ BitVectorAllocator::instance()->free(p);}
 
 static int genRanSize()
 {
@@ -27,8 +30,8 @@ static int genRanSize()
 
 static void test()
 {
-    void* (*allocas[])(int) = {&alloc0,&alloc1};
-    void (*frees[])(void*) = {&free0,&free1};
+    void* (*allocas[])(int) = {&alloc0, &alloc1, &alloc2};
+    void (*frees[])(void*) = {&free0, &free1, &free2};
 
     vector<int> ranSizes;
     for (int i = 0; i < (1<<15); ++i) ranSizes.push_back(genRanSize());
