@@ -19,7 +19,7 @@ private:
 private:
     int m_blockSize, m_entrySize;
     Entry *m_freeList;
-    vector<void*> blocks;
+    vector<void*> m_blocks;
 };
 SizeNAllocator::SizeNAllocator(int entrySize, int blockSize):
     m_freeList(NULL), m_blockSize(blockSize), m_entrySize(entrySize)
@@ -27,7 +27,7 @@ SizeNAllocator::SizeNAllocator(int entrySize, int blockSize):
 }
 SizeNAllocator::~SizeNAllocator()
 {
-    for (auto p : blocks) free(p);
+    for (auto p : m_blocks) ::free(p);
 }
 void* SizeNAllocator::alloc()
 {
@@ -45,7 +45,7 @@ void SizeNAllocator::free(void *p)
 void SizeNAllocator::allocBlock()
 {
     assert(m_entrySize >= 4);
-    Entry *block = (Entry*)malloc(m_blockSize * m_entrySize);
+    Entry *block = (Entry*)::malloc(m_blockSize * m_entrySize);
     Entry *ent = block;
     for (int i = 0; i < m_blockSize - 1; ++i) {
         Entry *nextEnt = (Entry*)((char*)ent + m_entrySize);
@@ -54,11 +54,16 @@ void SizeNAllocator::allocBlock()
     }
     ent->next = m_freeList;
     m_freeList = block;
+    m_blocks.push_back(block);
 }
 
-FixsizeAllocator::FixsizeAllocator():
-    m_sizeNs{4,8,16,24,32,40,48,64,80,96,128}
+FixsizeAllocator::FixsizeAllocator()
 {
+    {
+        int ns[] = {4,8,16,24,32,40,48,64,80,96,128};
+        for (auto sz : ns) m_sizeNs.push_back(sz);
+    }
+
     for (auto sz : m_sizeNs) {
         m_sizeNAllocators.push_back(new SizeNAllocator(sz, (1<<20)/sz));
     }
@@ -77,7 +82,7 @@ void* FixsizeAllocator::malloc(int size)
         return p + 1;
     }
     else {
-        int idx = iter - m_sizeNs.begin();
+        int idx = int(iter - m_sizeNs.begin());
         char *p = (char*)m_sizeNAllocators[idx]->alloc();
         p[0] = idx;
         return p + 1;

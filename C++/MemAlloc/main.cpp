@@ -20,7 +20,8 @@ static int genRanSize()
             return rand() % 32 + 32;
         case 9: 
             return rand() % 64 + 64;
-        default: break;
+        default:
+            return 4;
     }
 }
 
@@ -39,7 +40,7 @@ static void test()
         auto free = frees[i];
 
         clock_t total = 0;
-        for (int i = 0; i < 200; ++i) {
+        for (int j = 0; j < 200; ++j) {
             clock_t t1 = clock();
             for (auto sz : ranSizes) pts.push_back(alloc(sz));
             t1 = clock() - t1;
@@ -62,7 +63,7 @@ static void test()
 
 int main()
 {
-    srand(time(NULL));
+    srand((int)time(NULL));
 
     test();
 }
