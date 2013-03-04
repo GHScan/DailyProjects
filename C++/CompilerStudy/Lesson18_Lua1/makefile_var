@@ -1,0 +1,18 @@
+use_cpp0x=1
+build_dll=0
+macro_defs=
+include_dirs=
+lib_dirs=
+lib_files=
+
+.PHONY: 
+
+build_actions: yacc.c lex.c 
+
+clean_actions:
+	rm lex.c yacc.c yacc.h
+
+lex.c: lex.l
+	flex -o lex.c  lex.l
+yacc.c: yacc.y
+	bison -do yacc.c yacc.y
