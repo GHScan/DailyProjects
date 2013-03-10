@@ -2,7 +2,6 @@
 %token FOR FUNCTION IF IN LOCAL NIL
 %token REPEAT RETURN THEN TRUE UNTIL WHILE
 
-%token LINES
 %token OP_ARGS
 
 %token LITERAL1 LITERAL2 LITERAL3
@@ -30,9 +29,10 @@
 Program : Block;
 
 Block
-    : Opt_StatementSep  StatementList Opt_StatementSep 
-    | Opt_StatementSep  LastStatement Opt_StatementSep 
-    | Opt_StatementSep  StatementList StatementSep LastStatement Opt_StatementSep 
+    : StatementList 
+    | LastStatement 
+    | StatementList StatementSep LastStatement 
+    | 
     ;
 
 StatementList
@@ -40,12 +40,11 @@ StatementList
     | StatementList StatementSep Statement
     ;
 
-Opt_StatementSep : StatementSep | ;
-StatementSep : LINES | ';' | StatementSep LINES | StatementSep ';';
+StatementSep : ';' | ;
 
 Statement
     : VarList OP_ASSIGN ExpList
-    | FunctionCall
+    | FunctionCall 
     | DO Block END
     | WHILE Exp DO Block END
     | REPEAT Block UNTIL Exp
@@ -122,7 +121,7 @@ Var
 
 PrefixExp 
     : Var
-    | FunctionCall
+    | FunctionCall 
     | '(' Exp ')'
     ;
 

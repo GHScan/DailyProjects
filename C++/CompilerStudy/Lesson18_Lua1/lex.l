@@ -6,7 +6,6 @@
 #include "yacc.h"
 
 static void onTokenFound(bool isAttr);
-static bool isInsideExp();
 %}
 
 Number [0-9]+
@@ -72,7 +71,6 @@ EFloat {NumberOrFloat}[eE]\-?{NumberOrFloat}
 
 \n+ {
     onTokenFound(false); 
-    if (!isInsideExp()) return LINES; 
 }
 
 . { onTokenFound(false); return yytext[0]; }
@@ -103,11 +101,6 @@ static void onTokenFound(bool isAttr)
         default: break;
         }
     }
-}
-
-static bool isInsideExp()
-{
-    return g_parenthesisLevel > 0 || g_bracketLevel > 0 || g_braceLevel > 0;
 }
 
 void yyerror(const char *msg)
