@@ -2,9 +2,11 @@
 
 #include "Any.h"
 #define YYSTYPE Any
+
 #include "yacc.h"
 
 static void onTokenFound(bool isAttr);
+static bool isInsideExp();
 %}
 
 Number [0-9]+
@@ -17,9 +19,9 @@ EFloat {NumberOrFloat}[eE]\-?{NumberOrFloat}
 
 "--"[^\n]*\n {onTokenFound(false);}
 
-\s+ {onTokenFound(false);}
+[ \t]+ {onTokenFound(false);}
 
-"+" {onTokenFound(false); return OP_PLUS; }
+"+" {onTokenFound(false); return OP_ADD; }
 "-" {onTokenFound(false); return OP_SUB; }
 "*" {onTokenFound(false); return OP_MUL; }
 "/" {onTokenFound(false); return OP_DIV; }
@@ -68,22 +70,44 @@ EFloat {NumberOrFloat}[eE]\-?{NumberOrFloat}
 
 [_a-zA-Z][_a-zA-Z0-9]* { onTokenFound(true); return ID; }
 
-\n|. { onTokenFound(false); }
+\n+ {
+    onTokenFound(false); 
+    if (!isInsideExp()) return LINES; 
+}
+
+. { onTokenFound(false); return yytext[0]; }
 
 %%
 
 static int g_line = 1;
 static int g_column = 1;
+static int g_parenthesisLevel = 0;
+static int g_bracketLevel = 0;
+static int g_braceLevel = 0;
 static void onTokenFound(bool isAttr)
 {
     if (isAttr) yylval = string(yytext);
     g_column += yyleng;
     for (int i = 0; i < yyleng; ++i) { 
-        if (yytext[i] == '\n') {
+        switch (yytext[i]) {
+        case '\n':
             ++g_line;
             g_column = 1;
+            break;
+        case '[': ++g_bracketLevel; break;
+        case ']': --g_bracketLevel; break;
+        case '(': ++g_parenthesisLevel; break;
+        case ')': --g_parenthesisLevel; break;
+        case '{': ++g_braceLevel; break;
+        case '}': --g_braceLevel; break;
+        default: break;
         }
     }
+}
+
+static bool isInsideExp()
+{
+    return g_parenthesisLevel > 0 || g_bracketLevel > 0 || g_braceLevel > 0;
 }
 
 void yyerror(const char *msg)

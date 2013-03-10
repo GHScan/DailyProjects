@@ -10,9 +10,9 @@ lib_files=
 build_actions: yacc.c lex.c 
 
 clean_actions:
-	rm lex.c yacc.c yacc.h
+	rm lex.c yacc.c yacc.h yacc.output
 
 lex.c: lex.l
 	flex -o lex.c  lex.l
 yacc.c: yacc.y
-	bison -do yacc.c yacc.y
+	bison -vdo yacc.c yacc.y
