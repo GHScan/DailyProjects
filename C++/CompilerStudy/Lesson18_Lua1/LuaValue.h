@@ -29,7 +29,7 @@ class LuaValue
 public:
     explicit LuaValue(NumberType n): m_type(LVT_Number){ m_data.n = n; }
     explicit LuaValue(const char *str);
-    explicit LuaValue(LuaValueType t, int v = 0);
+    LuaValue(LuaValueType t, int v = 0);
 
     LuaValue(): m_type(LVT_Nil) {m_data.n = 0;}
     LuaValue(const LuaValue& o);
@@ -39,11 +39,11 @@ public:
     ~LuaValue();
 
     bool isTypeOf(LuaValueType t) const { return m_type == t; }
-    bool toBoolean() const { ASSERT(isTypeOf(LVT_Boolean)); return m_data.b;}
-    NumberType toNumber() const { ASSERT(isTypeOf(LVT_Number)); return m_data.n; }
-    const char *toString() const { ASSERT(isTypeOf(LVT_String)); return m_data.str;}
-    const LuaTable* toLuaTable() const { ASSERT(isTypeOf(LVT_Table)); return m_data.table;}
-    LuaTable* toLuaTable() { ASSERT(isTypeOf(LVT_Table)); return m_data.table;}
+    bool getBoolean() const { ASSERT(isTypeOf(LVT_Boolean)); return m_data.b;}
+    NumberType getNumber() const { ASSERT(isTypeOf(LVT_Number)); return m_data.n; }
+    const char *getString() const { ASSERT(isTypeOf(LVT_String)); return m_data.str;}
+    const LuaTable* getLuaTable() const { ASSERT(isTypeOf(LVT_Table)); return m_data.table;}
+    LuaTable* getLuaTable() { ASSERT(isTypeOf(LVT_Table)); return m_data.table;}
 
     bool operator == (const LuaValue& o) const;
     bool operator != (const LuaValue& o) const { return !(*this == o);}
@@ -62,6 +62,8 @@ public:
     void set(const LuaValue& k, const LuaValue& v);
 
     int getHash() const;
+
+    string toString() const;
 public:
     static LuaValue NIL;
     static LuaValue TRUE;

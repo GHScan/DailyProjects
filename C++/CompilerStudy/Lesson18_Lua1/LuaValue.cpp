@@ -6,7 +6,7 @@
 const LuaValue& LuaTable::get(const LuaValue& k) const
 {
     if (k.isTypeOf(LVT_Number)) {
-        int idx = (int)k.toNumber() - 1;
+        int idx = (int)k.getNumber() - 1;
         if (idx >= 0 && idx < (int)m_vec.size()) return m_vec[idx];
     }
     auto iter = m_hashTable.find(k);
@@ -16,7 +16,7 @@ const LuaValue& LuaTable::get(const LuaValue& k) const
 void LuaTable::set(const LuaValue& k, const LuaValue& v)
 {
     if (k.isTypeOf(LVT_Number)) {
-        int idx = (int)k.toNumber() - 1;
+        int idx = (int)k.getNumber() - 1;
         if (idx >= 0 && idx < (int)m_vec.size()) {
             m_vec[idx] = v;
             return;
@@ -42,7 +42,7 @@ const LuaValue& LuaTable::getNext(LuaValue& k) const
     }
     else {
         if (k.isTypeOf(LVT_Number)) {
-            int idx = (int)k.toNumber();
+            int idx = (int)k.getNumber();
             if (idx >= 0 && idx < (int)m_vec.size()) {
                 k = LuaValue(idx + 1);
                 return m_vec[idx];
@@ -253,6 +253,20 @@ int LuaValue::getHash() const
     }
     ASSERT(0);
     return 0;
+}
+
+string LuaValue::toString() const
+{
+    switch (m_type) {
+        case LVT_Nil: return "nil";
+        case LVT_Boolean: return m_data.b ? "true" : "false";
+        case LVT_Number: return m_data.n == (int)m_data.n ? format("%d", m_data.n) : format("%f", m_data.n);
+        case LVT_String: return m_data.str;
+        case LVT_Table: return format("%p", m_data.table);
+        default: break;
+    }
+    ASSERT(0);
+    return "";
 }
 
 LuaValue LuaValue::NIL;
