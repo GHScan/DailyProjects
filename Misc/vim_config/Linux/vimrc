@@ -1,4 +1,6 @@
-colorscheme desert
+colorscheme molokai
+
+set nocompatible
 
 set hlsearch
 set nowrap
@@ -18,10 +20,22 @@ set guifont=Monaco\ 10
 
 set completeopt=menu,longest,preview
 
+syntax on
 filetype plugin indent on
 
+set incsearch		" do incremental searching
+set showcmd			" display incomplete commands
+set cindent
+set autoindent
+set ignorecase			" ignore case
+set smartcase			" but don't ignore it, when search string contains uppercase letters
+set showmatch			" showmatch: Show the matching bracket for the last ')'?
+set fileformats=unix,mac,dos
+set completeopt=menu,longest,preview
+
 nnoremap <silent><F2>   :nohlsearch<CR>
-nnoremap <silent><F3>   :grep <C-R>=expand("<cword>")<CR> %<CR>
+nnoremap <silent><F3>   :grep -R "\<<C-R>=expand("<cword>")<CR>\>" *<CR>
+nnoremap <silent><F4>   :ts <C-R>=expand("<cword>")<CR><CR>
 nnoremap <silent><F5>   :cp<CR>
 nnoremap <silent><F6>   :cn<CR>
 nnoremap <silent><F8>   :!./main<CR>
