@@ -2,6 +2,7 @@
 #include "pch.h"
 
 #include <time.h>
+#include <assert.h>
 
 #include <unordered_set>
 #include <set>
@@ -26,7 +27,7 @@ void performanceTest_int()
     const int N = 1;
     std::vector<int> textArray;
     {
-        for (int i = 0; i < (1 << 20); ++i) textArray.push_back(rand() % (1<<15));
+        for (int i = 0; i < (1 << 20); ++i) textArray.push_back(rand() % (1<<14));
     }
 
     std::vector<int> rArray;
@@ -116,7 +117,39 @@ void performanceTest_int()
     cout << res2.size() << "," << (res == res2) << endl;
 }
 
+void functionTest()
+{
+    vector<int> ranInts;
+    for (int i = 0; i < (1<<15); ++i) ranInts.push_back(i % (1<<10));
+    random_shuffle(ranInts.begin(), ranInts.end());
+
+    SkipList_Int2 list;
+    set<int> set;
+    for (int i = 0; i < ranInts.size(); ++i) {
+        int v = ranInts[i];
+        switch (i % 3) {
+            case 0:
+                set.insert(v);
+                list.set(v, 1);
+                break;
+            case 1:
+                assert((set.count(v) == 1) == (list.get(v, 2) == 1));
+                break;
+            case 2:
+                set.erase(v);
+                list.erase(v);
+                break;
+            default:
+                break;
+        }
+    }
+}
+
 int main()
 {
+    srand((int)time(NULL));
+
+    //_CrtSetDbgFlag( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);    
+    functionTest();
     performanceTest_int();
 }

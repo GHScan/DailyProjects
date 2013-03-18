@@ -8,58 +8,60 @@
 #include "SkipList_Int2.h"
 #include "MemoryPool.h"
 
+//#define USE_MEMPOOL
+
 struct SLNode
 {
     SLNode *prev, *next, *lower;
     int key, *value;
+    SLNode(int _key, int *_value): key(_key), value(_value), prev(NULL), next(NULL), lower(NULL){}
+
+    void insertAfter(SLNode *o)
+    {
+        o->next = next, o->prev = this;
+        if (next) next->prev = o;
+        next = o;
+    }
+    SLNode* removeAfter()
+    {
+        SLNode *r = next;
+        if (r->next) r->next->prev = this;
+        next = r->next;
+        return r;
+    }
+    static void* operator new (size_t size);
+    static void operator delete(void *p);
 };
 
 FixSizeMemoryPool<sizeof(SLNode)> g_pool;
-//#define USE_MEMPOOL
 
-static SLNode* allocNode(int key, int *value)
+void* SLNode::operator new (size_t size)
 {
 #ifdef USE_MEMPOOL
-    SLNode* r = (SLNode*)g_pool.malloc();
+    return g_pool._malloc();
 #else
-    SLNode* r = (SLNode*)malloc(sizeof(SLNode));
+    return malloc(sizeof(SLNode));
 #endif
-    r->next = r->prev = r->lower = NULL;
-    r->key = key, r->value = value;
-    return r;
 }
-static void freeNode(SLNode *n)
+void SLNode::operator delete(void *p)
 {
 #ifdef USE_MEMPOOL
-    g_pool.free(n);
+    g_pool._free(p);
 #else
-    free(n);
+    free(p);
 #endif
-}
-inline static void insertAfter(SLNode *n1, SLNode *n2)
-{
-    n2->next = n1->next, n2->prev = n1;
-    if (n1->next) n1->next->prev = n2;
-    n1->next = n2;
-}
-inline static SLNode* removeAfter(SLNode *n)
-{
-    SLNode *n2 = n->next;
-    if (n2->next) n2->next->prev = n;
-    n->next = n2->next;
-    return n2;
 }
 
 SkipList_Int2::SkipList_Int2():
     m_maxLevel(1), m_size(0)
 {
-    m_head = allocNode(numeric_limits<int>::min(), new int(0));
-    m_tail = allocNode(numeric_limits<int>::max(), new int(0));
-    insertAfter(m_head, m_tail);
+    m_head = new SLNode(numeric_limits<int>::min(), new int(0));
+    m_tail = new SLNode(numeric_limits<int>::max(), new int(0));
+    m_head->insertAfter(m_tail);
 }
 SkipList_Int2::~SkipList_Int2()
 {
-    while (m_maxLevel > 1) removeLevel();
+    while (m_maxLevel > 0) removeLevel();
 }
 
 void SkipList_Int2::set(int key, int value)
@@ -78,16 +80,16 @@ SLNode* SkipList_Int2::insert(SLNode *head, int key, int value)
     else {
         n = n->prev;
         if (n->lower == NULL) {
-            SLNode *newN = allocNode(key, new int(value));
-            insertAfter(n, newN);
+            SLNode *newN = new SLNode(key, new int(value));
+            n->insertAfter(newN);
             ++m_size;
             return newN;
         }
         else {
             SLNode *lower = insert(n->lower, key, value);
             if (lower == NULL || rand() < (RAND_MAX / 2)) return NULL;
-            SLNode *newN = allocNode(key, lower->value);
-            insertAfter(n, newN);
+            SLNode *newN = new SLNode(key, lower->value);
+            n->insertAfter(newN);
             newN->lower = lower;
             return newN;
         }
@@ -108,9 +110,10 @@ void SkipList_Int2::erase(int key)
     while (n != NULL) {
         SLNode *temp = n;
         n = n->lower;
-        removeAfter(temp->prev);
-        freeNode(temp);
+        temp->prev->removeAfter();
+        delete temp;
     }
+    //tryRemoveLevel();
 }
 SLNode* SkipList_Int2::find(int key) const
 {
@@ -136,21 +139,21 @@ void SkipList_Int2::tryAddLevel()
 }
 void SkipList_Int2::addLevel()
 {
-    SLNode *newHead = allocNode(numeric_limits<int>::min(), m_head->value);
+    SLNode *newHead = new SLNode(numeric_limits<int>::min(), m_head->value);
     newHead->lower = m_head;
 
     SLNode *n = m_head->next, *n2 = newHead;
     while (n != m_tail) {
         if (rand() < (RAND_MAX / 2)) {
-            SLNode *newN = allocNode(n->key, n->value);
-            insertAfter(n2, newN);
+            SLNode *newN = new SLNode(n->key, n->value);
+            n2->insertAfter(newN);
             newN->lower = n;
             n2 = newN;
         }
         n = n->next;
     }
-    SLNode *newTail = allocNode(numeric_limits<int>::max(), m_tail->value);
-    insertAfter(n2, newTail);
+    SLNode *newTail = new SLNode(numeric_limits<int>::max(), m_tail->value);
+    n2->insertAfter(newTail);
     newTail->lower = m_tail;
     m_head = newHead, m_tail = newTail;
     ++m_maxLevel;
@@ -164,7 +167,7 @@ void SkipList_Int2::removeLevel()
         SLNode *temp = n;
         n = n->next;
         if (m_maxLevel == 0) delete temp->value;
-        freeNode(temp);
+        delete temp;
     }
 }
 

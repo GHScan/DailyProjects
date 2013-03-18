@@ -38,7 +38,7 @@ public:
             ::free(b);
         }
     }
-    void* malloc()
+    void* _malloc()
     {
         if (m_freeList == NULL) allocBlock();
         assert(m_freeList != NULL);
@@ -47,7 +47,7 @@ public:
         ++m_allocCnt;
         return n;
     }
-    void free(void* p)
+    void _free(void* p)
     {
         Node *n = (Node*)p;
         n->next = m_freeList;
