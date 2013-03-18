@@ -18,6 +18,8 @@ set formatoptions+=Mm       "支持中文字符；结合上个选项，可以用
 
 set guifont=Monaco:h13
 
+set completeopt=menu,longest,preview
+
 set rtp+=/usr/local/go/misc/vim
 syntax on
 filetype plugin indent on
