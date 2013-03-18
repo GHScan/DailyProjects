@@ -26,7 +26,7 @@ void performanceTest_int()
     const int N = 1;
     std::vector<int> textArray;
     {
-        for (int i = 0; i < (1 << 15); ++i) textArray.push_back(rand() % 4096);
+        for (int i = 0; i < (1 << 20); ++i) textArray.push_back(rand() % (1<<15));
     }
 
     std::vector<int> rArray;

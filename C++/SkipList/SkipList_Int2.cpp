@@ -11,13 +11,13 @@
 struct SLNode
 {
     SLNode *prev, *next, *lower;
-    int key, value;
+    int key, *value;
 };
 
 FixSizeMemoryPool<sizeof(SLNode)> g_pool;
 //#define USE_MEMPOOL
 
-static SLNode* allocNode(int key, int value)
+static SLNode* allocNode(int key, int *value)
 {
 #ifdef USE_MEMPOOL
     SLNode* r = (SLNode*)g_pool.malloc();
@@ -53,8 +53,8 @@ inline static SLNode* removeAfter(SLNode *n)
 SkipList_Int2::SkipList_Int2():
     m_maxLevel(1), m_size(0)
 {
-    m_head = allocNode(numeric_limits<int>::min(), 0);
-    m_tail = allocNode(numeric_limits<int>::max(), 0);
+    m_head = allocNode(numeric_limits<int>::min(), new int(0));
+    m_tail = allocNode(numeric_limits<int>::max(), new int(0));
     insertAfter(m_head, m_tail);
 }
 SkipList_Int2::~SkipList_Int2()
@@ -69,18 +69,16 @@ void SkipList_Int2::set(int key, int value)
 }
 SLNode* SkipList_Int2::insert(SLNode *head, int key, int value)
 {
-    SLNode *n = head;
-    while (key > n->next->key) n = n->next;
-    if (key == n->next->key) {
-        while (n != NULL) {
-            n->value = value;
-            n = n->next;
-        }
+    SLNode *n = head->next;
+    while (key > n->key) n = n->next;
+    if (key == n->key) {
+        *n->value = value;
         return NULL;
     }
     else {
+        n = n->prev;
         if (n->lower == NULL) {
-            SLNode *newN = allocNode(key, value);
+            SLNode *newN = allocNode(key, new int(value));
             insertAfter(n, newN);
             ++m_size;
             return newN;
@@ -88,7 +86,7 @@ SLNode* SkipList_Int2::insert(SLNode *head, int key, int value)
         else {
             SLNode *lower = insert(n->lower, key, value);
             if (lower == NULL || rand() < (RAND_MAX / 2)) return NULL;
-            SLNode *newN = allocNode(key, value);
+            SLNode *newN = allocNode(key, lower->value);
             insertAfter(n, newN);
             newN->lower = lower;
             return newN;
@@ -98,15 +96,15 @@ SLNode* SkipList_Int2::insert(SLNode *head, int key, int value)
 int SkipList_Int2::get(int key, int def) const
 {
     SLNode *n = find(key);
-    if (n->next->key == key) return n->next->value;
+    if (n->key == key) return *n->value;
     return def;
 }
 void SkipList_Int2::erase(int key)
 {
     SLNode *n = find(key);
-    if (n->next->key != key) return;
+    if (n->key != key) return;
+    delete n->value;
     --m_size;
-    n = n->next;
     while (n != NULL) {
         SLNode *temp = n;
         n = n->lower;
@@ -116,13 +114,13 @@ void SkipList_Int2::erase(int key)
 }
 SLNode* SkipList_Int2::find(int key) const
 {
-    SLNode *n = m_head;
+    SLNode *n = m_head->next;
     for (;;) {
-        while (key > n->next->key) n = n->next;
-        if (key == n->next->key) return n;
+        while (key > n->key) n = n->next;
+        if (key == n->key) return n;
         else {
-            if (n->lower == NULL) return n;
-            n = n->lower;
+            if (n->lower == NULL) return n->prev;
+            n = n->prev->lower->next;
         }
     }
     return NULL;
@@ -138,7 +136,7 @@ void SkipList_Int2::tryAddLevel()
 }
 void SkipList_Int2::addLevel()
 {
-    SLNode *newHead = allocNode(numeric_limits<int>::min(), 0);
+    SLNode *newHead = allocNode(numeric_limits<int>::min(), m_head->value);
     newHead->lower = m_head;
 
     SLNode *n = m_head->next, *n2 = newHead;
@@ -151,7 +149,7 @@ void SkipList_Int2::addLevel()
         }
         n = n->next;
     }
-    SLNode *newTail = allocNode(numeric_limits<int>::max(), 0);
+    SLNode *newTail = allocNode(numeric_limits<int>::max(), m_tail->value);
     insertAfter(n2, newTail);
     newTail->lower = m_tail;
     m_head = newHead, m_tail = newTail;
@@ -165,6 +163,7 @@ void SkipList_Int2::removeLevel()
     while (n != NULL) {
         SLNode *temp = n;
         n = n->next;
+        if (m_maxLevel == 0) delete temp->value;
         freeNode(temp);
     }
 }
@@ -176,7 +175,7 @@ vector<pair<int, int> > SkipList_Int2::toList() const
     while (head->lower != NULL) head = head->lower;
     SLNode *n = head->next;
     while (n->next != NULL) {
-        r.push_back(make_pair(n->key, n->value));
+        r.push_back(make_pair(n->key, *n->value));
         n = n->next;
     }
     return r;
