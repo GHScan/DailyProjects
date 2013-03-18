@@ -2,6 +2,7 @@
 #ifndef SKIP_LIST_H
 #define SKIP_LIST_H
 
+struct SLNode;
 class SkipList_Int2
 {
 public:
@@ -16,12 +17,6 @@ public:
     void erase(int key);
 
     vector<pair<int, int> > toList() const;
-public:
-    struct Node
-    {
-        Node *prev, *next, *lower;
-        int key, value;
-    };
 private:
     SkipList_Int2(const SkipList_Int2& o);
     SkipList_Int2& operator = (const SkipList_Int2& o);
@@ -30,14 +25,13 @@ private:
     void tryAddLevel();
     void addLevel();
     void removeLevel();
-    Node* insert(Node *head, int key, int value);
+    SLNode* insert(SLNode *head, int key, int value);
+    SLNode *find(int key) const;
 
-    static Node* allocNode(int key, int value);
-    static void freeNode(Node *n);
 private:
     int m_maxLevel;
     int m_size;
-    Node *m_head, *m_tail;
+    SLNode *m_head, *m_tail;
 };
 
 #endif

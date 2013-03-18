@@ -62,8 +62,6 @@ void performanceTest_int()
     std::sort(res.begin(), res.end());
     cout << res.size() << endl;
 
-    return;
-
     std::vector<int> res2;
 
     {

@@ -8,21 +8,27 @@
 #include "SkipList_Int2.h"
 #include "MemoryPool.h"
 
-FixSizeMemoryPool<sizeof(SkipList_Int2::Node)> g_pool;
+struct SLNode
+{
+    SLNode *prev, *next, *lower;
+    int key, value;
+};
+
+FixSizeMemoryPool<sizeof(SLNode)> g_pool;
 //#define USE_MEMPOOL
 
-SkipList_Int2::Node* SkipList_Int2::allocNode(int key, int value)
+static SLNode* allocNode(int key, int value)
 {
 #ifdef USE_MEMPOOL
-    Node* r = (Node*)g_pool.malloc();
+    SLNode* r = (SLNode*)g_pool.malloc();
 #else
-    Node* r = (Node*)malloc(sizeof(Node));
+    SLNode* r = (SLNode*)malloc(sizeof(SLNode));
 #endif
     r->next = r->prev = r->lower = NULL;
     r->key = key, r->value = value;
     return r;
 }
-void SkipList_Int2::freeNode(Node *n)
+static void freeNode(SLNode *n)
 {
 #ifdef USE_MEMPOOL
     g_pool.free(n);
@@ -30,14 +36,26 @@ void SkipList_Int2::freeNode(Node *n)
     free(n);
 #endif
 }
+inline static void insertAfter(SLNode *n1, SLNode *n2)
+{
+    n2->next = n1->next, n2->prev = n1;
+    if (n1->next) n1->next->prev = n2;
+    n1->next = n2;
+}
+inline static SLNode* removeAfter(SLNode *n)
+{
+    SLNode *n2 = n->next;
+    if (n2->next) n2->next->prev = n;
+    n->next = n2->next;
+    return n2;
+}
 
 SkipList_Int2::SkipList_Int2():
     m_maxLevel(1), m_size(0)
 {
     m_head = allocNode(numeric_limits<int>::min(), 0);
     m_tail = allocNode(numeric_limits<int>::max(), 0);
-    m_head->next = m_tail;
-    m_tail->prev = m_head; 
+    insertAfter(m_head, m_tail);
 }
 SkipList_Int2::~SkipList_Int2()
 {
@@ -49,9 +67,9 @@ void SkipList_Int2::set(int key, int value)
     insert(m_head, key, value);
     tryAddLevel();
 }
-SkipList_Int2::Node* SkipList_Int2::insert(Node *head, int key, int value)
+SLNode* SkipList_Int2::insert(SLNode *head, int key, int value)
 {
-    Node *n = head;
+    SLNode *n = head;
     while (key > n->next->key) n = n->next;
     if (key == n->next->key) {
         while (n != NULL) {
@@ -62,18 +80,16 @@ SkipList_Int2::Node* SkipList_Int2::insert(Node *head, int key, int value)
     }
     else {
         if (n->lower == NULL) {
-            Node *newN = allocNode(key, value);
-            newN->next = n->next, newN->prev = n;
-            n->next->prev = newN, n->next = newN;
+            SLNode *newN = allocNode(key, value);
+            insertAfter(n, newN);
             ++m_size;
             return newN;
         }
         else {
-            Node *lower = insert(n->lower, key, value);
+            SLNode *lower = insert(n->lower, key, value);
             if (lower == NULL || rand() < (RAND_MAX / 2)) return NULL;
-            Node *newN = allocNode(key, value);
-            newN->next = n->next, newN->prev = n;
-            n->next->prev = newN, n->next = newN;
+            SLNode *newN = allocNode(key, value);
+            insertAfter(n, newN);
             newN->lower = lower;
             return newN;
         }
@@ -81,32 +97,35 @@ SkipList_Int2::Node* SkipList_Int2::insert(Node *head, int key, int value)
 }
 int SkipList_Int2::get(int key, int def) const
 {
-    Node *n = m_head;
-    for (;;) {
-        while (key > n->next->key) n = n->next;
-        if (key == n->next->key) return n->next->value;
-        if (n->lower != NULL) n = n->lower;
-        else return def;
-    }
+    SLNode *n = find(key);
+    if (n->next->key == key) return n->next->value;
+    return def;
 }
 void SkipList_Int2::erase(int key)
 {
-    Node *n = m_head;
-    for (;;) {
-        while (key > n->next->key) n = n->next;
-        if (key == n->next->key) break;
-        if (n->lower != NULL) n = n->lower;
-        else return;
-    }
+    SLNode *n = find(key);
+    if (n->next->key != key) return;
     --m_size;
     n = n->next;
     while (n != NULL) {
-        Node *temp = n;
+        SLNode *temp = n;
         n = n->lower;
-        temp->prev->next = temp->next;
-        temp->next->prev = temp->prev;
+        removeAfter(temp->prev);
         freeNode(temp);
     }
+}
+SLNode* SkipList_Int2::find(int key) const
+{
+    SLNode *n = m_head;
+    for (;;) {
+        while (key > n->next->key) n = n->next;
+        if (key == n->next->key) return n;
+        else {
+            if (n->lower == NULL) return n;
+            n = n->lower;
+        }
+    }
+    return NULL;
 }
 
 void SkipList_Int2::tryRemoveLevel()
@@ -119,33 +138,32 @@ void SkipList_Int2::tryAddLevel()
 }
 void SkipList_Int2::addLevel()
 {
-    Node *newHead = allocNode(numeric_limits<int>::min(), 0);
+    SLNode *newHead = allocNode(numeric_limits<int>::min(), 0);
     newHead->lower = m_head;
 
-    Node *n = m_head->next, *n2 = newHead;
+    SLNode *n = m_head->next, *n2 = newHead;
     while (n != m_tail) {
         if (rand() < (RAND_MAX / 2)) {
-            Node *newN = allocNode(n->key, n->value);
+            SLNode *newN = allocNode(n->key, n->value);
+            insertAfter(n2, newN);
             newN->lower = n;
-            n2->next = newN;
-            newN->prev = n2;
             n2 = newN;
         }
         n = n->next;
     }
-    Node *newTail = allocNode(numeric_limits<int>::max(), 0);
-    n2->next = newTail;
-    newTail->prev = n2, newTail->lower = m_tail;
+    SLNode *newTail = allocNode(numeric_limits<int>::max(), 0);
+    insertAfter(n2, newTail);
+    newTail->lower = m_tail;
     m_head = newHead, m_tail = newTail;
     ++m_maxLevel;
 }
 void SkipList_Int2::removeLevel()
 {
     --m_maxLevel;
-    Node *n = m_head;
+    SLNode *n = m_head;
     m_head = m_head->lower, m_tail = m_tail->lower;
     while (n != NULL) {
-        Node *temp = n;
+        SLNode *temp = n;
         n = n->next;
         freeNode(temp);
     }
@@ -154,9 +172,9 @@ void SkipList_Int2::removeLevel()
 vector<pair<int, int> > SkipList_Int2::toList() const
 {
     vector<pair<int, int> > r;
-    Node *head = m_head;
+    SLNode *head = m_head;
     while (head->lower != NULL) head = head->lower;
-    Node *n = head->next;
+    SLNode *n = head->next;
     while (n->next != NULL) {
         r.push_back(make_pair(n->key, n->value));
         n = n->next;
