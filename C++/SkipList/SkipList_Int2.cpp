@@ -6,17 +6,29 @@
 #include <limits>
 
 #include "SkipList_Int2.h"
+#include "MemoryPool.h"
+
+FixSizeMemoryPool<sizeof(SkipList_Int2::Node)> g_pool;
+//#define USE_MEMPOOL
 
 SkipList_Int2::Node* SkipList_Int2::allocNode(int key, int value)
 {
+#ifdef USE_MEMPOOL
+    Node* r = (Node*)g_pool.malloc();
+#else
     Node* r = (Node*)malloc(sizeof(Node));
+#endif
     r->next = r->prev = r->lower = NULL;
     r->key = key, r->value = value;
     return r;
 }
 void SkipList_Int2::freeNode(Node *n)
 {
+#ifdef USE_MEMPOOL
+    g_pool.free(n);
+#else
     free(n);
+#endif
 }
 
 SkipList_Int2::SkipList_Int2():
@@ -36,12 +48,8 @@ void SkipList_Int2::set(int key, int value)
 {
     insert(m_head, key, value);
     tryAddLevel();
-
-    cout << "set:" << key << "," << value << endl;
-    for (auto p : toList()) printf("(%d,%d),", p.first, p.second);
-    puts("");
 }
-bool SkipList_Int2::insert(Node *head, int key, int value)
+SkipList_Int2::Node* SkipList_Int2::insert(Node *head, int key, int value)
 {
     Node *n = head;
     while (key > n->next->key) n = n->next;
@@ -50,7 +58,7 @@ bool SkipList_Int2::insert(Node *head, int key, int value)
             n->value = value;
             n = n->next;
         }
-        return false;
+        return NULL;
     }
     else {
         if (n->lower == NULL) {
@@ -58,14 +66,16 @@ bool SkipList_Int2::insert(Node *head, int key, int value)
             newN->next = n->next, newN->prev = n;
             n->next->prev = newN, n->next = newN;
             ++m_size;
-            return true;
+            return newN;
         }
         else {
-            if (!insert(n->lower, key, value) || rand() < (RAND_MAX / 2)) return false;
+            Node *lower = insert(n->lower, key, value);
+            if (lower == NULL || rand() < (RAND_MAX / 2)) return NULL;
             Node *newN = allocNode(key, value);
             newN->next = n->next, newN->prev = n;
             n->next->prev = newN, n->next = newN;
-            return true;
+            newN->lower = lower;
+            return newN;
         }
     }
 }
@@ -97,10 +107,6 @@ void SkipList_Int2::erase(int key)
         temp->next->prev = temp->prev;
         freeNode(temp);
     }
-
-    cout << "erase:" << key << "," << endl;
-    for (auto p : toList()) printf("(%d,%d),", p.first, p.second);
-    puts("");
 }
 
 void SkipList_Int2::tryRemoveLevel()

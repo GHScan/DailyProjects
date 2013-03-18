@@ -16,7 +16,7 @@ public:
     void erase(int key);
 
     vector<pair<int, int> > toList() const;
-private:
+public:
     struct Node
     {
         Node *prev, *next, *lower;
@@ -30,7 +30,7 @@ private:
     void tryAddLevel();
     void addLevel();
     void removeLevel();
-    bool insert(Node *head, int key, int value);
+    Node* insert(Node *head, int key, int value);
 
     static Node* allocNode(int key, int value);
     static void freeNode(Node *n);

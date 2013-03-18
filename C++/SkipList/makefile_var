@@ -4,10 +4,8 @@ macro_defs=
 include_dirs=
 lib_dirs=
 lib_files=
-
 .PHONY: 
 
 build_actions: 
 
 clean_actions:
-
