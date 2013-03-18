@@ -15,16 +15,25 @@ public:
     int get(int key, int def = 0) const;
     void erase(int key);
 
-private:
-    SkipList_Int2(const SkipList_Int2& o);
-    SkipList_Int2& operator = (const SkipList_Int2& o);
-
+    vector<pair<int, int> > toList() const;
 private:
     struct Node
     {
         Node *prev, *next, *lower;
         int key, value;
     };
+private:
+    SkipList_Int2(const SkipList_Int2& o);
+    SkipList_Int2& operator = (const SkipList_Int2& o);
+
+    void tryRemoveLevel();
+    void tryAddLevel();
+    void addLevel();
+    void removeLevel();
+    bool insert(Node *head, int key, int value);
+
+    static Node* allocNode(int key, int value);
+    static void freeNode(Node *n);
 private:
     int m_maxLevel;
     int m_size;
