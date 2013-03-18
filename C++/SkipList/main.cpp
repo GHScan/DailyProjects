@@ -25,6 +25,7 @@ private:
 void performanceTest_int()
 {
     const int N = 1;
+    const int QUERY_N = 4;
     std::vector<int> textArray;
     {
         for (int i = 0; i < (1 << 20); ++i) textArray.push_back(rand() % (1<<14));
@@ -50,6 +51,15 @@ void performanceTest_int()
                 else {
                     s.set(textArray[rArray[i]], 3);
                 }
+            }
+
+            {
+                Timer _tquery("SkipList_Int2 query");
+                int sum = 0;
+                for (int i = 0; i < QUERY_N; ++i) {
+                    for (auto j : textArray) sum += s.get(j);
+                }
+                cout << "end query:" << sum << endl;
             }
 
             if (res.empty()) {
@@ -82,6 +92,15 @@ void performanceTest_int()
                 }
             }
 
+            {
+                int sum = 0;
+                Timer _tquery("set query");
+                for (int i = 0; i < QUERY_N; ++i) {
+                    for (auto j : textArray) sum += s.count(j);
+                }
+                cout << "end query:" << sum << endl;
+            }
+
             if (res2.empty()) {
                 res2.assign(s.begin(), s.end());
             }
@@ -107,6 +126,16 @@ void performanceTest_int()
                     s.insert(textArray[rArray[i]]);
                 }
             }
+
+            {
+                int sum = 0;
+                Timer _tquery("hash_set query");
+                for (int i = 0; i < QUERY_N; ++i) {
+                    for (auto j : textArray) sum += s.count(j);
+                }
+                cout << "end query:" << sum << endl;
+            }
+
             if (res2.empty()) {
                 res2.assign(s.begin(), s.end());
             }
