@@ -26,11 +26,11 @@ void performanceTest_int()
     const int N = 1;
     std::vector<int> textArray;
     {
-        for (int i = 0; i < (1 << 18); ++i) textArray.push_back(rand() % 4096);
+        for (int i = 0; i < (1 << 15); ++i) textArray.push_back(rand() % 4096);
     }
 
     std::vector<int> rArray;
-    for (int i = 0; i < (1 << 18); ++i) rArray.push_back(rand() % textArray.size());
+    for (int i = 0; i < (1 << 20); ++i) rArray.push_back(rand() % textArray.size());
 
     std::vector<int> res;
 
@@ -43,7 +43,7 @@ void performanceTest_int()
                 s.erase(textArray[rArray[i]]);
             }
             for (int i = 0; i < rArray.size(); ++i) {
-                if (rArray[i] & 3) {
+                if (i % 3 == 0) {
                     s.erase(textArray[rArray[i]]);
                 }
                 else {
@@ -61,6 +61,7 @@ void performanceTest_int()
 
     std::sort(res.begin(), res.end());
     cout << res.size() << endl;
+
     return;
 
     std::vector<int> res2;
@@ -74,7 +75,7 @@ void performanceTest_int()
                 s.erase(textArray[rArray[i]]);
             }
             for (int i = 0; i < rArray.size(); ++i) {
-                if (rArray[i] & 3) {
+                if (i % 3 == 0) {
                     s.erase(textArray[rArray[i]]);
                 }
                 else {
