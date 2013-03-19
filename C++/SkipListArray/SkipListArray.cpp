@@ -10,8 +10,8 @@ struct SLANode
 {
     struct Joint
     {
+        SLANode *next;
         int gap;
-        SLANode *prev, *next;
     };
 
     int value;
@@ -20,15 +20,11 @@ struct SLANode
     void insertAfter(int levelIdx, SLANode *n2)
     {
         auto &j1 = joints[levelIdx], &j2 = n2->joints[levelIdx];
-        j2.prev = this, j2.next = j1.next;
-        if (j1.next) j1.next->joints[levelIdx].prev = n2;
-        j1.next = n2;
+        j2.next = j1.next, j1.next = n2;
     }
     void removeAfter(int levelIdx)
     {
-        auto &j1 = joints[levelIdx];
-        auto &j2 = j1.next->joints[levelIdx];
-        if (j2.next) j2.next->joints[levelIdx].prev = this;
+        auto &j1 = joints[levelIdx], &j2 = j1.next->joints[levelIdx];
         j1.next = j2.next;
     }
 };
@@ -81,16 +77,16 @@ pair<SLANode*, int> SkipListArray::insert(SLANode *head, int levelIdx, int off, 
         SLANode *newN = allocNode(value, level);
         head->insertAfter(0, newN);
         ++m_size;
-        return make_pair(level > 1 ? newN : NULL, level - 1);
+        return make_pair(newN, level - 1);
     }
     else {
         auto r = insert(head, levelIdx - 1, off, value);
         SLANode *newN = r.first;
-        if (newN != NULL) {
+        if (r.second > 0) {
+            --r.second;
             head->insertAfter(levelIdx, newN);
             newN->joints[levelIdx].gap = head->joints[levelIdx].gap - off;
             head->joints[levelIdx].gap = off;
-            if (--r.second == 0) r.first = NULL;
         }
         else ++head->joints[levelIdx].gap;
         return r;
@@ -101,26 +97,30 @@ void SkipListArray::erase(int off)
 {
     assert(off < m_size);
     --m_size;
-    erase(m_head, m_maxLevel - 1, off);
+    SLANode *n = erase(m_head, m_maxLevel - 1, off);
+    freeNode(n);
 }
-void SkipListArray::erase(SLANode *head, int levelIdx, int off)
+SLANode* SkipListArray::erase(SLANode *head, int levelIdx, int off)
 {
     while (head->joints[levelIdx].gap < off) {
         off -= head->joints[levelIdx].gap + 1;
         head = head->joints[levelIdx].next;
     }
-    if (head->joints[levelIdx].gap == off) {
-        SLANode *n = head->joints[levelIdx].next;
-        for (int i = 0; i <= levelIdx; ++i) {
-            auto prevN = n->joints[i].prev;
-            prevN->removeAfter(i);
-            prevN->joints[i].gap += n->joints[i].gap;
-        }
-        freeNode(n);
+    if (levelIdx == 0) {
+        assert(off == 0);
+        SLANode *n = head->joints[0].next;
+        head->removeAfter(0);
+        head->joints[0].gap += n->joints[0].gap;
+        return n;
     }
     else {
-        erase(head, levelIdx - 1, off);
-        --head->joints[levelIdx].gap;
+        SLANode *n = erase(head, levelIdx - 1, off);
+        if (head->joints[levelIdx].gap == off) {
+            head->removeAfter(levelIdx);
+            head->joints[levelIdx].gap += n->joints[levelIdx].gap;
+        }
+        else --head->joints[levelIdx].gap;
+        return n;
     }
 }
 

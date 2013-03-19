@@ -23,7 +23,7 @@ private:
     SkipListArray& operator = (const SkipListArray& o);
 
     SLANode* index(int off) const;
-    void erase(SLANode *head, int levelIdx, int off);
+    SLANode* erase(SLANode *head, int levelIdx, int off);
     pair<SLANode*, int> insert(SLANode *head, int levelIdx, int off, int value);
 private:
     int m_maxLevel, m_size;

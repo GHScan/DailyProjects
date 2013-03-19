@@ -24,13 +24,14 @@ private:
 
 int myrand() 
 {
-    return (rand() << 15) | rand();
+    return ((rand() << 16) | rand()) & ~(1 << 31);
 }
 
 void performanceTest()
 {
     const int DATA_N = 1 << 20;
-    const int ACT_N = 1 << 16;
+    const int ACT_N = 1 << 20;
+//#define TEST_VECTOR
 //#define TEST_LIST
 //#define TEST_DEQUE
 
@@ -39,6 +40,7 @@ void performanceTest()
 
     vector<int> res, res2;
 
+#ifdef TEST_VECTOR
     {
         vector<int> v;
         puts("********** test vector");
@@ -61,6 +63,7 @@ void performanceTest()
         }
         res.assign(v.begin(), v.end());
     }
+#endif
 
 #ifdef TEST_LIST
     {
