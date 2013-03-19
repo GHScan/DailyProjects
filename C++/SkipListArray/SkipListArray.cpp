@@ -80,6 +80,7 @@ pair<SLANode*, int> SkipListArray::insert(SLANode *head, int levelIdx, int off, 
         while (level < m_maxLevel && rand() < (RAND_MAX / 2)) ++level;
         SLANode *newN = allocNode(value, level);
         head->insertAfter(0, newN);
+        ++m_size;
         return make_pair(level > 1 ? newN : NULL, level - 1);
     }
     else {
