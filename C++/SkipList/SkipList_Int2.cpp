@@ -14,7 +14,7 @@ struct SLNode
 {
     SLNode *prev, *next, *lower;
     int key, *value;
-    SLNode(int _key, int *_value): key(_key), value(_value), prev(NULL), next(NULL), lower(NULL){}
+    SLNode(int _key, int *_value): prev(NULL), next(NULL), lower(NULL), key(_key), value(_value) {}
 
     void insertAfter(SLNode *o)
     {

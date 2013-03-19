@@ -40,11 +40,11 @@ void performanceTest_int()
         Timer _t("SkipList_Int2");
         for (int _ = 0; _ < N; ++_) {
             SkipList_Int2 s;
-            for (int i = 0; i < textArray.size(); ++i) s.set(textArray[i], 5);
-            for (int i = 0; i < rArray.size(); ++i) {
+            for (int i = 0; i < (int)textArray.size(); ++i) s.set(textArray[i], 5);
+            for (int i = 0; i < (int)rArray.size(); ++i) {
                 s.erase(textArray[rArray[i]]);
             }
-            for (int i = 0; i < rArray.size(); ++i) {
+            for (int i = 0; i < (int)rArray.size(); ++i) {
                 if (i % 3 == 0) {
                     s.erase(textArray[rArray[i]]);
                 }
@@ -79,11 +79,11 @@ void performanceTest_int()
         Timer _t("set");
         for (int _ = 0; _ < N; ++_) {
             std::set<int> s;
-            for (int i = 0; i < textArray.size(); ++i) s.insert(textArray[i]);
-            for (int i = 0; i < rArray.size(); ++i) {
+            for (int i = 0; i < (int)textArray.size(); ++i) s.insert(textArray[i]);
+            for (int i = 0; i < (int)rArray.size(); ++i) {
                 s.erase(textArray[rArray[i]]);
             }
-            for (int i = 0; i < rArray.size(); ++i) {
+            for (int i = 0; i < (int)rArray.size(); ++i) {
                 if (i % 3 == 0) {
                     s.erase(textArray[rArray[i]]);
                 }
@@ -114,11 +114,11 @@ void performanceTest_int()
         Timer _t("hash_set");
         for (int _ = 0; _ < N; ++_) {
             std::unordered_set<int> s;
-            for (int i = 0; i < textArray.size(); ++i) s.insert(textArray[i]);
-            for (int i = 0; i < rArray.size(); ++i) {
+            for (int i = 0; i < (int)textArray.size(); ++i) s.insert(textArray[i]);
+            for (int i = 0; i < (int)rArray.size(); ++i) {
                 s.erase(textArray[rArray[i]]);
             }
-            for (int i = 0; i < rArray.size(); ++i) {
+            for (int i = 0; i < (int)rArray.size(); ++i) {
                 if (rArray[i] & 3) {
                     s.erase(textArray[rArray[i]]);
                 }
@@ -154,7 +154,7 @@ void functionTest()
 
     SkipList_Int2 list;
     set<int> set;
-    for (int i = 0; i < ranInts.size(); ++i) {
+    for (int i = 0; i < (int)ranInts.size(); ++i) {
         int v = ranInts[i];
         switch (i % 3) {
             case 0:
@@ -174,11 +174,25 @@ void functionTest()
     }
 }
 
+#include "SkipList_Int2_v2.h"
+
 int main()
 {
     srand((int)time(NULL));
 
     //_CrtSetDbgFlag( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);    
-    functionTest();
-    performanceTest_int();
+    //functionTest();
+    //performanceTest_int();
+
+    SkipList_Int2_v2 list(5);
+    list.set(3, 9);
+    list.set(1, 1);
+    list.erase(4);
+    list.set(5, 25);
+    list.set(4, 16);
+    list.erase(4);
+    list.erase(1);
+    list.set(2, 4);
+    for (auto i : list.toList()) printf("(%d,%d),", i.first, i.second);
+    puts("");
 }

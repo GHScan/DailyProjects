@@ -7,7 +7,7 @@
 
 #include <algorithm>
 
-template<int n>
+template<int _size>
 class FixSizeMemoryPool
 {
 private:
@@ -16,7 +16,7 @@ private:
         union
         {
             Node *next;
-            char buf[n];
+            char buf[_size];
         };
     };
     struct Block
@@ -66,7 +66,7 @@ private:
     void allocBlock()
     {
         assert(m_freeList == NULL);
-        Block* b = (Block*)::malloc((m_blockNodeCnt - 1) * n + sizeof(Block));
+        Block* b = (Block*)::malloc((m_blockNodeCnt - 1) * _size + sizeof(Block));
         b->next = m_blockHead;
         m_blockHead = b;
         for (int i = 0; i < m_blockNodeCnt; ++i) {
@@ -85,8 +85,8 @@ private:
 
 namespace std
 {
-    template<int n>
-    inline void swap(FixSizeMemoryPool<n>& a, FixSizeMemoryPool<n>& b)
+    template<int _size>
+    inline void swap(FixSizeMemoryPool<_size>& a, FixSizeMemoryPool<_size>& b)
     {
         a.swap(b);
     }
