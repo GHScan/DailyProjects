@@ -78,7 +78,7 @@ pair<SLNode_v2*, int> SkipList_Int2_v2::insert(SLNode_v2 *head, int levelIdx, in
             SLNode_v2 *newN = allocNode(key, value, level);
             n->insertAfter(0, newN);
             ++m_size;
-            return make_pair(newN, level - 1);
+            return make_pair(level > 1 ? newN : NULL, level - 1);
         }
         else {
             auto r = insert(n, levelIdx - 1, key, value);

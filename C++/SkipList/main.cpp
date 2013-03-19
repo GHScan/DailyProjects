@@ -9,6 +9,8 @@
 
 #include "SkipList_Int2.h"
 
+#include "SkipList_Int2_v2.h"
+
 class Timer
 {
 public:
@@ -111,6 +113,43 @@ void performanceTest_int()
     cout << res2.size() << "," << (res == res2) << endl;
 
     {
+        Timer _t("SkipList_Int2_v2 ");
+        for (int _ = 0; _ < N; ++_) {
+            SkipList_Int2_v2 s(12);
+            for (int i = 0; i < (int)textArray.size(); ++i) s.set(textArray[i], i);
+            for (int i = 0; i < (int)rArray.size(); ++i) {
+                s.erase(textArray[rArray[i]]);
+            }
+            for (int i = 0; i < (int)rArray.size(); ++i) {
+                if (rArray[i] & 3) {
+                    s.erase(textArray[rArray[i]]);
+                }
+                else {
+                    s.set(textArray[rArray[i]], i);
+                }
+            }
+
+            {
+                int sum = 0;
+                Timer _tquery("SkipList_Int2_v2 query");
+                for (int i = 0; i < QUERY_N; ++i) {
+                    for (auto j : textArray) sum += s.get(j);
+                }
+                cout << "end query:" << sum << endl;
+            }
+
+            if (res2.empty()) {
+                for (auto p : s.toList()) {
+                    res2.push_back(p.first);
+                }
+            }
+        }
+    }
+
+    std::sort(res2.begin(), res2.end());
+    cout << res2.size() << "," << (res == res2) << endl;
+
+    {
         Timer _t("hash_set");
         for (int _ = 0; _ < N; ++_) {
             std::unordered_set<int> s;
@@ -152,7 +191,7 @@ void functionTest()
     for (int i = 0; i < (1<<15); ++i) ranInts.push_back(i % (1<<10));
     random_shuffle(ranInts.begin(), ranInts.end());
 
-    SkipList_Int2 list;
+    SkipList_Int2_v2 list(10);
     set<int> set;
     for (int i = 0; i < (int)ranInts.size(); ++i) {
         int v = ranInts[i];
@@ -174,25 +213,11 @@ void functionTest()
     }
 }
 
-#include "SkipList_Int2_v2.h"
-
 int main()
 {
     srand((int)time(NULL));
 
     //_CrtSetDbgFlag( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);    
-    //functionTest();
-    //performanceTest_int();
-
-    SkipList_Int2_v2 list(5);
-    list.set(3, 9);
-    list.set(1, 1);
-    list.erase(4);
-    list.set(5, 25);
-    list.set(4, 16);
-    list.erase(4);
-    list.erase(1);
-    list.set(2, 4);
-    for (auto i : list.toList()) printf("(%d,%d),", i.first, i.second);
-    puts("");
+    functionTest();
+    performanceTest_int();
 }
