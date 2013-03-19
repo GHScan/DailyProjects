@@ -122,7 +122,7 @@ void performanceTest()
 #endif
 
     {
-        SkipListArray v(12);
+        SkipListArray v(15);
         puts("********** test SkipListArray");
         {
             Timer _t("SkipListArray build:");
