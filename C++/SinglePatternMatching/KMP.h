@@ -2,6 +2,8 @@
 #ifndef KMP_H
 #define KMP_H
 
+#include <assert.h>
+
 class KMPFinder
 {
 public:
@@ -33,6 +35,27 @@ public:
             }
         }
         if (i == patternSize) ++r;
+        return r;
+    }
+    int find2(const char *src) 
+    {
+        const char *pattern = m_pattern.c_str();
+        int patternSize = (int)m_pattern.size();
+        const int *prefixTable = &m_prefixTable[0];
+
+        int r = 0;
+        int i = 0;
+        for (;; ++src) {
+            if (*src == pattern[i]) ++i;
+            else {
+                if (i == patternSize) ++r;
+                while (i > 0 && pattern[prefixTable[i - 1] + 1] != *src) {
+                    i = prefixTable[i - 1] + 1;
+                }
+                if (i != 0) i = prefixTable[i - 1] + 2;
+            }
+            if (*src == 0) break;
+        }
         return r;
     }
     void printPrefixTable()

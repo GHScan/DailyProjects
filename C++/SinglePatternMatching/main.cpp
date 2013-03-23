@@ -22,7 +22,7 @@ private:
 
 int for2Find(const char *pattern, const char *src)
 {
-    int len1 = strlen(pattern), len2 = strlen(src);
+    int len1 = (int)strlen(pattern), len2 = (int)strlen(src);
     int r = 0;
     for (int i = 0; i < len2 - len1; ++i) {
         int j = 0;
@@ -34,7 +34,7 @@ int for2Find(const char *pattern, const char *src)
 int strcmpFind(const char *pattern, const char *src)
 {
     int r = 0;
-    int len = strlen(pattern);
+    int len = (int)strlen(pattern);
     for (; *src; ++src) {
         if (strncmp(src, pattern, len) == 0) ++r;
     }
@@ -75,6 +75,13 @@ void test(const char *pat, const char *text)
         KMPFinder finder(pat);
         r2 = 0;
         for (int i = 0; i < N; ++i) r2 += finder.find(text);
+        if (r2 != r) puts("wrong !!!!");
+    }
+    {
+        Timer _t("KMP2");
+        KMPFinder finder(pat);
+        r2 = 0;
+        for (int i = 0; i < N; ++i) r2 += finder.find2(text);
         if (r2 != r) puts("wrong !!!!");
     }
     {

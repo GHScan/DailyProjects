@@ -10,9 +10,9 @@ public:
     SundayFinder(const char *pattern):
         m_pattern(pattern)
     {
-        for (int i = 0; i < 256; ++i) m_jumpTable[i] = m_pattern.size() + 1;
+        for (int i = 0; i < 256; ++i) m_jumpTable[i] = (int)m_pattern.size() + 1;
         for (int i = 0; i < (int)m_pattern.size(); ++i) {
-            m_jumpTable[(int)m_pattern[i]] = m_pattern.size() - i;
+            m_jumpTable[(int)m_pattern[i]] = (int)m_pattern.size() - i;
         }
     }
     int find(const char *src)
