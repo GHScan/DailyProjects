@@ -39,7 +39,7 @@ LuaValue::LuaValue(LuaValue&& o):
     m_type(LVT_Nil)
 {
     m_data.n = 0;
-    *this = forward<LuaValue&&>(o);
+    *this = forward<LuaValue>(o);
 }
 LuaValue& LuaValue::operator = (const LuaValue& o)
 {
@@ -83,6 +83,7 @@ LuaValue::~LuaValue()
             break;
         default: break;
     }
+    m_type = LVT_Nil;
     m_data.n = 0;
 }
 
@@ -112,9 +113,9 @@ bool LuaValue::operator < (const LuaValue& o) const
         case LVT_Number:
             return m_data.n < o.m_data.n;
         case LVT_Boolean:
-            return m_data.b < o.m_data.b;
+            ASSERT(0);
         case LVT_Nil:
-            return false;
+            ASSERT(0);
         default: break;
     }
     ASSERT(0);
@@ -184,7 +185,7 @@ string LuaValue::toString() const
         case LVT_Boolean: return m_data.b ? "true" : "false";
         case LVT_Number: return m_data.n == (int)m_data.n ? format("%d", m_data.n) : format("%f", m_data.n);
         case LVT_String: return m_data.str;
-        case LVT_Table: return format("%p", m_data.table);
+        case LVT_Table: return format("table: %p", m_data.table);
         default: break;
     }
     ASSERT(0);

@@ -23,7 +23,9 @@ public:
 
     bool operator == (const LuaTable& o) const
     {
-        return m_vec == o.m_vec && m_hashTable == o.m_hashTable;
+        // TODO: Uncomment to reach the value semantic
+        //return m_vec == o.m_vec && m_hashTable == o.m_hashTable;
+        return this == &o;
     }
     bool operator != (const LuaTable& o) const { return !(*this == o); }
 
