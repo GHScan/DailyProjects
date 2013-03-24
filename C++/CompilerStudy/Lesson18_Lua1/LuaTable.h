@@ -6,11 +6,9 @@
 
 class LuaValue;
 
-class LuaTable
-{
+class LuaTable {
 public:
-    static LuaTable* create()
-    {
+    static LuaTable* create() {
         return new LuaTable();
     }
 
@@ -21,8 +19,7 @@ public:
 
     const LuaValue& getNext(LuaValue& k) const;
 
-    bool operator == (const LuaTable& o) const
-    {
+    bool operator == (const LuaTable& o) const {
         // TODO: Uncomment to reach the value semantic
         //return m_vec == o.m_vec && m_hashTable == o.m_hashTable;
         return this == &o;
@@ -33,8 +30,7 @@ public:
 
     int getRefCount() const { return m_refCount;}
     int addRef() { return ++m_refCount;}
-    int releaseRef() 
-    {
+    int releaseRef() {
         int r = --m_refCount;
         if (r == 0) delete this;
         return r;

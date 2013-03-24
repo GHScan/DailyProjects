@@ -33,16 +33,13 @@ using namespace std;
 #endif
 
 class Exception:
-    public exception
-{
+    public exception {
 public:
-    Exception(const string& s): m_s(s)
-    {
+    Exception(const string& s): m_s(s) {
         assert(0);
     }
     ~Exception() throw(){}
-    const char* what() const throw()
-    {
+    const char* what() const throw() {
         return m_s.c_str();
     }
 private:

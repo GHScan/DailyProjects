@@ -4,8 +4,7 @@
 
 typedef double NumberType;
 
-enum LuaValueType
-{
+enum LuaValueType {
     LVT_Nil,
     LVT_Boolean,
     LVT_Number,
@@ -70,13 +69,10 @@ private:
     } m_data;
 };
 
-namespace std
-{
+namespace std {
     template<>
-    struct hash<LuaValue>
-    {
-        int operator () (const LuaValue& v) const
-        {
+    struct hash<LuaValue> {
+        int operator () (const LuaValue& v) const {
             return v.getHash();
         }
     };

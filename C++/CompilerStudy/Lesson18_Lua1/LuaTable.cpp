@@ -2,13 +2,11 @@
 #include "LuaTable.h"
 
 template <class T>
-inline void hash_combine(int & seed, const T & v)
-{
+inline void hash_combine(int & seed, const T & v) {
     seed ^= std::hash<T>()(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 }
 
-const LuaValue& LuaTable::get(const LuaValue& k) const
-{
+const LuaValue& LuaTable::get(const LuaValue& k) const {
     if (k.isTypeOf(LVT_Number)) {
         int idx = (int)k.getNumber() - 1;
         if (idx >= 0 && idx < (int)m_vec.size()) return m_vec[idx];
@@ -17,8 +15,7 @@ const LuaValue& LuaTable::get(const LuaValue& k) const
     if (iter == m_hashTable.end()) return LuaValue::NIL;
     return iter->second;
 }
-void LuaTable::set(const LuaValue& k, const LuaValue& v)
-{
+void LuaTable::set(const LuaValue& k, const LuaValue& v) {
     if (k.isTypeOf(LVT_Number)) {
         int idx = (int)k.getNumber() - 1;
         if (idx >= 0 && idx < (int)m_vec.size()) {
@@ -34,8 +31,7 @@ void LuaTable::set(const LuaValue& k, const LuaValue& v)
     return;
 }
 
-const LuaValue& LuaTable::getNext(LuaValue& k) const
-{
+const LuaValue& LuaTable::getNext(LuaValue& k) const {
     if (k.isTypeOf(LVT_Nil)) {
         if (!m_vec.empty()) {
             k = LuaValue(1);
@@ -67,8 +63,7 @@ const LuaValue& LuaTable::getNext(LuaValue& k) const
         if (iter == m_hashTable.end()) {
             k = LuaValue::NIL;
             return LuaValue::NIL;
-        }
-        else {
+        } else {
             auto iter2 = iter; ++iter2;
             if (iter2 == m_hashTable.end()) k = LuaValue::NIL;
             else k = iter2->first;
@@ -77,8 +72,7 @@ const LuaValue& LuaTable::getNext(LuaValue& k) const
     }
 }
 
-int LuaTable::getHash() const
-{
+int LuaTable::getHash() const {
     if (m_hash == 0) {
         // TODO: Uncomment to reach the value semantic
         //hash_combine(m_hash, 0);

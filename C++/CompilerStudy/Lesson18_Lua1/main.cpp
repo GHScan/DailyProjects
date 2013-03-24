@@ -3,8 +3,7 @@
 
 bool parseFile(const char *fname);
 
-int main()
-{
+int main() {
     parseFile("test.lua");
     return 0;
 }
