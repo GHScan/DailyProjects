@@ -1,11 +1,6 @@
 #include "pch.h"
 #include "LuaTable.h"
 
-template <class T>
-inline void hash_combine(int & seed, const T & v) {
-    seed ^= std::hash<T>()(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-}
-
 const LuaValue& LuaTable::get(const LuaValue& k) const {
     if (k.isTypeOf(LVT_Number)) {
         int idx = (int)k.getNumber() - 1;
@@ -71,21 +66,3 @@ const LuaValue& LuaTable::getNext(LuaValue& k) const {
         }
     }
 }
-
-int LuaTable::getHash() const {
-    if (m_hash == 0) {
-        // TODO: Uncomment to reach the value semantic
-        //hash_combine(m_hash, 0);
-        //LuaValue k = LuaValue::NIL;
-        //for (;;) {
-        //    const LuaValue &v = getNext(k);
-        //    if (k.isTypeOf(LVT_Nil)) break;
-        //    hash_combine(m_hash, k.getHash());
-        //    hash_combine(m_hash, v.getHash());
-        //}
-        hash_combine(m_hash, this);
-    }
-    return m_hash;
-}
-
-

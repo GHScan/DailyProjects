@@ -1,6 +1,8 @@
 #include "pch.h"
+#include "Ast.h"
 #include "LuaValue.h"
 #include "LuaTable.h"
+#include "LuaFunction.h"
 
 LuaValue::LuaValue(const char *str):
     m_type(LVT_String) {
@@ -52,6 +54,9 @@ LuaValue& LuaValue::operator = (const LuaValue& o) {
         case LVT_Table:
             m_data.table->addRef();
             break;
+        case LVT_Function:
+            m_data.func->addRef();
+            break;
         default:break;
     }
     return *this;
@@ -73,6 +78,9 @@ LuaValue::~LuaValue() {
         case LVT_Table:
             m_data.table->releaseRef();
             break;
+        case LVT_Function:
+            m_data.func->releaseRef();
+            break;
         default: break;
     }
     m_type = LVT_Nil;
@@ -84,8 +92,6 @@ bool LuaValue::operator == (const LuaValue& o) const {
         switch (m_type) {
             case LVT_String:
                 return strcmp(m_data.str, o.m_data.str) == 0;
-            case LVT_Table:
-                return *m_data.table == *o.m_data.table;
             default:
                 return m_data.n == o.m_data.n;
         }
@@ -153,7 +159,8 @@ int LuaValue::getHash() const {
         case LVT_Boolean: return hash<bool>()(m_data.b);
         case LVT_Number: return hash<NumberType>()(m_data.n);
         case LVT_String: return hash<const char*>()(m_data.str);
-        case LVT_Table: return m_data.table->getHash();
+        case LVT_Table: return hash<LuaTable*>()(m_data.table);
+        case LVT_Function: return hash<LuaFunction*>()(m_data.func);
         default: break;
     }
     ASSERT(0);
@@ -167,6 +174,7 @@ string LuaValue::toString() const {
         case LVT_Number: return m_data.n == (int)m_data.n ? format("%d", m_data.n) : format("%f", m_data.n);
         case LVT_String: return m_data.str;
         case LVT_Table: return format("table: %p", m_data.table);
+        case LVT_Function: return format("function: %p", m_data.func);
         default: break;
     }
     ASSERT(0);

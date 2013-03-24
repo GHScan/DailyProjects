@@ -10,9 +10,11 @@ enum LuaValueType {
     LVT_Number,
     LVT_String,
     LVT_Table,
+    LVT_Function,
 };
 
 class LuaTable;
+class LuaFunction;
 
 class LuaValue
 {
@@ -32,8 +34,9 @@ public:
     bool getBoolean() const { ASSERT(isTypeOf(LVT_Boolean)); return m_data.b;}
     NumberType getNumber() const { ASSERT(isTypeOf(LVT_Number)); return m_data.n; }
     const char *getString() const { ASSERT(isTypeOf(LVT_String)); return m_data.str;}
-    const LuaTable* getLuaTable() const { ASSERT(isTypeOf(LVT_Table)); return m_data.table;}
     LuaTable* getLuaTable() { ASSERT(isTypeOf(LVT_Table)); return m_data.table;}
+    LuaFunction* getFunction() { ASSERT(isTypeOf(LVT_Function)); return m_data.func;}
+
 
     bool operator == (const LuaValue& o) const;
     bool operator != (const LuaValue& o) const { return !(*this == o);}
@@ -66,6 +69,7 @@ private:
         NumberType n;
         char *str;
         LuaTable *table;
+        LuaFunction *func;
     } m_data;
 };
 

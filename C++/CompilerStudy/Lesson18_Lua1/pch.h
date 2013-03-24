@@ -49,6 +49,11 @@ private:
 string format(const char *fmt, ...);
 string tabString(int n);
 
+template <class T>
+inline void hash_combine(int & seed, const T & v) {
+    seed ^= std::hash<T>()(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+}
+
 #ifdef _MSC_VER
 #pragma warning(disable : 4996)
 #endif

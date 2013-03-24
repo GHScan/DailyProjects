@@ -19,15 +19,6 @@ public:
 
     const LuaValue& getNext(LuaValue& k) const;
 
-    bool operator == (const LuaTable& o) const {
-        // TODO: Uncomment to reach the value semantic
-        //return m_vec == o.m_vec && m_hashTable == o.m_hashTable;
-        return this == &o;
-    }
-    bool operator != (const LuaTable& o) const { return !(*this == o); }
-
-    int getHash() const;
-
     int getRefCount() const { return m_refCount;}
     int addRef() { return ++m_refCount;}
     int releaseRef() {
@@ -37,9 +28,10 @@ public:
     }
 
 private:
-    LuaTable(): m_hash(0), m_refCount(1){}
     LuaTable(const LuaTable&);
     LuaTable& operator = (const LuaTable&);
+    LuaTable(): m_hash(0), m_refCount(1){}
+    ~LuaTable(){}
 
 private:
     vector<LuaValue> m_vec;
