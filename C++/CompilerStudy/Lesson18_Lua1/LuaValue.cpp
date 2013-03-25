@@ -7,7 +7,7 @@
 LuaValue::LuaValue(const char *str):
     m_type(LVT_String) {
     int len = strlen(str);
-    m_data.str = new char[len + 1];
+    m_data.str = (char*)malloc(len + 1);
     memcpy(m_data.str, str, len + 1);
 }
 
@@ -17,7 +17,7 @@ LuaValue::LuaValue(LuaValueType t, int v):
     if (m_data.n == 0) {
         switch (m_type) {
             case LVT_String:
-                m_data.str = new char[1];
+                m_data.str = (char*)malloc(1);
                 m_data.str[0] = 0;
                 break;
             case LVT_Table:
@@ -47,7 +47,7 @@ LuaValue& LuaValue::operator = (const LuaValue& o) {
     switch (o.m_type) {
         case LVT_String: {
                 int len = strlen(o.m_data.str);
-                m_data.str = new char[len + 1];
+                m_data.str = (char*)malloc(len + 1);
                 memcpy(m_data.str, o.m_data.str, len + 1);
             }
             break;
@@ -73,7 +73,7 @@ LuaValue& LuaValue::operator = (LuaValue&& o) {
 LuaValue::~LuaValue() {
     switch (m_type) {
         case LVT_String:
-            delete[] m_data.str;
+            free(m_data.str);
             break;
         case LVT_Table:
             m_data.table->releaseRef();
@@ -142,6 +142,26 @@ LuaValue& LuaValue::operator %= (const LuaValue& o) {
     ASSERT(m_type == LVT_Number && o.m_type == LVT_Number);
     m_data.n = fmod(m_data.n, o.m_data.n);
     return *this;
+}
+LuaValue LuaValue::power(const LuaValue& o) const {
+    ASSERT(m_type == LVT_Number && o.m_type == LVT_Number);
+    return LuaValue(::pow(m_data.n, o.m_data.n));
+}
+LuaValue LuaValue::concat(const LuaValue& o) const {
+    ASSERT(m_type == LVT_String && o.m_type == LVT_String);
+    int len1 = strlen(m_data.str), len2 = strlen(o.m_data.str);
+    char *p = (char*)malloc(len1 + len2 + 1);
+    memcpy(p, m_data.str, len1);
+    memcpy(p + len1, m_data.str, len2 + 1);
+    return LuaValue(LVT_String, (int)p);
+}
+int LuaValue::getSize() const {
+    if (m_type == LVT_String) {
+        return strlen(m_data.str);
+    } else if (m_type == LVT_Table) {
+        return m_data.table->size();
+    } else ASSERT(0);
+    return 0;
 }
 
 const LuaValue& LuaValue::get(const LuaValue& k) {

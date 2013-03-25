@@ -9,11 +9,12 @@
 struct LuaFunctionMeta {
     string file;
     int line;
+    int argCount;
     vector<LuaValue> constTable;
     vector<string> nameTable;
     StmtNodePtr body;
 
-    LuaFunctionMeta(const string& _file, int _line): file(_file), line(_line){}
+    LuaFunctionMeta(const string& _file, int _line): file(_file), line(_line), argCount(0){}
     int getConstIndex(const LuaValue& v);
     int getNameIndex(const string& name);
 };
@@ -27,6 +28,7 @@ public:
 
     LuaValue& getLocal(int idx);
     LuaValue& getUpValue(int idx);
+    const vector<LuaValue>& getArgs() const { return m_args; }
 
     const LuaFunctionMeta* getMeta() const { return m_meta; }
 
@@ -50,6 +52,7 @@ private:
     LuaFunctionMeta *m_meta;
     vector<LuaValue> m_locals;
     vector<LuaValue> m_upValues;
+    vector<LuaValue> m_args;
 };
 
 #endif

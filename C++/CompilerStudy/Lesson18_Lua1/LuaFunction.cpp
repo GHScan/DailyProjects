@@ -3,81 +3,178 @@
 
 #include "Ast.h"
 #include "LuaFunction.h"
+#include "Runtime.h"
+#include "LuaTable.h"
+
+static vector<LuaValue> evalExps(LuaFunction *func, vector<ExpNodePtr>& exps) ;
 
 class ExpNodeVisitor_Eval:
     public IExpNodeVisitor {
 public:
     ExpNodeVisitor_Eval(LuaFunction *func): m_func(func){}
-    LuaValue& apply(ExpNodePtr& exp) {
+    vector<LuaValue>& apply(ExpNodePtr& exp) {
         exp->acceptVisitor(this);
-        return m_ret;
+        return m_rets;
     }
 private:
     virtual void visit(BinOpExpNode *v) {
+        v->left->acceptVisitor(this);
+        LuaValue lv = m_rets[0]; m_rets.clear();
+        if (v->op == "and") {
+            if (lv.getBoolean()) {
+                v->right->acceptVisitor(this);
+                LuaValue rv = m_rets[0]; m_rets.clear();
+                m_rets.push_back(rv);
+            } else m_rets.push_back(lv);
+        } else if (v->op == "or") {
+            if (!lv.getBoolean()) {
+                v->right->acceptVisitor(this);
+                LuaValue rv = m_rets[0]; m_rets.clear();
+                m_rets.push_back(rv);
+            }
+            else m_rets.push_back(lv);
+        }
+
+        v->right->acceptVisitor(this);
+        LuaValue rv = m_rets[0]; m_rets.clear();
+        if (v->op == "<") {
+            m_rets.push_back(lv < rv ? LuaValue::TRUE : LuaValue::FALSE);
+        } else if (v->op == "<=") {
+            m_rets.push_back(lv <= rv ? LuaValue::TRUE : LuaValue::FALSE);
+        } else if (v->op == ">") {
+            m_rets.push_back(lv > rv ? LuaValue::TRUE : LuaValue::FALSE);
+        } else if (v->op == ">=") {
+            m_rets.push_back(lv >= rv ? LuaValue::TRUE : LuaValue::FALSE);
+        } else if (v->op == "==") {
+            m_rets.push_back(lv == rv ? LuaValue::TRUE : LuaValue::FALSE);
+        } else if (v->op == "~=") {
+            m_rets.push_back(lv != rv ? LuaValue::TRUE : LuaValue::FALSE);
+        } else if (v->op == "+") {
+            m_rets.push_back(lv + rv);
+        } else if (v->op == "-") {
+            m_rets.push_back(lv - rv);
+        } else if (v->op == "*") {
+            m_rets.push_back(lv * rv);
+        } else if (v->op == "/") {
+            m_rets.push_back(lv / rv);
+        } else if (v->op == "%") {
+            m_rets.push_back(lv % rv);
+        } else if (v->op == "^") {
+            m_rets.push_back(lv.power(rv));
+        } else if (v->op == "..") {
+            m_rets.push_back(lv.concat(rv));
+        } else ASSERT(0);
     }
     virtual void visit(UnOpExpNode *v) {
+        v->cexp->acceptVisitor(this);
+        LuaValue value = m_rets[0]; m_rets.clear();
+        if (v->op == "-") {
+            m_rets.push_back(LuaValue(-value.getNumber()));
+        } else if (v->op == "not") {
+            if (value.isTypeOf(LVT_Nil) || !value.getBoolean()) {
+                m_rets.push_back(LuaValue::TRUE);
+            } else m_rets.push_back(LuaValue::FALSE);
+        } else if (v->op == "#") {
+            m_rets.push_back(LuaValue(value.getSize()));
+        } else ASSERT(0);
     }
     virtual void visit(ConstExpNode *v) {
+        m_rets.push_back(m_func->getMeta()->constTable[v->index]);
     }
     virtual void visit(LocalVarExpNode *v) {
+        m_rets.push_back(m_func->getLocal(v->index));
     }
     virtual void visit(UpValueVarExpNode *v) {
+        m_rets.push_back(m_func->getUpValue(v->index));
     }
     virtual void visit(GlobalVarExpNode *v) {
+        m_rets.push_back(Runtime::instance()->getGlobalTable()->get(LuaValue(v->name.c_str())));
     }
     virtual void visit(FieldAccessExpNode *v) {
+        v->table->acceptVisitor(this);
+        auto table = m_rets[0]; m_rets.clear();
+        v->field->acceptVisitor(this);
+        auto field = m_rets[0]; m_rets.clear();
+        m_rets.push_back(table.get(field)); 
     }
     virtual void visit(TableConstructorExpNode *v) {
+        LuaValue table(LVT_Table);
+        {
+            auto vals(evalExps(m_func, v->vec));
+            for (int i = 0; i < (int)vals.size(); ++i) {
+                table.set(LuaValue(i + 1), vals[i]);
+            }
+        }
+        for (int i = 0; i < (int)v->hashTable.size(); ++i) {
+            v->hashTable[i].first->acceptVisitor(this);
+            LuaValue k = m_rets[0]; m_rets.clear();
+            v->hashTable[i].second->acceptVisitor(this);
+            LuaValue v = m_rets[0]; m_rets.clear();
+            table.set(k, v);
+        }
+        m_rets.push_back(table);
     }
     virtual void visit(LambdaExpNode *v) {
+        vector<LuaValue> upValues;
+        m_rets.push_back(LuaValue(LVT_Function, (int)LuaFunction::create(v->meta, upValues)));
     }
     virtual void visit(CallExpNode *v) {
+        auto func = ExpNodeVisitor_Eval(m_func).apply(v->func)[0].getFunction();
+        vector<LuaValue> params(evalExps(m_func, v->params)); 
+        func->call(params, m_rets);
     }
     virtual void visit(ArgsTupleExpNode *v) {
+        auto &args = m_func->getArgs();
+        m_rets.assign(args.begin() + m_func->getMeta()->argCount, args.end());
     }
 private:
     LuaFunction *m_func;
-    LuaValue m_ret;
+    vector<LuaValue> m_rets;
 };
+
+static vector<LuaValue> evalExps(LuaFunction *func, vector<ExpNodePtr>& exps) {
+    vector<LuaValue> r;
+    for (int i = 0; i < (int)exps.size() - 1; ++i) {
+        r.push_back(ExpNodeVisitor_Eval(func).apply(exps[i])[0]);
+    }
+    auto vec(move(ExpNodeVisitor_Eval(func).apply(exps.back())));
+    r.insert(r.end(), vec.begin(), vec.end());
+    return r;
+}
 
 class StmtNodeVisitor_Execute:
     public IStmtNodeVisitor {
 public:
-    StmtNodeVisitor_Execute(LuaFunction* func, const vector<LuaValue>& args): m_func(func), m_args(args){}
+    StmtNodeVisitor_Execute(LuaFunction* func): m_func(func){}
     vector<LuaValue>& apply() {
         m_func->getMeta()->body->acceptVisitor(this);
         return m_rets;
     }
 private:
     virtual void visit(CallStmtNode *v) {
-        auto exp = static_cast<CallExpNode*>(v->exp.get());
-        auto func = ExpNodeVisitor_Eval(m_func).apply(exp->func).getFunction();
-        vector<LuaValue> params; 
-        vector<LuaValue> rets;
-        for (auto &paramExp : exp->params) params.push_back(ExpNodeVisitor_Eval(m_func).apply(paramExp));
-        func->call(params, rets);
+        ExpNodeVisitor_Eval(m_func).apply(v->exp);
     }
     virtual void visit(AssignStmtNode *v) {
         if (v->vars.size() == 1 && dynamic_cast<LocalVarExpNode*>(v->vars[0].get())) {
             auto p = static_cast<LocalVarExpNode*>(v->vars[0].get());
             if (p->getName(m_func->getMeta()) == "return") {
-                for (auto &exp : v->exps) {
-                    m_rets.push_back(ExpNodeVisitor_Eval(m_func).apply(exp));
-                }
+                m_rets = evalExps(m_func, v->exps);
+                return;
             }
         }
+        auto values = evalExps(m_func, v->exps);
         for (int i = 0; i < (int)v->vars.size(); ++i) {
             if (auto localExp = dynamic_cast<LocalVarExpNode*>(v->vars[i].get())) {
-                m_func->getLocal(localExp->index) = ExpNodeVisitor_Eval(m_func).apply(v->exps[i]);
+                m_func->getLocal(localExp->index) = values[i];
             }
             else if (auto upValueExp = dynamic_cast<UpValueVarExpNode*>(v->vars[i].get())) {
-                m_func->getUpValue(upValueExp->index) = ExpNodeVisitor_Eval(m_func).apply(v->exps[i]);
+                m_func->getUpValue(upValueExp->index) = values[i];
             }
             else {
                 assert(dynamic_cast<FieldAccessExpNode*>(v->vars[i].get()));
                 auto fieldAccessExp = static_cast<FieldAccessExpNode*>(v->vars[i].get());
-                ExpNodeVisitor_Eval(m_func).apply(fieldAccessExp->value).set(
-                        ExpNodeVisitor_Eval(m_func).apply(fieldAccessExp->field), ExpNodeVisitor_Eval(m_func).apply(v->exps[i]));
+                ExpNodeVisitor_Eval(m_func).apply(fieldAccessExp->table)[0].set(
+                        ExpNodeVisitor_Eval(m_func).apply(fieldAccessExp->field)[0], values[i]);
             }
         }
     }
@@ -89,9 +186,10 @@ private:
     virtual void visit(IfElseStmtNode *v) {
         bool ok = false;
         for (auto &p : v->ifExpStmtList) {
-            if (ExpNodeVisitor_Eval(m_func).apply(p.first).getBoolean()) {
+            if (ExpNodeVisitor_Eval(m_func).apply(p.first)[0].getBoolean()) {
                 ok = true;
                 p.second->acceptVisitor(this);
+                break;
             }
         }
         if (!ok && v->elseStmt) {
@@ -106,29 +204,34 @@ private:
     }
     virtual void visit(LoopForStmtNode *v) {
         v->stmtPre->acceptVisitor(this);
-        while (ExpNodeVisitor_Eval(m_func).apply(v->exp).getBoolean()) {
+        while (ExpNodeVisitor_Eval(m_func).apply(v->exp)[0].getBoolean()) {
             v->stmtBody->acceptVisitor(this);
         }
     }
     virtual void visit(IteraterForStmtNode *v) {
-        // TODO: eval can return multi value!
-        auto func = ExpNodeVisitor_Eval(m_func).apply(v->iterExp);
-        LuaValue state, k;
+        LuaValue func, state, k;
+        {
+            auto callRet(move(ExpNodeVisitor_Eval(m_func).apply(v->iterExp)));
+            if (callRet.size() >= 1) func = callRet[0];
+            else if (callRet.size() >= 2) state = callRet[1];
+            else if (callRet.size() >= 3) k = callRet[2];
+            else {}
+        }
         for (;;) {
             vector<LuaValue> args;
+            args.push_back(state); args.push_back(k);
             vector<LuaValue> rets;
             func.getFunction()->call(args, rets);
             k = rets[0];
             if (k == LuaValue::NIL) break;
-            m_func->getLocal(v->indexs[0]) = k;
-            // FIXME
+            for (int i = 0; i < (int)v->indexs.size(); ++i) {
+                m_func->getLocal(v->indexs[i]) = rets[i];
+            }
             v->stmt->acceptVisitor(this);
         }
     }
 private:
-private:
     LuaFunction *m_func;
-    vector<LuaValue> m_args;
     vector<LuaValue> m_rets;
 };
 
@@ -156,7 +259,9 @@ LuaFunction::LuaFunction(LuaFunctionMeta *meta, const vector<LuaValue>& upValues
 LuaFunction::~LuaFunction() {
 }
 void LuaFunction::call(const vector<LuaValue>& args, vector<LuaValue>& rets) {
-    rets = StmtNodeVisitor_Execute(this, args).apply();
+    m_args = args;
+    m_locals.assign(m_args.begin(), m_args.end());
+    rets = StmtNodeVisitor_Execute(this).apply();
 }
 LuaValue& LuaFunction::getLocal(int idx) {
     if (idx < (int)m_locals.size()) return m_locals[idx];

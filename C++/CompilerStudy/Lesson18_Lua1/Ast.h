@@ -70,7 +70,7 @@ struct GlobalVarExpNode:
 };
 struct FieldAccessExpNode:
     public IExpNode {
-    ExpNodePtr value;
+    ExpNodePtr table;
     ExpNodePtr field;
     virtual void acceptVisitor(IExpNodeVisitor *v) { v->visit(this);}
 };

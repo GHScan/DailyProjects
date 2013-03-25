@@ -37,7 +37,6 @@ public:
     LuaTable* getLuaTable() { ASSERT(isTypeOf(LVT_Table)); return m_data.table;}
     LuaFunction* getFunction() { ASSERT(isTypeOf(LVT_Function)); return m_data.func;}
 
-
     bool operator == (const LuaValue& o) const;
     bool operator != (const LuaValue& o) const { return !(*this == o);}
     bool operator < (const LuaValue& o) const;
@@ -50,6 +49,11 @@ public:
     LuaValue& operator *= (const LuaValue& o);
     LuaValue& operator /= (const LuaValue& o);
     LuaValue& operator %= (const LuaValue& o);
+
+    LuaValue power(const LuaValue& o) const;
+    LuaValue concat(const LuaValue& o) const;
+
+    int getSize() const;
 
     const LuaValue& get(const LuaValue& k);
     void set(const LuaValue& k, const LuaValue& v);
@@ -72,6 +76,11 @@ private:
         LuaFunction *func;
     } m_data;
 };
+inline LuaValue operator + (const LuaValue& a, const LuaValue &b) { return LuaValue(a) += b; }
+inline LuaValue operator - (const LuaValue& a, const LuaValue &b) { return LuaValue(a) -= b; }
+inline LuaValue operator * (const LuaValue& a, const LuaValue &b) { return LuaValue(a) *= b; }
+inline LuaValue operator / (const LuaValue& a, const LuaValue &b) { return LuaValue(a) /= b; }
+inline LuaValue operator % (const LuaValue& a, const LuaValue &b) { return LuaValue(a) %= b; }
 
 namespace std {
     template<>
