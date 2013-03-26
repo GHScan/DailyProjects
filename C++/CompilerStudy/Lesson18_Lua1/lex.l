@@ -82,8 +82,7 @@ static int g_column = 1;
 static int g_parenthesisLevel = 0;
 static int g_bracketLevel = 0;
 static int g_braceLevel = 0;
-static void onTokenFound(bool isAttr)
-{
+static void onTokenFound(bool isAttr) {
     if (isAttr) yylval = string(yytext);
     g_column += yyleng;
     for (int i = 0; i < yyleng; ++i) { 
@@ -103,13 +102,11 @@ static void onTokenFound(bool isAttr)
     }
 }
 
-void yyerror(const char *msg)
-{
+void yyerror(const char *msg) {
     printf("yyerror [%d-%d]: %s\n", g_line, g_column, msg);
 }
 
-int yywrap()
-{
+int yywrap() {
     g_line = 1;
     g_column = 1;
     (void)yyunput;

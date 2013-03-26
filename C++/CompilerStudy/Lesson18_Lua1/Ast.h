@@ -2,6 +2,7 @@
 #define AST_H
 
 struct LuaFunctionMeta;
+typedef shared_ptr<LuaFunctionMeta> LuaFunctionMetaPtr;
 //========= IExpNodeVisitor ===========
 struct BinOpExpNode;
 struct UnOpExpNode;
@@ -36,42 +37,49 @@ typedef shared_ptr<IExpNode>  ExpNodePtr;
 
 struct BinOpExpNode: 
     public IExpNode {
-    ExpNodePtr left, right;
     string op;
+    ExpNodePtr left, right;
+    BinOpExpNode(const string& _op, const ExpNodePtr& _left, const ExpNodePtr& _right): op(_op), left(_left), right(_right){}
     virtual void acceptVisitor(IExpNodeVisitor *v) { v->visit(this);}
 };
 struct UnOpExpNode:
     public IExpNode {
-    ExpNodePtr cexp;
     string op;
+    ExpNodePtr exp;
+    UnOpExpNode(const string& _op, const ExpNodePtr& _exp): op(_op), exp(_exp){}
     virtual void acceptVisitor(IExpNodeVisitor *v) { v->visit(this);}
 };
 struct ConstExpNode:
     public IExpNode {
     int index;
+    ConstExpNode(int _index): index(_index){}
     virtual void acceptVisitor(IExpNodeVisitor *v) { v->visit(this);}
 };
 struct LocalVarExpNode:
     public IExpNode {
     int index, nameIdx;
     const string& getName(const LuaFunctionMeta *meta) const;
+    LocalVarExpNode(int _index, int _nameIdx): index(_index), nameIdx(_nameIdx){}
     virtual void acceptVisitor(IExpNodeVisitor *v) { v->visit(this);}
 };
 struct UpValueVarExpNode:
     public IExpNode {
     int index, nameIdx;
     const string& getName(const LuaFunctionMeta *meta) const;
+    UpValueVarExpNode(int _index, int _nameIdx): index(_index), nameIdx(_nameIdx){}
     virtual void acceptVisitor(IExpNodeVisitor *v) { v->visit(this);}
 };
 struct GlobalVarExpNode:
     public IExpNode {
     string name;
+    GlobalVarExpNode(const string& _name): name(_name){}
     virtual void acceptVisitor(IExpNodeVisitor *v) { v->visit(this);}
 };
 struct FieldAccessExpNode:
     public IExpNode {
     ExpNodePtr table;
     ExpNodePtr field;
+    FieldAccessExpNode(const ExpNodePtr& _table, const ExpNodePtr& _field): table(_table), field(_field){}
     virtual void acceptVisitor(IExpNodeVisitor *v) { v->visit(this);}
 };
 struct TableConstructorExpNode:
@@ -82,13 +90,15 @@ struct TableConstructorExpNode:
 };
 struct LambdaExpNode:
     public IExpNode {
-    LuaFunctionMeta *meta;
+    LuaFunctionMetaPtr meta;
+    LambdaExpNode(const LuaFunctionMetaPtr& _meta): meta(_meta){}
     virtual void acceptVisitor(IExpNodeVisitor *v) { v->visit(this);}
 };
 struct CallExpNode:
     public IExpNode {
     ExpNodePtr func;
     vector<ExpNodePtr> params;
+    CallExpNode(const ExpNodePtr& _func, vector<ExpNodePtr>&& _params): func(_func), params(_params){}
     virtual void acceptVisitor(IExpNodeVisitor *v) { v->visit(this);}
 };
 struct ArgsTupleExpNode:

@@ -66,7 +66,7 @@ private:
         } else ASSERT(0);
     }
     virtual void visit(UnOpExpNode *v) {
-        v->cexp->acceptVisitor(this);
+        v->exp->acceptVisitor(this);
         LuaValue value = m_rets[0]; m_rets.clear();
         if (v->op == "-") {
             m_rets.push_back(LuaValue(-value.getNumber()));
@@ -253,7 +253,7 @@ int LuaFunctionMeta::getNameIndex(const string& name) {
     return r;
 }
 //======== LuaFunction ============
-LuaFunction::LuaFunction(LuaFunctionMeta *meta, const vector<LuaValue>& upValues): 
+LuaFunction::LuaFunction(LuaFunctionMetaPtr meta, const vector<LuaValue>& upValues): 
     m_refCount(1), m_meta(meta), m_upValues(upValues)  {
 }
 LuaFunction::~LuaFunction() {

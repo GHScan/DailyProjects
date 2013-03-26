@@ -4,33 +4,34 @@
 
 #include "Function.h"
 #include "LuaValue.h"
+#include "Ast.h"
 
 //======== LuaFunctionMeta ============
 struct LuaFunctionMeta {
-    string file;
-    int line;
     int argCount;
     vector<LuaValue> constTable;
     vector<string> nameTable;
     StmtNodePtr body;
 
-    LuaFunctionMeta(const string& _file, int _line): file(_file), line(_line), argCount(0){}
+    LuaFunctionMeta(): argCount(0){}
     int getConstIndex(const LuaValue& v);
     int getNameIndex(const string& name);
 };
+typedef shared_ptr<LuaFunctionMeta> LuaFunctionMetaPtr;
 //======== LuaFunction ============
 class LuaFunction:
     public IFunction {
 public:
-    static LuaFunction* create(LuaFunctionMeta *meta, const vector<LuaValue>& upValues) {
+    static LuaFunction* create(LuaFunctionMetaPtr meta, const vector<LuaValue>& upValues) {
         return new LuaFunction(meta, upValues);
     }
+    ~LuaFunction();
 
     LuaValue& getLocal(int idx);
     LuaValue& getUpValue(int idx);
     const vector<LuaValue>& getArgs() const { return m_args; }
 
-    const LuaFunctionMeta* getMeta() const { return m_meta; }
+    const LuaFunctionMeta* getMeta() const { return m_meta.get(); }
 
     virtual void call(const vector<LuaValue>& args, vector<LuaValue>& rets);
 
@@ -44,15 +45,15 @@ public:
 private:
     LuaFunction(LuaFunction& o);
     LuaFunction& operator = (const LuaFunction& o);
-    LuaFunction(LuaFunctionMeta *meta, const vector<LuaValue>& upValues);
-    ~LuaFunction();
+    LuaFunction(LuaFunctionMetaPtr meta, const vector<LuaValue>& upValues);
 
 private:
     int m_refCount;
-    LuaFunctionMeta *m_meta;
+    LuaFunctionMetaPtr m_meta;
     vector<LuaValue> m_locals;
     vector<LuaValue> m_upValues;
     vector<LuaValue> m_args;
 };
+typedef shared_ptr<LuaFunction> LuaFunctionPtr;
 
 #endif
