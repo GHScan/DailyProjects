@@ -108,6 +108,8 @@ struct ArgsTupleExpNode:
 //========= IStmtNodeVisitor ===========
 struct CallStmtNode;
 struct AssignStmtNode;
+struct BreakStmtNode;
+struct ReturnStmtNode;
 struct BlockStmtNode;
 struct IfElseStmtNode;
 struct RangeForStmtNode;
@@ -117,6 +119,8 @@ struct IStmtNodeVisitor {
     virtual ~IStmtNodeVisitor(){}
     virtual void visit(CallStmtNode *v) = 0;
     virtual void visit(AssignStmtNode *v) = 0;
+    virtual void visit(BreakStmtNode *v) = 0;
+    virtual void visit(ReturnStmtNode *v) = 0;
     virtual void visit(BlockStmtNode *v) = 0;
     virtual void visit(IfElseStmtNode *v) = 0;
     virtual void visit(RangeForStmtNode *v) = 0;
@@ -138,6 +142,17 @@ struct AssignStmtNode:
     public IStmtNode {
     vector<ExpNodePtr> vars;
     vector<ExpNodePtr> exps;
+    AssignStmtNode(const vector<ExpNodePtr>& _vars, const vector<ExpNodePtr>& _exps): vars(_vars), exps(_exps){}
+    virtual void acceptVisitor(IStmtNodeVisitor *v) { v->visit(this);}
+};
+struct BreakStmtNode:
+    public IStmtNode {
+    virtual void acceptVisitor(IStmtNodeVisitor *v) { v->visit(this);}
+};
+struct ReturnStmtNode:
+    public IStmtNode {
+    vector<ExpNodePtr> exps;
+    ReturnStmtNode(const vector<ExpNodePtr>& _exps): exps(_exps){}
     virtual void acceptVisitor(IStmtNodeVisitor *v) { v->visit(this);}
 };
 struct BlockStmtNode:

@@ -27,6 +27,16 @@
 
 static stack<LuaFunctionMetaPtr>* functionMetaStack();
 
+namespace {
+
+struct Temp_FuncNameInfo {
+    bool includingSelf;
+    vector<string> names;
+    Temp_FuncNameInfo(): includingSelf(false){}
+};
+
+}
+
 %}
 
 %%
@@ -60,31 +70,113 @@ Statement
     | FOR ID OP_ASSIGN Exp ',' Exp DO Block END
     | FOR ID OP_ASSIGN Exp ',' Exp ',' Exp DO Block END
     | FOR IDList IN ExpList DO Block END
-    | FUNCTION FuncName FuncBody 
-    | LOCAL FUNCTION ID FuncBody
-    | LOCAL IDList
-    | LOCAL IDList OP_ASSIGN ExpList
+    | FUNCTION FuncName FuncBody  {
+        auto &info = $2.get<Temp_FuncNameInfo>();
+        auto vars = vector<ExpNodePtr>();
+        auto exps = vector<ExpNodePtr>();
+        // refactor
+        auto name = info.names[0];
+        ExpNodePtr funcExp;
+        auto localIdx = SymbolTable::top()->getLocalIndex(name);
+        if (localIdx != -1) {
+            funcExp = ExpNodePtr(new LocalVarExpNode(localIdx, functionMetaStack()->top()->getNameIndex(name)));
+        } else {
+            auto uvIdx = SymbolTable::top()->getUpValueIndex(name);
+            if (uvIdx != -1) {
+                funcExp = ExpNodePtr(new UpValueVarExpNode(uvIdx, functionMetaStack()->top()->getNameIndex(name)));
+            } else {
+                funcExp = ExpNodePtr(new GlobalVarExpNode(name));
+            }
+        }
+        // FIXME:
+        if (info.names.size() > 1) {
+            for (int i = 1; i < (int)info.names.size(); ++i) { 
+                int constIdx = functionMetaStack()->top()->getConstIndex(LuaValue(info.names[i].c_str()));
+                funcExp = ExpNodePtr(new FieldAccessExpNode(funcExp, ExpNodePtr(new ConstExpNode(constIdx))));
+            }
+        }
+        vars.push_back(funcExp);
+        exps.push_back($3.get<ExpNodePtr>());
+        $$ = StmtNodePtr(new AssignStmtNode(vars, exps));
+    }
+    | LOCAL FUNCTION ID FuncBody {
+        string name = $3.get<string>();
+        SymbolTable::top()->declareLocal(name);
+        auto vars = vector<ExpNodePtr>();
+        auto exps = vector<ExpNodePtr>();
+
+        // TODO
+        auto index = SymbolTable::top()->getLocalIndex(name);
+        auto nameIdx = functionMetaStack()->top()->getNameIndex(name);
+        vars.push_back(ExpNodePtr(new LocalVarExpNode(index, nameIdx)));
+        exps.push_back($4.get<ExpNodePtr>());
+        $$ = StmtNodePtr(new AssignStmtNode(vars, exps));
+    }
+    | LOCAL IDList {
+        for (auto &name : $2.get<vector<string> >()) {
+            SymbolTable::top()->declareLocal(name);
+        }
+    }
+    | LOCAL IDList OP_ASSIGN ExpList {
+        vector<ExpNodePtr> vars;
+        for (auto &name : $2.get<vector<string> >()) {
+            SymbolTable::top()->declareLocal(name);
+            
+            // TODO: refactor
+            auto index = SymbolTable::top()->getLocalIndex(name);
+            auto nameIdx = functionMetaStack()->top()->getNameIndex(name);
+            vars.push_back(ExpNodePtr(new LocalVarExpNode(index, nameIdx)));
+        }
+        $$ = StmtNodePtr(new AssignStmtNode(vars, $4.get<vector<ExpNodePtr> >()));
+    }
     ;
 
 ElseIfList 
-    : ElseIf
-    | ElseIfList ElseIf
+    : ElseIf {
+        auto vec = vector<pair<ExpNodePtr, StmtNodePtr> >();
+        vec.push_back($1.get<pair<ExpNodePtr, StmtNodePtr> >());
+        $$ = vec;
+    }
+    | ElseIfList ElseIf {
+        auto &vec = $1.get<vector<pair<ExpNodePtr, StmtNodePtr> > >();
+        vec.push_back($2.get<pair<ExpNodePtr, StmtNodePtr> >());
+        $$ = move($1);
+    }
     ;
-ElseIf : ELSEIF Exp THEN Block ;
+ElseIf : ELSEIF Exp THEN Block {
+        $$ = make_pair($2.get<ExpNodePtr>(), $4.get<StmtNodePtr>());
+       };
 
 LastStatement 
-    : RETURN Opt_ExpList
-    | BREAK
+    : RETURN Opt_ExpList {
+        $$ = StmtNodePtr(new ReturnStmtNode($2.get<vector<ExpNodePtr> >()));
+    }
+    | BREAK {
+        $$ = StmtNodePtr(new BreakStmtNode());
+    }
     ;
         
 FuncName 
     : DotIDList
-    | DotIDList ':' ID
+    | DotIDList ':' ID {
+        auto &info = $1.get<Temp_FuncNameInfo>();
+        info.names.push_back($3.get<string>());
+        info.includingSelf = true;
+        $$ = info;
+    }
     ;
 
 DotIDList 
-    : ID
-    | DotIDList '.' ID
+    : ID {
+        auto info = Temp_FuncNameInfo();
+        info.names.push_back($1.get<string>());
+        $$ = info;
+    }
+    | DotIDList '.' ID {
+        auto &info = $1.get<Temp_FuncNameInfo>();
+        info.names.push_back($3.get<string>());
+        $$ = info;
+    }
     ;
 
 IDList 

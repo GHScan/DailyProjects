@@ -178,6 +178,12 @@ private:
             }
         }
     }
+    virtual void visit(BreakStmtNode *v) {
+        // TODO
+    }
+    virtual void visit(ReturnStmtNode *v) {
+        // TODO
+    }
     virtual void visit(BlockStmtNode *v) {
         for (auto &stmt : v->stmts) {
             stmt->acceptVisitor(this);
