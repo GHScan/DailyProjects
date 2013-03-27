@@ -2,10 +2,13 @@
 
 #include "Any.h"
 #define YYSTYPE Any
+#define YY_NO_UNISTD_H
+
+static void onTokenFound(bool isAttr);
+int isatty(int );
 
 #include "yacc.h"
 
-static void onTokenFound(bool isAttr);
 %}
 
 Number [0-9]+
@@ -111,4 +114,8 @@ int yywrap() {
     g_column = 1;
     (void)yyunput;
     return 1;
+}
+
+int isatty(int ) {
+    return 0;
 }

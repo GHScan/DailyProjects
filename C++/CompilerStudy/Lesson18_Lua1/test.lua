@@ -1,3 +1,4 @@
 
-a = 1
-print(a)
+
+function func()
+end

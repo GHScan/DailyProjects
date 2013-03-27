@@ -21,7 +21,8 @@ class LuaValue
 public:
     explicit LuaValue(NumberType n): m_type(LVT_Number){ m_data.n = n; }
     explicit LuaValue(const string& str);
-    LuaValue(LuaValueType t, int v = 0);
+    explicit LuaValue(IFunction *func);
+    explicit LuaValue(LuaTable *table);
 
     LuaValue(): m_type(LVT_Nil) {m_data.n = 0;}
     LuaValue(const LuaValue& o);
@@ -65,6 +66,9 @@ public:
     static LuaValue NIL;
     static LuaValue TRUE;
     static LuaValue FALSE;
+
+private:
+    explicit LuaValue(bool b);
 
 private:
     LuaValueType m_type;

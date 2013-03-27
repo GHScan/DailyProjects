@@ -75,7 +75,7 @@ private:
                 m_rets.push_back(LuaValue::TRUE);
             } else m_rets.push_back(LuaValue::FALSE);
         } else if (v->op == "#") {
-            m_rets.push_back(LuaValue(value.getSize()));
+            m_rets.push_back(LuaValue(NumberType(value.getSize())));
         } else ASSERT(0);
     }
     virtual void visit(ConstExpNode *v) {
@@ -98,11 +98,11 @@ private:
         m_rets.push_back(table.get(field)); 
     }
     virtual void visit(TableConstructorExpNode *v) {
-        LuaValue table(LVT_Table);
+        LuaValue table(LuaTable::create());
         {
             auto vals(evalExps(m_func, v->vec));
             for (int i = 0; i < (int)vals.size(); ++i) {
-                table.set(LuaValue(i + 1), vals[i]);
+                table.set(LuaValue(NumberType(i + 1)), vals[i]);
             }
         }
         for (int i = 0; i < (int)v->hashTable.size(); ++i) {
@@ -117,7 +117,7 @@ private:
     virtual void visit(LambdaExpNode *v) {
         // FIXME:
         vector<LuaValue> upValues;
-        m_rets.push_back(LuaValue(LVT_Function, (int)LuaFunction::create(v->meta, upValues)));
+        m_rets.push_back(LuaValue(LuaFunction::create(v->meta, upValues)));
     }
     virtual void visit(CallExpNode *v) {
         auto func = ExpNodeVisitor_Eval(m_func).apply(v->func)[0].getFunction();
@@ -164,6 +164,10 @@ private:
             else if (auto upValueExp = dynamic_cast<UpValueVarExpNode*>(v->vars[i].get())) {
                 m_func->getUpValue(upValueExp->index) = values[i];
             }
+            else if (auto gValueExp = dynamic_cast<GlobalVarExpNode*>(v->vars[i].get())) {
+                // TODO: performance
+                Runtime::instance()->getGlobalTable()->set(LuaValue(gValueExp->name), values[i]);
+            }
             else {
                 assert(dynamic_cast<FieldAccessExpNode*>(v->vars[i].get()));
                 auto fieldAccessExp = static_cast<FieldAccessExpNode*>(v->vars[i].get());
@@ -200,8 +204,8 @@ private:
     }
     virtual void visit(RangeForStmtNode *v) {
         LuaValue cur = ExpNodeVisitor_Eval(m_func).apply(v->first)[0];
-        LuaValue last = ExpNodeVisitor_Eval(m_func).apply(v->first)[1];
-        LuaValue step = ExpNodeVisitor_Eval(m_func).apply(v->first)[2];
+        LuaValue last = ExpNodeVisitor_Eval(m_func).apply(v->last)[0];
+        LuaValue step = ExpNodeVisitor_Eval(m_func).apply(v->step)[0];
         while (cur <= last) {
             m_func->getLocal(v->index) = cur;
             v->stmt->acceptVisitor(this);

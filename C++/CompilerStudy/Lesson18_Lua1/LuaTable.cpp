@@ -29,7 +29,7 @@ void LuaTable::set(const LuaValue& k, const LuaValue& v) {
 const LuaValue& LuaTable::getNext(LuaValue& k) const {
     if (k.isTypeOf(LVT_Nil)) {
         if (!m_vec.empty()) {
-            k = LuaValue(1);
+            k = LuaValue(NumberType(1));
             return m_vec.front();
         }
         if (!m_hashTable.empty()) {
@@ -43,7 +43,7 @@ const LuaValue& LuaTable::getNext(LuaValue& k) const {
         if (k.isTypeOf(LVT_Number)) {
             int idx = (int)k.getNumber() - 1;
             if (idx >= 0 && idx < (int)m_vec.size()) {
-                k = LuaValue(idx + 2);
+                k = LuaValue(NumberType(idx + 2));
                 return m_vec[idx];
             }
             if (idx == (int)m_vec.size() && !m_hashTable.empty()) {

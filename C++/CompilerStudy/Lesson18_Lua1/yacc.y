@@ -132,27 +132,29 @@ Statement
     | FOR ID OP_ASSIGN Exp ',' Exp {
         SymbolTable::top()->beginBlock();
         auto forStmt = new RangeForStmtNode(FUNC_META, $2.get<string>());
-        $$ = StmtNodePtr(forStmt);
-        forStmt->first = $4.get<ExpNodePtr>(); 
-        forStmt->last = $6.get<ExpNodePtr>(); 
-        forStmt->step = getConstExp(LuaValue(1));
+        $1 = StmtNodePtr(forStmt);
     } DO Block END {
         SymbolTable::top()->endBlock();
-        auto forStmt = static_cast<RangeForStmtNode*>($$.get<StmtNodePtr>().get());
-        forStmt->stmt = $8.get<StmtNodePtr>();
+        auto forStmt = static_cast<RangeForStmtNode*>($1.get<StmtNodePtr>().get());
+        $$ = move($1);
+        forStmt->first = $4.get<ExpNodePtr>(); 
+        forStmt->last = $6.get<ExpNodePtr>(); 
+        forStmt->step = getConstExp(LuaValue(NumberType(1)));
+        forStmt->stmt = $9.get<StmtNodePtr>();
     }
 
     | FOR ID OP_ASSIGN Exp ',' Exp ',' Exp {
         SymbolTable::top()->beginBlock();
         auto forStmt = new RangeForStmtNode(FUNC_META, $2.get<string>());
-        $$ = StmtNodePtr(forStmt);
+        $1 = StmtNodePtr(forStmt);
+    } DO Block END {
+        SymbolTable::top()->endBlock();
+        auto forStmt = static_cast<RangeForStmtNode*>($1.get<StmtNodePtr>().get());
+        $$ = move($1);
         forStmt->first = $4.get<ExpNodePtr>(); 
         forStmt->last = $6.get<ExpNodePtr>(); 
         forStmt->step = $8.get<ExpNodePtr>(); 
-    } DO Block END {
-        SymbolTable::top()->endBlock();
-        auto forStmt = static_cast<RangeForStmtNode*>($$.get<StmtNodePtr>().get());
-        forStmt->stmt = $10.get<StmtNodePtr>();
+        forStmt->stmt = $11.get<StmtNodePtr>();
     }
 
     | FOR IDList IN ExpList {
@@ -162,11 +164,12 @@ Statement
         for (auto &name : $2.get<vector<string> >()) {
             forStmt->pushName(FUNC_META, name);
         }
-        $$ = StmtNodePtr(forStmt);
+        $1 = StmtNodePtr(forStmt);
     }
     DO Block END {
         SymbolTable::top()->endBlock();
-        auto forStmt = static_cast<IteraterForStmtNode*>($$.get<StmtNodePtr>().get());
+        auto forStmt = static_cast<IteraterForStmtNode*>($1.get<StmtNodePtr>().get());
+        $$ = move($1);
         forStmt->stmt = $6.get<StmtNodePtr>();
     }
 
@@ -473,49 +476,49 @@ Field
 
 BinOp_Exp 
     : Exp AND Exp {
-        $$ = ExpNodePtr(new BinOpExpNode("and", $1.get<ExpNodePtr>(), $2.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new BinOpExpNode("and", $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
     }
     | Exp OR Exp {
-        $$ = ExpNodePtr(new BinOpExpNode("or", $1.get<ExpNodePtr>(), $2.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new BinOpExpNode("or", $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
     }
     | Exp OP_LESS Exp {
-        $$ = ExpNodePtr(new BinOpExpNode("<", $1.get<ExpNodePtr>(), $2.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new BinOpExpNode("<", $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
     }
     | Exp OP_LEQUAL Exp {
-        $$ = ExpNodePtr(new BinOpExpNode("<=", $1.get<ExpNodePtr>(), $2.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new BinOpExpNode("<=", $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
     }
     | Exp OP_GREATER Exp {
-        $$ = ExpNodePtr(new BinOpExpNode(">", $1.get<ExpNodePtr>(), $2.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new BinOpExpNode(">", $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
     }
     | Exp OP_GEQUAL Exp {
-        $$ = ExpNodePtr(new BinOpExpNode(">=", $1.get<ExpNodePtr>(), $2.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new BinOpExpNode(">=", $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
     }
     | Exp OP_EQUAL Exp {
-        $$ = ExpNodePtr(new BinOpExpNode("==", $1.get<ExpNodePtr>(), $2.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new BinOpExpNode("==", $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
     }
     | Exp OP_NEQUAL Exp {
-        $$ = ExpNodePtr(new BinOpExpNode("~=", $1.get<ExpNodePtr>(), $2.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new BinOpExpNode("~=", $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
     }
     | Exp OP_ADD Exp  {
-        $$ = ExpNodePtr(new BinOpExpNode("+", $1.get<ExpNodePtr>(), $2.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new BinOpExpNode("+", $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
     }
     | Exp OP_SUB Exp  {
-        $$ = ExpNodePtr(new BinOpExpNode("-", $1.get<ExpNodePtr>(), $2.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new BinOpExpNode("-", $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
     }
     | Exp OP_MUL Exp {
-        $$ = ExpNodePtr(new BinOpExpNode("*", $1.get<ExpNodePtr>(), $2.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new BinOpExpNode("*", $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
     }
     | Exp OP_DIV Exp {
-        $$ = ExpNodePtr(new BinOpExpNode("/", $1.get<ExpNodePtr>(), $2.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new BinOpExpNode("/", $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
     }
     | Exp OP_MOD Exp {
-        $$ = ExpNodePtr(new BinOpExpNode("%", $1.get<ExpNodePtr>(), $2.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new BinOpExpNode("%", $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
     }
     | Exp OP_POWER Exp {
-        $$ = ExpNodePtr(new BinOpExpNode("^", $1.get<ExpNodePtr>(), $2.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new BinOpExpNode("^", $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
     }
     | Exp OP_CONCAT Exp {
-        $$ = ExpNodePtr(new BinOpExpNode("..", $1.get<ExpNodePtr>(), $2.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new BinOpExpNode("..", $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
     }
     ;
 UnOp_Exp 
@@ -534,7 +537,7 @@ Number
     : NUMBER1 {
         int num = 0;
         sscanf($1.get<string>().c_str(), "%x", &num);
-        $$ = getConstExp(LuaValue(num));
+        $$ = getConstExp(LuaValue(NumberType(num)));
     }
     | NUMBER2 {
         NumberType num = atof($1.get<string>().c_str());

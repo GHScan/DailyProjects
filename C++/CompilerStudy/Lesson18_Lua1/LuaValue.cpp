@@ -11,21 +11,19 @@ LuaValue::LuaValue(const string& str):
     memcpy(m_data.str, str.c_str(), len + 1);
 }
 
-LuaValue::LuaValue(LuaValueType t, int v):
-    m_type(t) {
-    m_data.n = v;
-    if (m_data.n == 0) {
-        switch (m_type) {
-            case LVT_String:
-                m_data.str = (char*)malloc(1);
-                m_data.str[0] = 0;
-                break;
-            case LVT_Table:
-                m_data.table = LuaTable::create();
-                break;
-            default: break;
-        }
-    }
+LuaValue::LuaValue(IFunction *func):
+    m_type(LVT_Function) {
+    m_data.func = func;
+}
+
+LuaValue::LuaValue(LuaTable *table): 
+    m_type(LVT_Table) {
+    m_data.table = table;
+}
+
+LuaValue::LuaValue(bool b):
+    m_type(LVT_Boolean) {
+    m_data.b = b;
 }
 
 LuaValue::LuaValue(const LuaValue& o):
@@ -46,7 +44,7 @@ LuaValue& LuaValue::operator = (const LuaValue& o) {
     m_data.n = o.m_data.n;
     switch (o.m_type) {
         case LVT_String: {
-                int len = strlen(o.m_data.str);
+                int len = (int)strlen(o.m_data.str);
                 m_data.str = (char*)malloc(len + 1);
                 memcpy(m_data.str, o.m_data.str, len + 1);
             }
@@ -149,15 +147,16 @@ LuaValue LuaValue::power(const LuaValue& o) const {
 }
 LuaValue LuaValue::concat(const LuaValue& o) const {
     ASSERT(m_type == LVT_String && o.m_type == LVT_String);
-    int len1 = strlen(m_data.str), len2 = strlen(o.m_data.str);
+    int len1 = (int)strlen(m_data.str), len2 = (int)strlen(o.m_data.str);
     char *p = (char*)malloc(len1 + len2 + 1);
     memcpy(p, m_data.str, len1);
     memcpy(p + len1, m_data.str, len2 + 1);
-    return LuaValue(LVT_String, (int)p);
+    // TODO: performance
+    return LuaValue(string(p));
 }
 int LuaValue::getSize() const {
     if (m_type == LVT_String) {
-        return strlen(m_data.str);
+        return (int)strlen(m_data.str);
     } else if (m_type == LVT_Table) {
         return m_data.table->size();
     } else ASSERT(0);
@@ -175,12 +174,12 @@ void LuaValue::set(const LuaValue& k, const LuaValue& v) {
 
 int LuaValue::getHash() const {
     switch (m_type) {
-        case LVT_Nil: return hash<int>()(0);
-        case LVT_Boolean: return hash<bool>()(m_data.b);
-        case LVT_Number: return hash<NumberType>()(m_data.n);
-        case LVT_String: return hash<const char*>()(m_data.str);
-        case LVT_Table: return hash<LuaTable*>()(m_data.table);
-        case LVT_Function: return hash<IFunction*>()(m_data.func);
+        case LVT_Nil: return (int)hash<int>()(0);
+        case LVT_Boolean: return (int)hash<bool>()(m_data.b);
+        case LVT_Number: return (int)hash<NumberType>()(m_data.n);
+        case LVT_String: return (int)hash<string>()(m_data.str);
+        case LVT_Table: return (int)hash<LuaTable*>()(m_data.table);
+        case LVT_Function: return (int)hash<IFunction*>()(m_data.func);
         default: break;
     }
     ASSERT(0);
@@ -191,7 +190,7 @@ string LuaValue::toString() const {
     switch (m_type) {
         case LVT_Nil: return "nil";
         case LVT_Boolean: return m_data.b ? "true" : "false";
-        case LVT_Number: return m_data.n == (int)m_data.n ? format("%d", m_data.n) : format("%f", m_data.n);
+        case LVT_Number: return m_data.n == (int)m_data.n ? format("%d", (int)m_data.n) : format("%f", m_data.n);
         case LVT_String: return m_data.str;
         case LVT_Table: return format("table: %p", m_data.table);
         case LVT_Function: return format("function: %p", m_data.func);
@@ -202,5 +201,5 @@ string LuaValue::toString() const {
 }
 
 LuaValue LuaValue::NIL;
-LuaValue LuaValue::TRUE(LVT_Boolean, 1);
-LuaValue LuaValue::FALSE(LVT_Boolean, 0);
+LuaValue LuaValue::TRUE(true);
+LuaValue LuaValue::FALSE(false);

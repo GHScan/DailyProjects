@@ -25,7 +25,7 @@ void registerFunctions() {
     for (int i = 0; i < COUNT_OF(names); ++i) {
         Runtime::instance()->getGlobalTable()->set(
                 LuaValue(names[i]), 
-                LuaValue(LVT_Function, (int)CFunction::create(funcs[i])));
+                LuaValue(CFunction::create(funcs[i])));
     }
 }
 
