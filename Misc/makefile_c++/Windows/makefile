@@ -35,7 +35,11 @@ manifest_type =1
 target_file =main.exe
 endif
 
-depends_gen_cmd = g++ -MM $< | sed "1 s/^\(.\+\)\.o:/\1.obj:/" > $(patsubst %.cpp,%.d,$<)
+ifeq ($(use_cpp0x),1)
+gpp_flag = -std=c++0x	
+endif
+
+depends_gen_cmd = g++ $(gpp_flag) -MM $< | sed "1 s/^\(.\+\)\.o:/\1.obj:/" > $(patsubst %.cpp,%.d,$<)
 
 temp_file_ext = ilk pdb exp lib manifest idb ib_tag pch
 temp_files = $(foreach i,$(temp_file_ext),$(wildcard *.$(i)))
