@@ -9,6 +9,7 @@ public:
     static SymbolTable* top();
 
     SymbolTable();
+    ~SymbolTable();
 
     void beginBlock();
     void endBlock();

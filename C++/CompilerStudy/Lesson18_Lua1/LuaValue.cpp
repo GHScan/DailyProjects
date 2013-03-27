@@ -4,11 +4,11 @@
 #include "LuaTable.h"
 #include "LuaFunction.h"
 
-LuaValue::LuaValue(const char *str):
+LuaValue::LuaValue(const string& str):
     m_type(LVT_String) {
-    int len = strlen(str);
+    int len = (int)str.size();
     m_data.str = (char*)malloc(len + 1);
-    memcpy(m_data.str, str, len + 1);
+    memcpy(m_data.str, str.c_str(), len + 1);
 }
 
 LuaValue::LuaValue(LuaValueType t, int v):
@@ -180,7 +180,7 @@ int LuaValue::getHash() const {
         case LVT_Number: return hash<NumberType>()(m_data.n);
         case LVT_String: return hash<const char*>()(m_data.str);
         case LVT_Table: return hash<LuaTable*>()(m_data.table);
-        case LVT_Function: return hash<LuaFunction*>()(m_data.func);
+        case LVT_Function: return hash<IFunction*>()(m_data.func);
         default: break;
     }
     ASSERT(0);

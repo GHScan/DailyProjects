@@ -26,14 +26,19 @@
 #include "SymbolTable.h"
 
 static stack<LuaFunctionMetaPtr>* functionMetaStack();
+static ExpNodePtr getLocalExp(const string& name);
+static ExpNodePtr getExpByIDName(const string& name);
+static ExpNodePtr getConstExp(const LuaValue& v);
 
 namespace {
 
 struct Temp_FuncNameInfo {
     bool includingSelf;
     vector<string> names;
-    Temp_FuncNameInfo(): includingSelf(false){}
+    Temp_FuncNameInfo(const vector<string>& _names): includingSelf(false), names(_names){}
 };
+
+#define FUNC_META (functionMetaStack()->top().get())
 
 }
 
@@ -41,58 +46,139 @@ struct Temp_FuncNameInfo {
 
 %%
 
-Program : Block;
+Program : Block {
+        functionMetaStack()->top()->body = $1.get<StmtNodePtr>();
+        }
+        ;
 
 Block
-    : StatementList 
-    | LastStatement 
-    | StatementList StatementSep LastStatement 
-    | 
+    : StatementList {
+        $$ = StmtNodePtr(new BlockStmtNode($1.get<vector<StmtNodePtr> >()));
+    }
+    | LastStatement {
+        auto vec = vector<StmtNodePtr>();
+        vec.push_back($1.get<StmtNodePtr>());
+        $$ = StmtNodePtr(new BlockStmtNode(vec));
+    }
+    | StatementList StatementSep LastStatement {
+        auto &vec = $1.get<vector<StmtNodePtr> >();
+        vec.push_back($3.get<StmtNodePtr>());
+        $$ = StmtNodePtr(new BlockStmtNode(vec));
+    }
+    | {
+        $$ = StmtNodePtr(new BlockStmtNode(vector<StmtNodePtr>()));
+    }
     ;
 
 StatementList
-    : Statement 
-    | StatementList StatementSep Statement
+    : Statement {
+        auto vec = vector<StmtNodePtr>();
+        vec.push_back($1.get<StmtNodePtr>());
+        $$ = vec;
+    }
+    | StatementList StatementSep Statement {
+        $1.get<vector<StmtNodePtr> >().push_back($3.get<StmtNodePtr>());
+        $$ = move($1);
+    }
     ;
 
 StatementSep : ';' | ;
 
 Statement
-    : VarList OP_ASSIGN ExpList
-    | FunctionCall 
-    | DO Block END
-    | WHILE Exp DO Block END
-    | REPEAT Block UNTIL Exp
-    | IF Exp THEN Block END
-    | IF Exp THEN Block ELSE Block END
-    | IF Exp THEN Block ElseIfList END
-    | IF Exp THEN Block ElseIfList ELSE Block END
-    | FOR ID OP_ASSIGN Exp ',' Exp DO Block END
-    | FOR ID OP_ASSIGN Exp ',' Exp ',' Exp DO Block END
-    | FOR IDList IN ExpList DO Block END
+    : VarList OP_ASSIGN ExpList {
+        $$ = StmtNodePtr(new AssignStmtNode($1.get<vector<ExpNodePtr> >(), $3.get<vector<ExpNodePtr> >()));
+    }
+
+    | FunctionCall  {
+        $$ = StmtNodePtr(new CallStmtNode($1.get<ExpNodePtr>()));
+    }
+
+    | DO {
+        SymbolTable::top()->beginBlock();
+    } Block END {
+        SymbolTable::top()->endBlock();
+        $$ = $2.get<StmtNodePtr>();
+    }
+
+    | WHILE Exp {
+        SymbolTable::top()->beginBlock();
+    } DO Block END {
+        SymbolTable::top()->endBlock();
+        $$ = StmtNodePtr(new LoopForStmtNode(StmtNodePtr(), $2.get<ExpNodePtr>(), $4.get<StmtNodePtr>()));
+    }
+
+    | REPEAT {
+        SymbolTable::top()->beginBlock();
+    } Block UNTIL Exp {
+        SymbolTable::top()->endBlock();
+        auto &block = $2.get<StmtNodePtr>();
+        auto pred = ExpNodePtr(new UnOpExpNode("not", $4.get<ExpNodePtr>()));
+        $$ = StmtNodePtr(new LoopForStmtNode(block, pred, block));
+    }
+
+    | IF Exp THEN {
+        SymbolTable::top()->beginBlock();
+    } Block {
+        SymbolTable::top()->endBlock();
+    } Opt_ElseIfList Opt_ElseBlock END {
+        auto ifStmt = new IfElseStmtNode();
+        ifStmt->ifExpStmtList = move($5.get<vector<pair<ExpNodePtr, StmtNodePtr> > >());
+        ifStmt->ifExpStmtList.insert(ifStmt->ifExpStmtList.end(),
+            make_pair($2.get<ExpNodePtr>(), $4.get<StmtNodePtr>()));
+        ifStmt->elseStmt = $6.get<StmtNodePtr>();
+        $$ = StmtNodePtr(ifStmt);
+    }
+
+    | FOR ID OP_ASSIGN Exp ',' Exp {
+        SymbolTable::top()->beginBlock();
+        auto forStmt = new RangeForStmtNode(FUNC_META, $2.get<string>());
+        $$ = StmtNodePtr(forStmt);
+        forStmt->first = $4.get<ExpNodePtr>(); 
+        forStmt->last = $6.get<ExpNodePtr>(); 
+        forStmt->step = getConstExp(LuaValue(1));
+    } DO Block END {
+        SymbolTable::top()->endBlock();
+        auto forStmt = static_cast<RangeForStmtNode*>($$.get<StmtNodePtr>().get());
+        forStmt->stmt = $8.get<StmtNodePtr>();
+    }
+
+    | FOR ID OP_ASSIGN Exp ',' Exp ',' Exp {
+        SymbolTable::top()->beginBlock();
+        auto forStmt = new RangeForStmtNode(FUNC_META, $2.get<string>());
+        $$ = StmtNodePtr(forStmt);
+        forStmt->first = $4.get<ExpNodePtr>(); 
+        forStmt->last = $6.get<ExpNodePtr>(); 
+        forStmt->step = $8.get<ExpNodePtr>(); 
+    } DO Block END {
+        SymbolTable::top()->endBlock();
+        auto forStmt = static_cast<RangeForStmtNode*>($$.get<StmtNodePtr>().get());
+        forStmt->stmt = $10.get<StmtNodePtr>();
+    }
+
+    | FOR IDList IN ExpList {
+        SymbolTable::top()->beginBlock();
+        auto forStmt = new IteraterForStmtNode();
+        forStmt->iterExps = $4.get<vector<ExpNodePtr> >();
+        for (auto &name : $2.get<vector<string> >()) {
+            forStmt->pushName(FUNC_META, name);
+        }
+        $$ = StmtNodePtr(forStmt);
+    }
+    DO Block END {
+        SymbolTable::top()->endBlock();
+        auto forStmt = static_cast<IteraterForStmtNode*>($$.get<StmtNodePtr>().get());
+        forStmt->stmt = $6.get<StmtNodePtr>();
+    }
+
     | FUNCTION FuncName FuncBody  {
         auto &info = $2.get<Temp_FuncNameInfo>();
         auto vars = vector<ExpNodePtr>();
         auto exps = vector<ExpNodePtr>();
-        // refactor
-        auto name = info.names[0];
-        ExpNodePtr funcExp;
-        auto localIdx = SymbolTable::top()->getLocalIndex(name);
-        if (localIdx != -1) {
-            funcExp = ExpNodePtr(new LocalVarExpNode(localIdx, functionMetaStack()->top()->getNameIndex(name)));
-        } else {
-            auto uvIdx = SymbolTable::top()->getUpValueIndex(name);
-            if (uvIdx != -1) {
-                funcExp = ExpNodePtr(new UpValueVarExpNode(uvIdx, functionMetaStack()->top()->getNameIndex(name)));
-            } else {
-                funcExp = ExpNodePtr(new GlobalVarExpNode(name));
-            }
-        }
-        // FIXME:
+        // FIXME: includingSelf
+        ExpNodePtr funcExp = getExpByIDName(info.names[0]);
         if (info.names.size() > 1) {
             for (int i = 1; i < (int)info.names.size(); ++i) { 
-                int constIdx = functionMetaStack()->top()->getConstIndex(LuaValue(info.names[i].c_str()));
-                funcExp = ExpNodePtr(new FieldAccessExpNode(funcExp, ExpNodePtr(new ConstExpNode(constIdx))));
+                funcExp = ExpNodePtr(new FieldAccessExpNode(funcExp, getConstExp(LuaValue(info.names[i]))));
             }
         }
         vars.push_back(funcExp);
@@ -104,11 +190,7 @@ Statement
         SymbolTable::top()->declareLocal(name);
         auto vars = vector<ExpNodePtr>();
         auto exps = vector<ExpNodePtr>();
-
-        // TODO
-        auto index = SymbolTable::top()->getLocalIndex(name);
-        auto nameIdx = functionMetaStack()->top()->getNameIndex(name);
-        vars.push_back(ExpNodePtr(new LocalVarExpNode(index, nameIdx)));
+        vars.push_back(getLocalExp(name));
         exps.push_back($4.get<ExpNodePtr>());
         $$ = StmtNodePtr(new AssignStmtNode(vars, exps));
     }
@@ -121,13 +203,27 @@ Statement
         vector<ExpNodePtr> vars;
         for (auto &name : $2.get<vector<string> >()) {
             SymbolTable::top()->declareLocal(name);
-            
-            // TODO: refactor
-            auto index = SymbolTable::top()->getLocalIndex(name);
-            auto nameIdx = functionMetaStack()->top()->getNameIndex(name);
-            vars.push_back(ExpNodePtr(new LocalVarExpNode(index, nameIdx)));
+            vars.push_back(getLocalExp(name));
         }
         $$ = StmtNodePtr(new AssignStmtNode(vars, $4.get<vector<ExpNodePtr> >()));
+    }
+    ;
+
+Opt_ElseBlock
+    : ElseBlock 
+    | {
+        $$ = StmtNodePtr();
+    }
+    ;
+ElseBlock: ELSE Block {
+         $$ = move($2);
+         }
+         ;
+
+Opt_ElseIfList 
+    : ElseIfList
+    | {
+        $$ = vector<pair<ExpNodePtr, StmtNodePtr> >();
     }
     ;
 
@@ -143,7 +239,10 @@ ElseIfList
         $$ = move($1);
     }
     ;
-ElseIf : ELSEIF Exp THEN Block {
+ElseIf : ELSEIF Exp {
+        SymbolTable::top()->beginBlock();
+       } THEN Block {
+        SymbolTable::top()->endBlock();
         $$ = make_pair($2.get<ExpNodePtr>(), $4.get<StmtNodePtr>());
        };
 
@@ -157,9 +256,12 @@ LastStatement
     ;
         
 FuncName 
-    : DotIDList
+    : DotIDList { 
+        auto info = Temp_FuncNameInfo($1.get<vector<string> >());
+        $$ = info;
+    }
     | DotIDList ':' ID {
-        auto &info = $1.get<Temp_FuncNameInfo>();
+        auto info = Temp_FuncNameInfo($1.get<vector<string> >());
         info.names.push_back($3.get<string>());
         info.includingSelf = true;
         $$ = info;
@@ -168,14 +270,13 @@ FuncName
 
 DotIDList 
     : ID {
-        auto info = Temp_FuncNameInfo();
-        info.names.push_back($1.get<string>());
-        $$ = info;
+        auto vec = vector<string>();
+        vec.push_back($1.get<string>());
+        $$ = vec;
     }
     | DotIDList '.' ID {
-        auto &info = $1.get<Temp_FuncNameInfo>();
-        info.names.push_back($3.get<string>());
-        $$ = info;
+        $1.get<vector<string> >().push_back($3.get<string>());
+        $$ = move($1);
     }
     ;
 
@@ -210,16 +311,13 @@ ExpList
     ;
 Exp 
     : NIL {
-        int constIdx = functionMetaStack()->top()->getConstIndex(LuaValue::NIL);
-        $$ = ExpNodePtr(new ConstExpNode(constIdx));
+        $$ = getConstExp(LuaValue::NIL);
     }
     | FALSE {
-        int constIdx = functionMetaStack()->top()->getConstIndex(LuaValue::FALSE);
-        $$ = ExpNodePtr(new ConstExpNode(constIdx));
+        $$ = getConstExp(LuaValue::FALSE);
     }
     | TRUE {
-        int constIdx = functionMetaStack()->top()->getConstIndex(LuaValue::TRUE);
-        $$ = ExpNodePtr(new ConstExpNode(constIdx));
+        $$ = getConstExp(LuaValue::TRUE);
     }
     | Number
     | Literal
@@ -246,28 +344,13 @@ VarList
     ;
 Var 
     : ID {
-        auto name = $1.get<string>();
-        auto localIdx = SymbolTable::top()->getLocalIndex(name);
-        if (localIdx != -1) {
-            $$ = ExpNodePtr(new LocalVarExpNode(localIdx, functionMetaStack()->top()->getNameIndex(name)));
-        } else {
-            auto uvIdx = SymbolTable::top()->getUpValueIndex(name);
-            if (uvIdx != -1) {
-                $$ = ExpNodePtr(new UpValueVarExpNode(uvIdx, functionMetaStack()->top()->getNameIndex(name)));
-            } else {
-                $$ = ExpNodePtr(new GlobalVarExpNode(name));
-            }
-        }
+        $$ = getExpByIDName($1.get<string>());
     }
     | PrefixExp '[' Exp ']' {
-        auto table = $1.get<ExpNodePtr>();
-        $$ = ExpNodePtr(new FieldAccessExpNode(table, $3.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new FieldAccessExpNode($1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
     }
     | PrefixExp '.' ID {
-        auto table = $1.get<ExpNodePtr>();
-        int constIdx =
-        functionMetaStack()->top()->getConstIndex(LuaValue($3.get<string>().c_str()));
-        $$ = ExpNodePtr(new FieldAccessExpNode(table, ExpNodePtr(new ConstExpNode(constIdx))));
+        $$ = ExpNodePtr(new FieldAccessExpNode($1.get<ExpNodePtr>(), getConstExp(LuaValue($3.get<string>()))));
     }
     ;
 
@@ -281,15 +364,15 @@ PrefixExp
 
 FunctionCall 
     : PrefixExp Params {
-        $$ = ExpNodePtr(new CallExpNode($1.get<ExpNodePtr>(), move($2.get<vector<ExpNodePtr> >())));
+        $$ = ExpNodePtr(new CallExpNode($1.get<ExpNodePtr>(), $2.get<vector<ExpNodePtr> >()));
     }
     | PrefixExp ':' ID Params {
-        auto table = $1.get<ExpNodePtr>();
-        auto constIdx = functionMetaStack()->top()->getConstIndex(LuaValue($3.get<string>().c_str()));
+        auto selfExp = $1.get<ExpNodePtr>();
+        auto idExp = getConstExp(LuaValue($3.get<string>()));
+        auto &params = $4.get<vector<ExpNodePtr> >();
+        params.insert(params.begin(), selfExp);
         $$ = ExpNodePtr(new CallExpNode(
-            ExpNodePtr(new FieldAccessExpNode(table, ExpNodePtr(new ConstExpNode(constIdx)))),
-            move($4.get<vector<ExpNodePtr> >())
-        ));
+                ExpNodePtr(new FieldAccessExpNode(selfExp, idExp)), params));
     }
     ;
 
@@ -310,7 +393,7 @@ Params
     ;
 
 Lambda : FUNCTION FuncBody {
-        $$ = ExpNodePtr(new LambdaExpNode($2.get<LuaFunctionMetaPtr>()));
+        $$ = $2;
        }
        ;
 FuncBody : '(' Opt_ArgList ')' {
@@ -325,10 +408,10 @@ FuncBody : '(' Opt_ArgList ')' {
             }
          } Block END  {
             auto meta = functionMetaStack()->top();
-            SymbolTable::pop();
             functionMetaStack()->pop();
+            SymbolTable::pop();
             meta->body = $4.get<StmtNodePtr>();
-            $$ = meta;
+            $$ = ExpNodePtr(new LambdaExpNode(meta));
          }
          ;
 
@@ -350,41 +433,38 @@ ArgList
 
 TableConstructor 
     : '{' Opt_FieldList '}' {
-        $$ = $2;
+        auto &fields = $2.get<pair<vector<ExpNodePtr>, vector<pair<ExpNodePtr, ExpNodePtr> > > >();
+        $$ = ExpNodePtr(new TableConstructorExpNode(fields.first, fields.second));
     }
     ;
 
 Opt_FieldList 
     : {
-        $$ = ExpNodePtr(new TableConstructorExpNode);
+        $$ = make_pair(vector<ExpNodePtr>(), vector<pair<ExpNodePtr, ExpNodePtr> >());
     }
     | FieldList
     ;
 FieldList 
     : Field {
-        auto table = new TableConstructorExpNode();
-        $$ = ExpNodePtr(table);
-        if ($1.isTypeOf<ExpNodePtr>()) table->vec.push_back($1.get<ExpNodePtr>());
-        else table->hashTable.push_back($1.get<pair<ExpNodePtr, ExpNodePtr> >());
+        auto fields = make_pair(vector<ExpNodePtr>(), vector<pair<ExpNodePtr, ExpNodePtr> >());
+        if ($1.isTypeOf<ExpNodePtr>()) fields.first.push_back($1.get<ExpNodePtr>());
+        else fields.second.push_back($1.get<pair<ExpNodePtr, ExpNodePtr> >());
+        $$ = fields;
     }
     | FieldList FieldSep Field {
-        auto table = static_cast<TableConstructorExpNode*>($1.get<ExpNodePtr>().get());
+        auto &fields = $2.get<pair<vector<ExpNodePtr>, vector<pair<ExpNodePtr, ExpNodePtr> > > >();
+        if ($3.isTypeOf<ExpNodePtr>()) fields.first.push_back($3.get<ExpNodePtr>());
+        else fields.second.push_back($3.get<pair<ExpNodePtr, ExpNodePtr> >());
         $$ = move($1);
-        if ($2.isTypeOf<ExpNodePtr>()) table->vec.push_back($2.get<ExpNodePtr>());
-        else table->hashTable.push_back($2.get<pair<ExpNodePtr, ExpNodePtr> >());
     }
     ;
 
 FieldSep : ',' | ';' ;
 
 Field 
-    : Exp {
-        $$ = ExpNodePtr($1.get<ExpNodePtr>());
-    }
+    : Exp 
     | ID OP_ASSIGN Exp  {
-        auto str = $1.get<string>();
-        int constIdx = functionMetaStack()->top()->getConstIndex(LuaValue(str.c_str()));
-        $$ = make_pair(ExpNodePtr(new ConstExpNode(constIdx)), $3.get<ExpNodePtr>());
+        $$ = make_pair(getConstExp(LuaValue($1.get<string>())), $3.get<ExpNodePtr>());
     }
     | '[' Exp ']' OP_ASSIGN Exp {
         $$ = make_pair($2.get<ExpNodePtr>(), $5.get<ExpNodePtr>());
@@ -454,38 +534,29 @@ Number
     : NUMBER1 {
         int num = 0;
         sscanf($1.get<string>().c_str(), "%x", &num);
-        int constIdx = functionMetaStack()->top()->getConstIndex(LuaValue(NumberType(num)));
-        $$ = ExpNodePtr(new ConstExpNode(constIdx));
+        $$ = getConstExp(LuaValue(num));
     }
     | NUMBER2 {
         NumberType num = atof($1.get<string>().c_str());
-        int constIdx = functionMetaStack()->top()->getConstIndex(LuaValue(num));
-        $$ = ExpNodePtr(new ConstExpNode(constIdx));
+        $$ = getConstExp(LuaValue(num));
     }
     | NUMBER3 {
         NumberType num = atof($1.get<string>().c_str());
-        int constIdx = functionMetaStack()->top()->getConstIndex(LuaValue(num));
-        $$ = ExpNodePtr(new ConstExpNode(constIdx));
+        $$ = getConstExp(LuaValue(num));
     }
     ;
 Literal
     : LITERAL1 {
         auto str = $1.get<string>();
-        string realStr = str.substr(1, str.size() - 2);
-        int constIdx = functionMetaStack()->top()->getConstIndex(LuaValue(realStr.c_str()));
-        $$ = ExpNodePtr(new ConstExpNode(constIdx));
+        $$ = getConstExp(LuaValue(str.substr(1, str.size() - 2)));
     }
     | LITERAL2 {
         auto str = $1.get<string>();
-        string realStr = str.substr(1, str.size() - 2);
-        int constIdx = functionMetaStack()->top()->getConstIndex(LuaValue(realStr.c_str()));
-        $$ = ExpNodePtr(new ConstExpNode(constIdx));
+        $$ = getConstExp(LuaValue(str.substr(1, str.size() - 2)));
     }
     | LITERAL3 {
         auto str = $1.get<string>();
-        string realStr = str.substr(2, str.size() - 4);
-        int constIdx = functionMetaStack()->top()->getConstIndex(LuaValue(realStr.c_str()));
-        $$ = ExpNodePtr(new ConstExpNode(constIdx));
+        $$ = getConstExp(LuaValue(str.substr(2, str.size() - 4)));
     }
     ;
 
@@ -496,7 +567,7 @@ static stack<LuaFunctionMetaPtr>* functionMetaStack() {
     return &s_ins;
 }
 
-bool parseFile(const char *fname) {
+bool doFile(const char *fname) {
     bool succ = false;
     FILE *f = fopen(fname, "r");
     try {
@@ -510,7 +581,7 @@ bool parseFile(const char *fname) {
 
         SymbolTable::pop();
         functionMetaStack()->pop();
-        LuaFunctionPtr func(LuaFunction::create(meta, vector<LuaValue>()));
+        LuaFunctionPtr func(LuaFunction::create(meta, vector<LuaValue>()), [](LuaFunction *p){ p->releaseRef(); });
         vector<LuaValue> rets;
         func->call(vector<LuaValue>(), rets);
     }
@@ -521,3 +592,25 @@ bool parseFile(const char *fname) {
     return succ;
 }
 
+static ExpNodePtr getLocalExp(const string& name) {
+    auto index = SymbolTable::top()->getLocalIndex(name);
+    auto nameIdx = functionMetaStack()->top()->getNameIndex(name);
+    assert(index != -1);
+    return ExpNodePtr(new LocalVarExpNode(index, nameIdx));
+}
+static ExpNodePtr getExpByIDName(const string& name) {
+    auto localIdx = SymbolTable::top()->getLocalIndex(name);
+    if (localIdx != -1) {
+        return ExpNodePtr(new LocalVarExpNode(localIdx, functionMetaStack()->top()->getNameIndex(name)));
+    } else {
+        auto uvIdx = SymbolTable::top()->getUpValueIndex(name);
+        if (uvIdx != -1) {
+            return ExpNodePtr(new UpValueVarExpNode(uvIdx, functionMetaStack()->top()->getNameIndex(name)));
+        } else {
+            return ExpNodePtr(new GlobalVarExpNode(name));
+        }
+    }
+}
+static ExpNodePtr getConstExp(const LuaValue& v) {
+    return ExpNodePtr(new ConstExpNode(FUNC_META, v));
+}

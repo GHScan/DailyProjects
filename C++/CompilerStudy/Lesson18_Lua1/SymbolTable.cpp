@@ -14,6 +14,10 @@ SymbolTable* SymbolTable::top() {
 vector<SymbolTable> SymbolTable::s_stack;
 
 SymbolTable::SymbolTable(): m_lastLocalIdx(0) {
+    beginBlock();
+}
+SymbolTable::~SymbolTable() {
+    endBlock();
 }
 void SymbolTable::beginBlock() {
     m_blocks.push_back(map<string, int>());

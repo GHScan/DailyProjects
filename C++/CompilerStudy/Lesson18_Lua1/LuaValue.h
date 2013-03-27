@@ -14,13 +14,13 @@ enum LuaValueType {
 };
 
 class LuaTable;
-class LuaFunction;
+struct IFunction;
 
 class LuaValue
 {
 public:
     explicit LuaValue(NumberType n): m_type(LVT_Number){ m_data.n = n; }
-    explicit LuaValue(const char *str);
+    explicit LuaValue(const string& str);
     LuaValue(LuaValueType t, int v = 0);
 
     LuaValue(): m_type(LVT_Nil) {m_data.n = 0;}
@@ -35,7 +35,7 @@ public:
     NumberType getNumber() const { ASSERT(isTypeOf(LVT_Number)); return m_data.n; }
     const char *getString() const { ASSERT(isTypeOf(LVT_String)); return m_data.str;}
     LuaTable* getLuaTable() { ASSERT(isTypeOf(LVT_Table)); return m_data.table;}
-    LuaFunction* getFunction() { ASSERT(isTypeOf(LVT_Function)); return m_data.func;}
+    IFunction* getFunction() { ASSERT(isTypeOf(LVT_Function)); return m_data.func;}
 
     bool operator == (const LuaValue& o) const;
     bool operator != (const LuaValue& o) const { return !(*this == o);}
@@ -73,7 +73,7 @@ private:
         NumberType n;
         char *str;
         LuaTable *table;
-        LuaFunction *func;
+        IFunction *func;
     } m_data;
 };
 inline LuaValue operator + (const LuaValue& a, const LuaValue &b) { return LuaValue(a) += b; }

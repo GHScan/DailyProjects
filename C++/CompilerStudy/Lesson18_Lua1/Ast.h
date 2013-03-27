@@ -1,6 +1,7 @@
 #ifndef AST_H
 #define AST_H
 
+class LuaValue;
 struct LuaFunctionMeta;
 typedef shared_ptr<LuaFunctionMeta> LuaFunctionMetaPtr;
 //========= IExpNodeVisitor ===========
@@ -52,7 +53,7 @@ struct UnOpExpNode:
 struct ConstExpNode:
     public IExpNode {
     int index;
-    ConstExpNode(int _index): index(_index){}
+    ConstExpNode(LuaFunctionMeta *meta, const LuaValue& v);
     virtual void acceptVisitor(IExpNodeVisitor *v) { v->visit(this);}
 };
 struct LocalVarExpNode:
@@ -86,6 +87,7 @@ struct TableConstructorExpNode:
     public IExpNode {
     vector<ExpNodePtr> vec;
     vector<pair<ExpNodePtr, ExpNodePtr> > hashTable;
+    TableConstructorExpNode(const vector<ExpNodePtr>& _vec, const vector<pair<ExpNodePtr, ExpNodePtr> >& _hash): vec(_vec), hashTable(_hash){}
     virtual void acceptVisitor(IExpNodeVisitor *v) { v->visit(this);}
 };
 struct LambdaExpNode:
@@ -98,7 +100,7 @@ struct CallExpNode:
     public IExpNode {
     ExpNodePtr func;
     vector<ExpNodePtr> params;
-    CallExpNode(const ExpNodePtr& _func, vector<ExpNodePtr>&& _params): func(_func), params(_params){}
+    CallExpNode(const ExpNodePtr& _func, const vector<ExpNodePtr>& _params): func(_func), params(_params){}
     virtual void acceptVisitor(IExpNodeVisitor *v) { v->visit(this);}
 };
 struct ArgsTupleExpNode:
@@ -136,6 +138,7 @@ typedef shared_ptr<IStmtNode> StmtNodePtr;
 struct CallStmtNode:
     public IStmtNode {
     ExpNodePtr exp;
+    CallStmtNode(const ExpNodePtr &_exp): exp(_exp){}
     virtual void acceptVisitor(IStmtNodeVisitor *v) { v->visit(this);}
 };
 struct AssignStmtNode:
@@ -158,6 +161,7 @@ struct ReturnStmtNode:
 struct BlockStmtNode:
     public IStmtNode {
     vector<StmtNodePtr> stmts;
+    BlockStmtNode(const vector<StmtNodePtr>& _stmts): stmts(_stmts){}
     virtual void acceptVisitor(IStmtNodeVisitor *v) { v->visit(this);}
 };
 struct IfElseStmtNode:
@@ -168,9 +172,10 @@ struct IfElseStmtNode:
 };
 struct RangeForStmtNode:
     public IStmtNode {
-    int first, last, step;
+    ExpNodePtr first, last, step;
     int index, nameIdx;
     StmtNodePtr stmt;
+    RangeForStmtNode(LuaFunctionMeta *meta, const string& name);
     const string& getName(const LuaFunctionMeta *meta) const;
     virtual void acceptVisitor(IStmtNodeVisitor *v) { v->visit(this);}
 };
@@ -179,15 +184,18 @@ struct LoopForStmtNode:
     StmtNodePtr stmtPre;
     ExpNodePtr exp;
     StmtNodePtr stmtBody;
+    LoopForStmtNode(const StmtNodePtr& _stmtPre, const ExpNodePtr& _exp, const StmtNodePtr& _stmtBody):
+        stmtPre(_stmtPre), exp(_exp), stmtBody(_stmtBody){}
     virtual void acceptVisitor(IStmtNodeVisitor *v) { v->visit(this);}
 };
 struct IteraterForStmtNode:
     public IStmtNode {
     vector<int> indexs;
     vector<int> nameIdxs;
-    ExpNodePtr iterExp;
+    vector<ExpNodePtr> iterExps;
     StmtNodePtr stmt;
-    const string& getName(const LuaFunctionMeta *meta, int idx) const;
+    void pushName(LuaFunctionMeta *meta, const string& name);
+    const string& getName(const LuaFunctionMeta *meta, int off) const;
     virtual void acceptVisitor(IStmtNodeVisitor *v) { v->visit(this);}
 };
 

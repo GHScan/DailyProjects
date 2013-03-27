@@ -88,7 +88,7 @@ private:
         m_rets.push_back(m_func->getUpValue(v->index));
     }
     virtual void visit(GlobalVarExpNode *v) {
-        m_rets.push_back(Runtime::instance()->getGlobalTable()->get(LuaValue(v->name.c_str())));
+        m_rets.push_back(Runtime::instance()->getGlobalTable()->get(LuaValue(v->name)));
     }
     virtual void visit(FieldAccessExpNode *v) {
         v->table->acceptVisitor(this);
@@ -115,6 +115,7 @@ private:
         m_rets.push_back(table);
     }
     virtual void visit(LambdaExpNode *v) {
+        // FIXME:
         vector<LuaValue> upValues;
         m_rets.push_back(LuaValue(LVT_Function, (int)LuaFunction::create(v->meta, upValues)));
     }
@@ -145,7 +146,7 @@ static vector<LuaValue> evalExps(LuaFunction *func, vector<ExpNodePtr>& exps) {
 class StmtNodeVisitor_Execute:
     public IStmtNodeVisitor {
 public:
-    StmtNodeVisitor_Execute(LuaFunction* func): m_func(func){}
+    StmtNodeVisitor_Execute(LuaFunction* func): m_func(func), m_isBreak(false), m_isReturn(false){}
     vector<LuaValue>& apply() {
         m_func->getMeta()->body->acceptVisitor(this);
         return m_rets;
@@ -155,13 +156,6 @@ private:
         ExpNodeVisitor_Eval(m_func).apply(v->exp);
     }
     virtual void visit(AssignStmtNode *v) {
-        if (v->vars.size() == 1 && dynamic_cast<LocalVarExpNode*>(v->vars[0].get())) {
-            auto p = static_cast<LocalVarExpNode*>(v->vars[0].get());
-            if (p->getName(m_func->getMeta()) == "return") {
-                m_rets = evalExps(m_func, v->exps);
-                return;
-            }
-        }
         auto values = evalExps(m_func, v->exps);
         for (int i = 0; i < (int)v->vars.size(); ++i) {
             if (auto localExp = dynamic_cast<LocalVarExpNode*>(v->vars[i].get())) {
@@ -179,14 +173,16 @@ private:
         }
     }
     virtual void visit(BreakStmtNode *v) {
-        // TODO
+        m_isBreak = true;
     }
     virtual void visit(ReturnStmtNode *v) {
-        // TODO
+        m_isReturn = true;
+        m_rets = move(evalExps(m_func, v->exps));
     }
     virtual void visit(BlockStmtNode *v) {
         for (auto &stmt : v->stmts) {
             stmt->acceptVisitor(this);
+            if (m_isBreak || m_isReturn) break;
         }
     }
     virtual void visit(IfElseStmtNode *v) {
@@ -203,24 +199,33 @@ private:
         }
     }
     virtual void visit(RangeForStmtNode *v) {
-        for (int i = v->first; i <= v->last; i += v->step) {
-            m_func->getLocal(v->index) = LuaValue(i);
+        LuaValue cur = ExpNodeVisitor_Eval(m_func).apply(v->first)[0];
+        LuaValue last = ExpNodeVisitor_Eval(m_func).apply(v->first)[1];
+        LuaValue step = ExpNodeVisitor_Eval(m_func).apply(v->first)[2];
+        while (cur <= last) {
+            m_func->getLocal(v->index) = cur;
             v->stmt->acceptVisitor(this);
+            cur += step;
+            if (m_isBreak || m_isReturn) break;
         }
+        m_isBreak = false;
     }
     virtual void visit(LoopForStmtNode *v) {
-        v->stmtPre->acceptVisitor(this);
+        if (v->stmtPre != NULL) v->stmtPre->acceptVisitor(this);
         while (ExpNodeVisitor_Eval(m_func).apply(v->exp)[0].getBoolean()) {
             v->stmtBody->acceptVisitor(this);
+            if (m_isBreak || m_isReturn) break;
         }
+        m_isBreak = false;
     }
     virtual void visit(IteraterForStmtNode *v) {
         LuaValue func, state, k;
         {
-            auto callRet(move(ExpNodeVisitor_Eval(m_func).apply(v->iterExp)));
-            if (callRet.size() >= 1) func = callRet[0];
-            else if (callRet.size() >= 2) state = callRet[1];
-            else if (callRet.size() >= 3) k = callRet[2];
+            auto iterValues(evalExps(m_func, v->iterExps));
+            assert(iterValues.size() >= 1);
+            if (iterValues.size() >= 1) func = iterValues[0];
+            else if (iterValues.size() >= 2) state = iterValues[1];
+            else if (iterValues.size() >= 3) k = iterValues[2];
             else {}
         }
         for (;;) {
@@ -234,11 +239,14 @@ private:
                 m_func->getLocal(v->indexs[i]) = rets[i];
             }
             v->stmt->acceptVisitor(this);
+            if (m_isBreak || m_isReturn) break;
         }
+        m_isBreak = false;
     }
 private:
     LuaFunction *m_func;
     vector<LuaValue> m_rets;
+    bool m_isBreak, m_isReturn;
 };
 
 //======== LuaFunctionMeta ============
@@ -260,14 +268,14 @@ int LuaFunctionMeta::getNameIndex(const string& name) {
 }
 //======== LuaFunction ============
 LuaFunction::LuaFunction(LuaFunctionMetaPtr meta, const vector<LuaValue>& upValues): 
-    m_refCount(1), m_meta(meta), m_upValues(upValues)  {
+    m_meta(meta), m_upValues(upValues)  {
 }
 LuaFunction::~LuaFunction() {
 }
 void LuaFunction::call(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     m_args = args;
     m_locals.assign(m_args.begin(), m_args.end());
-    rets = StmtNodeVisitor_Execute(this).apply();
+    rets = move(StmtNodeVisitor_Execute(this).apply());
 }
 LuaValue& LuaFunction::getLocal(int idx) {
     if (idx < (int)m_locals.size()) return m_locals[idx];

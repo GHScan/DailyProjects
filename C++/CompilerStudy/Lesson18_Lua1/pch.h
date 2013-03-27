@@ -55,6 +55,8 @@ inline void hash_combine(int & seed, const T & v) {
     seed ^= std::hash<T>()(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 }
 
+#define COUNT_OF(a) static_cast<int>(sizeof(a) / sizeof(a[0]))
+
 #ifdef _MSC_VER
 #pragma warning(disable : 4996)
 #endif

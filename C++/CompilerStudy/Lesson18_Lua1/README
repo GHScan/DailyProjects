@@ -1,3 +1,7 @@
 # TODO
+1. Grammar bug
+
+# Next version
 1. GC
-2. Grammar bug
+2. Byte code
+3. Top-down recursive parsing
