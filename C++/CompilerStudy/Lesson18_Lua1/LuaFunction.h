@@ -26,10 +26,7 @@ public:
         return new LuaFunction(meta, upValues);
     }
 
-    LuaValue& getLocal(int idx);
     LuaValue& getUpValue(int idx);
-    const vector<LuaValue>& getArgs() const { return m_args; }
-
     const LuaFunctionMeta* getMeta() const { return m_meta.get(); }
 
     virtual void call(const vector<LuaValue>& args, vector<LuaValue>& rets);
@@ -42,9 +39,7 @@ private:
 
 private:
     LuaFunctionMetaPtr m_meta;
-    vector<LuaValue> m_locals;
     vector<LuaValue> m_upValues;
-    vector<LuaValue> m_args;
 };
 typedef shared_ptr<LuaFunction> LuaFunctionPtr;
 

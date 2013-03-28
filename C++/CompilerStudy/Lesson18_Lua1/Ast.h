@@ -161,7 +161,11 @@ struct ReturnStmtNode:
 struct BlockStmtNode:
     public IStmtNode {
     vector<StmtNodePtr> stmts;
-    BlockStmtNode(const vector<StmtNodePtr>& _stmts): stmts(_stmts){}
+    BlockStmtNode(const vector<StmtNodePtr>& _stmts) {
+        for (auto &stmt : _stmts) {
+            if (stmt != NULL) stmts.push_back(stmt);
+        }
+    }
     virtual void acceptVisitor(IStmtNodeVisitor *v) { v->visit(this);}
 };
 struct IfElseStmtNode:

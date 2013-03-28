@@ -32,7 +32,11 @@ public:
     ~LuaValue();
 
     bool isTypeOf(LuaValueType t) const { return m_type == t; }
-    bool getBoolean() const { ASSERT(isTypeOf(LVT_Boolean)); return m_data.b;}
+    bool getBoolean() const { 
+        if (isTypeOf(LVT_Nil)) return false;
+        else if (isTypeOf(LVT_Boolean) && !m_data.b) return false;
+        return true;
+    }
     NumberType getNumber() const { ASSERT(isTypeOf(LVT_Number)); return m_data.n; }
     const char *getString() const { ASSERT(isTypeOf(LVT_String)); return m_data.str;}
     LuaTable* getLuaTable() { ASSERT(isTypeOf(LVT_Table)); return m_data.table;}

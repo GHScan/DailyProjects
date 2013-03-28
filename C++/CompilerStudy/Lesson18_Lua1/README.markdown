@@ -1,10 +1,10 @@
 # TODO
-1. Grammar bug
-2. Closure
-4. String
-3. Coroutine
+1. Closure
+2. Library
+3. Grammar bug
+4. Memory issues (eg. leaks)
 
 # Next version
 1. GC
 2. Byte code
-3. Top-down recursive parsing
+3. Coroutine

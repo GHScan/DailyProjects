@@ -22,7 +22,9 @@ void LuaTable::set(const LuaValue& k, const LuaValue& v) {
             return;
         }
     }
-    m_hashTable[k] = v;
+    if (v.isTypeOf(LVT_Nil)) {
+        m_hashTable.erase(k);
+    } else m_hashTable[k] = v;
     return;
 }
 
