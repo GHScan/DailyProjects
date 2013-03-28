@@ -19,6 +19,7 @@ struct IFunction;
 class LuaValue
 {
 public:
+    // TODO: rafactor the constructor!!! various of ambiguous
     explicit LuaValue(NumberType n): m_type(LVT_Number){ m_data.n = n; }
     explicit LuaValue(const string& str);
     explicit LuaValue(IFunction *func);
@@ -31,6 +32,7 @@ public:
     LuaValue& operator = (LuaValue&& o);
     ~LuaValue();
 
+    LuaValueType getType() const { return m_type; }
     bool isTypeOf(LuaValueType t) const { return m_type == t; }
     bool getBoolean() const { 
         if (isTypeOf(LVT_Nil)) return false;
@@ -39,8 +41,8 @@ public:
     }
     NumberType getNumber() const { ASSERT(isTypeOf(LVT_Number)); return m_data.n; }
     const char *getString() const { ASSERT(isTypeOf(LVT_String)); return m_data.str;}
-    LuaTable* getLuaTable() { ASSERT(isTypeOf(LVT_Table)); return m_data.table;}
-    IFunction* getFunction() { ASSERT(isTypeOf(LVT_Function)); return m_data.func;}
+    LuaTable* getTable() const { ASSERT(isTypeOf(LVT_Table)); return m_data.table; }
+    IFunction* getFunction() const { ASSERT(isTypeOf(LVT_Function)); return m_data.func;}
 
     bool operator == (const LuaValue& o) const;
     bool operator != (const LuaValue& o) const { return !(*this == o);}

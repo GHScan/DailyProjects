@@ -43,16 +43,14 @@ const LuaValue& LuaTable::getNext(LuaValue& k) const {
     }
     else {
         if (k.isTypeOf(LVT_Number)) {
-            int idx = (int)k.getNumber() - 1;
+            int idx = (int)k.getNumber();
             if (idx >= 0 && idx < (int)m_vec.size()) {
-                k = LuaValue(NumberType(idx + 2));
+                k = LuaValue(NumberType(idx + 1));
                 return m_vec[idx];
             }
             if (idx == (int)m_vec.size() && !m_hashTable.empty()) {
                 auto iter = m_hashTable.begin();
-                auto iter2 = iter; ++iter2;
-                if (iter2 == m_hashTable.end()) k = LuaValue::NIL;
-                else k = iter2->first;
+                k = iter->first;
                 return iter->second;
             }
         }
@@ -64,7 +62,25 @@ const LuaValue& LuaTable::getNext(LuaValue& k) const {
             auto iter2 = iter; ++iter2;
             if (iter2 == m_hashTable.end()) k = LuaValue::NIL;
             else k = iter2->first;
-            return iter->second;
+            return iter2->second;
         }
+    }
+}
+const LuaValue& LuaTable::getINext(LuaValue& k) const {
+    if (k.isTypeOf(LVT_Nil)) {
+        if (!m_vec.empty()) {
+            k = LuaValue(NumberType(1));
+            return m_vec.front();
+        }
+        return LuaValue::NIL;
+    }
+    else {
+        int idx = (int)k.getNumber();
+        if (idx >= 0 && idx < (int)m_vec.size()) {
+            k = LuaValue(NumberType(idx + 1));
+            return m_vec[idx];
+        }
+        k = LuaValue::NIL;
+        return LuaValue::NIL;
     }
 }

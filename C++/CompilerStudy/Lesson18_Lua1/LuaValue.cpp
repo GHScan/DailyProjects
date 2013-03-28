@@ -150,7 +150,7 @@ LuaValue LuaValue::concat(const LuaValue& o) const {
     int len1 = (int)strlen(m_data.str), len2 = (int)strlen(o.m_data.str);
     char *p = (char*)malloc(len1 + len2 + 1);
     memcpy(p, m_data.str, len1);
-    memcpy(p + len1, m_data.str, len2 + 1);
+    memcpy(p + len1, o.m_data.str, len2 + 1);
     // TODO: performance
     return LuaValue(string(p));
 }

@@ -18,6 +18,7 @@ public:
     int size() const { return (int)m_vec.size();}
 
     const LuaValue& getNext(LuaValue& k) const;
+    const LuaValue& getINext(LuaValue& k) const;
 
     int getRefCount() const { return m_refCount;}
     int addRef() { return ++m_refCount;}

@@ -189,21 +189,23 @@ void StmtNodeVisitor_Execute::visit(CallStmtNode *v) {
 void StmtNodeVisitor_Execute::visit(AssignStmtNode *v) {
     auto values = evalExps(this, v->exps);
     for (int i = 0; i < (int)v->vars.size(); ++i) {
+        LuaValue value;
+        if (i < (int)values.size()) value = values[i];
         if (auto localExp = dynamic_cast<LocalVarExpNode*>(v->vars[i].get())) {
-            getLocal(localExp->index) = values[i];
+            getLocal(localExp->index) = value;
         }
         else if (auto upValueExp = dynamic_cast<UpValueVarExpNode*>(v->vars[i].get())) {
-            m_func->getUpValue(upValueExp->index) = values[i];
+            m_func->getUpValue(upValueExp->index) = value;
         }
         else if (auto gValueExp = dynamic_cast<GlobalVarExpNode*>(v->vars[i].get())) {
             // TODO: performance
-            Runtime::instance()->getGlobalTable()->set(LuaValue(gValueExp->name), values[i]);
+            Runtime::instance()->getGlobalTable()->set(LuaValue(gValueExp->name), value);
         }
         else {
             assert(dynamic_cast<FieldAccessExpNode*>(v->vars[i].get()));
             auto fieldAccessExp = static_cast<FieldAccessExpNode*>(v->vars[i].get());
             ExpNodeVisitor_Eval(this).apply(fieldAccessExp->table)[0].set(
-                    ExpNodeVisitor_Eval(this).apply(fieldAccessExp->field)[0], values[i]);
+                    ExpNodeVisitor_Eval(this).apply(fieldAccessExp->field)[0], value);
         }
     }
 }
@@ -261,9 +263,8 @@ void StmtNodeVisitor_Execute::visit(IteraterForStmtNode *v) {
         auto iterValues(evalExps(this, v->iterExps));
         assert(iterValues.size() >= 1);
         if (iterValues.size() >= 1) func = iterValues[0];
-        else if (iterValues.size() >= 2) state = iterValues[1];
-        else if (iterValues.size() >= 3) k = iterValues[2];
-        else {}
+        if (iterValues.size() >= 2) state = iterValues[1];
+        if (iterValues.size() >= 3) k = iterValues[2];
     }
     for (;;) {
         vector<LuaValue> args;
