@@ -40,6 +40,7 @@ public:
         return true;
     }
     NumberType getNumber() const { ASSERT(isTypeOf(LVT_Number)); return m_data.n; }
+    // TODO:refactor
     const char *getString() const { ASSERT(isTypeOf(LVT_String)); return m_data.str;}
     LuaTable* getTable() const { ASSERT(isTypeOf(LVT_Table)); return m_data.table; }
     IFunction* getFunction() const { ASSERT(isTypeOf(LVT_Function)); return m_data.func;}
@@ -61,9 +62,6 @@ public:
     LuaValue concat(const LuaValue& o) const;
 
     int getSize() const;
-
-    const LuaValue& get(const LuaValue& k);
-    void set(const LuaValue& k, const LuaValue& v);
 
     int getHash() const;
 

@@ -23,6 +23,7 @@ protected:
 private:
     int m_refCount;
 };
+typedef shared_ptr<IFunction> FunctionPtr;
 
 class CFunction:
     public IFunction {

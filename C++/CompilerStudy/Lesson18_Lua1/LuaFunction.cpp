@@ -130,17 +130,17 @@ private:
     }
     virtual void visit(FieldAccessExpNode *v) {
         v->table->acceptVisitor(this);
-        auto table = m_rets[0]; m_rets.clear();
+        auto table = m_rets[0].getTable(); m_rets.clear();
         v->field->acceptVisitor(this);
         auto field = m_rets[0]; m_rets.clear();
-        m_rets.push_back(table.get(field)); 
+        m_rets.push_back(table->get(field)); 
     }
     virtual void visit(TableConstructorExpNode *v) {
-        LuaValue table(LuaTable::create());
+        auto table = LuaTable::create();
         {
             auto vals(evalExps(m_stmt, v->vec));
             for (int i = 0; i < (int)vals.size(); ++i) {
-                table.set(LuaValue(NumberType(i + 1)), vals[i]);
+                table->set(LuaValue(NumberType(i + 1)), vals[i]);
             }
         }
         for (int i = 0; i < (int)v->hashTable.size(); ++i) {
@@ -148,9 +148,9 @@ private:
             LuaValue k = m_rets[0]; m_rets.clear();
             v->hashTable[i].second->acceptVisitor(this);
             LuaValue v = m_rets[0]; m_rets.clear();
-            table.set(k, v);
+            table->set(k, v);
         }
-        m_rets.push_back(table);
+        m_rets.push_back(LuaValue(table));
     }
     virtual void visit(LambdaExpNode *v) {
         // FIXME:
@@ -204,7 +204,7 @@ void StmtNodeVisitor_Execute::visit(AssignStmtNode *v) {
         else {
             assert(dynamic_cast<FieldAccessExpNode*>(v->vars[i].get()));
             auto fieldAccessExp = static_cast<FieldAccessExpNode*>(v->vars[i].get());
-            ExpNodeVisitor_Eval(this).apply(fieldAccessExp->table)[0].set(
+            ExpNodeVisitor_Eval(this).apply(fieldAccessExp->table)[0].getTable()->set(
                     ExpNodeVisitor_Eval(this).apply(fieldAccessExp->field)[0], value);
         }
     }

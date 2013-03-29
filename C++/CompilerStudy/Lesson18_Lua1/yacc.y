@@ -30,6 +30,7 @@ static ExpNodePtr getLocalExp(const string& name);
 static ExpNodePtr getExpByIDName(const string& name);
 static ExpNodePtr getConstExp(const LuaValue& v);
 static bool& isDefiningMethod();
+static string unEscape(const string& s);
 
 #define FUNC_META (functionMetaStack()->top().get())
 
@@ -544,15 +545,15 @@ Number
 Literal
     : LITERAL1 {
         auto str = $1.get<string>();
-        $$ = getConstExp(LuaValue(str.substr(1, str.size() - 2)));
+        $$ = getConstExp(LuaValue(unEscape(str.substr(1, str.size() - 2))));
     }
     | LITERAL2 {
         auto str = $1.get<string>();
-        $$ = getConstExp(LuaValue(str.substr(1, str.size() - 2)));
+        $$ = getConstExp(LuaValue(unEscape(str.substr(1, str.size() - 2))));
     }
     | LITERAL3 {
         auto str = $1.get<string>();
-        $$ = getConstExp(LuaValue(str.substr(2, str.size() - 4)));
+        $$ = getConstExp(LuaValue(unEscape(str.substr(2, str.size() - 4))));
     }
     ;
 
@@ -563,29 +564,29 @@ static stack<LuaFunctionMetaPtr>* functionMetaStack() {
     return &s_ins;
 }
 
-bool doFile(const char *fname) {
-    bool succ = false;
+FunctionPtr loadFile(FILE *f) {
+    LuaFunctionMetaPtr meta(new LuaFunctionMeta());
+    functionMetaStack()->push(meta);
+    SymbolTable::push();
+
+    yyrestart(f);
+    yyparse();
+
+    SymbolTable::pop();
+    functionMetaStack()->pop();
+    return FunctionPtr(
+        LuaFunction::create(meta, vector<LuaValue>()), [](LuaFunction *p){ p->releaseRef(); });
+}
+FunctionPtr loadFile(const char *fname) {
     FILE *f = fopen(fname, "r");
     try {
-        LuaFunctionMetaPtr meta(new LuaFunctionMeta());
-        functionMetaStack()->push(meta);
-        SymbolTable::push();
-
-        yyrestart(f);
-        yyparse();
-        succ = true;
-
-        SymbolTable::pop();
-        functionMetaStack()->pop();
-        LuaFunctionPtr func(LuaFunction::create(meta, vector<LuaValue>()), [](LuaFunction *p){ p->releaseRef(); });
-        vector<LuaValue> rets;
-        func->call(vector<LuaValue>(), rets);
+        auto r = loadFile(f);
+        fclose(f);
+        return r;
+    } catch(const exception& e) {
+        fclose(f);
+        throw;
     }
-    catch(const exception& e) {
-        printf("Catch parse exception: %s\n", e.what());
-    }
-    fclose(f);
-    return succ;
 }
 
 static ExpNodePtr getLocalExp(const string& name) {
@@ -613,4 +614,19 @@ static ExpNodePtr getConstExp(const LuaValue& v) {
 static bool& isDefiningMethod() {
     static bool s_ins(false);
     return s_ins;
+}
+static string unEscape(const string& s) {
+    string r;
+    for (int i = 0; i < (int)s.size(); ++i) {
+        if (s[i] == '\\') {
+            switch (s[++i]) {
+            case 'r': r.push_back('\r'); break;
+            case 'n': r.push_back('\n'); break;
+            case 't': r.push_back('\t'); break;
+            default: ASSERT(0) ; break;
+            }
+        }
+        else r.push_back(s[i]);
+    }
+    return r;
 }

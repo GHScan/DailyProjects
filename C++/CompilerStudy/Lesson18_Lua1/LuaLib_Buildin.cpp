@@ -2,10 +2,10 @@
 #include "pch.h"
 
 #include "LuaLibs.h"
-#include "Runtime.h"
 #include "LuaValue.h"
-#include "Function.h"
 #include "LuaTable.h"
+#include "Runtime.h"
+#include "Function.h"
 
 static void buildin_print(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     for (auto &arg : args) {
@@ -48,9 +48,11 @@ static void buildin_tostring(const vector<LuaValue>& args, vector<LuaValue>& ret
     rets.push_back(LuaValue(args[0].toString()));
 }
 static void buildin_assert(const vector<LuaValue>& args, vector<LuaValue>& rets) {
-    if (!args[0].getBoolean()) {
+    if (args[0].getBoolean()) {
+        rets.assign(args.begin(), args.end());
+    } else {
         if (args.size() > 1) ASSERT1(0, args[1].toString());
-        else ASSERT(0);
+        else ASSERT("assertion failed!");
     }
 }
 static void buildin_next(const vector<LuaValue>& args, vector<LuaValue>& rets) {
@@ -94,6 +96,35 @@ static void buildin_select(const vector<LuaValue>& args, vector<LuaValue>& rets)
         }
     } else ASSERT(0);
 }
+static void buildin_loadstring(const vector<LuaValue>& args, vector<LuaValue>& rets) {
+    FILE *f = tmpfile();
+    try {
+        fprintf(f, "%s", args[0].getString());
+        rewind(f);
+        auto func = loadFile(f);
+        fclose(f);
+
+        func->addRef();
+        rets.push_back(LuaValue(func.get()));
+    } catch(const exception& e)  {
+        fclose(f);
+        rets.push_back(LuaValue::NIL);
+        rets.push_back(LuaValue(string(e.what())));
+    }
+}
+static void buildin_loadfile(const vector<LuaValue>& args, vector<LuaValue>& rets) {
+    try {
+        auto func = loadFile(args[0].getString());
+        func->addRef();
+        rets.push_back(LuaValue(func.get()));
+    } catch(const exception& e) {
+        rets.push_back(LuaValue::NIL);
+        rets.push_back(LuaValue(string(e.what())));
+    }
+}
+static void buildin_dofile(const vector<LuaValue>& args, vector<LuaValue>& rets) {
+    loadFile(args[0].getString())->call(vector<LuaValue>(), rets);
+}
 
 extern void openLib_buildin() {
     string names[] = {
@@ -108,19 +139,17 @@ extern void openLib_buildin() {
         "ipairs",
         "unpack",
         "select",
+        "loadstring",
+        "loadfile",
+        "dofile",
         // TODO: 
-        //"load",
-        //"loadstring",
-        //"loadfile",
-        //"dofile",
-        //
         //"getfenv",
+        //"setfenv",
         //"getmetatable",
+        //"setmetatable",
         //"rawequal",
         //"rawget",
         //"rawset",
-        //"setfenv",
-        //"setmetatable",
     };
 
     void (*funcs[])(const vector<LuaValue>& args, vector<LuaValue>& rets) = {
@@ -135,6 +164,9 @@ extern void openLib_buildin() {
         &buildin_ipairs,
         &buildin_unpack,
         &buildin_select,
+        &buildin_loadstring,
+        &buildin_loadfile,
+        &buildin_dofile,
     };
     for (int i = 0; i < COUNT_OF(names); ++i) {
         Runtime::instance()->getGlobalTable()->set(

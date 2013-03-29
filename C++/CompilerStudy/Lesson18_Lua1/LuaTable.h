@@ -15,7 +15,13 @@ public:
     const LuaValue& get(const LuaValue& k) const;
     void set(const LuaValue& k, const LuaValue& v);
 
+    void arrayInsert(int off, const LuaValue& v);
+    LuaValue arrayRemove(int off);
+
     int size() const { return (int)m_vec.size();}
+
+    void sort();
+    void sort(const LuaValue& cmp);
 
     const LuaValue& getNext(LuaValue& k) const;
     const LuaValue& getINext(LuaValue& k) const;

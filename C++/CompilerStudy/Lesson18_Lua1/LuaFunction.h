@@ -41,6 +41,5 @@ private:
     LuaFunctionMetaPtr m_meta;
     vector<LuaValue> m_upValues;
 };
-typedef shared_ptr<LuaFunction> LuaFunctionPtr;
 
 #endif

@@ -163,15 +163,6 @@ int LuaValue::getSize() const {
     return 0;
 }
 
-const LuaValue& LuaValue::get(const LuaValue& k) {
-    ASSERT(m_type == LVT_Table);
-    return m_data.table->get(k);
-}
-void LuaValue::set(const LuaValue& k, const LuaValue& v) {
-    ASSERT(m_type == LVT_Table);
-    m_data.table->set(k, v);
-}
-
 int LuaValue::getHash() const {
     switch (m_type) {
         case LVT_Nil: return (int)hash<int>()(0);
@@ -199,7 +190,3 @@ string LuaValue::toString() const {
     ASSERT(0);
     return "";
 }
-
-LuaValue LuaValue::NIL;
-LuaValue LuaValue::TRUE(true);
-LuaValue LuaValue::FALSE(false);

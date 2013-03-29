@@ -88,7 +88,7 @@ static int g_braceLevel = 0;
 static void onTokenFound(bool isAttr) {
     if (isAttr) yylval = string(yytext);
     g_column += yyleng;
-    for (int i = 0; i < yyleng; ++i) { 
+    for (int i = 0; i < (int)yyleng; ++i) { 
         switch (yytext[i]) {
         case '\n':
             ++g_line;

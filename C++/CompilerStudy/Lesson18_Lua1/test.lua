@@ -1,4 +1,12 @@
 
-for k, v in pairs({1, 2, 3, a=3, b=2, c={}}) do
-    print(k, v)
+a = {5, 3, 4, 2, 1}
+table.sort(a, function(a, b) return a > b end)
+table.foreach(a, print)
+
+a.name = 'fjdksl'
+function a:printName()
+    print(self.name)
 end
+
+a.printName(a)
+a:printName()
