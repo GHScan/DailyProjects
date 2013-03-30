@@ -125,6 +125,35 @@ static void buildin_loadfile(const vector<LuaValue>& args, vector<LuaValue>& ret
 static void buildin_dofile(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     loadFile(args[0].getString())->call(vector<LuaValue>(), rets);
 }
+static void buildin_getfenv(const vector<LuaValue>& args, vector<LuaValue>& rets) {
+    IFunction *func = NULL;
+    if (args.empty()) func = Runtime::instance()->getFrame(-2);
+    else if (args[0].isTypeOf(LVT_Number)) {
+        auto n = (int)args[0].getNumber();
+        ASSERT(n >= 0);
+        if (n > 0) func = Runtime::instance()->getFrame(-n - 1);
+    } else func = args[0].getFunction();
+
+    LuaTable* table = NULL;
+    if (func == NULL) table = Runtime::instance()->getGlobalTable();
+    else table = func->getfenv();
+    table->addRef();
+    rets.push_back(LuaValue(table));
+}
+static void buildin_setfenv(const vector<LuaValue>& args, vector<LuaValue>& rets) {
+    IFunction *func = NULL;
+    if (args[0].isTypeOf(LVT_Number)) {
+        auto n = (int)args[0].getNumber();
+        ASSERT(n >= 0);
+        if (n > 0) func = Runtime::instance()->getFrame(-n - 1);
+    } else func = args[0].getFunction();
+
+    if (func == NULL) {
+        Runtime::instance()->setGlobalTable(args[1].getTable());
+    } else {
+        func->setfenv(args[1].getTable());
+    }
+}
 
 extern void openLib_buildin() {
 #define ENTRY(name) {#name, &buildin_##name}
@@ -143,9 +172,9 @@ extern void openLib_buildin() {
         ENTRY(loadstring),
         ENTRY(loadfile),
         ENTRY(dofile),
+        ENTRY(getfenv),
+        ENTRY(setfenv),
         // TODO: 
-        //"getfenv",
-        //"setfenv",
         //"getmetatable",
         //"setmetatable",
         //"rawequal",

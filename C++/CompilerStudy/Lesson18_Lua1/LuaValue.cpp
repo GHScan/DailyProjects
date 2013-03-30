@@ -88,10 +88,12 @@ LuaValue::~LuaValue() {
 bool LuaValue::operator == (const LuaValue& o) const {
     if (m_type == o.m_type) {
         switch (m_type) {
-            case LVT_String:
-                return strcmp(m_data.str, o.m_data.str) == 0;
-            default:
-                return m_data.n == o.m_data.n;
+            case LVT_Boolean: return m_data.b == o.m_data.b;
+            case LVT_Number: return m_data.n == o.m_data.n;
+            case LVT_String: return strcmp(m_data.str, o.m_data.str) == 0;
+            case LVT_Table: return m_data.table == o.m_data.table;
+            case LVT_Function: return m_data.func->equal(o.m_data.func);
+            default: ASSERT(0);
         }
     }
     return false;

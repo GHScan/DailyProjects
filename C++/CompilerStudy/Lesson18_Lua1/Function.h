@@ -7,6 +7,10 @@
 struct IFunction {
 public:
     virtual void call(const vector<LuaValue>& args, vector<LuaValue>& rets) = 0;
+    virtual bool equal(IFunction *o) = 0;
+
+    LuaTable* getfenv() { return m_fenv; }
+    void setfenv(LuaTable* env);
 
     int getRefCount() const { return m_refCount;}
     int addRef() { return ++m_refCount;}
@@ -17,11 +21,14 @@ public:
     }
 
 protected:
-    IFunction(): m_refCount(1){}
-    virtual ~IFunction(){}
+    IFunction();
+    virtual ~IFunction();
+    IFunction(IFunction& o);
+    IFunction& operator = (const IFunction& o);
 
 private:
     int m_refCount;
+    LuaTable* m_fenv;
 };
 typedef shared_ptr<IFunction> FunctionPtr;
 
@@ -30,9 +37,8 @@ class CFunction:
 public:
     typedef void (*CFuncT)(const vector<LuaValue>& args, vector<LuaValue>& rets);
 public:
-    virtual void call(const vector<LuaValue>& args, vector<LuaValue>& rets) {
-        m_func(args, rets);
-    }
+    virtual void call(const vector<LuaValue>& args, vector<LuaValue>& rets);
+    virtual bool equal(IFunction *o);
     static CFunction* create(CFuncT func) {
         return new CFunction(func);
     }

@@ -38,6 +38,7 @@ typedef shared_ptr<IExpNode>  ExpNodePtr;
 
 struct BinOpExpNode: 
     public IExpNode {
+    // TODO: enum
     string op;
     ExpNodePtr left, right;
     BinOpExpNode(const string& _op, const ExpNodePtr& _left, const ExpNodePtr& _right): op(_op), left(_left), right(_right){}
@@ -45,6 +46,7 @@ struct BinOpExpNode:
 };
 struct UnOpExpNode:
     public IExpNode {
+    // TODO: enum
     string op;
     ExpNodePtr exp;
     UnOpExpNode(const string& _op, const ExpNodePtr& _exp): op(_op), exp(_exp){}

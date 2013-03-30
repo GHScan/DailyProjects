@@ -30,6 +30,7 @@ public:
     const LuaFunctionMeta* getMeta() const { return m_meta.get(); }
 
     virtual void call(const vector<LuaValue>& args, vector<LuaValue>& rets);
+    virtual bool equal(IFunction *o);
 
 private:
     LuaFunction(LuaFunction& o);

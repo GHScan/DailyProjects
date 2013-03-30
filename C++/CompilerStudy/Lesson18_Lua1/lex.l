@@ -106,7 +106,7 @@ static void onTokenFound(bool isAttr) {
 }
 
 void yyerror(const char *msg) {
-    printf("yyerror [%d-%d]: %s\n", g_line, g_column, msg);
+    ASSERT1(0, format("yyerror [%d-%d]: %s\n", g_line, g_column, msg));
 }
 
 int yywrap() {

@@ -126,7 +126,7 @@ private:
         m_rets.push_back(m_stmt->getFunc()->getUpValue(v->index));
     }
     virtual void visit(GlobalVarExpNode *v) {
-        m_rets.push_back(Runtime::instance()->getGlobalTable()->get(LuaValue(v->name)));
+        m_rets.push_back(m_stmt->getFunc()->getfenv()->get(LuaValue(v->name)));
     }
     virtual void visit(FieldAccessExpNode *v) {
         v->table->acceptVisitor(this);
@@ -199,7 +199,7 @@ void StmtNodeVisitor_Execute::visit(AssignStmtNode *v) {
         }
         else if (auto gValueExp = dynamic_cast<GlobalVarExpNode*>(v->vars[i].get())) {
             // TODO: performance
-            Runtime::instance()->getGlobalTable()->set(LuaValue(gValueExp->name), value);
+            getFunc()->getfenv()->set(LuaValue(gValueExp->name), value);
         }
         else {
             assert(dynamic_cast<FieldAccessExpNode*>(v->vars[i].get()));
@@ -306,7 +306,15 @@ LuaFunction::LuaFunction(LuaFunctionMetaPtr meta, const vector<LuaValue>& upValu
 LuaFunction::~LuaFunction() {
 }
 void LuaFunction::call(const vector<LuaValue>& args, vector<LuaValue>& rets) {
+    Runtime::instance()->pushFrame(this);
     rets = move(StmtNodeVisitor_Execute(this).apply(args));
+    Runtime::instance()->popFrame();
+}
+bool LuaFunction::equal(IFunction *o) {
+    if (auto p = dynamic_cast<LuaFunction*>(o)) {
+        return m_meta == p->m_meta && m_upValues == p->m_upValues;
+    }
+    return false;
 }
 LuaValue& LuaFunction::getUpValue(int idx) {
     return m_upValues[idx];
