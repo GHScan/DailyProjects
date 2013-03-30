@@ -6,6 +6,23 @@
 #include "Runtime.h"
 #include "LuaTable.h"
 
+static string guessFunctionName(const LuaFunctionMeta* meta, CallExpNode *exp) {
+    string name = "?";
+    if (auto p = dynamic_cast<LocalVarExpNode*>(exp->func.get())){
+        name = p->getName(meta);
+    } else if (auto p = dynamic_cast<UpValueVarExpNode*>(exp->func.get())) {
+        name = p->getName(meta);
+    } else if (auto p = dynamic_cast<GlobalVarExpNode*>(exp->func.get())) {
+        name = p->name;
+    } else if (auto p = dynamic_cast<FieldAccessExpNode*>(exp->func.get())) {
+        if (auto p2 = dynamic_cast<ConstExpNode*>(p->field.get())) {
+            auto cst = meta->constTable[p2->index];
+            if (cst.isTypeOf(LVT_String)) name = cst.getString();
+        }
+    }
+    return name;
+}
+
 class StmtNodeVisitor_Execute:
     public IStmtNodeVisitor {
 public:
@@ -161,11 +178,19 @@ private:
     }
     virtual void visit(CallExpNode *v) {
         v->func->acceptVisitor(this);
-        auto func = m_rets[0]; m_rets.clear();
-        vector<LuaValue> params(evalExps(m_stmt, v->params)); 
-        if (func.isTypeOf(LVT_Table)) {
-            func.getTable()->meta_call(params, m_rets);
-        } else func.getFunction()->call(params, m_rets);
+
+        try {
+            auto func = m_rets[0]; m_rets.clear();
+            vector<LuaValue> params(evalExps(m_stmt, v->params)); 
+            if (func.isTypeOf(LVT_Table)) {
+                func.getTable()->meta_call(params, m_rets);
+            } else func.getFunction()->call(params, m_rets);
+        } catch(Exception& e) {
+            e.addLine(format("%s:%d: in function '%s'", 
+                        v->srcFile.c_str(), v->srcLine, 
+                        guessFunctionName(m_stmt->getFunc()->getMeta(), v).c_str()));
+            throw;
+        }
     }
     virtual void visit(ArgsTupleExpNode *v) {
         auto &args = m_stmt->getArgs();

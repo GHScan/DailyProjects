@@ -102,7 +102,8 @@ struct CallExpNode:
     public IExpNode {
     ExpNodePtr func;
     vector<ExpNodePtr> params;
-    CallExpNode(const ExpNodePtr& _func, const vector<ExpNodePtr>& _params): func(_func), params(_params){}
+    string srcFile; int srcLine;
+    CallExpNode(const ExpNodePtr& _func, const vector<ExpNodePtr>& _params): func(_func), params(_params), srcLine(0){}
     virtual void acceptVisitor(IExpNodeVisitor *v) { v->visit(this);}
 };
 struct ArgsTupleExpNode:

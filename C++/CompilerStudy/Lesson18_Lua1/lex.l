@@ -6,6 +6,7 @@
 
 static void onTokenFound(bool isAttr);
 int isatty(int );
+int getTokenLine();
 
 #include "yacc.h"
 
@@ -118,4 +119,8 @@ int yywrap() {
 
 int isatty(int ) {
     return 0;
+}
+
+int getTokenLine() {
+    return g_line;
 }

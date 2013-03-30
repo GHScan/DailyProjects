@@ -29,8 +29,11 @@ static stack<LuaFunctionMetaPtr>* functionMetaStack();
 static ExpNodePtr getLocalExp(const string& name);
 static ExpNodePtr getExpByIDName(const string& name);
 static ExpNodePtr getConstExp(const LuaValue& v);
-static bool& isDefiningMethod();
 static string unEscape(const string& s);
+static bool& isDefiningMethod();
+static string& srcFileName();
+static int& srcFileLine();
+extern int getTokenLine();
 
 #define FUNC_META (functionMetaStack()->top().get())
 
@@ -337,6 +340,7 @@ VarList
 Var 
     : ID {
         $$ = getExpByIDName($1.get<string>());
+        srcFileLine() = getTokenLine();
     }
     | PrefixExp '[' Exp ']' {
         $$ = ExpNodePtr(new FieldAccessExpNode($1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
@@ -350,21 +354,27 @@ PrefixExp
     : Var
     | FunctionCall  
     | '(' Exp ')' {
+        srcFileLine() = getTokenLine();
         $$ = $2;
     }
     ;
 
 FunctionCall 
     : PrefixExp Params {
-        $$ = ExpNodePtr(new CallExpNode($1.get<ExpNodePtr>(), $2.get<vector<ExpNodePtr> >()));
+        auto exp = new CallExpNode($1.get<ExpNodePtr>(), $2.get<vector<ExpNodePtr> >());
+        exp->srcFile = srcFileName();
+        exp->srcLine = srcFileLine();
+        $$ = ExpNodePtr(exp);
     }
     | PrefixExp ':' ID Params {
         auto selfExp = $1.get<ExpNodePtr>();
         auto idExp = getConstExp(LuaValue($3.get<string>()));
         auto &params = $4.get<vector<ExpNodePtr> >();
         params.insert(params.begin(), selfExp);
-        $$ = ExpNodePtr(new CallExpNode(
-                ExpNodePtr(new FieldAccessExpNode(selfExp, idExp)), params));
+        auto exp = new CallExpNode(ExpNodePtr(new FieldAccessExpNode(selfExp, idExp)), params);
+        exp->srcFile = srcFileName();
+        exp->srcLine = srcFileLine();
+        $$ = ExpNodePtr(exp);
     }
     ;
 
@@ -565,7 +575,7 @@ static stack<LuaFunctionMetaPtr>* functionMetaStack() {
     return &s_ins;
 }
 
-FunctionPtr loadFile(FILE *f) {
+static FunctionPtr _loadFile(FILE *f) {
     LuaFunctionMetaPtr meta(new LuaFunctionMeta());
     functionMetaStack()->push(meta);
     SymbolTable::push();
@@ -578,10 +588,15 @@ FunctionPtr loadFile(FILE *f) {
     return FunctionPtr(
         LuaFunction::create(meta, vector<LuaValue>()), [](LuaFunction *p){ p->releaseRef(); });
 }
+FunctionPtr loadFile(FILE *f) {
+    srcFileName() = "[????]";
+    return _loadFile(f);
+}
 FunctionPtr loadFile(const char *fname) {
     FILE *f = fopen(fname, "r");
     try {
-        auto r = loadFile(f);
+        srcFileName() = fname;
+        auto r = _loadFile(f);
         fclose(f);
         return r;
     } catch(const exception& e) {
@@ -612,10 +627,6 @@ static ExpNodePtr getExpByIDName(const string& name) {
 static ExpNodePtr getConstExp(const LuaValue& v) {
     return ExpNodePtr(new ConstExpNode(FUNC_META, v));
 }
-static bool& isDefiningMethod() {
-    static bool s_ins(false);
-    return s_ins;
-}
 static string unEscape(const string& s) {
     string r;
     for (int i = 0; i < (int)s.size(); ++i) {
@@ -630,4 +641,16 @@ static string unEscape(const string& s) {
         else r.push_back(s[i]);
     }
     return r;
+}
+static bool& isDefiningMethod() {
+    static bool s_ins(false);
+    return s_ins;
+}
+static string& srcFileName() {
+    static string s_name;
+    return s_name;
+}
+static int& srcFileLine() {
+    static int s_line;
+    return s_line;
 }
