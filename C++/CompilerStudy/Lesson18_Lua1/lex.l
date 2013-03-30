@@ -43,6 +43,7 @@ EFloat {NumberOrFloat}[eE]\-?{NumberOrFloat}
 
 "and" {onTokenFound(false);  return AND;}
 "break" {onTokenFound(false);  return BREAK;}
+"continue" {onTokenFound(false);  return CONTINUE;}
 "do" {onTokenFound(false);  return DO;}
 "else" {onTokenFound(false);  return ELSE;}
 "elseif" {onTokenFound(false);  return ELSEIF;}

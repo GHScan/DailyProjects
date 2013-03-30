@@ -179,6 +179,17 @@ static void buildin_rawget(const vector<LuaValue>& args, vector<LuaValue>& rets)
 static void buildin_rawset(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     args[0].getTable()->set(args[1], args[2], true);
 }
+static void buildin_pcall(const vector<LuaValue>& args, vector<LuaValue>& rets) {
+    auto func = args[0].getFunction();
+    try {
+        vector<LuaValue> _args(args.begin() + 1, args.end());
+        func->call(_args, rets);
+        rets.insert(rets.begin(), LuaValue::TRUE);
+    } catch(const exception& e) {
+        rets.push_back(LuaValue::FALSE);
+        rets.push_back(LuaValue(string(e.what())));
+    }
+}
 
 extern void openLib_buildin() {
 #define ENTRY(name) {#name, &buildin_##name}
@@ -204,6 +215,7 @@ extern void openLib_buildin() {
         ENTRY(rawequal),
         ENTRY(rawget),
         ENTRY(rawset),
+        ENTRY(pcall),
     };
 #undef ENTRY
     for (auto &entry : entries) {

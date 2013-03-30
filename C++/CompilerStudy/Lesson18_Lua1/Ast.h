@@ -114,6 +114,7 @@ struct ArgsTupleExpNode:
 struct CallStmtNode;
 struct AssignStmtNode;
 struct BreakStmtNode;
+struct ContinueStmtNode;
 struct ReturnStmtNode;
 struct BlockStmtNode;
 struct IfElseStmtNode;
@@ -125,6 +126,7 @@ struct IStmtNodeVisitor {
     virtual void visit(CallStmtNode *v) = 0;
     virtual void visit(AssignStmtNode *v) = 0;
     virtual void visit(BreakStmtNode *v) = 0;
+    virtual void visit(ContinueStmtNode *v) = 0;
     virtual void visit(ReturnStmtNode *v) = 0;
     virtual void visit(BlockStmtNode *v) = 0;
     virtual void visit(IfElseStmtNode *v) = 0;
@@ -152,6 +154,10 @@ struct AssignStmtNode:
     virtual void acceptVisitor(IStmtNodeVisitor *v) { v->visit(this);}
 };
 struct BreakStmtNode:
+    public IStmtNode {
+    virtual void acceptVisitor(IStmtNodeVisitor *v) { v->visit(this);}
+};
+struct ContinueStmtNode:
     public IStmtNode {
     virtual void acceptVisitor(IStmtNodeVisitor *v) { v->visit(this);}
 };

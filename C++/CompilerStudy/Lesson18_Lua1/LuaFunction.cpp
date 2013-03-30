@@ -26,7 +26,7 @@ static string guessFunctionName(const LuaFunctionMeta* meta, CallExpNode *exp) {
 class StmtNodeVisitor_Execute:
     public IStmtNodeVisitor {
 public:
-    StmtNodeVisitor_Execute(LuaFunction* func): m_func(func), m_isBreak(false), m_isReturn(false){}
+    StmtNodeVisitor_Execute(LuaFunction* func): m_func(func), m_isBreak(false), m_isReturn(false), m_isContinue(false){}
     vector<LuaValue>& apply(const vector<LuaValue>& args) {
         m_locals.assign(args.begin(), args.begin() + m_func->getMeta()->argCount);
         m_args = args;
@@ -48,6 +48,7 @@ private:
     virtual void visit(CallStmtNode *v);
     virtual void visit(AssignStmtNode *v);
     virtual void visit(BreakStmtNode *v);
+    virtual void visit(ContinueStmtNode *v);
     virtual void visit(ReturnStmtNode *v);
     virtual void visit(BlockStmtNode *v);
     virtual void visit(IfElseStmtNode *v);
@@ -59,7 +60,7 @@ private:
     vector<LuaValue> m_rets;
     vector<LuaValue> m_args;
     vector<LuaValue> m_locals;
-    bool m_isBreak, m_isReturn;
+    bool m_isBreak, m_isReturn, m_isContinue;
 };
 
 static vector<LuaValue> evalExps(StmtNodeVisitor_Execute *stmt, vector<ExpNodePtr>& exps) ;
@@ -241,6 +242,9 @@ void StmtNodeVisitor_Execute::visit(AssignStmtNode *v) {
 void StmtNodeVisitor_Execute::visit(BreakStmtNode *v) {
     m_isBreak = true;
 }
+void StmtNodeVisitor_Execute::visit(ContinueStmtNode *v) {
+    m_isContinue = true;
+}
 void StmtNodeVisitor_Execute::visit(ReturnStmtNode *v) {
     m_isReturn = true;
     m_rets = move(evalExps(this, v->exps));
@@ -248,7 +252,7 @@ void StmtNodeVisitor_Execute::visit(ReturnStmtNode *v) {
 void StmtNodeVisitor_Execute::visit(BlockStmtNode *v) {
     for (auto &stmt : v->stmts) {
         stmt->acceptVisitor(this);
-        if (m_isBreak || m_isReturn) break;
+        if (m_isBreak || m_isReturn || m_isContinue) break;
     }
 }
 void StmtNodeVisitor_Execute::visit(IfElseStmtNode *v) {
@@ -274,6 +278,7 @@ void StmtNodeVisitor_Execute::visit(RangeForStmtNode *v) {
         getLocal(v->index) = cur;
         v->stmt->acceptVisitor(this);
         cur += step;
+        m_isContinue = false;
         if (m_isBreak || m_isReturn) break;
     }
     m_isBreak = false;
@@ -282,6 +287,7 @@ void StmtNodeVisitor_Execute::visit(LoopForStmtNode *v) {
     if (v->stmtPre != NULL) v->stmtPre->acceptVisitor(this);
     while (ExpNodeVisitor_Eval(this).apply(v->exp)[0].getBoolean()) {
         v->stmtBody->acceptVisitor(this);
+        m_isContinue = false;
         if (m_isBreak || m_isReturn) break;
     }
     m_isBreak = false;
@@ -306,6 +312,7 @@ void StmtNodeVisitor_Execute::visit(IteraterForStmtNode *v) {
             getLocal(v->indexs[i]) = rets[i];
         }
         v->stmt->acceptVisitor(this);
+        m_isContinue = false;
         if (m_isBreak || m_isReturn) break;
     }
     m_isBreak = false;

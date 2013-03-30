@@ -1,4 +1,4 @@
-%token BREAK DO ELSE ELSEIF END FALSE 
+%token CONTINUE BREAK DO ELSE ELSEIF END FALSE 
 %token FOR FUNCTION IF IN LOCAL NIL
 %token REPEAT RETURN THEN TRUE UNTIL WHILE
 
@@ -250,6 +250,9 @@ LastStatement
     }
     | BREAK {
         $$ = StmtNodePtr(new BreakStmtNode());
+    }
+    | CONTINUE {
+        $$ = StmtNodePtr(new ContinueStmtNode());
     }
     ;
         
