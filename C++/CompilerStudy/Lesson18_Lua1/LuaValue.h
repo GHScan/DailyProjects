@@ -11,10 +11,14 @@ enum LuaValueType {
     LVT_String,
     LVT_Table,
     LVT_Function,
+    LVT_LightUserData,
 };
 
 class LuaTable;
 struct IFunction;
+
+struct LightUserDataRef{};
+typedef LightUserDataRef* LightUserData;
 
 class LuaValue
 {
@@ -24,6 +28,7 @@ public:
     explicit LuaValue(const string& str);
     explicit LuaValue(IFunction *func);
     explicit LuaValue(LuaTable *table);
+    explicit LuaValue(LightUserData lud);
 
     LuaValue(): m_type(LVT_Nil) {m_data.n = 0;}
     LuaValue(const LuaValue& o);
@@ -44,6 +49,7 @@ public:
     const char *getString() const { ASSERT(isTypeOf(LVT_String)); return m_data.str;}
     LuaTable* getTable() const { ASSERT(isTypeOf(LVT_Table)); return m_data.table; }
     IFunction* getFunction() const { ASSERT(isTypeOf(LVT_Function)); return m_data.func;}
+    LightUserData getLightUserData() const { ASSERT(isTypeOf(LVT_LightUserData)); return m_data.lud; }
 
     bool operator == (const LuaValue& o) const;
     bool operator != (const LuaValue& o) const { return !(*this == o);}
@@ -82,6 +88,7 @@ private:
         char *str;
         LuaTable *table;
         IFunction *func;
+        LightUserData lud;
     } m_data;
 };
 LuaValue operator + (const LuaValue& a, const LuaValue &b);

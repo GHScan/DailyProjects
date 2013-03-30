@@ -26,6 +26,11 @@ LuaValue::LuaValue(bool b):
     m_data.b = b;
 }
 
+LuaValue::LuaValue(LightUserData lud): 
+    m_type(LVT_LightUserData) {
+    m_data.lud = lud;
+}
+
 LuaValue::LuaValue(const LuaValue& o):
     m_type(LVT_Nil) {
     m_data.n = 0;
@@ -41,7 +46,7 @@ LuaValue& LuaValue::operator = (const LuaValue& o) {
     if (this == &o) return *this;
     this->~LuaValue();
     m_type = o.m_type;
-    m_data.n = o.m_data.n;
+    m_data = o.m_data;
     switch (o.m_type) {
         case LVT_String: {
                 int len = (int)strlen(o.m_data.str);
@@ -63,7 +68,7 @@ LuaValue& LuaValue::operator = (LuaValue&& o) {
     if (this == &o) return *this;
     this->~LuaValue();
     m_type = o.m_type;
-    m_data.n = o.m_data.n;
+    m_data = o.m_data;
     o.m_type = LVT_Nil;
     o.m_data.n = 0;
     return *this;
@@ -88,6 +93,7 @@ LuaValue::~LuaValue() {
 bool LuaValue::operator == (const LuaValue& o) const {
     if (m_type == o.m_type) {
         switch (m_type) {
+            case LVT_Nil: return true;
             case LVT_Boolean: return m_data.b == o.m_data.b;
             case LVT_Number: return m_data.n == o.m_data.n;
             case LVT_String: return strcmp(m_data.str, o.m_data.str) == 0;
@@ -97,6 +103,7 @@ bool LuaValue::operator == (const LuaValue& o) const {
                     return false;
                 }
             case LVT_Function: return m_data.func->equal(o.m_data.func);
+            case LVT_LightUserData: return m_data.lud == o.m_data.lud;
             default: ASSERT(0);
         }
     }
@@ -119,10 +126,6 @@ bool LuaValue::operator < (const LuaValue& o) const {
             return m_data.table->meta_lt(o).getBoolean();
         case LVT_Number:
             return m_data.n < o.m_data.n;
-        case LVT_Boolean:
-            ASSERT(0);
-        case LVT_Nil:
-            ASSERT(0);
         default: break;
     }
     ASSERT(0);
@@ -186,6 +189,7 @@ int LuaValue::getHash() const {
         case LVT_String: return (int)hash<string>()(m_data.str);
         case LVT_Table: return (int)hash<LuaTable*>()(m_data.table);
         case LVT_Function: return (int)hash<IFunction*>()(m_data.func);
+        case LVT_LightUserData: return (int)hash<LightUserData>()(m_data.lud);
         default: break;
     }
     ASSERT(0);
@@ -200,6 +204,7 @@ string LuaValue::toString() const {
         case LVT_String: return m_data.str;
         case LVT_Table: return format("table: %p", m_data.table);
         case LVT_Function: return format("function: %p", m_data.func);
+        case LVT_LightUserData: return format("lightuserdata: %p", m_data.lud);
         default: break;
     }
     ASSERT(0);

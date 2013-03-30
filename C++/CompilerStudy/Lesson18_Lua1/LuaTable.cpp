@@ -3,6 +3,15 @@
 #include "LuaTable.h"
 #include "Function.h"
 
+static LuaValue invokeMeta(LuaTable* table, LuaTable *metaTable, const string& metaName, const LuaValue& arg1, const LuaValue& arg2) {
+    LuaValue f = metaTable->get(LuaValue(metaName));
+    vector<LuaValue> args, rets;
+    table->addRef();
+    args.push_back(LuaValue(table)); args.push_back(arg1); args.push_back(arg2);
+    f.getFunction()->call(args, rets);
+    return rets.empty() ? LuaValue::NIL : rets[0];
+}
+
 bool LuaTable::hasKey(const LuaValue& k) const {
     if (k.isTypeOf(LVT_Number)) {
         int idx = (int)k.getNumber() - 1;
@@ -155,21 +164,22 @@ LuaTable::LuaTable(): m_refCount(1), m_metaTable(NULL) {
 LuaTable::~LuaTable() {
     if (m_metaTable != NULL) m_metaTable->releaseRef();
 }
+int LuaTable::releaseRef() const {
+    if (m_refCount == 1 && m_metaTable != NULL) {
+        // NOT STANDARD!
+        invokeMeta(const_cast<LuaTable*>(this), m_metaTable, "__gc", LuaValue::NIL, LuaValue::NIL);
+    }
+
+    int r = --m_refCount;
+    if (r == 0) delete this;
+    return r;
+}
 void LuaTable::setMetaTable(LuaTable *t) {
     if (m_metaTable != t) {
         if (m_metaTable != NULL) m_metaTable->releaseRef();
         if (t != NULL) t->addRef();
         m_metaTable = t;
     }
-}
-
-static LuaValue invokeMeta(LuaTable* table, LuaTable *metaTable, const string& metaName, const LuaValue& arg1, const LuaValue& arg2) {
-    LuaValue f = metaTable->get(LuaValue(metaName));
-    vector<LuaValue> args, rets;
-    table->addRef();
-    args.push_back(LuaValue(table)); args.push_back(arg1); args.push_back(arg2);
-    f.getFunction()->call(args, rets);
-    return rets[0];
 }
 LuaValue LuaTable::meta_add(const LuaValue& v) {
     return invokeMeta(this, m_metaTable, "__add", v, LuaValue::NIL);

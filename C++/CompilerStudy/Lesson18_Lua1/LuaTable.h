@@ -46,11 +46,7 @@ public:
 
     int getRefCount() const { return m_refCount;}
     int addRef() const { return ++m_refCount;}
-    int releaseRef() const {
-        int r = --m_refCount;
-        if (r == 0) delete this;
-        return r;
-    }
+    int releaseRef() const ;
 private:
     LuaTable(const LuaTable&);
     LuaTable& operator = (const LuaTable&);
