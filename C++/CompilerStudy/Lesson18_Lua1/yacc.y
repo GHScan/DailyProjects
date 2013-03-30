@@ -440,6 +440,7 @@ Opt_FieldList
         $$ = make_pair(vector<ExpNodePtr>(), vector<pair<ExpNodePtr, ExpNodePtr> >());
     }
     | FieldList
+    | FieldList FieldSep
     ;
 FieldList 
     : Field {

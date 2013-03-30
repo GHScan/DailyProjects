@@ -127,21 +127,22 @@ static void buildin_dofile(const vector<LuaValue>& args, vector<LuaValue>& rets)
 }
 
 extern void openLib_buildin() {
-    string names[] = {
-        "print",
-        "type",
-        "tonumber",
-        "tostring",
-        "assert",
-        "next",
-        "_inext",
-        "pairs",
-        "ipairs",
-        "unpack",
-        "select",
-        "loadstring",
-        "loadfile",
-        "dofile",
+#define ENTRY(name) {#name, &buildin_##name}
+    CFuncEntry entries[] = {
+        ENTRY(print),
+        ENTRY(type),
+        ENTRY(tonumber),
+        ENTRY(tostring),
+        ENTRY(assert),
+        ENTRY(next),
+        ENTRY(_inext),
+        ENTRY(pairs),
+        ENTRY(ipairs),
+        ENTRY(unpack),
+        ENTRY(select),
+        ENTRY(loadstring),
+        ENTRY(loadfile),
+        ENTRY(dofile),
         // TODO: 
         //"getfenv",
         //"setfenv",
@@ -151,27 +152,9 @@ extern void openLib_buildin() {
         //"rawget",
         //"rawset",
     };
-
-    void (*funcs[])(const vector<LuaValue>& args, vector<LuaValue>& rets) = {
-        &buildin_print,
-        &buildin_type,
-        &buildin_tonumber,
-        &buildin_tostring,
-        &buildin_assert,
-        &buildin_next,
-        &buildin__inext,
-        &buildin_pairs,
-        &buildin_ipairs,
-        &buildin_unpack,
-        &buildin_select,
-        &buildin_loadstring,
-        &buildin_loadfile,
-        &buildin_dofile,
-    };
-    for (int i = 0; i < COUNT_OF(names); ++i) {
-        Runtime::instance()->getGlobalTable()->set(
-                LuaValue(names[i]), 
-                LuaValue(CFunction::create(funcs[i])));
+#undef ENTRY
+    for (auto &entry : entries) {
+        Runtime::instance()->getGlobalTable()->set(LuaValue(entry.name), LuaValue(CFunction::create(entry.func)));
     }
 
     Runtime::instance()->getGlobalTable()->addRef();

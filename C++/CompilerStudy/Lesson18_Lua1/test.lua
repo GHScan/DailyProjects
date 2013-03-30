@@ -1,12 +1,11 @@
 
-a = {5, 3, 4, 2, 1}
-table.sort(a, function(a, b) return a > b end)
-table.foreach(a, print)
+t = os.time()
+print(t)
 
-a.name = 'fjdksl'
-function a:printName()
-    print(self.name)
-end
+tb = os.date('*t', t)
+table.foreach(tb, print)
 
-a.printName(a)
-a:printName()
+t2 = os.time(tb)
+
+print(t2)
+print(t2 == t)

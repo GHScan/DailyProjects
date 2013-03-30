@@ -72,9 +72,14 @@ const LuaValue& LuaTable::getNext(LuaValue& k) const {
             return LuaValue::NIL;
         } else {
             auto iter2 = iter; ++iter2;
-            if (iter2 == m_hashTable.end()) k = LuaValue::NIL;
-            else k = iter2->first;
-            return iter2->second;
+            if (iter2 == m_hashTable.end()) {
+                k = LuaValue::NIL;
+                return LuaValue::NIL;
+            }
+            else {
+                k = iter2->first;
+                return iter2->second;
+            }
         }
     }
 }
@@ -106,8 +111,7 @@ void LuaTable::sort(const LuaValue& cmp) {
         args.push_back(a); args.push_back(b);
         func->call(args, rets);
         bool r = rets[0].getBoolean(); 
-        args.clear();
-        rets.clear();
+        args.clear(); rets.clear();
         return r;
     });
 }

@@ -1,6 +1,5 @@
 
 #include "pch.h"
-#include "LuaLibs.h"
 
 #include "LuaLibs.h"
 #include "LuaValue.h"
@@ -74,26 +73,19 @@ static void table_foreach(const vector<LuaValue>& args, vector<LuaValue>& rets) 
 }
 
 extern void openLib_table() {
-    string names[] = {
-        "concat",
-        "insert",
-        "maxn",
-        "remove",
-        "sort",
-        "foreach",
+#define ENTRY(name) {#name, &table_##name}
+    CFuncEntry entries[] = {
+        ENTRY(concat),
+        ENTRY(insert),
+        ENTRY(maxn),
+        ENTRY(remove),
+        ENTRY(sort),
+        ENTRY(foreach),
     };
-    void (*funcs[])(const vector<LuaValue>& args, vector<LuaValue>& rets) = {
-        &table_concat,
-        &table_insert,
-        &table_maxn,
-        &table_remove,
-        &table_sort,
-        &table_foreach,
-    };
-
+#undef ENTRY
     auto table = LuaTable::create();
     Runtime::instance()->getGlobalTable()->set(LuaValue(string("table")), LuaValue(table));
-    for (int i = 0; i < COUNT_OF(names); ++i) {
-        table->set(LuaValue(names[i]), LuaValue(CFunction::create(funcs[i])));
+    for (auto &entry : entries) {
+        table->set(LuaValue(entry.name), LuaValue(CFunction::create(entry.func)));
     }
 }

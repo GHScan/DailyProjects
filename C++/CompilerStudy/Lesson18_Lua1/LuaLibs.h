@@ -11,5 +11,8 @@ FunctionPtr loadFile(FILE *f);
 extern void openLib_buildin();
 extern void openLib_string();
 extern void openLib_table();
+extern void openLib_math();
+extern void openLib_os();
+extern void openLib_io();
 
 #endif

@@ -46,4 +46,10 @@ private:
     CFuncT m_func;
 };
 
+struct CFuncEntry
+{
+    string name;
+    void (*func)(const vector<LuaValue>& args, vector<LuaValue>& rets);
+};
+
 #endif

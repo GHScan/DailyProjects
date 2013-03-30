@@ -104,37 +104,22 @@ static void string_sub(const vector<LuaValue>& args, vector<LuaValue>& rets) {
 }
 
 extern void openLib_string() {
-    string names[] = {
-        "byte",
-        "char",
-        "format",
-        "len",
-        "lower",
-        "upper",
-        "rep",
-        "reverse",
-        "sub",
-        // TODO:
-        //"find",
-        //"gmatch",
-        //"gsub",
-        //"match",
+#define ENTRY(name) {#name, &string_##name}
+    CFuncEntry entries[] = {
+        ENTRY(byte),
+        ENTRY(char),
+        ENTRY(format),
+        ENTRY(len),
+        ENTRY(lower),
+        ENTRY(upper),
+        ENTRY(rep),
+        ENTRY(reverse),
+        ENTRY(sub),
     };
-    void (*funcs[])(const vector<LuaValue>& args, vector<LuaValue>& rets) = {
-        &string_byte,
-        &string_char,
-        &string_format,
-        &string_len,
-        &string_lower,
-        &string_upper,
-        &string_rep,
-        &string_reverse,
-        &string_sub,
-    };
-
+#undef ENTRY
     auto table = LuaTable::create();
     Runtime::instance()->getGlobalTable()->set(LuaValue(string("string")), LuaValue(table));
-    for (int i = 0; i < COUNT_OF(names); ++i) {
-        table->set(LuaValue(names[i]), LuaValue(CFunction::create(funcs[i])));
+    for (auto &entry : entries) {
+        table->set(LuaValue(entry.name), LuaValue(CFunction::create(entry.func)));
     }
 }
