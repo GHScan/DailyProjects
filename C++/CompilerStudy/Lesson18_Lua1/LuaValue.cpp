@@ -91,12 +91,23 @@ bool LuaValue::operator == (const LuaValue& o) const {
             case LVT_Boolean: return m_data.b == o.m_data.b;
             case LVT_Number: return m_data.n == o.m_data.n;
             case LVT_String: return strcmp(m_data.str, o.m_data.str) == 0;
-            case LVT_Table: return m_data.table == o.m_data.table;
+            case LVT_Table: {
+                    if (m_data.table == o.m_data.table) return true;
+                    if (m_data.table->hasMeta("__eq")) return m_data.table->meta_eq(o).getBoolean();
+                    return false;
+                }
             case LVT_Function: return m_data.func->equal(o.m_data.func);
             default: ASSERT(0);
         }
     }
     return false;
+}
+
+bool LuaValue::operator <= (const LuaValue& o) const {
+    if (isTypeOf(LVT_Table) && o.isTypeOf(LVT_Table)) {
+        return m_data.table->meta_le(o).getBoolean();
+    }
+    return !(o < *this);
 }
 
 bool LuaValue::operator < (const LuaValue& o) const {
@@ -105,7 +116,7 @@ bool LuaValue::operator < (const LuaValue& o) const {
         case LVT_String:
             return strcmp(m_data.str, o.m_data.str) < 0;
         case LVT_Table:
-            ASSERT(0);
+            return m_data.table->meta_lt(o).getBoolean();
         case LVT_Number:
             return m_data.n < o.m_data.n;
         case LVT_Boolean:
@@ -144,17 +155,19 @@ LuaValue& LuaValue::operator %= (const LuaValue& o) {
     return *this;
 }
 LuaValue LuaValue::power(const LuaValue& o) const {
-    ASSERT(m_type == LVT_Number && o.m_type == LVT_Number);
-    return LuaValue(::pow(m_data.n, o.m_data.n));
+    if (m_type == LVT_Number && o.m_type == LVT_Number) {
+        return LuaValue(::pow(m_data.n, o.m_data.n));
+    } else return getTable()->meta_pow(o);
 }
 LuaValue LuaValue::concat(const LuaValue& o) const {
-    ASSERT(m_type == LVT_String && o.m_type == LVT_String);
-    int len1 = (int)strlen(m_data.str), len2 = (int)strlen(o.m_data.str);
-    char *p = (char*)malloc(len1 + len2 + 1);
-    memcpy(p, m_data.str, len1);
-    memcpy(p + len1, o.m_data.str, len2 + 1);
-    // TODO: performance
-    return LuaValue(string(p));
+    if (m_type == LVT_String && o.m_type == LVT_String) {
+        int len1 = (int)strlen(m_data.str), len2 = (int)strlen(o.m_data.str);
+        char *p = (char*)malloc(len1 + len2 + 1);
+        memcpy(p, m_data.str, len1);
+        memcpy(p + len1, o.m_data.str, len2 + 1);
+        // TODO: performance
+        return LuaValue(string(p));
+    } else return getTable()->meta_concat(o);
 }
 int LuaValue::getSize() const {
     if (m_type == LVT_String) {
@@ -191,4 +204,29 @@ string LuaValue::toString() const {
     }
     ASSERT(0);
     return "";
+}
+
+LuaValue LuaValue::NIL;
+LuaValue LuaValue::TRUE(true);
+LuaValue LuaValue::FALSE(false);
+
+LuaValue operator + (const LuaValue& a, const LuaValue &b) {
+    if (a.isTypeOf(LVT_Table)) return a.getTable()->meta_add(b);
+    return LuaValue(a) += b;
+}
+LuaValue operator - (const LuaValue& a, const LuaValue &b) {
+    if (a.isTypeOf(LVT_Table)) return a.getTable()->meta_sub(b);
+    return LuaValue(a) -= b;
+}
+LuaValue operator * (const LuaValue& a, const LuaValue &b) {
+    if (a.isTypeOf(LVT_Table)) return a.getTable()->meta_mul(b);
+    return LuaValue(a) *= b;
+}
+LuaValue operator / (const LuaValue& a, const LuaValue &b) {
+    if (a.isTypeOf(LVT_Table)) return a.getTable()->meta_div(b);
+    return LuaValue(a) /= b;
+}
+LuaValue operator % (const LuaValue& a, const LuaValue &b) {
+    if (a.isTypeOf(LVT_Table)) return a.getTable()->meta_mod(b);
+    return LuaValue(a) %= b;
 }

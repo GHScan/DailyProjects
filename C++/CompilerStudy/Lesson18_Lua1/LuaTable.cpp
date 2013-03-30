@@ -3,16 +3,57 @@
 #include "LuaTable.h"
 #include "Function.h"
 
-const LuaValue& LuaTable::get(const LuaValue& k) const {
+bool LuaTable::hasKey(const LuaValue& k) const {
+    if (k.isTypeOf(LVT_Number)) {
+        int idx = (int)k.getNumber() - 1;
+        if (idx >= 0 && idx < (int)m_vec.size()) return true;
+    } 
+    return m_hashTable.find(k) != m_hashTable.end();
+}
+LuaValue LuaTable::get(const LuaValue& k, bool raw) const {
     if (k.isTypeOf(LVT_Number)) {
         int idx = (int)k.getNumber() - 1;
         if (idx >= 0 && idx < (int)m_vec.size()) return m_vec[idx];
     }
     auto iter = m_hashTable.find(k);
-    if (iter == m_hashTable.end()) return LuaValue::NIL;
-    return iter->second;
+    if (iter != m_hashTable.end()) return iter->second;
+
+    if (!raw && m_metaTable != NULL) {
+        LuaValue f = m_metaTable->get(LuaValue(string("__index")));
+        if (f.isTypeOf(LVT_Nil)) {}
+        else if (f.isTypeOf(LVT_Table)) return f.getTable()->get(k);
+        else if (f.isTypeOf(LVT_Function)) {
+            vector<LuaValue> args, rets;
+            {
+                auto t = const_cast<LuaTable*>(this);
+                t->addRef();
+                args.push_back(LuaValue(t)); args.push_back(k);
+            }
+            f.getFunction()->call(args, rets);
+            if (!rets.empty()) return rets[0];
+        } else ASSERT(0);
+    }
+
+    return LuaValue::NIL;
 }
-void LuaTable::set(const LuaValue& k, const LuaValue& v) {
+void LuaTable::set(const LuaValue& k, const LuaValue& v, bool raw) {
+    if (!raw && m_metaTable != NULL && !v.isTypeOf(LVT_Nil)) {
+        if (!hasKey(k)) {
+            LuaValue f = m_metaTable->get(LuaValue(string("__newindex")));
+            if (f.isTypeOf(LVT_Nil)) {}
+            else if (f.isTypeOf(LVT_Table)) {
+                f.getTable()->set(k, v);
+                return;
+            } else if (f.isTypeOf(LVT_Function)) {
+                vector<LuaValue> args, rets;
+                addRef();
+                args.push_back(LuaValue(this)); args.push_back(k); args.push_back(v);
+                f.getFunction()->call(args, rets);
+                return;
+            } else ASSERT(0);
+        }
+    }
+
     if (k.isTypeOf(LVT_Number)) {
         int idx = (int)k.getNumber() - 1;
         if (idx >= 0 && idx < (int)m_vec.size()) {
@@ -51,7 +92,6 @@ const LuaValue& LuaTable::getNext(LuaValue& k) const {
             k = iter->first;
             return iter->second;
         }
-        return LuaValue::NIL;
     }
     else {
         if (k.isTypeOf(LVT_Number)) {
@@ -67,21 +107,16 @@ const LuaValue& LuaTable::getNext(LuaValue& k) const {
             }
         }
         auto iter = m_hashTable.find(k);
-        if (iter == m_hashTable.end()) {
-            k = LuaValue::NIL;
-            return LuaValue::NIL;
-        } else {
-            auto iter2 = iter; ++iter2;
-            if (iter2 == m_hashTable.end()) {
-                k = LuaValue::NIL;
-                return LuaValue::NIL;
-            }
-            else {
-                k = iter2->first;
-                return iter2->second;
+        if (iter != m_hashTable.end()) {
+            ++iter;
+            if (iter != m_hashTable.end()) {
+                k = iter->first;
+                return iter->second;
             }
         }
     }
+    k = LuaValue::NIL;
+    return LuaValue::NIL;
 }
 const LuaValue& LuaTable::getINext(LuaValue& k) const {
     if (k.isTypeOf(LVT_Nil)) {
@@ -115,7 +150,68 @@ void LuaTable::sort(const LuaValue& cmp) {
         return r;
     });
 }
+LuaTable::LuaTable(): m_refCount(1), m_metaTable(NULL) {
+}
+LuaTable::~LuaTable() {
+    if (m_metaTable != NULL) m_metaTable->releaseRef();
+}
+void LuaTable::setMetaTable(LuaTable *t) {
+    if (m_metaTable != t) {
+        if (m_metaTable != NULL) m_metaTable->releaseRef();
+        if (t != NULL) t->addRef();
+        m_metaTable = t;
+    }
+}
 
-LuaValue LuaValue::NIL;
-LuaValue LuaValue::TRUE(true);
-LuaValue LuaValue::FALSE(false);
+static LuaValue invokeMeta(LuaTable* table, LuaTable *metaTable, const string& metaName, const LuaValue& arg1, const LuaValue& arg2) {
+    LuaValue f = metaTable->get(LuaValue(metaName));
+    vector<LuaValue> args, rets;
+    table->addRef();
+    args.push_back(LuaValue(table)); args.push_back(arg1); args.push_back(arg2);
+    f.getFunction()->call(args, rets);
+    return rets[0];
+}
+LuaValue LuaTable::meta_add(const LuaValue& v) {
+    return invokeMeta(this, m_metaTable, "__add", v, LuaValue::NIL);
+}
+LuaValue LuaTable::meta_sub(const LuaValue& v) {
+    return invokeMeta(this, m_metaTable, "__sub", v, LuaValue::NIL);
+}
+LuaValue LuaTable::meta_mul(const LuaValue& v) {
+    return invokeMeta(this, m_metaTable, "__mul", v, LuaValue::NIL);
+}
+LuaValue LuaTable::meta_div(const LuaValue& v) {
+    return invokeMeta(this, m_metaTable, "__div", v, LuaValue::NIL);
+}
+LuaValue LuaTable::meta_mod(const LuaValue& v) {
+    return invokeMeta(this, m_metaTable, "__mod", v, LuaValue::NIL);
+}
+LuaValue LuaTable::meta_pow(const LuaValue& v) {
+    return invokeMeta(this, m_metaTable, "__pow", v, LuaValue::NIL);
+}
+LuaValue LuaTable::meta_concat(const LuaValue& v) {
+    return invokeMeta(this, m_metaTable, "__concat", v, LuaValue::NIL);
+}
+LuaValue LuaTable::meta_eq(const LuaValue& v) {
+    return invokeMeta(this, m_metaTable, "__eq", v, LuaValue::NIL);
+}
+LuaValue LuaTable::meta_lt(const LuaValue& v) {
+    return invokeMeta(this, m_metaTable, "__lt", v, LuaValue::NIL);
+}
+LuaValue LuaTable::meta_le(const LuaValue& v) {
+    return invokeMeta(this, m_metaTable, "__le", v, LuaValue::NIL);
+}
+LuaValue LuaTable::meta_unm() {
+    return invokeMeta(this, m_metaTable, "__unm", LuaValue::NIL, LuaValue::NIL);
+}
+void LuaTable::meta_call(const vector<LuaValue>& args, vector<LuaValue>& rets) {
+    LuaValue f = m_metaTable->get(LuaValue(string("__call")));
+    vector<LuaValue> _args;
+    addRef();
+    _args.push_back(LuaValue(this)); 
+    _args.insert(_args.end(), args.begin(), args.end());
+    f.getFunction()->call(_args, rets);
+}
+bool LuaTable::hasMeta(const string& metaName) {
+    return m_metaTable != NULL && !m_metaTable->get(LuaValue(metaName)).isTypeOf(LVT_Nil);
+}

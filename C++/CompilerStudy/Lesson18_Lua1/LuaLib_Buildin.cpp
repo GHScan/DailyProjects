@@ -154,6 +154,31 @@ static void buildin_setfenv(const vector<LuaValue>& args, vector<LuaValue>& rets
         func->setfenv(args[1].getTable());
     }
 }
+static void buildin_setmetatable(const vector<LuaValue>& args, vector<LuaValue>& rets) {
+    args[0].getTable()->setMetaTable(args[1].getTable());
+}
+static void buildin_getmetatable(const vector<LuaValue>& args, vector<LuaValue>& rets) {
+    auto table = args[0].getTable()->getMetaTable();
+    if (table == NULL) rets.push_back(LuaValue::NIL);
+    else {
+        table->addRef();
+        rets.push_back(LuaValue(table));
+    }
+}
+static void buildin_rawequal(const vector<LuaValue>& args, vector<LuaValue>& rets) {
+    auto &a1(args[0]), &a2(args[1]);
+    bool b = false;
+    if (a1.isTypeOf(LVT_Table) && a2.isTypeOf(LVT_Table)) {
+        b = a1.getTable() == a2.getTable();
+    } else b = a1 == a2;
+    rets.push_back(b ? LuaValue::TRUE : LuaValue::FALSE);
+}
+static void buildin_rawget(const vector<LuaValue>& args, vector<LuaValue>& rets) {
+    rets.push_back(args[0].getTable()->get(args[1], true));
+}
+static void buildin_rawset(const vector<LuaValue>& args, vector<LuaValue>& rets) {
+    args[0].getTable()->set(args[1], args[2], true);
+}
 
 extern void openLib_buildin() {
 #define ENTRY(name) {#name, &buildin_##name}
@@ -174,12 +199,11 @@ extern void openLib_buildin() {
         ENTRY(dofile),
         ENTRY(getfenv),
         ENTRY(setfenv),
-        // TODO: 
-        //"getmetatable",
-        //"setmetatable",
-        //"rawequal",
-        //"rawget",
-        //"rawset",
+        ENTRY(getmetatable),
+        ENTRY(setmetatable),
+        ENTRY(rawequal),
+        ENTRY(rawget),
+        ENTRY(rawset),
     };
 #undef ENTRY
     for (auto &entry : entries) {

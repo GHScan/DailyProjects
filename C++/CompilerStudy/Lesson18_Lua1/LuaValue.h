@@ -48,7 +48,7 @@ public:
     bool operator == (const LuaValue& o) const;
     bool operator != (const LuaValue& o) const { return !(*this == o);}
     bool operator < (const LuaValue& o) const;
-    bool operator <= (const LuaValue& o) const { return *this == o || *this < o;}
+    bool operator <= (const LuaValue& o) const;
     bool operator > (const LuaValue& o) const { return !(*this <= o);}
     bool operator >= (const LuaValue& o) const { return !(*this < o);}
 
@@ -84,11 +84,11 @@ private:
         IFunction *func;
     } m_data;
 };
-inline LuaValue operator + (const LuaValue& a, const LuaValue &b) { return LuaValue(a) += b; }
-inline LuaValue operator - (const LuaValue& a, const LuaValue &b) { return LuaValue(a) -= b; }
-inline LuaValue operator * (const LuaValue& a, const LuaValue &b) { return LuaValue(a) *= b; }
-inline LuaValue operator / (const LuaValue& a, const LuaValue &b) { return LuaValue(a) /= b; }
-inline LuaValue operator % (const LuaValue& a, const LuaValue &b) { return LuaValue(a) %= b; }
+LuaValue operator + (const LuaValue& a, const LuaValue &b);
+LuaValue operator - (const LuaValue& a, const LuaValue &b);
+LuaValue operator * (const LuaValue& a, const LuaValue &b);
+LuaValue operator / (const LuaValue& a, const LuaValue &b);
+LuaValue operator % (const LuaValue& a, const LuaValue &b);
 
 namespace std {
     template<>

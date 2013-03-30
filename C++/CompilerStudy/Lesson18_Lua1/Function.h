@@ -13,8 +13,8 @@ public:
     void setfenv(LuaTable* env);
 
     int getRefCount() const { return m_refCount;}
-    int addRef() { return ++m_refCount;}
-    int releaseRef() {
+    int addRef() const { return ++m_refCount;}
+    int releaseRef() const {
         int r = --m_refCount;
         if (r == 0) delete this;
         return r;
@@ -27,7 +27,7 @@ protected:
     IFunction& operator = (const IFunction& o);
 
 private:
-    int m_refCount;
+    mutable int m_refCount;
     LuaTable* m_fenv;
 };
 typedef shared_ptr<IFunction> FunctionPtr;

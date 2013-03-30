@@ -108,7 +108,9 @@ private:
         v->exp->acceptVisitor(this);
         LuaValue value = m_rets[0]; m_rets.clear();
         if (v->op == "-") {
-            m_rets.push_back(LuaValue(-value.getNumber()));
+            if (value.isTypeOf(LVT_Table)) {
+                m_rets.push_back(value.getTable()->meta_unm());
+            } else m_rets.push_back(LuaValue(-value.getNumber()));
         } else if (v->op == "not") {
             if (!value.getBoolean()) m_rets.push_back(LuaValue::TRUE);
             else m_rets.push_back(LuaValue::FALSE);
@@ -161,7 +163,9 @@ private:
         v->func->acceptVisitor(this);
         auto func = m_rets[0]; m_rets.clear();
         vector<LuaValue> params(evalExps(m_stmt, v->params)); 
-        func.getFunction()->call(params, m_rets);
+        if (func.isTypeOf(LVT_Table)) {
+            func.getTable()->meta_call(params, m_rets);
+        } else func.getFunction()->call(params, m_rets);
     }
     virtual void visit(ArgsTupleExpNode *v) {
         auto &args = m_stmt->getArgs();
