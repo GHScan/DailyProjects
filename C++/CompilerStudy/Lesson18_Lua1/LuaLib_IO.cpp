@@ -4,10 +4,6 @@
 #include <stdio.h>
 
 #include "LuaLibs.h"
-#include "LuaValue.h"
-#include "LuaTable.h"
-#include "Runtime.h"
-#include "Function.h"
 
 #define MAX_LINE 256
 #define IOFIELD_IO_META "_filemeta"
@@ -25,7 +21,7 @@ static void __lineIter(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     string line(MAX_LINE, 0); 
     char *p = fgets((char*)line.c_str(), line.size(), f);
     if (p != NULL) p[strlen(p) - 1] = 0;
-    rets.push_back(p == NULL ? LuaValue::NIL : LuaValue(line));
+    rets.push_back(p == NULL ? LuaValue::NIL : LuaValue(line.c_str()));
 }
 
 static void file_close(const vector<LuaValue>& args, vector<LuaValue>& rets) {
@@ -51,7 +47,7 @@ static void file_read(const vector<LuaValue>& args, vector<LuaValue>& rets) {
         int n = (int)args[1].getNumber();
         string s(n + 1, 0);
         fread((char*)s.c_str(), n, 1, f);
-        rets.push_back(LuaValue(s));
+        rets.push_back(LuaValue(s.c_str()));
         return;
     }
 
@@ -66,7 +62,7 @@ static void file_read(const vector<LuaValue>& args, vector<LuaValue>& rets) {
         if (off2 > off) {
             string buf(off2 - off + 1, 0);
             fread((char*)buf.c_str(), buf.size(), 1, f);
-            rets.push_back(LuaValue(string(buf)));
+            rets.push_back(LuaValue(buf.c_str()));
         } else rets.push_back(LuaValue::NIL);
 
     } else if (fmt == "*n") {
@@ -78,7 +74,7 @@ static void file_read(const vector<LuaValue>& args, vector<LuaValue>& rets) {
         string line(MAX_LINE, 0); 
         char *p = fgets((char*)line.c_str(), line.size(), f);
         if (p != NULL) p[strlen(p) - 1] = 0;
-        rets.push_back(p == NULL ? LuaValue::NIL : LuaValue(string(p)));
+        rets.push_back(p == NULL ? LuaValue::NIL : LuaValue(p));
     } else ASSERT(0);
 }
 static void file_seek(const vector<LuaValue>& args, vector<LuaValue>& rets) {
@@ -117,24 +113,25 @@ static void file_write(const vector<LuaValue>& args, vector<LuaValue>& rets) {
 }
 
 static LuaTable* getFileMetaTable() {
-    auto ioTable = Runtime::instance()->getGlobalTable()->get(LuaValue(string("io"))).getTable();
-    auto meta = ioTable->get(LuaValue(string(IOFIELD_IO_META)));
+    auto ioTable = Runtime::instance()->getGlobalTable()->get(LuaValue("io")).getTable();
+    auto meta = ioTable->get(LuaValue(IOFIELD_IO_META));
     if (meta.isTypeOf(LVT_Nil)) {
         auto table = LuaTable::create();
-        table->set(LuaValue(string("__gc")), LuaValue(CFunction::create(&__gc)));
+        table->set(LuaValue("__gc"), LuaValue(CFunction::create(&__gc)));
         table->addRef();
-        table->set(LuaValue(string("__index")), LuaValue(table));
+        table->set(LuaValue("__index"), LuaValue(table));
 
-        table->set(LuaValue(string("close")), LuaValue(CFunction::create(&file_close)));
-        table->set(LuaValue(string("flush")), LuaValue(CFunction::create(&file_flush)));
-        table->set(LuaValue(string("lines")), LuaValue(CFunction::create(&file_lines)));
-        table->set(LuaValue(string("read")), LuaValue(CFunction::create(&file_read)));
-        table->set(LuaValue(string("seek")), LuaValue(CFunction::create(&file_seek)));
-        table->set(LuaValue(string("setvbuf")), LuaValue(CFunction::create(&file_setvbuf)));
-        table->set(LuaValue(string("write")), LuaValue(CFunction::create(&file_write)));
+#define ENTRY(name) {#name, &file_##name}
+        CFuncEntry entries[] = {
+            ENTRY(close), ENTRY(flush), ENTRY(lines),
+            ENTRY(read), ENTRY(seek), ENTRY(setvbuf),
+            ENTRY(write),
+        };
+#undef ENTRY
+        for (auto &entry: entries) table->set(LuaValue(entry.name), LuaValue(CFunction::create(entry.func)));
 
-        ioTable->set(LuaValue(string(IOFIELD_IO_META)), LuaValue(table));
-        meta = ioTable->get(LuaValue(string(IOFIELD_IO_META)));
+        ioTable->set(LuaValue(IOFIELD_IO_META), LuaValue(table));
+        meta = ioTable->get(LuaValue(IOFIELD_IO_META));
     }
     return meta.getTable();
 }
@@ -143,7 +140,7 @@ static LuaTable* attachFile(FILE *f) {
     ASSERT(f != NULL);
     auto t = LuaTable::create();
     t->set(LuaValue(NumberType(1)), LuaValue((LightUserData)f));
-    t->set(LuaValue(string(FILEFIELD_TYPE)), LuaValue(string(OBJ_TYPE)));
+    t->set(LuaValue(FILEFIELD_TYPE), LuaValue(OBJ_TYPE));
     t->setMetaTable(getFileMetaTable());
     return t;
 }
@@ -157,7 +154,7 @@ static void io_close(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     vector<LuaValue> _args(args);
     if (_args.empty()) {
         _args.push_back(
-                Runtime::instance()->getGlobalTable()->get(LuaValue(string("io"))).getTable()->get(LuaValue(string(IOFIELD_ODEFAULT))));
+                Runtime::instance()->getGlobalTable()->get(LuaValue("io")).getTable()->get(LuaValue(IOFIELD_ODEFAULT)));
     } 
     file_close(_args, rets);
 }
@@ -165,19 +162,19 @@ static void io_flush(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     vector<LuaValue> _args(args);
     if (_args.empty()) {
         _args.push_back(
-                Runtime::instance()->getGlobalTable()->get(LuaValue(string("io"))).getTable()->get(LuaValue(string(IOFIELD_ODEFAULT))));
+                Runtime::instance()->getGlobalTable()->get(LuaValue("io")).getTable()->get(LuaValue(IOFIELD_ODEFAULT)));
     } 
     file_flush(_args, rets);
 }
 static void io_input(const vector<LuaValue>& args, vector<LuaValue>& rets) {
-    auto r = Runtime::instance()->getGlobalTable()->get(LuaValue(string("io"))).getTable()->get(LuaValue(string(IOFIELD_IDEFAULT)));
+    auto r = Runtime::instance()->getGlobalTable()->get(LuaValue("io")).getTable()->get(LuaValue(IOFIELD_IDEFAULT));
     if (!args.empty()) {
         LuaValue f(args[0]);
         if (f.isTypeOf(LVT_String)) {
             f = LuaValue(openFile(f.getString(), "r"));
         }
         ASSERT(f.isTypeOf(LVT_Table));
-        Runtime::instance()->getGlobalTable()->get(LuaValue(string("io"))).getTable()->set(LuaValue(string(IOFIELD_IDEFAULT)), f);
+        Runtime::instance()->getGlobalTable()->get(LuaValue("io")).getTable()->set(LuaValue(IOFIELD_IDEFAULT), f);
     }
     rets.push_back(r);
 }
@@ -185,7 +182,7 @@ static void io_lines(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     vector<LuaValue> _args;
     if (args.empty()) {
         _args.push_back(
-                Runtime::instance()->getGlobalTable()->get(LuaValue(string("io"))).getTable()->get(LuaValue(string(IOFIELD_IDEFAULT))));
+                Runtime::instance()->getGlobalTable()->get(LuaValue("io")).getTable()->get(LuaValue(IOFIELD_IDEFAULT)));
     } else {
         _args.push_back(LuaValue(openFile(args[0].getString(), "r")));
     }
@@ -199,18 +196,18 @@ static void io_open(const vector<LuaValue>& args, vector<LuaValue>& rets) {
         rets.push_back(LuaValue(t));
     } else {
         rets.push_back(LuaValue::NIL);
-        rets.push_back(LuaValue(string("fopen failed!!")));
+        rets.push_back(LuaValue("fopen failed!!"));
     }
 }
 static void io_output(const vector<LuaValue>& args, vector<LuaValue>& rets) {
-    auto r = Runtime::instance()->getGlobalTable()->get(LuaValue(string("io"))).getTable()->get(LuaValue(string(IOFIELD_ODEFAULT)));
+    auto r = Runtime::instance()->getGlobalTable()->get(LuaValue("io")).getTable()->get(LuaValue(IOFIELD_ODEFAULT));
     if (!args.empty()) {
         LuaValue f(args[0]);
         if (f.isTypeOf(LVT_String)) {
             f = LuaValue(openFile(f.getString(), "w"));
         }
         ASSERT(f.isTypeOf(LVT_Table));
-        Runtime::instance()->getGlobalTable()->get(LuaValue(string("io"))).getTable()->set(LuaValue(string(IOFIELD_ODEFAULT)), f);
+        Runtime::instance()->getGlobalTable()->get(LuaValue("io")).getTable()->set(LuaValue(IOFIELD_ODEFAULT), f);
     }
     rets.push_back(r);
 }
@@ -219,7 +216,7 @@ static void io_popen(const vector<LuaValue>& args, vector<LuaValue>& rets) {
 }
 static void io_read(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     vector<LuaValue> _args(args);
-    auto file = Runtime::instance()->getGlobalTable()->get(LuaValue(string("io"))).getTable()->get(LuaValue(string(IOFIELD_IDEFAULT)));
+    auto file = Runtime::instance()->getGlobalTable()->get(LuaValue("io")).getTable()->get(LuaValue(IOFIELD_IDEFAULT));
     _args.insert(_args.begin(), file);
     file_read(_args, rets);
 }
@@ -230,10 +227,10 @@ static void io_type(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     auto &arg(args[0]);
     if (arg.isTypeOf(LVT_Table)) {
         auto table = arg.getTable();
-        LuaValue type = table->get(LuaValue(string(FILEFIELD_TYPE)));
+        LuaValue type = table->get(LuaValue(FILEFIELD_TYPE));
         if (type.isTypeOf(LVT_String) && type.getString() == string(OBJ_TYPE)) {
             auto f = (FILE*)table->get(LuaValue(NumberType(1))).getLightUserData();
-            rets.push_back(f == NULL ? LuaValue(string("closed file")) : LuaValue(string("file")));
+            rets.push_back(f == NULL ? LuaValue("closed file") : LuaValue("file"));
             return;
         }
     }
@@ -241,36 +238,29 @@ static void io_type(const vector<LuaValue>& args, vector<LuaValue>& rets) {
 }
 static void io_write(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     vector<LuaValue> _args(args);
-    auto file = Runtime::instance()->getGlobalTable()->get(LuaValue(string("io"))).getTable()->get(LuaValue(string(IOFIELD_ODEFAULT)));
+    auto file = Runtime::instance()->getGlobalTable()->get(LuaValue("io")).getTable()->get(LuaValue(IOFIELD_ODEFAULT));
     _args.insert(_args.begin(), file);
     file_write(_args, rets);
 }
 
 extern void openLib_io() {
+    auto table = LuaTable::create();
+    Runtime::instance()->getGlobalTable()->set(LuaValue("io"), LuaValue(table));
+
 #define ENTRY(name) {#name, &io_##name}
     CFuncEntry entries[] = {
-        ENTRY(close),
-        ENTRY(flush),
-        ENTRY(input),
-        ENTRY(lines),
-        ENTRY(open),
-        ENTRY(output),
-        ENTRY(popen),
-        ENTRY(read),
-        ENTRY(tmpfile),
-        ENTRY(type),
-        ENTRY(write),
+        ENTRY(close), ENTRY(flush), ENTRY(input),
+        ENTRY(lines), ENTRY(open), ENTRY(output),
+        ENTRY(popen), ENTRY(read), ENTRY(tmpfile),
+        ENTRY(type), ENTRY(write), 
     };
 #undef ENTRY
-    auto table = LuaTable::create();
-    Runtime::instance()->getGlobalTable()->set(LuaValue(string("io")), LuaValue(table));
-    for (auto &entry : entries) {
-        table->set(LuaValue(entry.name), LuaValue(CFunction::create(entry.func)));
-    }
-    table->set(LuaValue(string("stdin")), LuaValue(attachFile(stdin)));
-    table->set(LuaValue(string("stdout")), LuaValue(attachFile(stdout)));
-    table->set(LuaValue(string("stderr")), LuaValue(attachFile(stderr)));
+    for (auto &entry : entries) table->set(LuaValue(entry.name), LuaValue(CFunction::create(entry.func)));
 
-    table->set(LuaValue(string(IOFIELD_IDEFAULT)), table->get(LuaValue(string("stdin"))));
-    table->set(LuaValue(string(IOFIELD_ODEFAULT)), table->get(LuaValue(string("stdout"))));
+    table->set(LuaValue("stdin"), LuaValue(attachFile(stdin)));
+    table->set(LuaValue("stdout"), LuaValue(attachFile(stdout)));
+    table->set(LuaValue("stderr"), LuaValue(attachFile(stderr)));
+
+    table->set(LuaValue(IOFIELD_IDEFAULT), table->get(LuaValue("stdin")));
+    table->set(LuaValue(IOFIELD_ODEFAULT), table->get(LuaValue("stdout")));
 }

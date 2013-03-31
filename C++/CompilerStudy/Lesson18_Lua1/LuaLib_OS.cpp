@@ -4,10 +4,6 @@
 #include <time.h>
 
 #include "LuaLibs.h"
-#include "LuaValue.h"
-#include "LuaTable.h"
-#include "Runtime.h"
-#include "Function.h"
 
 static void os_clock(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     rets.push_back(LuaValue(NumberType(::clock()) / CLOCKS_PER_SEC));
@@ -26,18 +22,18 @@ static void os_date(const vector<LuaValue>& args, vector<LuaValue>& rets) {
 
     if (strcmp(fmt, "*t") == 0) {
         auto table = LuaTable::create();
-        table->set(LuaValue(string("year")), LuaValue(NumberType(detail.tm_year + 1900)));
-        table->set(LuaValue(string("month")), LuaValue(NumberType(detail.tm_mon + 1)));
-        table->set(LuaValue(string("day")), LuaValue(NumberType(detail.tm_mday)));
-        table->set(LuaValue(string("hour")), LuaValue(NumberType(detail.tm_hour)));
-        table->set(LuaValue(string("min")), LuaValue(NumberType(detail.tm_min)));
-        table->set(LuaValue(string("sec")), LuaValue(NumberType(detail.tm_sec)));
-        table->set(LuaValue(string("isdst")), detail.tm_isdst == 1 ? LuaValue::TRUE : LuaValue::FALSE);
+        table->set(LuaValue("year"), LuaValue(NumberType(detail.tm_year + 1900)));
+        table->set(LuaValue("month"), LuaValue(NumberType(detail.tm_mon + 1)));
+        table->set(LuaValue("day"), LuaValue(NumberType(detail.tm_mday)));
+        table->set(LuaValue("hour"), LuaValue(NumberType(detail.tm_hour)));
+        table->set(LuaValue("min"), LuaValue(NumberType(detail.tm_min)));
+        table->set(LuaValue("sec"), LuaValue(NumberType(detail.tm_sec)));
+        table->set(LuaValue("isdst"), detail.tm_isdst == 1 ? LuaValue::TRUE : LuaValue::FALSE);
         rets.push_back(LuaValue(table));
     } else {
         char buf[64] = "";
         strftime(buf, sizeof(buf), fmt, &detail);
-        rets.push_back(LuaValue(string(buf)));
+        rets.push_back(LuaValue(buf));
     }
 }
 static void os_difftime(const vector<LuaValue>& args, vector<LuaValue>& rets) {
@@ -55,7 +51,7 @@ static void os_exit(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     ::exit(code);
 }
 static void os_getenv(const vector<LuaValue>& args, vector<LuaValue>& rets) {
-    rets.push_back(LuaValue(string(::getenv(args[0].getString()))));
+    rets.push_back(LuaValue(::getenv(args[0].getString())));
 }
 static void os_remove(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     const char *path = args[0].getString();
@@ -64,7 +60,7 @@ static void os_remove(const vector<LuaValue>& args, vector<LuaValue>& rets) {
         rets.push_back(LuaValue::TRUE);
     } else {
         rets.push_back(LuaValue::NIL);
-        rets.push_back(LuaValue(string("remove failed!")));
+        rets.push_back(LuaValue("remove failed!"));
     }
 }
 static void os_rename(const vector<LuaValue>& args, vector<LuaValue>& rets) {
@@ -74,7 +70,7 @@ static void os_rename(const vector<LuaValue>& args, vector<LuaValue>& rets) {
         rets.push_back(LuaValue::TRUE);
     } else {
         rets.push_back(LuaValue::NIL);
-        rets.push_back(LuaValue(string("rename failed!")));
+        rets.push_back(LuaValue("rename failed!"));
     }
 }
 static void os_setlocale(const vector<LuaValue>& args, vector<LuaValue>& rets) {
@@ -86,22 +82,22 @@ static void os_time(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     } else {
         auto table = args[0].getTable();
         tm detail = {0};
-        detail.tm_year = (int)table->get(LuaValue(string("year"))).getNumber() - 1900;
-        detail.tm_mon = (int)table->get(LuaValue(string("month"))).getNumber() - 1;
-        detail.tm_mday = (int)table->get(LuaValue(string("day"))).getNumber();
-        LuaValue hour = table->get(LuaValue(string("hour")));
+        detail.tm_year = (int)table->get(LuaValue("year")).getNumber() - 1900;
+        detail.tm_mon = (int)table->get(LuaValue("month")).getNumber() - 1;
+        detail.tm_mday = (int)table->get(LuaValue("day")).getNumber();
+        LuaValue hour = table->get(LuaValue("hour"));
         if (!hour.isTypeOf(LVT_Nil)) {
             detail.tm_hour = (int)hour.getNumber();
         }
-        LuaValue min = table->get(LuaValue(string("min")));
+        LuaValue min = table->get(LuaValue("min"));
         if (!min.isTypeOf(LVT_Nil)) {
             detail.tm_min = (int)min.getNumber();
         }
-        LuaValue sec = table->get(LuaValue(string("sec")));
+        LuaValue sec = table->get(LuaValue("sec"));
         if (!sec.isTypeOf(LVT_Nil)) {
             detail.tm_sec = (int)sec.getNumber();
         }
-        LuaValue isdst = table->get(LuaValue(string("isdst")));
+        LuaValue isdst = table->get(LuaValue("isdst"));
         if (!sec.isTypeOf(LVT_Nil)) {
             detail.tm_isdst = sec.getBoolean() ? 1 : 0;
         }
@@ -110,28 +106,20 @@ static void os_time(const vector<LuaValue>& args, vector<LuaValue>& rets) {
 }
 static void os_tmpname(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     char *p = tmpnam(NULL);
-    rets.push_back(LuaValue(string(p == NULL ? "" : p)));
+    rets.push_back(LuaValue(p == NULL ? "" : p));
 }
 
 extern void openLib_os() {
+    auto table = LuaTable::create();
+    Runtime::instance()->getGlobalTable()->set(LuaValue("os"), LuaValue(table));
+
 #define ENTRY(name) {#name, &os_##name}
     CFuncEntry entries[] = {
-        ENTRY(clock),
-        ENTRY(date),
-        ENTRY(difftime),
-        ENTRY(execute),
-        ENTRY(exit),
-        ENTRY(getenv),
-        ENTRY(remove),
-        ENTRY(rename),
-        ENTRY(setlocale),
-        ENTRY(time),
-        ENTRY(tmpname),
+        ENTRY(clock), ENTRY(date), ENTRY(difftime),
+        ENTRY(execute), ENTRY(exit), ENTRY(getenv),
+        ENTRY(remove), ENTRY(rename), ENTRY(setlocale),
+        ENTRY(time), ENTRY(tmpname),
     };
 #undef ENTRY
-    auto table = LuaTable::create();
-    Runtime::instance()->getGlobalTable()->set(LuaValue(string("os")), LuaValue(table));
-    for (auto &entry : entries) {
-        table->set(LuaValue(entry.name), LuaValue(CFunction::create(entry.func)));
-    }
+    for (auto &entry : entries) table->set(LuaValue(entry.name), LuaValue(CFunction::create(entry.func)));
 }

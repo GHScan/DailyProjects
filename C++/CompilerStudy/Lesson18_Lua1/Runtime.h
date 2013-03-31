@@ -5,7 +5,8 @@
 #include "LuaValue.h"
 
 class LuaTable;
-struct IFunction;
+class CFunction;
+class LuaFunction;
 
 class StackFrame {
 public:
@@ -33,12 +34,12 @@ public:
 
     StackFrame* getFrame(int off) { 
         ASSERT(off < 0);
-        return &m_frames[m_frames.size() + off];
+        return m_frames[m_frames.size() + off];
     }
-    void pushFrame(IFunction *func, int localCount){ m_frames.push_back(StackFrame(func, localCount)); } 
-    void popFrame() { m_frames.pop_back(); }
+    void pushFrame(LuaFunction *func, int localCount);
+    void pushFrame(CFunction *func);
+    void popFrame();
 
-    // TODO: opmitize
     StackFrame* getFrameByLevel(int level);
 private:
     Runtime(Runtime& o);
@@ -47,7 +48,8 @@ private:
     ~Runtime();
 private:
     LuaTable *m_gtable;
-    vector<StackFrame> m_frames;
+    vector<StackFrame*> m_frames;
+    vector<vector<StackFrame*> > m_levelFrames;
 };
 
 #endif

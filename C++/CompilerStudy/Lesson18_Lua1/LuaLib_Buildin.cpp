@@ -2,10 +2,6 @@
 #include "pch.h"
 
 #include "LuaLibs.h"
-#include "LuaValue.h"
-#include "LuaTable.h"
-#include "Runtime.h"
-#include "Function.h"
 
 static void buildin_print(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     for (auto &arg : args) {
@@ -15,12 +11,13 @@ static void buildin_print(const vector<LuaValue>& args, vector<LuaValue>& rets) 
 }
 static void buildin_type(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     switch (args[0].getType()) {
-        case LVT_Nil: rets.push_back(LuaValue(string("nil"))); break;
-        case LVT_Boolean: rets.push_back(LuaValue(string("boolean"))); break;
-        case LVT_Number: rets.push_back(LuaValue(string("number"))); break;
-        case LVT_String: rets.push_back(LuaValue(string("string"))); break;
-        case LVT_Table: rets.push_back(LuaValue(string("table"))); break;
-        case LVT_Function: rets.push_back(LuaValue(string("function"))); break;
+        case LVT_Nil: rets.push_back(LuaValue("nil")); break;
+        case LVT_Boolean: rets.push_back(LuaValue("boolean")); break;
+        case LVT_Number: rets.push_back(LuaValue("number")); break;
+        case LVT_String: rets.push_back(LuaValue("string")); break;
+        case LVT_Table: rets.push_back(LuaValue("table")); break;
+        case LVT_Function: rets.push_back(LuaValue("function")); break;
+        case LVT_LightUserData: rets.push_back(LuaValue("lightuserdata")); break;
         default: ASSERT(0); break;
     }
 }
@@ -45,7 +42,7 @@ static void buildin_tonumber(const vector<LuaValue>& args, vector<LuaValue>& ret
     } else rets.push_back(LuaValue::NIL);
 }
 static void buildin_tostring(const vector<LuaValue>& args, vector<LuaValue>& rets) {
-    rets.push_back(LuaValue(args[0].toString()));
+    rets.push_back(LuaValue(args[0].toString().c_str()));
 }
 static void buildin_assert(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     if (args[0].getBoolean()) {
@@ -72,11 +69,11 @@ static void buildin__inext(const vector<LuaValue>& args, vector<LuaValue>& rets)
     if (!k.isTypeOf(LVT_Nil)) rets.push_back(v);
 }
 static void buildin_ipairs(const vector<LuaValue>& args, vector<LuaValue>& rets) {
-    rets.push_back(Runtime::instance()->getGlobalTable()->get(LuaValue(string("_inext"))));
+    rets.push_back(Runtime::instance()->getGlobalTable()->get(LuaValue("_inext")));
     rets.push_back(args[0]);
 }
 static void buildin_pairs(const vector<LuaValue>& args, vector<LuaValue>& rets) {
-    rets.push_back(Runtime::instance()->getGlobalTable()->get(LuaValue(string("next"))));
+    rets.push_back(Runtime::instance()->getGlobalTable()->get(LuaValue("next")));
     rets.push_back(args[0]);
 }
 static void buildin_unpack(const vector<LuaValue>& args, vector<LuaValue>& rets) {
@@ -109,7 +106,7 @@ static void buildin_loadstring(const vector<LuaValue>& args, vector<LuaValue>& r
     } catch(const exception& e)  {
         fclose(f);
         rets.push_back(LuaValue::NIL);
-        rets.push_back(LuaValue(string(e.what())));
+        rets.push_back(LuaValue(e.what()));
     }
 }
 static void buildin_loadfile(const vector<LuaValue>& args, vector<LuaValue>& rets) {
@@ -119,7 +116,7 @@ static void buildin_loadfile(const vector<LuaValue>& args, vector<LuaValue>& ret
         rets.push_back(LuaValue(func.get()));
     } catch(const exception& e) {
         rets.push_back(LuaValue::NIL);
-        rets.push_back(LuaValue(string(e.what())));
+        rets.push_back(LuaValue(e.what()));
     }
 }
 static void buildin_dofile(const vector<LuaValue>& args, vector<LuaValue>& rets) {
@@ -187,34 +184,20 @@ static void buildin_pcall(const vector<LuaValue>& args, vector<LuaValue>& rets) 
         rets.insert(rets.begin(), LuaValue::TRUE);
     } catch(const exception& e) {
         rets.push_back(LuaValue::FALSE);
-        rets.push_back(LuaValue(string(e.what())));
+        rets.push_back(LuaValue(e.what()));
     }
 }
 
 extern void openLib_buildin() {
 #define ENTRY(name) {#name, &buildin_##name}
     CFuncEntry entries[] = {
-        ENTRY(print),
-        ENTRY(type),
-        ENTRY(tonumber),
-        ENTRY(tostring),
-        ENTRY(assert),
-        ENTRY(next),
-        ENTRY(_inext),
-        ENTRY(pairs),
-        ENTRY(ipairs),
-        ENTRY(unpack),
-        ENTRY(select),
-        ENTRY(loadstring),
-        ENTRY(loadfile),
-        ENTRY(dofile),
-        ENTRY(getfenv),
-        ENTRY(setfenv),
-        ENTRY(getmetatable),
-        ENTRY(setmetatable),
-        ENTRY(rawequal),
-        ENTRY(rawget),
-        ENTRY(rawset),
+        ENTRY(print), ENTRY(type), ENTRY(tonumber),
+        ENTRY(tostring), ENTRY(assert), ENTRY(next),
+        ENTRY(_inext), ENTRY(pairs), ENTRY(ipairs),
+        ENTRY(unpack), ENTRY(select), ENTRY(loadstring),
+        ENTRY(loadfile), ENTRY(dofile), ENTRY(getfenv),
+        ENTRY(setfenv), ENTRY(getmetatable), ENTRY(setmetatable),
+        ENTRY(rawequal), ENTRY(rawget), ENTRY(rawset),
         ENTRY(pcall),
     };
 #undef ENTRY
@@ -223,7 +206,7 @@ extern void openLib_buildin() {
     }
 
     Runtime::instance()->getGlobalTable()->addRef();
-    Runtime::instance()->getGlobalTable()->set(LuaValue(string("_G")), LuaValue(Runtime::instance()->getGlobalTable()));
+    Runtime::instance()->getGlobalTable()->set(LuaValue("_G"), LuaValue(Runtime::instance()->getGlobalTable()));
 
-    Runtime::instance()->getGlobalTable()->set(LuaValue(string("_VERSION")), LuaValue(string("Lua 5.1 (by Scan)")));
+    Runtime::instance()->getGlobalTable()->set(LuaValue("_VERSION"), LuaValue("Lua 5.1 (by Scan)"));
 }

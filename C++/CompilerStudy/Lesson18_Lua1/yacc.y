@@ -178,7 +178,7 @@ Statement
         ExpNodePtr funcExp = getExpByIDName(names[0]);
         if (names.size() > 1) {
             for (int i = 1; i < (int)names.size(); ++i) { 
-                funcExp = ExpNodePtr(new FieldAccessExpNode(funcExp, getConstExp(LuaValue(names[i]))));
+                funcExp = ExpNodePtr(new FieldAccessExpNode(funcExp, getConstExp(LuaValue(names[i].c_str()))));
             }
         }
         vars.push_back(funcExp);
@@ -352,7 +352,7 @@ Var
         $$ = ExpNodePtr(new FieldAccessExpNode($1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
     }
     | PrefixExp '.' ID {
-        $$ = ExpNodePtr(new FieldAccessExpNode($1.get<ExpNodePtr>(), getConstExp(LuaValue($3.get<string>()))));
+        $$ = ExpNodePtr(new FieldAccessExpNode($1.get<ExpNodePtr>(), getConstExp(LuaValue($3.get<string>().c_str()))));
     }
     ;
 
@@ -374,7 +374,7 @@ FunctionCall
     }
     | PrefixExp ':' ID Params {
         auto selfExp = $1.get<ExpNodePtr>();
-        auto idExp = getConstExp(LuaValue($3.get<string>()));
+        auto idExp = getConstExp(LuaValue($3.get<string>().c_str()));
         auto &params = $4.get<vector<ExpNodePtr> >();
         params.insert(params.begin(), selfExp);
         auto exp = new CallExpNode(ExpNodePtr(new FieldAccessExpNode(selfExp, idExp)), params);
@@ -479,7 +479,7 @@ FieldSep : ',' | ';' ;
 Field 
     : Exp 
     | ID OP_ASSIGN Exp  {
-        $$ = make_pair(getConstExp(LuaValue($1.get<string>())), $3.get<ExpNodePtr>());
+        $$ = make_pair(getConstExp(LuaValue($1.get<string>().c_str())), $3.get<ExpNodePtr>());
     }
     | '[' Exp ']' OP_ASSIGN Exp {
         $$ = make_pair($2.get<ExpNodePtr>(), $5.get<ExpNodePtr>());
@@ -563,15 +563,15 @@ Number
 Literal
     : LITERAL1 {
         auto str = $1.get<string>();
-        $$ = getConstExp(LuaValue(unEscape(str.substr(1, str.size() - 2))));
+        $$ = getConstExp(LuaValue(unEscape(str.substr(1, str.size() - 2)).c_str()));
     }
     | LITERAL2 {
         auto str = $1.get<string>();
-        $$ = getConstExp(LuaValue(unEscape(str.substr(1, str.size() - 2))));
+        $$ = getConstExp(LuaValue(unEscape(str.substr(1, str.size() - 2)).c_str()));
     }
     | LITERAL3 {
         auto str = $1.get<string>();
-        $$ = getConstExp(LuaValue(unEscape(str.substr(2, str.size() - 4))));
+        $$ = getConstExp(LuaValue(unEscape(str.substr(2, str.size() - 4)).c_str()));
     }
     ;
 

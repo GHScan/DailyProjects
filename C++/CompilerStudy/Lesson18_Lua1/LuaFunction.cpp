@@ -164,7 +164,7 @@ private:
         m_rets.push_back(m_stmt->getFunc()->getUpValue(v->index));
     }
     virtual void visit(GlobalVarExpNode *v) {
-        m_rets.push_back(m_stmt->getFunc()->getfenv()->get(LuaValue(v->name)));
+        m_rets.push_back(m_stmt->getFunc()->getfenv()->get(LuaValue(v->name.c_str())));
     }
     virtual void visit(FieldAccessExpNode *v) {
         v->table->acceptVisitor(this);
@@ -244,8 +244,7 @@ void StmtNodeVisitor_Execute::visit(AssignStmtNode *v) {
             m_func->getUpValue(upValueExp->index) = value;
         }
         else if (auto gValueExp = dynamic_cast<GlobalVarExpNode*>(v->vars[i].get())) {
-            // TODO: performance
-            getFunc()->getfenv()->set(LuaValue(gValueExp->name), value);
+            getFunc()->getfenv()->set(LuaValue(gValueExp->name.c_str()), value);
         }
         else {
             assert(dynamic_cast<FieldAccessExpNode*>(v->vars[i].get()));

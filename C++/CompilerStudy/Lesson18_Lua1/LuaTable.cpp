@@ -3,7 +3,7 @@
 #include "LuaTable.h"
 #include "Function.h"
 
-static LuaValue invokeMeta(LuaTable* table, LuaTable *metaTable, const string& metaName, const LuaValue& arg1, const LuaValue& arg2) {
+static LuaValue invokeMeta(LuaTable* table, LuaTable *metaTable, const char* metaName, const LuaValue& arg1, const LuaValue& arg2) {
     LuaValue f = metaTable->get(LuaValue(metaName));
     vector<LuaValue> args, rets;
     table->addRef();
@@ -28,7 +28,7 @@ LuaValue LuaTable::get(const LuaValue& k, bool raw) const {
     if (iter != m_hashTable.end()) return iter->second;
 
     if (!raw && m_metaTable != NULL) {
-        LuaValue f = m_metaTable->get(LuaValue(string("__index")));
+        LuaValue f = m_metaTable->get(LuaValue("__index"));
         if (f.isTypeOf(LVT_Nil)) {}
         else if (f.isTypeOf(LVT_Table)) return f.getTable()->get(k);
         else if (f.isTypeOf(LVT_Function)) {
@@ -48,7 +48,7 @@ LuaValue LuaTable::get(const LuaValue& k, bool raw) const {
 void LuaTable::set(const LuaValue& k, const LuaValue& v, bool raw) {
     if (!raw && m_metaTable != NULL && !v.isTypeOf(LVT_Nil)) {
         if (!hasKey(k)) {
-            LuaValue f = m_metaTable->get(LuaValue(string("__newindex")));
+            LuaValue f = m_metaTable->get(LuaValue("__newindex"));
             if (f.isTypeOf(LVT_Nil)) {}
             else if (f.isTypeOf(LVT_Table)) {
                 f.getTable()->set(k, v);
@@ -215,13 +215,13 @@ LuaValue LuaTable::meta_unm() {
     return invokeMeta(this, m_metaTable, "__unm", LuaValue::NIL, LuaValue::NIL);
 }
 void LuaTable::meta_call(const vector<LuaValue>& args, vector<LuaValue>& rets) {
-    LuaValue f = m_metaTable->get(LuaValue(string("__call")));
+    LuaValue f = m_metaTable->get(LuaValue("__call"));
     vector<LuaValue> _args;
     addRef();
     _args.push_back(LuaValue(this)); 
     _args.insert(_args.end(), args.begin(), args.end());
     f.getFunction()->call(_args, rets);
 }
-bool LuaTable::hasMeta(const string& metaName) {
+bool LuaTable::hasMeta(const char* metaName) {
     return m_metaTable != NULL && !m_metaTable->get(LuaValue(metaName)).isTypeOf(LVT_Nil);
 }

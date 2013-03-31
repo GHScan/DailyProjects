@@ -21,7 +21,7 @@ void IFunction::setfenv(LuaTable* env) {
 }
 
 void CFunction::call(const vector<LuaValue>& args, vector<LuaValue>& rets) {
-    Runtime::instance()->pushFrame(this, 0);
+    Runtime::instance()->pushFrame(this);
     m_func(args, rets);
     Runtime::instance()->popFrame();
 }

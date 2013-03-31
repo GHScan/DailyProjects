@@ -2,10 +2,6 @@
 #include "pch.h"
 
 #include "LuaLibs.h"
-#include "LuaValue.h"
-#include "LuaTable.h"
-#include "Runtime.h"
-#include "Function.h"
 
 extern int index_LuaValue2Int(const LuaValue& v, int len);
 
@@ -31,7 +27,7 @@ static void table_concat(const vector<LuaValue>& args, vector<LuaValue>& rets) {
         r += v.toString();
     }
 
-    rets.push_back(LuaValue(r));
+    rets.push_back(LuaValue(r.c_str()));
 }
 static void table_insert(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     auto table = args[0].getTable();
@@ -75,19 +71,14 @@ static void table_foreach(const vector<LuaValue>& args, vector<LuaValue>& rets) 
 }
 
 extern void openLib_table() {
+    auto table = LuaTable::create();
+    Runtime::instance()->getGlobalTable()->set(LuaValue("table"), LuaValue(table));
+
 #define ENTRY(name) {#name, &table_##name}
     CFuncEntry entries[] = {
-        ENTRY(concat),
-        ENTRY(insert),
-        ENTRY(maxn),
-        ENTRY(remove),
-        ENTRY(sort),
-        ENTRY(foreach),
+        ENTRY(concat), ENTRY(insert), ENTRY(maxn),
+        ENTRY(remove), ENTRY(sort), ENTRY(foreach),
     };
 #undef ENTRY
-    auto table = LuaTable::create();
-    Runtime::instance()->getGlobalTable()->set(LuaValue(string("table")), LuaValue(table));
-    for (auto &entry : entries) {
-        table->set(LuaValue(entry.name), LuaValue(CFunction::create(entry.func)));
-    }
+    for (auto &entry : entries) table->set(LuaValue(entry.name), LuaValue(CFunction::create(entry.func)));
 }

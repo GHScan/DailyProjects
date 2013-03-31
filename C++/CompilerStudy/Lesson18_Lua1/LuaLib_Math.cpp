@@ -4,10 +4,6 @@
 #include <math.h>
 
 #include "LuaLibs.h"
-#include "LuaValue.h"
-#include "LuaTable.h"
-#include "Runtime.h"
-#include "Function.h"
 
 static const NumberType PI = 3.1415926535;
 static const NumberType E = 2.71828182846;
@@ -141,43 +137,25 @@ static void math_tanh(const vector<LuaValue>& args, vector<LuaValue>& rets) {
 }
 
 extern void openLib_math() {
+    auto table = LuaTable::create();
+    Runtime::instance()->getGlobalTable()->set(LuaValue("math"), LuaValue(table));
+
 #define ENTRY(name) {#name, &math_##name}
     CFuncEntry entries[] = {
-        ENTRY(abs),
-        ENTRY(acos),
-        ENTRY(asin),
-        ENTRY(atan),
-        ENTRY(atan2),
-        ENTRY(ceil),
-        ENTRY(cos),
-        ENTRY(cosh),
-        ENTRY(deg),
-        ENTRY(exp),
-        ENTRY(floor),
-        ENTRY(fmod),
-        ENTRY(frexp),
-        ENTRY(ldexp),
-        ENTRY(log),
-        ENTRY(log10),
-        ENTRY(max),
-        ENTRY(min),
-        ENTRY(modf),
-        ENTRY(pow),
-        ENTRY(rad),
-        ENTRY(random),
-        ENTRY(randomseed),
-        ENTRY(sin),
-        ENTRY(sinh),
-        ENTRY(sqrt),
-        ENTRY(tan),
+        ENTRY(abs), ENTRY(acos), ENTRY(asin),
+        ENTRY(atan), ENTRY(atan2), ENTRY(ceil),
+        ENTRY(cos), ENTRY(cosh), ENTRY(deg),
+        ENTRY(exp), ENTRY(floor), ENTRY(fmod),
+        ENTRY(frexp), ENTRY(ldexp), ENTRY(log),
+        ENTRY(log10), ENTRY(max), ENTRY(min),
+        ENTRY(modf), ENTRY(pow), ENTRY(rad),
+        ENTRY(random), ENTRY(randomseed), ENTRY(sin),
+        ENTRY(sinh), ENTRY(sqrt), ENTRY(tan),
         ENTRY(tanh),
     };
 #undef ENTRY
-    auto table = LuaTable::create();
-    Runtime::instance()->getGlobalTable()->set(LuaValue(string("math")), LuaValue(table));
-    for (auto &entry : entries) {
-        table->set(LuaValue(entry.name), LuaValue(CFunction::create(entry.func)));
-    }
-    table->set(LuaValue(string("huge")), LuaValue(NumberType(HUGE_VAL)));
-    table->set(LuaValue(string("pi")), LuaValue(NumberType(PI)));
+    for (auto &entry : entries) table->set(LuaValue(entry.name), LuaValue(CFunction::create(entry.func)));
+
+    table->set(LuaValue("huge"), LuaValue(NumberType(HUGE_VAL)));
+    table->set(LuaValue("pi"), LuaValue(NumberType(PI)));
 }

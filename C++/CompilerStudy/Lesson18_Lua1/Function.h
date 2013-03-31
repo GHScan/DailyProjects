@@ -54,7 +54,7 @@ private:
 
 struct CFuncEntry
 {
-    string name;
+    const char *name;
     void (*func)(const vector<LuaValue>& args, vector<LuaValue>& rets);
 };
 

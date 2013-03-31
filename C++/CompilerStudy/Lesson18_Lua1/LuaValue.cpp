@@ -4,11 +4,11 @@
 #include "LuaTable.h"
 #include "LuaFunction.h"
 
-LuaValue::LuaValue(const string& str):
+LuaValue::LuaValue(const char* str):
     m_type(LVT_String) {
-    int len = (int)str.size();
+    int len = strlen(str);
     m_data.str = (char*)malloc(len + 1);
-    memcpy(m_data.str, str.c_str(), len + 1);
+    memcpy(m_data.str, str, len + 1);
 }
 
 LuaValue::LuaValue(IFunction *func):
@@ -19,11 +19,6 @@ LuaValue::LuaValue(IFunction *func):
 LuaValue::LuaValue(LuaTable *table): 
     m_type(LVT_Table) {
     m_data.table = table;
-}
-
-LuaValue::LuaValue(bool b):
-    m_type(LVT_Boolean) {
-    m_data.b = b;
 }
 
 LuaValue::LuaValue(LightUserData lud): 
@@ -229,8 +224,7 @@ LuaValue LuaValue::concat(const LuaValue& o) const {
         char *p = (char*)malloc(len1 + len2 + 1);
         memcpy(p, m_data.str, len1);
         memcpy(p + len1, o.m_data.str, len2 + 1);
-        // TODO: performance
-        return LuaValue(string(p));
+        return LuaValue(p);
     } else return getTable()->meta_concat(o);
 }
 int LuaValue::getSize() const {
@@ -301,8 +295,8 @@ void LuaValue::disableShared() {
 }
 
 LuaValue LuaValue::NIL;
-LuaValue LuaValue::TRUE(true);
-LuaValue LuaValue::FALSE(false);
+LuaValue LuaValue::TRUE(createBoolean(true));
+LuaValue LuaValue::FALSE(createBoolean(false));
 
 LuaValue operator + (const LuaValue& a, const LuaValue &b) {
     if (a.isTypeOf(LVT_Table)) return a.getTable()->meta_add(b);

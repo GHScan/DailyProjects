@@ -2,10 +2,6 @@
 #include "pch.h"
 
 #include "LuaLibs.h"
-#include "LuaValue.h"
-#include "LuaTable.h"
-#include "Runtime.h"
-#include "Function.h"
 
 int index_LuaValue2Int(const LuaValue& v, int len) {
     int r = (int)v.getNumber();
@@ -34,7 +30,7 @@ static void string_char(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     for (int i = 0; i < (int)args.size(); ++i) {
         s.push_back((char)args[i].getNumber());
     }
-    rets.push_back(LuaValue(s));
+    rets.push_back(LuaValue(s.c_str()));
 }
 static void string_format(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     const char *fmt = args[0].getString();
@@ -66,7 +62,7 @@ static void string_format(const vector<LuaValue>& args, vector<LuaValue>& rets) 
         }
     }
     r += buf;
-    rets.push_back(LuaValue(r));
+    rets.push_back(LuaValue(r.c_str()));
 }
 static void string_len(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     rets.push_back(LuaValue(NumberType(args[0].getSize())));
@@ -75,51 +71,44 @@ static void string_lower(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     const char *s = args[0].getString();
     string r;
     for (; *s; ++s) r.push_back(::tolower(*s));
-    rets.push_back(LuaValue(r));
+    rets.push_back(LuaValue(r.c_str()));
 }
 static void string_upper(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     const char *s = args[0].getString();
     string r;
     for (; *s; ++s) r.push_back(::toupper(*s));
-    rets.push_back(LuaValue(r));
+    rets.push_back(LuaValue(r.c_str()));
 }
 static void string_rep(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     const char *s = args[0].getString();
     int n = (int)args[1].getNumber();
     string r;
     for (int i = 0; i < n; ++i) r += s;
-    rets.push_back(LuaValue(r));
+    rets.push_back(LuaValue(r.c_str()));
 }
 static void string_reverse(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     string s = args[0].getString();
-    rets.push_back(LuaValue(string(s.rbegin(), s.rend())));
+    rets.push_back(LuaValue(string(s.rbegin(), s.rend()).c_str()));
 }
 static void string_sub(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     string s = args[0].getString();
     int i = index_LuaValue2Int(args[1], (int)s.size());
     int j = (int)s.size() - 1;
     if (args.size() >= 3) j = index_LuaValue2Int(args[2], (int)s.size());
-    if (i < 0 || i >= (int)s.size() || i > j) rets.push_back(LuaValue(string("")));
-    else rets.push_back(LuaValue(s.substr(i, j - i + 2)));
+    if (i < 0 || i >= (int)s.size() || i > j) rets.push_back(LuaValue(""));
+    else rets.push_back(LuaValue(s.substr(i, j - i + 2).c_str()));
 }
 
 extern void openLib_string() {
+    auto table = LuaTable::create();
+    Runtime::instance()->getGlobalTable()->set(LuaValue("string"), LuaValue(table));
+
 #define ENTRY(name) {#name, &string_##name}
     CFuncEntry entries[] = {
-        ENTRY(byte),
-        ENTRY(char),
-        ENTRY(format),
-        ENTRY(len),
-        ENTRY(lower),
-        ENTRY(upper),
-        ENTRY(rep),
-        ENTRY(reverse),
-        ENTRY(sub),
+        ENTRY(byte), ENTRY(char), ENTRY(format),
+        ENTRY(len), ENTRY(lower), ENTRY(upper),
+        ENTRY(rep), ENTRY(reverse), ENTRY(sub),
     };
 #undef ENTRY
-    auto table = LuaTable::create();
-    Runtime::instance()->getGlobalTable()->set(LuaValue(string("string")), LuaValue(table));
-    for (auto &entry : entries) {
-        table->set(LuaValue(entry.name), LuaValue(CFunction::create(entry.func)));
-    }
+    for (auto &entry : entries) table->set(LuaValue(entry.name), LuaValue(CFunction::create(entry.func)));
 }

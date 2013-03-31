@@ -20,15 +20,23 @@ void Runtime::setGlobalTable(LuaTable *t) {
     }
 }
 StackFrame* Runtime::getFrameByLevel(int level) {
-    StackFrame *f = NULL;
-    for (int i = m_frames.size() - 1; i >= 0; --i) {
-        if (auto func = dynamic_cast<LuaFunction*>(m_frames[i].getFunc())) {
-            if (func->getMeta()->level == level) {
-                f = &m_frames[i];
-                break;
-            }
-        }
+    return m_levelFrames[level].back();
+}
+
+void Runtime::pushFrame(LuaFunction *func, int localCount) {
+    m_frames.push_back(new StackFrame(func, localCount)); 
+
+    m_levelFrames.resize(func->getMeta()->level + 1);
+    m_levelFrames[func->getMeta()->level].push_back(m_frames.back());
+}
+void Runtime::pushFrame(CFunction *func) {
+    m_frames.push_back(new StackFrame(func, 0)); 
+}
+void Runtime::popFrame() { 
+    if (auto func = dynamic_cast<LuaFunction*>(m_frames.back()->getFunc())) {
+        m_levelFrames[func->getMeta()->level].pop_back();
     }
-    ASSERT(f != NULL);
-    return f;
+
+    delete m_frames.back();
+    m_frames.pop_back(); 
 }

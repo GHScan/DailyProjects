@@ -1,6 +1,6 @@
 # TODO
-+ Refactor
 + Memory issues (eg. leaks)
++ More test case
 + Library: string
 + Grammar bug
 

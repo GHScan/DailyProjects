@@ -32,14 +32,13 @@ typedef LightUserDataRef* LightUserData;
 class LuaValue
 {
 public:
-    // TODO: rafactor the constructor!!! various of ambiguous
+    LuaValue(): m_type(LVT_Nil) {m_data.n = 0;}
     explicit LuaValue(NumberType n): m_type(LVT_Number){ m_data.n = n; }
-    explicit LuaValue(const string& str);
+    explicit LuaValue(const char* str);
     explicit LuaValue(IFunction *func);
     explicit LuaValue(LuaTable *table);
     explicit LuaValue(LightUserData lud);
 
-    LuaValue(): m_type(LVT_Nil) {m_data.n = 0;}
     LuaValue(const LuaValue& o);
     LuaValue(LuaValue&& o);
     LuaValue& operator = (const LuaValue& o);
@@ -87,7 +86,10 @@ public:
     static LuaValue FALSE;
 
 private:
-    explicit LuaValue(bool b);
+    static LuaValue createBoolean(bool b) {
+        LuaValue r; r.m_type = LVT_Boolean; r.m_data.b = b;
+        return r;
+    }
 
 private:
     LuaValueType m_type;
@@ -151,7 +153,6 @@ inline NumberType LuaValue::getNumber() const {
     ASSERT(m_type == LVT_Number);
     return m_data.n;
 }
-// TODO:refactor
 inline const char * LuaValue::getString() const { 
     if (m_type == LVT_SharedLuaValue) return m_data.shared->value().getString();
     ASSERT(m_type == LVT_String); 
