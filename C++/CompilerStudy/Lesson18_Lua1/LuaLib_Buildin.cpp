@@ -127,11 +127,11 @@ static void buildin_dofile(const vector<LuaValue>& args, vector<LuaValue>& rets)
 }
 static void buildin_getfenv(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     IFunction *func = NULL;
-    if (args.empty()) func = Runtime::instance()->getFrame(-2);
+    if (args.empty()) func = Runtime::instance()->getFrame(-2)->getFunc();
     else if (args[0].isTypeOf(LVT_Number)) {
         auto n = (int)args[0].getNumber();
         ASSERT(n >= 0);
-        if (n > 0) func = Runtime::instance()->getFrame(-n - 1);
+        if (n > 0) func = Runtime::instance()->getFrame(-n - 1)->getFunc();
     } else func = args[0].getFunction();
 
     LuaTable* table = NULL;
@@ -145,7 +145,7 @@ static void buildin_setfenv(const vector<LuaValue>& args, vector<LuaValue>& rets
     if (args[0].isTypeOf(LVT_Number)) {
         auto n = (int)args[0].getNumber();
         ASSERT(n >= 0);
-        if (n > 0) func = Runtime::instance()->getFrame(-n - 1);
+        if (n > 0) func = Runtime::instance()->getFrame(-n - 1)->getFunc();
     } else func = args[0].getFunction();
 
     if (func == NULL) {

@@ -12,9 +12,18 @@ enum LuaValueType {
     LVT_Table,
     LVT_Function,
     LVT_LightUserData,
+    // This is used to mask the special location as reference, it will only
+    // exist on local/upvalue variable. It will be better to use a standard
+    // flag to be this property instead of use LuaValueType, but we can get
+    // the benifit of memory usage in this way, so...
+    // We should prevent something like 'locals.resize(newsize)' to be
+    // happened, becase it will cause the property of the local lost. Shared
+    // flag can't be move to another memory address automaticly.
+    LVT_SharedLuaValue, 
 };
 
 class LuaTable;
+class SharedLuaValue;
 struct IFunction;
 
 struct LightUserDataRef{};
@@ -37,19 +46,15 @@ public:
     LuaValue& operator = (LuaValue&& o);
     ~LuaValue();
 
-    LuaValueType getType() const { return m_type; }
-    bool isTypeOf(LuaValueType t) const { return m_type == t; }
-    bool getBoolean() const { 
-        if (isTypeOf(LVT_Nil)) return false;
-        else if (isTypeOf(LVT_Boolean) && !m_data.b) return false;
-        return true;
-    }
-    NumberType getNumber() const { ASSERT(isTypeOf(LVT_Number)); return m_data.n; }
-    // TODO:refactor
-    const char *getString() const { ASSERT(isTypeOf(LVT_String)); return m_data.str;}
-    LuaTable* getTable() const { ASSERT(isTypeOf(LVT_Table)); return m_data.table; }
-    IFunction* getFunction() const { ASSERT(isTypeOf(LVT_Function)); return m_data.func;}
-    LightUserData getLightUserData() const { ASSERT(isTypeOf(LVT_LightUserData)); return m_data.lud; }
+    LuaValueType getType() const;
+    bool isTypeOf(LuaValueType t) const { return getType() == t; }
+
+    bool getBoolean() const;
+    NumberType getNumber() const ;
+    const char *getString() const;
+    LuaTable* getTable() const;
+    IFunction* getFunction() const ;
+    LightUserData getLightUserData() const ;
 
     bool operator == (const LuaValue& o) const;
     bool operator != (const LuaValue& o) const { return !(*this == o);}
@@ -72,6 +77,10 @@ public:
     int getHash() const;
 
     string toString() const;
+
+    void shareWith(LuaValue& o);
+    void disableShared();
+
 public:
     static LuaValue NIL;
     static LuaValue TRUE;
@@ -89,6 +98,7 @@ private:
         LuaTable *table;
         IFunction *func;
         LightUserData lud;
+        SharedLuaValue *shared;
     } m_data;
 };
 LuaValue operator + (const LuaValue& a, const LuaValue &b);
@@ -96,6 +106,72 @@ LuaValue operator - (const LuaValue& a, const LuaValue &b);
 LuaValue operator * (const LuaValue& a, const LuaValue &b);
 LuaValue operator / (const LuaValue& a, const LuaValue &b);
 LuaValue operator % (const LuaValue& a, const LuaValue &b);
+
+class SharedLuaValue {
+public:
+    static SharedLuaValue* create(const LuaValue& v) {
+        return new SharedLuaValue(v);
+    }
+
+    LuaValue& value() { return m_value;}
+
+    int getRefCount() const { return m_refCount;}
+    int addRef() const { return ++m_refCount;}
+    int releaseRef() const {
+        int r = --m_refCount;
+        if (r == 0) delete this;
+        return r;
+    }
+private:
+    SharedLuaValue(const SharedLuaValue&);
+    SharedLuaValue& operator = (const SharedLuaValue&);
+    SharedLuaValue(const LuaValue& v): m_value(v), m_refCount(1){}
+    ~SharedLuaValue(){}
+
+private:
+    LuaValue m_value;
+    mutable int m_refCount;
+};
+
+inline LuaValueType LuaValue::getType() const { 
+    if (m_type == LVT_SharedLuaValue) return m_data.shared->value().getType();
+    return m_type; 
+}
+
+inline bool LuaValue::getBoolean() const { 
+    switch (m_type) {
+        case LVT_SharedLuaValue: return m_data.shared->value().getBoolean();
+        case LVT_Nil: return false;
+        case LVT_Boolean: return m_data.b;
+        default: return true;
+    }
+}
+inline NumberType LuaValue::getNumber() const { 
+    if (m_type == LVT_SharedLuaValue) return m_data.shared->value().getNumber();
+    ASSERT(m_type == LVT_Number);
+    return m_data.n;
+}
+// TODO:refactor
+inline const char * LuaValue::getString() const { 
+    if (m_type == LVT_SharedLuaValue) return m_data.shared->value().getString();
+    ASSERT(m_type == LVT_String); 
+    return m_data.str;
+}
+inline LuaTable* LuaValue::getTable() const { 
+    if (m_type == LVT_SharedLuaValue) return m_data.shared->value().getTable();
+    ASSERT(m_type == LVT_Table); 
+    return m_data.table; 
+}
+inline IFunction* LuaValue::getFunction() const { 
+    if (m_type == LVT_SharedLuaValue) return m_data.shared->value().getFunction();
+    ASSERT(m_type == LVT_Function);
+    return m_data.func;
+}
+inline LightUserData LuaValue::getLightUserData() const { 
+    if (m_type == LVT_SharedLuaValue) return m_data.shared->value().getLightUserData();
+    ASSERT(m_type == LVT_LightUserData); 
+    return m_data.lud; 
+}
 
 namespace std {
     template<>

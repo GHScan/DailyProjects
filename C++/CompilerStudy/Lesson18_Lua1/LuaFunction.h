@@ -8,22 +8,28 @@
 
 //======== LuaFunctionMeta ============
 struct LuaFunctionMeta {
-    int argCount;
+    int argCount, level, localCount;
     vector<LuaValue> constTable;
     vector<string> nameTable;
     StmtNodePtr body;
+    vector<pair<int, int> > upValues;
 
-    LuaFunctionMeta(): argCount(0){}
+    LuaFunctionMeta(int _level): argCount(0), level(_level), localCount(0){}
     int getConstIndex(const LuaValue& v);
     int getNameIndex(const string& name);
+
+    static std::stack<shared_ptr<LuaFunctionMeta> >* stack() {
+        static std::stack<shared_ptr<LuaFunctionMeta> > s_ins;
+        return &s_ins;
+    }
 };
 typedef shared_ptr<LuaFunctionMeta> LuaFunctionMetaPtr;
 //======== LuaFunction ============
 class LuaFunction:
     public IFunction {
 public:
-    static LuaFunction* create(LuaFunctionMetaPtr meta, const vector<LuaValue>& upValues) {
-        return new LuaFunction(meta, upValues);
+    static LuaFunction* create(LuaFunctionMetaPtr meta) {
+        return new LuaFunction(meta);
     }
 
     LuaValue& getUpValue(int idx);
@@ -35,7 +41,7 @@ public:
 private:
     LuaFunction(LuaFunction& o);
     LuaFunction& operator = (const LuaFunction& o);
-    LuaFunction(LuaFunctionMetaPtr meta, const vector<LuaValue>& upValues);
+    LuaFunction(LuaFunctionMetaPtr meta);
     ~LuaFunction();
 
 private:

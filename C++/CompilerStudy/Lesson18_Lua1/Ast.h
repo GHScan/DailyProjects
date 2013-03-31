@@ -170,7 +170,10 @@ struct ReturnStmtNode:
 struct BlockStmtNode:
     public IStmtNode {
     vector<StmtNodePtr> stmts;
-    BlockStmtNode(const vector<StmtNodePtr>& _stmts) {
+    int blockOff;
+    int blockSize;
+    BlockStmtNode(int _blockOff, int _blockSize, const vector<StmtNodePtr>& _stmts):
+        blockOff(_blockOff), blockSize(_blockSize) {
         for (auto &stmt : _stmts) {
             if (stmt != NULL) stmts.push_back(stmt);
         }

@@ -25,7 +25,6 @@
 #include "LuaFunction.h"
 #include "SymbolTable.h"
 
-static stack<LuaFunctionMetaPtr>* functionMetaStack();
 static ExpNodePtr getLocalExp(const string& name);
 static ExpNodePtr getExpByIDName(const string& name);
 static ExpNodePtr getConstExp(const LuaValue& v);
@@ -35,33 +34,37 @@ static string& srcFileName();
 static int& srcFileLine();
 extern int getTokenLine();
 
-#define FUNC_META (functionMetaStack()->top().get())
+#define FUNC_META (LuaFunctionMeta::stack()->top().get())
 
 %}
 
 %%
 
 Program : Block {
-        functionMetaStack()->top()->body = $1.get<StmtNodePtr>();
+        LuaFunctionMeta::stack()->top()->body = $1.get<StmtNodePtr>();
         }
         ;
 
 Block
     : StatementList {
-        $$ = StmtNodePtr(new BlockStmtNode($1.get<vector<StmtNodePtr> >()));
+        int blockOff = SymbolTable::top()->getBlockOff(), blockSize = SymbolTable::top()->getBlockSize();
+        $$ = StmtNodePtr(new BlockStmtNode(blockOff, blockSize, $1.get<vector<StmtNodePtr> >()));
     }
     | LastStatement {
         auto vec = vector<StmtNodePtr>();
         vec.push_back($1.get<StmtNodePtr>());
-        $$ = StmtNodePtr(new BlockStmtNode(vec));
+        int blockOff = SymbolTable::top()->getBlockOff(), blockSize = SymbolTable::top()->getBlockSize();
+        $$ = StmtNodePtr(new BlockStmtNode(blockOff, blockSize, vec));
     }
     | StatementList StatementSep LastStatement {
         auto &vec = $1.get<vector<StmtNodePtr> >();
         vec.push_back($3.get<StmtNodePtr>());
-        $$ = StmtNodePtr(new BlockStmtNode(vec));
+        int blockOff = SymbolTable::top()->getBlockOff(), blockSize = SymbolTable::top()->getBlockSize();
+        $$ = StmtNodePtr(new BlockStmtNode(blockOff, blockSize, vec));
     }
     | {
-        $$ = StmtNodePtr(new BlockStmtNode(vector<StmtNodePtr>()));
+        int blockOff = SymbolTable::top()->getBlockOff(), blockSize = SymbolTable::top()->getBlockSize();
+        $$ = StmtNodePtr(new BlockStmtNode(blockOff, blockSize, vector<StmtNodePtr>()));
     }
     ;
 
@@ -402,8 +405,8 @@ Lambda : FUNCTION FuncBody {
        }
        ;
 FuncBody : '(' Opt_ArgList ')' {
-            auto meta = LuaFunctionMetaPtr(new LuaFunctionMeta());
-            functionMetaStack()->push(meta);
+            auto meta = LuaFunctionMetaPtr(new LuaFunctionMeta((int)LuaFunctionMeta::stack()->size()));
+            LuaFunctionMeta::stack()->push(meta);
             SymbolTable::push();
 
             auto &args = $2.get<vector<string> >();
@@ -417,8 +420,9 @@ FuncBody : '(' Opt_ArgList ')' {
                 SymbolTable::top()->declareLocal(arg);
             }
          } Block END  {
-            auto meta = functionMetaStack()->top();
-            functionMetaStack()->pop();
+            auto meta = LuaFunctionMeta::stack()->top();
+            meta->localCount = SymbolTable::top()->getLocalCount();
+            LuaFunctionMeta::stack()->pop();
             SymbolTable::pop();
             meta->body = $5.get<StmtNodePtr>();
             $$ = ExpNodePtr(new LambdaExpNode(meta));
@@ -573,23 +577,19 @@ Literal
 
 %%
 
-static stack<LuaFunctionMetaPtr>* functionMetaStack() {
-    static stack<LuaFunctionMetaPtr> s_ins;
-    return &s_ins;
-}
-
 static FunctionPtr _loadFile(FILE *f) {
-    LuaFunctionMetaPtr meta(new LuaFunctionMeta());
-    functionMetaStack()->push(meta);
+    LuaFunctionMetaPtr meta(new LuaFunctionMeta((int)LuaFunctionMeta::stack()->size()));
+    LuaFunctionMeta::stack()->push(meta);
     SymbolTable::push();
 
     yyrestart(f);
     yyparse();
 
+    meta->localCount = SymbolTable::top()->getLocalCount();
     SymbolTable::pop();
-    functionMetaStack()->pop();
+    LuaFunctionMeta::stack()->pop();
     return FunctionPtr(
-        LuaFunction::create(meta, vector<LuaValue>()), [](LuaFunction *p){ p->releaseRef(); });
+        LuaFunction::create(meta), [](LuaFunction *p){ p->releaseRef(); });
 }
 FunctionPtr loadFile(FILE *f) {
     srcFileName() = "[????]";
@@ -610,18 +610,18 @@ FunctionPtr loadFile(const char *fname) {
 
 static ExpNodePtr getLocalExp(const string& name) {
     auto index = SymbolTable::top()->getLocalIndex(name);
-    auto nameIdx = functionMetaStack()->top()->getNameIndex(name);
+    auto nameIdx = LuaFunctionMeta::stack()->top()->getNameIndex(name);
     assert(index != -1);
     return ExpNodePtr(new LocalVarExpNode(index, nameIdx));
 }
 static ExpNodePtr getExpByIDName(const string& name) {
     auto localIdx = SymbolTable::top()->getLocalIndex(name);
     if (localIdx != -1) {
-        return ExpNodePtr(new LocalVarExpNode(localIdx, functionMetaStack()->top()->getNameIndex(name)));
+        return ExpNodePtr(new LocalVarExpNode(localIdx, LuaFunctionMeta::stack()->top()->getNameIndex(name)));
     } else {
         auto uvIdx = SymbolTable::top()->getUpValueIndex(name);
         if (uvIdx != -1) {
-            return ExpNodePtr(new UpValueVarExpNode(uvIdx, functionMetaStack()->top()->getNameIndex(name)));
+            return ExpNodePtr(new UpValueVarExpNode(uvIdx, LuaFunctionMeta::stack()->top()->getNameIndex(name)));
         } else {
             return ExpNodePtr(new GlobalVarExpNode(name));
         }

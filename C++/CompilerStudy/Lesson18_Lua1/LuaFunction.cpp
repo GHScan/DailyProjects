@@ -26,23 +26,22 @@ static string guessFunctionName(const LuaFunctionMeta* meta, CallExpNode *exp) {
 class StmtNodeVisitor_Execute:
     public IStmtNodeVisitor {
 public:
-    StmtNodeVisitor_Execute(LuaFunction* func): m_func(func), m_isBreak(false), m_isReturn(false), m_isContinue(false){}
+    StmtNodeVisitor_Execute(LuaFunction* func): m_func(func), m_isBreak(false), m_isReturn(false), m_isContinue(false){
+    }
     vector<LuaValue>& apply(const vector<LuaValue>& args) {
-        m_locals.assign(args.begin(), args.begin() + m_func->getMeta()->argCount);
+        std::copy(args.begin(), args.begin() + m_func->getMeta()->argCount, Runtime::instance()->getFrame(-1)->locals().begin());
         m_args = args;
         m_func->getMeta()->body->acceptVisitor(this);
         return m_rets;
-    }
-    LuaValue& getLocal(int idx) {
-        if (idx < (int)m_locals.size()) return m_locals[idx];
-        m_locals.resize(idx + 1);
-        return m_locals[idx];
     }
     const vector<LuaValue>& getArgs() const {
         return m_args;
     }
     LuaFunction* getFunc() {
         return m_func;
+    }
+    LuaValue& getLocal(int idx) {
+        return Runtime::instance()->getFrame(-1)->locals()[idx];
     }
 private:
     virtual void visit(CallStmtNode *v);
@@ -59,7 +58,6 @@ private:
     LuaFunction *m_func;
     vector<LuaValue> m_rets;
     vector<LuaValue> m_args;
-    vector<LuaValue> m_locals;
     bool m_isBreak, m_isReturn, m_isContinue;
 };
 
@@ -173,9 +171,7 @@ private:
         m_rets.push_back(LuaValue(table));
     }
     virtual void visit(LambdaExpNode *v) {
-        // FIXME:
-        vector<LuaValue> upValues;
-        m_rets.push_back(LuaValue(LuaFunction::create(v->meta, upValues)));
+        m_rets.push_back(LuaValue(LuaFunction::create(v->meta)));
     }
     virtual void visit(CallExpNode *v) {
         v->func->acceptVisitor(this);
@@ -253,6 +249,11 @@ void StmtNodeVisitor_Execute::visit(BlockStmtNode *v) {
     for (auto &stmt : v->stmts) {
         stmt->acceptVisitor(this);
         if (m_isBreak || m_isReturn || m_isContinue) break;
+    }
+
+    auto &locals = Runtime::instance()->getFrame(-1)->locals();
+    for (int i = 0; i < v->blockSize; ++i) {
+        locals[i + v->blockOff].disableShared();
     }
 }
 void StmtNodeVisitor_Execute::visit(IfElseStmtNode *v) {
@@ -336,13 +337,21 @@ int LuaFunctionMeta::getNameIndex(const string& name) {
     return r;
 }
 //======== LuaFunction ============
-LuaFunction::LuaFunction(LuaFunctionMetaPtr meta, const vector<LuaValue>& upValues): 
-    m_meta(meta), m_upValues(upValues)  {
+LuaFunction::LuaFunction(LuaFunctionMetaPtr meta): 
+    m_meta(meta) {
+    ASSERT(meta->localCount >= meta->argCount);
+
+    m_upValues.resize(meta->upValues.size());
+    for (int i = 0; i < (int)m_upValues.size(); ++i) {
+        auto &uvInfo(meta->upValues[i]);
+        auto frame = Runtime::instance()->getFrameByLevel(uvInfo.first);
+        frame->locals()[uvInfo.second].shareWith(m_upValues[i]);
+    }
 }
 LuaFunction::~LuaFunction() {
 }
 void LuaFunction::call(const vector<LuaValue>& args, vector<LuaValue>& rets) {
-    Runtime::instance()->pushFrame(this);
+    Runtime::instance()->pushFrame(this, m_meta->localCount);
     rets = move(StmtNodeVisitor_Execute(this).apply(args));
     Runtime::instance()->popFrame();
 }
