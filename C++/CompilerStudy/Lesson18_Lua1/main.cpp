@@ -9,7 +9,12 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    openLib_all();
-    dofile(argv[1]);
+#ifdef CHECK_MEMORY_LEAKS
+#ifdef _MSC_VER
+    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+#endif
+#endif
+
+    runfile(argv[1]);
     return 0;
 }

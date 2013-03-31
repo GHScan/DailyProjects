@@ -165,7 +165,7 @@ LuaTable::~LuaTable() {
     if (m_metaTable != NULL) m_metaTable->releaseRef();
 }
 int LuaTable::releaseRef() const {
-    if (m_refCount == 1 && m_metaTable != NULL) {
+    if (m_refCount == 1 && hasMeta("__gc")) {
         // NOT STANDARD!
         invokeMeta(const_cast<LuaTable*>(this), m_metaTable, "__gc", LuaValue::NIL, LuaValue::NIL);
     }
@@ -222,6 +222,6 @@ void LuaTable::meta_call(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     _args.insert(_args.end(), args.begin(), args.end());
     f.getFunction()->call(_args, rets);
 }
-bool LuaTable::hasMeta(const char* metaName) {
+bool LuaTable::hasMeta(const char* metaName) const {
     return m_metaTable != NULL && !m_metaTable->get(LuaValue(metaName)).isTypeOf(LVT_Nil);
 }

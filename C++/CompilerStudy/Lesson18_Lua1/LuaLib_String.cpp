@@ -12,7 +12,7 @@ int index_LuaValue2Int(const LuaValue& v, int len) {
 
 static void string_byte(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     const char* s = args[0].getString();
-    int len = strlen(s);
+    int len = (int)strlen(s);
     int i = 0;
     if (args.size() >= 2) i = index_LuaValue2Int(args[1], len);
     int j = i;

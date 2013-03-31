@@ -6,16 +6,15 @@
 #include "LuaFunction.h"
 
 Runtime::Runtime():
-    m_gtable(LuaTable::create()) {
-
+    m_gtable(NULL) {
 }
 Runtime::~Runtime() {
-    m_gtable->releaseRef();
+    if (m_gtable) m_gtable->releaseRef();
 }
 void Runtime::setGlobalTable(LuaTable *t) {
     if (m_gtable != t) {
-        m_gtable->releaseRef();
-        t->addRef();
+        if (m_gtable) m_gtable->releaseRef();
+        if (t) t->addRef();
         m_gtable = t;
     }
 }
@@ -26,8 +25,11 @@ StackFrame* Runtime::getFrameByLevel(int level) {
 void Runtime::pushFrame(LuaFunction *func, int localCount) {
     m_frames.push_back(new StackFrame(func, localCount)); 
 
-    m_levelFrames.resize(func->getMeta()->level + 1);
-    m_levelFrames[func->getMeta()->level].push_back(m_frames.back());
+    int level = func->getMeta()->level;
+    if ((int)m_levelFrames.size() <= level) {
+        m_levelFrames.resize(level + 1);
+    }
+    m_levelFrames[level].push_back(m_frames.back());
 }
 void Runtime::pushFrame(CFunction *func) {
     m_frames.push_back(new StackFrame(func, 0)); 

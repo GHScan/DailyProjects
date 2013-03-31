@@ -6,7 +6,7 @@
 
 LuaValue::LuaValue(const char* str):
     m_type(LVT_String) {
-    int len = strlen(str);
+    int len = (int)strlen(str);
     m_data.str = (char*)malloc(len + 1);
     memcpy(m_data.str, str, len + 1);
 }

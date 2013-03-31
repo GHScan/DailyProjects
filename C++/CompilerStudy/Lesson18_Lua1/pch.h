@@ -1,6 +1,19 @@
 #ifndef PCH_H
 #define PCH_H
 
+#define CHECK_MEMORY_LEAKS
+
+#ifdef _MSC_VER
+#pragma warning(disable : 4996)
+
+#ifdef CHECK_MEMORY_LEAKS
+#define _CRTDBG_MAP_ALLOC
+#include <stdlib.h>
+#include <crtdbg.h>
+#endif
+
+#endif
+
 #include <assert.h>
 #include <string.h>
 
@@ -37,7 +50,7 @@ class Exception:
     public exception {
 public:
     Exception(const string& s): m_s(s) {
-        //assert(0);
+        // assert(0);
     }
     ~Exception() throw(){}
     const char* what() const throw() {
@@ -57,9 +70,5 @@ inline void hash_combine(int & seed, const T & v) {
 }
 
 #define COUNT_OF(a) static_cast<int>(sizeof(a) / sizeof(a[0]))
-
-#ifdef _MSC_VER
-#pragma warning(disable : 4996)
-#endif
 
 #endif

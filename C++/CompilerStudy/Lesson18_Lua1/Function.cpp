@@ -5,17 +5,18 @@
 #include "Runtime.h"
 #include "LuaTable.h"
 
-IFunction::IFunction(): m_refCount(1) {
-    m_fenv = Runtime::instance()->getGlobalTable();
-    m_fenv->addRef();
+IFunction::IFunction(): m_refCount(1), m_fenv(NULL) {
 }
 IFunction::~IFunction() {
-    m_fenv->releaseRef();
+    if (m_fenv != NULL) m_fenv->releaseRef();
+}
+LuaTable* IFunction::getfenv() {
+    return m_fenv != NULL ? m_fenv : Runtime::instance()->getGlobalTable();
 }
 void IFunction::setfenv(LuaTable* env) {
     if (m_fenv != env) {
-        m_fenv->releaseRef();
-        env->addRef();
+        if (m_fenv != NULL) m_fenv->releaseRef();
+        if(env != NULL) env->addRef();
         m_fenv = env;
     }
 }

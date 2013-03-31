@@ -9,7 +9,7 @@ public:
     virtual void call(const vector<LuaValue>& args, vector<LuaValue>& rets) = 0;
     virtual bool equal(IFunction *o) = 0;
 
-    LuaTable* getfenv() { return m_fenv; }
+    LuaTable* getfenv();
     void setfenv(LuaTable* env);
 
     int getRefCount() const { return m_refCount;}

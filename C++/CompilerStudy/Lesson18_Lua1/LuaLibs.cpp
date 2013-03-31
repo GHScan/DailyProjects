@@ -2,16 +2,22 @@
 #include "pch.h"
 #include "LuaLibs.h"
 
-void openLib_all() {
+void runfile(const char *fname) {
+    Runtime::instance()->setGlobalTable(LuaTable::create());
+
     openLib_buildin();
     openLib_string();
     openLib_table();
     openLib_math();
     openLib_os();
     openLib_io();
-}
 
-void dofile(const char *fname) {
-    vector<LuaValue> args, rets;
-    loadFile(fname)->call(args, rets);
+    try {
+        vector<LuaValue> args, rets;
+        loadFile(fname)->call(args, rets);
+    } catch (const exception& e) {
+        printf("unhandled excpetion: \n%s", e.what());
+    }
+
+    Runtime::instance()->setGlobalTable(NULL);
 }

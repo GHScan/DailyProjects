@@ -12,14 +12,14 @@
 #define FILEFIELD_TYPE "_type"
 #define OBJ_TYPE "file"
 
-static void __gc(const vector<LuaValue>& args, vector<LuaValue>& rets) {
+static void _gc(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     auto f = (FILE*)args[0].getTable()->get(LuaValue(NumberType(1))).getLightUserData();
     if (f != NULL) fclose(f);
 }
-static void __lineIter(const vector<LuaValue>& args, vector<LuaValue>& rets) {
+static void _lineIter(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     auto f = (FILE*)args[0].getTable()->get(LuaValue(NumberType(1))).getLightUserData();
     string line(MAX_LINE, 0); 
-    char *p = fgets((char*)line.c_str(), line.size(), f);
+    char *p = fgets((char*)line.c_str(), (int)line.size(), f);
     if (p != NULL) p[strlen(p) - 1] = 0;
     rets.push_back(p == NULL ? LuaValue::NIL : LuaValue(line.c_str()));
 }
@@ -37,7 +37,7 @@ static void file_flush(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     fflush(f);
 }
 static void file_lines(const vector<LuaValue>& args, vector<LuaValue>& rets) {
-    rets.push_back(LuaValue(CFunction::create(&__lineIter)));
+    rets.push_back(LuaValue(CFunction::create(&_lineIter)));
     rets.push_back(args[0]);
 }
 static void file_read(const vector<LuaValue>& args, vector<LuaValue>& rets) {
@@ -72,7 +72,7 @@ static void file_read(const vector<LuaValue>& args, vector<LuaValue>& rets) {
         } else rets.push_back(LuaValue::NIL);
     } else if (fmt == "*l") {
         string line(MAX_LINE, 0); 
-        char *p = fgets((char*)line.c_str(), line.size(), f);
+        char *p = fgets((char*)line.c_str(), (int)line.size(), f);
         if (p != NULL) p[strlen(p) - 1] = 0;
         rets.push_back(p == NULL ? LuaValue::NIL : LuaValue(p));
     } else ASSERT(0);
@@ -117,7 +117,7 @@ static LuaTable* getFileMetaTable() {
     auto meta = ioTable->get(LuaValue(IOFIELD_IO_META));
     if (meta.isTypeOf(LVT_Nil)) {
         auto table = LuaTable::create();
-        table->set(LuaValue("__gc"), LuaValue(CFunction::create(&__gc)));
+        table->set(LuaValue("__gc"), LuaValue(CFunction::create(&_gc)));
         table->addRef();
         table->set(LuaValue("__index"), LuaValue(table));
 

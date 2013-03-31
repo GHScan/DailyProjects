@@ -81,6 +81,7 @@ private:
                 LuaValue rv = m_rets[0]; m_rets.clear();
                 m_rets.push_back(rv);
             } else m_rets.push_back(lv);
+            return;
         } else if (v->op == BOP_Or) {
             if (!lv.getBoolean()) {
                 v->right->acceptVisitor(this);
@@ -88,6 +89,7 @@ private:
                 m_rets.push_back(rv);
             }
             else m_rets.push_back(lv);
+            return;
         }
 
         v->right->acceptVisitor(this);
@@ -168,10 +170,10 @@ private:
     }
     virtual void visit(FieldAccessExpNode *v) {
         v->table->acceptVisitor(this);
-        auto table = m_rets[0].getTable(); m_rets.clear();
+        auto value = m_rets[0]; m_rets.clear();
         v->field->acceptVisitor(this);
         auto field = m_rets[0]; m_rets.clear();
-        m_rets.push_back(table->get(field)); 
+        m_rets.push_back(value.getTable()->get(field)); 
     }
     virtual void visit(TableConstructorExpNode *v) {
         auto table = LuaTable::create();

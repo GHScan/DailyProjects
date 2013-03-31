@@ -14,25 +14,25 @@ static void os_date(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     if (args.size() >= 1) fmt = args[0].getString();
     if (args.size() >= 2) time = (time_t)args[1].getNumber();
 
-    tm detail;
+    tm *detail;
     if (*fmt == '!') {
         ++fmt;
-        gmtime_r(&time, &detail);
-    } else localtime_r(&time, &detail);
+        detail = gmtime(&time);
+    } else detail = localtime(&time);
 
     if (strcmp(fmt, "*t") == 0) {
         auto table = LuaTable::create();
-        table->set(LuaValue("year"), LuaValue(NumberType(detail.tm_year + 1900)));
-        table->set(LuaValue("month"), LuaValue(NumberType(detail.tm_mon + 1)));
-        table->set(LuaValue("day"), LuaValue(NumberType(detail.tm_mday)));
-        table->set(LuaValue("hour"), LuaValue(NumberType(detail.tm_hour)));
-        table->set(LuaValue("min"), LuaValue(NumberType(detail.tm_min)));
-        table->set(LuaValue("sec"), LuaValue(NumberType(detail.tm_sec)));
-        table->set(LuaValue("isdst"), detail.tm_isdst == 1 ? LuaValue::TRUE : LuaValue::FALSE);
+        table->set(LuaValue("year"), LuaValue(NumberType(detail->tm_year + 1900)));
+        table->set(LuaValue("month"), LuaValue(NumberType(detail->tm_mon + 1)));
+        table->set(LuaValue("day"), LuaValue(NumberType(detail->tm_mday)));
+        table->set(LuaValue("hour"), LuaValue(NumberType(detail->tm_hour)));
+        table->set(LuaValue("min"), LuaValue(NumberType(detail->tm_min)));
+        table->set(LuaValue("sec"), LuaValue(NumberType(detail->tm_sec)));
+        table->set(LuaValue("isdst"), detail->tm_isdst == 1 ? LuaValue::TRUE : LuaValue::FALSE);
         rets.push_back(LuaValue(table));
     } else {
         char buf[64] = "";
-        strftime(buf, sizeof(buf), fmt, &detail);
+        strftime(buf, sizeof(buf), fmt, detail);
         rets.push_back(LuaValue(buf));
     }
 }

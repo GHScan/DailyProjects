@@ -30,7 +30,7 @@ public:
     void setMetaTable(LuaTable *t);
     LuaTable* getMetaTable() { return m_metaTable;}
 
-    bool hasMeta(const char* metaName);
+    bool hasMeta(const char* metaName) const;
     LuaValue meta_add(const LuaValue& v);
     LuaValue meta_sub(const LuaValue& v);
     LuaValue meta_mul(const LuaValue& v);

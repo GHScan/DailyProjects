@@ -597,12 +597,13 @@ FunctionPtr loadFile(FILE *f) {
 }
 FunctionPtr loadFile(const char *fname) {
     FILE *f = fopen(fname, "r");
+    ASSERT1(f != NULL, format("Can not open file :%s", fname));
     try {
         srcFileName() = fname;
         auto r = _loadFile(f);
         fclose(f);
         return r;
-    } catch(const exception& e) {
+    } catch(const exception&) {
         fclose(f);
         throw;
     }
