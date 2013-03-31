@@ -110,7 +110,7 @@ Statement
     } Block UNTIL Exp {
         SymbolTable::top()->endBlock();
         auto &block = $3.get<StmtNodePtr>();
-        auto pred = ExpNodePtr(new UnOpExpNode("not", $5.get<ExpNodePtr>()));
+        auto pred = ExpNodePtr(new UnOpExpNode(UOP_Not, $5.get<ExpNodePtr>()));
         $$ = StmtNodePtr(new LoopForStmtNode(block, pred, block));
     }
 
@@ -488,60 +488,60 @@ Field
 
 BinOp_Exp 
     : Exp AND Exp {
-        $$ = ExpNodePtr(new BinOpExpNode("and", $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new BinOpExpNode(BOP_And, $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
     }
     | Exp OR Exp {
-        $$ = ExpNodePtr(new BinOpExpNode("or", $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new BinOpExpNode(BOP_Or, $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
     }
     | Exp OP_LESS Exp {
-        $$ = ExpNodePtr(new BinOpExpNode("<", $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new BinOpExpNode(BOP_Less, $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
     }
     | Exp OP_LEQUAL Exp {
-        $$ = ExpNodePtr(new BinOpExpNode("<=", $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new BinOpExpNode(BOP_LessEq, $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
     }
     | Exp OP_GREATER Exp {
-        $$ = ExpNodePtr(new BinOpExpNode(">", $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new BinOpExpNode(BOP_Greater, $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
     }
     | Exp OP_GEQUAL Exp {
-        $$ = ExpNodePtr(new BinOpExpNode(">=", $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new BinOpExpNode(BOP_GreaterEq, $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
     }
     | Exp OP_EQUAL Exp {
-        $$ = ExpNodePtr(new BinOpExpNode("==", $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new BinOpExpNode(BOP_Equal, $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
     }
     | Exp OP_NEQUAL Exp {
-        $$ = ExpNodePtr(new BinOpExpNode("~=", $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new BinOpExpNode(BOP_NEqual, $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
     }
     | Exp OP_ADD Exp  {
-        $$ = ExpNodePtr(new BinOpExpNode("+", $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new BinOpExpNode(BOP_Add, $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
     }
     | Exp OP_SUB Exp  {
-        $$ = ExpNodePtr(new BinOpExpNode("-", $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new BinOpExpNode(BOP_Sub, $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
     }
     | Exp OP_MUL Exp {
-        $$ = ExpNodePtr(new BinOpExpNode("*", $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new BinOpExpNode(BOP_Mul, $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
     }
     | Exp OP_DIV Exp {
-        $$ = ExpNodePtr(new BinOpExpNode("/", $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new BinOpExpNode(BOP_Div, $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
     }
     | Exp OP_MOD Exp {
-        $$ = ExpNodePtr(new BinOpExpNode("%", $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new BinOpExpNode(BOP_Mod, $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
     }
     | Exp OP_POWER Exp {
-        $$ = ExpNodePtr(new BinOpExpNode("^", $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new BinOpExpNode(BOP_Pow, $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
     }
     | Exp OP_CONCAT Exp {
-        $$ = ExpNodePtr(new BinOpExpNode("..", $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new BinOpExpNode(BOP_Concat, $1.get<ExpNodePtr>(), $3.get<ExpNodePtr>()));
     }
     ;
 UnOp_Exp 
     : OP_SUB Exp {
-        $$ = ExpNodePtr(new UnOpExpNode("-", $2.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new UnOpExpNode(UOP_Unm, $2.get<ExpNodePtr>()));
     }
     | NOT Exp {
-        $$ = ExpNodePtr(new UnOpExpNode("not", $2.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new UnOpExpNode(UOP_Not, $2.get<ExpNodePtr>()));
     }
     | OP_LEN Exp {
-        $$ = ExpNodePtr(new UnOpExpNode("#", $2.get<ExpNodePtr>()));
+        $$ = ExpNodePtr(new UnOpExpNode(UOP_Len, $2.get<ExpNodePtr>()));
     }
     ;
 

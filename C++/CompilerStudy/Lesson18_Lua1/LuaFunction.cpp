@@ -75,13 +75,13 @@ private:
     virtual void visit(BinOpExpNode *v) {
         v->left->acceptVisitor(this);
         LuaValue lv = m_rets[0]; m_rets.clear();
-        if (v->op == "and") {
+        if (v->op == BOP_And) {
             if (lv.getBoolean()) {
                 v->right->acceptVisitor(this);
                 LuaValue rv = m_rets[0]; m_rets.clear();
                 m_rets.push_back(rv);
             } else m_rets.push_back(lv);
-        } else if (v->op == "or") {
+        } else if (v->op == BOP_Or) {
             if (!lv.getBoolean()) {
                 v->right->acceptVisitor(this);
                 LuaValue rv = m_rets[0]; m_rets.clear();
@@ -92,47 +92,67 @@ private:
 
         v->right->acceptVisitor(this);
         LuaValue rv = m_rets[0]; m_rets.clear();
-        if (v->op == "<") {
-            m_rets.push_back(lv < rv ? LuaValue::TRUE : LuaValue::FALSE);
-        } else if (v->op == "<=") {
-            m_rets.push_back(lv <= rv ? LuaValue::TRUE : LuaValue::FALSE);
-        } else if (v->op == ">") {
-            m_rets.push_back(lv > rv ? LuaValue::TRUE : LuaValue::FALSE);
-        } else if (v->op == ">=") {
-            m_rets.push_back(lv >= rv ? LuaValue::TRUE : LuaValue::FALSE);
-        } else if (v->op == "==") {
-            m_rets.push_back(lv == rv ? LuaValue::TRUE : LuaValue::FALSE);
-        } else if (v->op == "~=") {
-            m_rets.push_back(lv != rv ? LuaValue::TRUE : LuaValue::FALSE);
-        } else if (v->op == "+") {
-            m_rets.push_back(lv + rv);
-        } else if (v->op == "-") {
-            m_rets.push_back(lv - rv);
-        } else if (v->op == "*") {
-            m_rets.push_back(lv * rv);
-        } else if (v->op == "/") {
-            m_rets.push_back(lv / rv);
-        } else if (v->op == "%") {
-            m_rets.push_back(lv % rv);
-        } else if (v->op == "^") {
-            m_rets.push_back(lv.power(rv));
-        } else if (v->op == "..") {
-            m_rets.push_back(lv.concat(rv));
-        } else ASSERT(0);
+        switch (v->op) {
+            case BOP_Less: 
+                m_rets.push_back(lv < rv ? LuaValue::TRUE : LuaValue::FALSE);
+                break;
+            case BOP_LessEq:
+                m_rets.push_back(lv <= rv ? LuaValue::TRUE : LuaValue::FALSE);
+                break;
+            case BOP_Greater:
+                m_rets.push_back(lv > rv ? LuaValue::TRUE : LuaValue::FALSE);
+                break;
+            case BOP_GreaterEq:
+                m_rets.push_back(lv >= rv ? LuaValue::TRUE : LuaValue::FALSE);
+                break;
+            case BOP_Equal:
+                m_rets.push_back(lv == rv ? LuaValue::TRUE : LuaValue::FALSE);
+                break;
+            case BOP_NEqual:
+                m_rets.push_back(lv != rv ? LuaValue::TRUE : LuaValue::FALSE);
+                break;
+            case BOP_Add:
+                m_rets.push_back(lv + rv);
+                break;
+            case BOP_Sub:
+                m_rets.push_back(lv - rv);
+                break;
+            case BOP_Mul:
+                m_rets.push_back(lv * rv);
+                break;
+            case BOP_Div:
+                m_rets.push_back(lv / rv);
+                break;
+            case BOP_Mod:
+                m_rets.push_back(lv % rv);
+                break;
+            case BOP_Pow:
+                m_rets.push_back(lv.power(rv));
+                break;
+            case BOP_Concat:
+                m_rets.push_back(lv.concat(rv));
+                break;
+            default: ASSERT(0); break;
+        }
     }
     virtual void visit(UnOpExpNode *v) {
         v->exp->acceptVisitor(this);
         LuaValue value = m_rets[0]; m_rets.clear();
-        if (v->op == "-") {
-            if (value.isTypeOf(LVT_Table)) {
-                m_rets.push_back(value.getTable()->meta_unm());
-            } else m_rets.push_back(LuaValue(-value.getNumber()));
-        } else if (v->op == "not") {
-            if (!value.getBoolean()) m_rets.push_back(LuaValue::TRUE);
-            else m_rets.push_back(LuaValue::FALSE);
-        } else if (v->op == "#") {
-            m_rets.push_back(LuaValue(NumberType(value.getSize())));
-        } else ASSERT(0);
+        switch (v->op) {
+            case UOP_Unm:
+                if (value.isTypeOf(LVT_Table)) {
+                    m_rets.push_back(value.getTable()->meta_unm());
+                } else m_rets.push_back(LuaValue(-value.getNumber()));
+                break;
+            case UOP_Not:
+                if (!value.getBoolean()) m_rets.push_back(LuaValue::TRUE);
+                else m_rets.push_back(LuaValue::FALSE);
+                break;
+            case UOP_Len:
+                m_rets.push_back(LuaValue(NumberType(value.getSize())));
+                break;
+            default: ASSERT(0); break;
+        }
     }
     virtual void visit(ConstExpNode *v) {
         m_rets.push_back(m_stmt->getFunc()->getMeta()->constTable[v->index]);

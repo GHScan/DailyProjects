@@ -36,20 +36,40 @@ struct IExpNode {
 };
 typedef shared_ptr<IExpNode>  ExpNodePtr;
 
+enum BinOpType {
+    BOP_And,
+    BOP_Or,
+    BOP_Less,
+    BOP_LessEq,
+    BOP_Greater,
+    BOP_GreaterEq,
+    BOP_Equal,
+    BOP_NEqual,
+    BOP_Add,
+    BOP_Sub,
+    BOP_Mul,
+    BOP_Div,
+    BOP_Mod,
+    BOP_Pow,
+    BOP_Concat,
+};
 struct BinOpExpNode: 
     public IExpNode {
-    // TODO: enum
-    string op;
+    BinOpType op;
     ExpNodePtr left, right;
-    BinOpExpNode(const string& _op, const ExpNodePtr& _left, const ExpNodePtr& _right): op(_op), left(_left), right(_right){}
+    BinOpExpNode(BinOpType _op, const ExpNodePtr& _left, const ExpNodePtr& _right): op(_op), left(_left), right(_right){}
     virtual void acceptVisitor(IExpNodeVisitor *v) { v->visit(this);}
+};
+enum UnOpType {
+    UOP_Unm,
+    UOP_Not,
+    UOP_Len,
 };
 struct UnOpExpNode:
     public IExpNode {
-    // TODO: enum
-    string op;
+    UnOpType op;
     ExpNodePtr exp;
-    UnOpExpNode(const string& _op, const ExpNodePtr& _exp): op(_op), exp(_exp){}
+    UnOpExpNode(UnOpType _op, const ExpNodePtr& _exp): op(_op), exp(_exp){}
     virtual void acceptVisitor(IExpNodeVisitor *v) { v->visit(this);}
 };
 struct ConstExpNode:
