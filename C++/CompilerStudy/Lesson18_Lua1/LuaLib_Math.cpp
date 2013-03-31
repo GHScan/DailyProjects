@@ -109,11 +109,11 @@ static void math_random(const vector<LuaValue>& args, vector<LuaValue>& rets) {
         NumberType n = args[0].getNumber();
         ASSERT(n > 1);
         rets.push_back(LuaValue(1 + rand() * (n - 1) / RAND_MAX));
-    } else if (args.size() == 2) {
+    } else if (args.size() >= 2) {
         NumberType m = args[0].getNumber(), n = args[1].getNumber();
         ASSERT(n > m);
         rets.push_back(LuaValue(m + rand() * (n - m) / RAND_MAX));
-    } else ASSERT(0);
+    } else ;
 }
 static void math_randomseed(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     NumberType n = args[0].getNumber();

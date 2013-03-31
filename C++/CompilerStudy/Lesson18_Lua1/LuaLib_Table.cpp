@@ -35,11 +35,12 @@ static void table_concat(const vector<LuaValue>& args, vector<LuaValue>& rets) {
 }
 static void table_insert(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     auto table = args[0].getTable();
-    if (args.size() == 2) {
+    if (args.size() <= 1) ASSERT(0);
+    else if (args.size() == 2) {
         table->arrayInsert(table->size(), args[1]);
-    } else if (args.size() == 3) {
+    } else if (args.size() >= 3) {
         table->arrayInsert(index_LuaValue2Int(args[1], table->size()), args[2]);
-    } else ASSERT(0);
+    } else ;
 }
 static void table_maxn(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     rets.push_back(LuaValue(NumberType(args[0].getTable()->size())));
@@ -52,11 +53,12 @@ static void table_remove(const vector<LuaValue>& args, vector<LuaValue>& rets) {
 }
 static void table_sort(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     auto table = args[0].getTable();
-    if (args.size() == 1) {
+    if (args.empty()) ASSERT(0);
+    else if (args.size() == 1) {
         table->sort();
-    } else if (args.size() == 2) {
+    } else if (args.size() >= 2) {
         table->sort(args[1]);
-    } else ASSERT(0);
+    } else ;
 }
 static void table_foreach(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     auto table = args[0].getTable();
