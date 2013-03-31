@@ -1,15 +1,13 @@
 # TODO
-+ Memory issues (eg. leaks)
-+ More test case
 + Library: string
 + Grammar bug
 
-# Enhance the official-lua
+# Feature
 + __gc of table
 + continue
 
 # Next version
++ Optmized metatable
 + GC
 + Byte code
 + Coroutine
-+ Optmized metatable
