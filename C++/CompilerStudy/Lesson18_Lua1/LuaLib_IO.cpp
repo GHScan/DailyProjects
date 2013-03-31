@@ -46,8 +46,11 @@ static void file_read(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     if (args.size() > 1 && args[1].isTypeOf(LVT_Number)) {
         int n = (int)args[1].getNumber();
         string s(n + 1, 0);
-        fread((char*)s.c_str(), n, 1, f);
-        rets.push_back(LuaValue(s.c_str()));
+        n = fread((char*)s.c_str(), 1, n, f);
+        if (n > 0) {
+            s.resize(n);
+            rets.push_back(LuaValue(s.c_str()));
+        } else rets.push_back(LuaValue::NIL);
         return;
     }
 
@@ -61,8 +64,9 @@ static void file_read(const vector<LuaValue>& args, vector<LuaValue>& rets) {
 
         if (off2 > off) {
             string buf(off2 - off + 1, 0);
-            fread((char*)buf.c_str(), buf.size(), 1, f);
-            rets.push_back(LuaValue(buf.c_str()));
+            if (fread((char*)buf.c_str(), 1, buf.size() - 1, f) > 0)  {
+                rets.push_back(LuaValue(buf.c_str()));
+            } else rets.push_back(LuaValue::NIL);
         } else rets.push_back(LuaValue::NIL);
 
     } else if (fmt == "*n") {
