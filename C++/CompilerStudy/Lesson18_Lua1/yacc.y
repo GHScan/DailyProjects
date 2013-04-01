@@ -330,6 +330,9 @@ Exp
     | TableConstructor
     | BinOp_Exp 
     | UnOp_Exp
+    | '(' Exp ')' {
+        $$ = $2;
+    }
     ;
 
 VarList 
@@ -359,10 +362,6 @@ Var
 PrefixExp 
     : Var
     | FunctionCall  
-    | '(' Exp ')' {
-        srcFileLine() = getTokenLine();
-        $$ = $2;
-    }
     ;
 
 FunctionCall 

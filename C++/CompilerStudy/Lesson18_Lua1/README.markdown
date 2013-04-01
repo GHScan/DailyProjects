@@ -1,6 +1,5 @@
 # TODO
 + Library: string
-+ Grammar bug
 
 # Feature
 + __gc of table
