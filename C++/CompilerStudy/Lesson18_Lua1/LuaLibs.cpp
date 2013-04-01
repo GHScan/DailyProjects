@@ -2,7 +2,9 @@
 #include "pch.h"
 #include "LuaLibs.h"
 
-void runfile(const char *fname) {
+void runfile(int argc, char *argv[]) {
+    ASSERT(argc >= 2);
+
     Runtime::instance()->setGlobalTable(LuaTable::create());
 
     openLib_buildin();
@@ -14,7 +16,8 @@ void runfile(const char *fname) {
 
     try {
         vector<LuaValue> args, rets;
-        loadFile(fname)->call(args, rets);
+        for (int i = 2; i < argc; ++i) args.push_back(LuaValue(argv[i]));
+        loadFile(argv[1])->call(args, rets);
     } catch (const exception& e) {
         printf("unhandled excpetion: \n%s", e.what());
     }

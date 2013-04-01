@@ -15,6 +15,6 @@ int main(int argc, char *argv[]) {
 #endif
 #endif
 
-    runfile(argv[1]);
+    runfile(argc, argv);
     return 0;
 }

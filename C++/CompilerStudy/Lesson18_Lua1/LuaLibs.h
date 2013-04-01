@@ -12,7 +12,7 @@ typedef shared_ptr<IFunction> FunctionPtr;
 
 extern FunctionPtr loadFile(const char *fname);
 extern FunctionPtr loadFile(FILE *f);
-extern void runfile(const char *fname);
+extern void runfile(int argc, char *argv[]);
 
 extern void openLib_buildin();
 extern void openLib_string();
