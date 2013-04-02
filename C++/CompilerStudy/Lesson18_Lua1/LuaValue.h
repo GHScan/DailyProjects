@@ -2,6 +2,10 @@
 #ifndef LUA_VALUE_H
 #define LUA_VALUE_H
 
+#undef NIL
+#undef TRUE
+#undef FALSE
+
 typedef double NumberType;
 
 enum LuaValueType {
