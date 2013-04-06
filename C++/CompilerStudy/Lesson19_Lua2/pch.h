@@ -28,6 +28,7 @@
 #include <map>
 #include <set>
 #include <unordered_map>
+#include <unordered_set>
 #include <stack>
 
 using namespace std;
@@ -69,4 +70,6 @@ inline void hash_combine(int & seed, const T & v) {
     seed ^= std::hash<T>()(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 }
 
+#define sdelete(p) (delete (p), (p) = NULL)
+ 
 #endif
