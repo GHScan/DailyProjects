@@ -5,6 +5,7 @@
 class GCObjectManager;
 class StringPool;
 class LuaStack;
+class LuaTable;
 
 class LuaVM {
 public:
@@ -16,6 +17,8 @@ public:
     StringPool *getStringPool() { return m_strPool; }
     LuaStack* getCurrentStack() { return m_curStack;}
     void setCurrentStack(LuaStack *stack) { m_curStack = stack; }
+    LuaTable* getGlobalTable() { return m_gtable;}
+    void setGlobalTable(LuaTable *t) { m_gtable = t; }
 public:
     LuaVM();
     ~LuaVM();
@@ -31,6 +34,7 @@ private:
     GCObjectManager *m_gcObjMgr;
     StringPool *m_strPool;
     LuaStack *m_curStack;
+    LuaTable *m_gtable;
 };
 
 #endif

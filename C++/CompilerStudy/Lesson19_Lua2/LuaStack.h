@@ -24,20 +24,27 @@ struct LuaStackFrame {
 };
 
 struct LuaStack:
+    // TODO: should it derived from gcobject ???
     public GCObject {
     static LuaStack* create() {
         return new LuaStack();
+    }
+    void destroy() {
+        delete this;
     }
 
     LuaStackFrame* topFrame() { return m_frames.back(); }
     void pushFrame(Function *func, int paramBase, int paramCount);
     void popFrame();
 
-    LuaStack();
-    ~LuaStack();
+    void collectGCObject(vector<GCObject*>& unscaned);
 
     vector<LuaValue> m_values;
     vector<LuaStackFrame*> m_frames;
+
+private:
+    LuaStack();
+    ~LuaStack();
 };
 
 inline LuaValue& LuaStackFrame::local(int localIdx) { return stack->m_values[localBase + localIdx];}

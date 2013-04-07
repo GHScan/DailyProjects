@@ -1,13 +1,29 @@
 
 #include "pch.h"
 #include "LuaTable.h"
+#include "LuaFunction.h"
+#include "LuaVM.h"
+#include "GCObject.h"
+
+static LuaValue invokeMeta(LuaTable* table, LuaValue& func, const LuaValue& arg0, const LuaValue& arg1 = LuaValue::NIL) {
+    vector<LuaValue> params, rets;
+    params.push_back(LuaValue(table));
+    params.push_back(arg0);
+    callFunc(func, params, rets);
+    return rets.empty() ? LuaValue::NIL : rets[0];
+}
+static LuaValue invokeMeta(LuaTable* table, LuaTable *metaTable, const char *metaName, const LuaValue& arg0, const LuaValue& arg1 = LuaValue::NIL) {
+    LuaValue func = metaTable->get(LuaValue(metaName));
+    return invokeMeta(table, func, arg0, arg1);
+}
 
 LuaTable::LuaTable(): GCObject(OT_Table), m_metaTable(NULL) {
+    LuaVM::instance()->getGCObjManager()->linkObject(this);
 }
 LuaTable::~LuaTable() {
 }
 
-LuaValue& LuaTable::get(const LuaValue& k, bool raw) {
+LuaValue LuaTable::get(const LuaValue& k, bool raw) {
     if (k.isTypeOf(LVT_Number)) {
         int idx = (int)k.getNumber() - 1;
         if (idx >= 0 && idx < (int)m_array.size()) return m_array[idx];
@@ -16,19 +32,29 @@ LuaValue& LuaTable::get(const LuaValue& k, bool raw) {
     if (iter != m_dict.end()) return iter->second;
 
     if (!raw) {
-        LuaValue &v = getMeta("__index");
-        if (v.isNil());
-        else if (v.isTypeOf(LVT_Table)) {
-            return v.getTable()->get(k);
-        } else if (v.isTypeOf(LVT_Function)) {
-            // TODO
-        }
+        LuaValue m = getMeta("__index");
+        if (m.isNil());
+        else if (m.isTypeOf(LVT_Table)) {
+            return m.getTable()->get(k);
+        } else if (m.isTypeOf(LVT_Function)) {
+            return invokeMeta(this, m, k);
+        } else ;
     }
 
     return LuaValue::NIL;
 }
 void LuaTable::set(const LuaValue& k, const LuaValue& v, bool raw) {
-    // TODO
+    if (!raw && m_metaTable != NULL && get(k, true).isNil()) {
+        LuaValue m = getMeta("__newindex");
+        if (m.isNil());
+        else if (m.isTypeOf(LVT_Table)) {
+            m.getTable()->set(k, v);
+            return;
+        } else if (m.isTypeOf(LVT_Function)) {
+            invokeMeta(this, m, k, v);
+            return;
+        } else ;
+    }
 
     if (k.isTypeOf(LVT_Number)) {
         int idx = (int)k.getNumber() - 1;
@@ -37,6 +63,17 @@ void LuaTable::set(const LuaValue& k, const LuaValue& v, bool raw) {
         else {}
     }
     m_dict[k] = v;
+}
+
+void LuaTable::arrayInsert(int off, const LuaValue& v) {
+    m_array.insert(m_array.begin() + off, v);
+}
+
+LuaValue LuaTable::arrayRemove(int off) {
+    auto iter = m_array.begin() + off;
+    auto r = *iter;
+    m_array.erase(iter);
+    return r;
 }
 
 LuaValue& LuaTable::getNext(LuaValue& k) {
@@ -76,9 +113,82 @@ LuaValue& LuaTable::getNext(LuaValue& k) {
     k = LuaValue::NIL;
     return LuaValue::NIL;
 }
+const LuaValue& LuaTable::getINext(LuaValue& k) const {
+    if (k.isNil()) return m_array.empty() ? LuaValue::NIL : m_array[0];
+    int idx = (int)k.getNumber();
+    if (idx >= 0 && idx < (int)m_array.size()) return m_array[idx];
+    return LuaValue::NIL;
+}
 
-LuaValue& LuaTable::getMeta(const char *metaName) {
+LuaValue LuaTable::getMeta(const char *metaName) {
     if (m_metaTable == NULL) return LuaValue::NIL;
-    LuaValue& v = m_metaTable->get(LuaValue(metaName));
+    LuaValue v = m_metaTable->get(LuaValue(metaName));
     return v;
+}
+
+void LuaTable::sort() {
+    std::sort(m_array.begin(), m_array.end());
+}
+void LuaTable::sort(LuaValue& cmp) {
+    vector<LuaValue> params, rets;
+    std::sort(m_array.begin(), m_array.end(), [&params, &rets, &cmp]
+            (const LuaValue& l, const LuaValue& r){
+        params.clear(); rets.clear();
+        params.push_back(l); params.push_back(r);
+        callFunc(cmp, params, rets);
+        return rets[0].getBoolean();
+    });
+}
+
+LuaValue LuaTable::meta_add(const LuaValue& v) {
+    return invokeMeta(this, m_metaTable, "__add", v);
+}
+LuaValue LuaTable::meta_sub(const LuaValue& v) {
+    return invokeMeta(this, m_metaTable, "__sub", v);
+}
+LuaValue LuaTable::meta_mul(const LuaValue& v) {
+    return invokeMeta(this, m_metaTable, "__mul", v);
+}
+LuaValue LuaTable::meta_div(const LuaValue& v) {
+    return invokeMeta(this, m_metaTable, "__div", v);
+}
+LuaValue LuaTable::meta_mod(const LuaValue& v) {
+    return invokeMeta(this, m_metaTable, "__mod", v);
+}
+LuaValue LuaTable::meta_pow(const LuaValue& v) {
+    return invokeMeta(this, m_metaTable, "__pow", v);
+}
+LuaValue LuaTable::meta_concat(const LuaValue& v) {
+    return invokeMeta(this, m_metaTable, "__concat", v);
+}
+LuaValue LuaTable::meta_eq(const LuaValue& v) {
+    return invokeMeta(this, m_metaTable, "__eq", v);
+}
+LuaValue LuaTable::meta_lt(const LuaValue& v) {
+    return invokeMeta(this, m_metaTable, "__lt", v);
+}
+LuaValue LuaTable::meta_le(const LuaValue& v) {
+    return invokeMeta(this, m_metaTable, "__le", v);
+}
+LuaValue LuaTable::meta_unm() {
+    return invokeMeta(this, m_metaTable, "__unm", LuaValue::NIL);
+}
+void LuaTable::meta_call(const vector<LuaValue>& args, vector<LuaValue>& rets) {
+    LuaValue m = m_metaTable->get(LuaValue("__call"));
+    vector<LuaValue> params(args);
+    params.insert(params.begin(), LuaValue(this));
+    callFunc(m, params, rets);
+}
+
+void LuaTable::collectGCObject(vector<GCObject*>& unscaned) {
+    if (m_metaTable != NULL) {
+        if (auto p = m_metaTable->gcAccess()) unscaned.push_back(p);
+    }
+    for (auto &v : m_array) {
+        if (auto p = v.gcAccess()) unscaned.push_back(p);
+    }
+    for (auto &kv : m_dict) {
+        if (auto p = kv.first.gcAccess()) unscaned.push_back(p);
+        if (auto p = kv.second.gcAccess()) unscaned.push_back(p);
+    }
 }

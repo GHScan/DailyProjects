@@ -12,8 +12,10 @@ struct Function:
         FT_C,
     };
     FuncType funcType;
-    Function(FuncType _funcType): GCObject(OT_Function), funcType(_funcType){}
+    Function(FuncType _funcType);
     bool equal(Function *o);
+    void collectGCObject(vector<GCObject*>& unscaned);
+    void destroy();
 };
 
 struct LuaFunctionMeta {

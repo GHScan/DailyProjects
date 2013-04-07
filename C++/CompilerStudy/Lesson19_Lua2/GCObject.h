@@ -11,6 +11,13 @@ struct GCObject {
     };
 
     GCObject(ObjType _objType): next(NULL), gcState(GCS_Unaccess), objType(_objType){}
+    GCObject* gcAccess() {
+        if (gcState == GCS_Unaccess) {
+            gcState = GCS_Unscan;
+            return this;
+        }
+        return NULL;
+    }
 
     GCObject *next;
     GCState gcState;
@@ -23,7 +30,6 @@ public:
     ~GCObjectManager();
 
     void performFullGC();
-    // TODO: makesure kinds of gcobject has call this
     void linkObject(GCObject *obj);
 
 private:

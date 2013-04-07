@@ -5,12 +5,39 @@
 #include "LuaVM.h"
 #include "LuaStack.h"
 #include "ByteCode.h"
+#include "GCObject.h"
+
+Function::Function(FuncType _funcType): GCObject(OT_Function), funcType(_funcType){
+    LuaVM::instance()->getGCObjManager()->linkObject(this);
+}
+
+void Function::collectGCObject(vector<GCObject*>& unscaned) {
+    if (funcType == FT_Lua) {
+        for (auto &uv : static_cast<LuaFunction*>(this)->upValues) {
+            if (auto p = uv.gcAccess()) unscaned.push_back(p);
+        }
+    }
+}
+void Function::destroy() {
+    if (funcType == FT_Lua) {
+        delete static_cast<LuaFunction*>(this);
+    } else if (funcType == FT_C) {
+        delete static_cast<CFunction*>(this);
+    } else {
+        ASSERT(0);
+    }
+}
 
 void callFunc(int tempIdx) {
     auto stack = LuaVM::instance()->getCurrentStack();
     auto frame = stack->topFrame();
     auto func = frame->temp(tempIdx).getFunction();
     if (func->funcType == Function::FT_Lua) {
+        {
+            auto meta = static_cast<LuaFunction*>(func)->meta;
+            int paramCount = frame->tempExtCount - tempIdx - 1;
+            for (; paramCount < meta->argCount; ++paramCount) frame->pushExtTemp(LuaValue::NIL);
+        }
         stack->pushFrame(func, tempIdx + 1, frame->tempExtCount - tempIdx - 1);
     } else if (func->funcType == Function::FT_C) {
         // TODO: optmize
@@ -38,6 +65,6 @@ void callFunc(LuaValue &func, const vector<LuaValue>& params, vector<LuaValue>& 
     for (auto &v : params) frame->pushTemp(v);
     callFunc(tempIdx);
     execute(frame);
-    for (int i = tempIdx; i < frame->tempExtCount; ++i) rets.push_back(frame->temp(i));
+    rets.assign(&frame->temp(tempIdx), &frame->temp(frame->tempExtCount));
     frame->popTemps(tempIdx);
 }

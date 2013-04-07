@@ -36,6 +36,7 @@ StringPool::~StringPool() {
     ASSERT(m_strSet.empty());
 }
 LuaString* StringPool::createString(const char *buf) {
+    // TODO: opmitize
     return createString(buf, strlen(buf));
 }
 LuaString* StringPool::createString(const char *buf, int size) {

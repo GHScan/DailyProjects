@@ -5,6 +5,8 @@
 #include "LuaVM.h"
 #include "LuaString.h"
 #include "LuaFunction.h"
+#include "GCObject.h"
+#include "LuaTable.h"
 
 LuaValue::LuaValue(NumberType num): 
     m_type(LVT_Number) {
@@ -64,7 +66,7 @@ bool LuaValue::operator == (const LuaValue& o) const {
         case LVT_Number: return m_data.num == o.m_data.num;
         case LVT_String: return m_data.str == o.m_data.str;
         case LVT_Table: return m_data.table == o.m_data.table;
-        case LVT_Function: return m_data.func->equal(o.m_data.func);
+        case LVT_Function: return m_data.func == o.m_data.func;
         case LVT_LightUserData: return m_data.lud == o.m_data.lud;
         default: ASSERT(0);
         }
@@ -74,7 +76,7 @@ bool LuaValue::operator == (const LuaValue& o) const {
 bool LuaValue::operator < (const LuaValue& o) const {
     if (m_type == o.m_type) {
         switch (m_type) {
-        case LVT_Boolean: return m_data.b < o.m_data.b;
+        case LVT_Boolean: ASSERT(0);
         case LVT_Number: return m_data.num < o.m_data.num;
         case LVT_String: return m_data.str->isContentLess(*o.m_data.str);
         case LVT_Table: ASSERT(0);
@@ -82,10 +84,18 @@ bool LuaValue::operator < (const LuaValue& o) const {
         case LVT_LightUserData: ASSERT(0);
         default: ASSERT(0);
         }
-    } else {
-        ASSERT(0);
-    }
+    } 
+    ASSERT(0);
     return false;
+}
+
+GCObject* LuaValue::gcAccess() const {
+    switch (m_type) {
+        case LVT_String: return m_data.str->gcAccess();
+        case LVT_Table: return m_data.table->gcAccess();
+        case LVT_Function: return m_data.func->gcAccess();
+        default: return NULL;
+    }
 }
 
 LuaValue LuaValue::NIL;

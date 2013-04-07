@@ -7,10 +7,9 @@
 class LuaString:
     public GCObject {
 public:
-    LuaString(): GCObject(OT_String), m_buf(NULL), m_size(0), m_contentHash(0){}
-    LuaString(const char *buf);
-    LuaString(const char *buf, int size);
-    ~LuaString();
+    void destroy() {
+        delete this;
+    }
 
     const char* buf() const { return m_buf; }
     int size() const { return m_size; }
@@ -34,6 +33,14 @@ public:
         if (r == 0) return m_size < o.m_size;
         else return r;
     }
+private:
+    friend class StringPool;
+
+    LuaString(): GCObject(OT_String), m_buf(NULL), m_size(0), m_contentHash(0){}
+    LuaString(const char *buf);
+    LuaString(const char *buf, int size);
+    ~LuaString();
+
 private:
     LuaString(const LuaString&);
     LuaString& operator = (const LuaString&);

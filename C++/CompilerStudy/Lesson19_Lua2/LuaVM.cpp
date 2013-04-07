@@ -6,7 +6,6 @@
 #include "LuaString.h"
 #include "LuaStack.h"
 
-
 void LuaVM::create() {
     s_ins = new LuaVM();
 }
@@ -18,9 +17,11 @@ LuaVM* LuaVM::s_ins;
 LuaVM::LuaVM(): 
     m_gcObjMgr(new GCObjectManager),
     m_strPool(new StringPool),
-    m_curStack(LuaStack::create()) {
+    m_curStack(LuaStack::create()),
+    m_gtable(NULL){
 }
 LuaVM::~LuaVM() {
+    m_gtable = NULL;
     m_curStack = NULL;
     sdelete(m_gcObjMgr);
     sdelete(m_strPool);

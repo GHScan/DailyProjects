@@ -7,6 +7,7 @@ typedef double NumberType;
 class LuaString;
 class LuaTable;
 struct Function;
+struct GCObject;
 
 struct LightUserDataRef {};
 typedef LightUserDataRef* LightUserData;
@@ -51,7 +52,7 @@ public:
     bool isTypeOf(LuaValueType t) const { return m_type == t; }
     bool isNil() const { return m_type == LVT_Nil; }
     bool getBoolean() const { 
-        if (isTypeOf(LVT_Nil)) return false;
+        if (isNil()) return false;
         else if (isTypeOf(LVT_Boolean)) return m_data.b;
         else return true;
     }
@@ -62,6 +63,8 @@ public:
     const Function* getFunction() const { ASSERT(isTypeOf(LVT_Function)); return m_data.func;}
     Function* getFunction() { ASSERT(isTypeOf(LVT_Function)); return m_data.func; }
     LightUserData getLightUserData() const { ASSERT(isTypeOf(LVT_LightUserData)); return m_data.lud; }
+
+    GCObject* gcAccess() const;
 
     int getHash() const;
 public:
