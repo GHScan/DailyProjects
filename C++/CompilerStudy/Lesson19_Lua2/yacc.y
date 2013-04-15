@@ -22,6 +22,9 @@
 
 %{
 
+#include "LuaFunction.h"
+#include "SymbolTable.h"
+
 %}
 
 %%
@@ -210,7 +213,8 @@ Number
 Literal
     : LITERAL1
     | LITERAL2
-    | LITERAL3
+    | LITERAL3 {
+    }
     ;
 
 %%
@@ -221,9 +225,13 @@ bool parseFile(const char *fname)
     FILE *f = fopen(fname, "r");
     try
     {
+        SymbolTable::push(new LuaFunctionMeta());
+
         yyrestart(f);
         yyparse();
         succ = true;
+
+        SymbolTable::pop();
     }
     catch(const exception& e) {
         printf("Catch parse exception: %s\n", e.what());

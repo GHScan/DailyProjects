@@ -16,3 +16,6 @@ void execute(LuaStackFrame *stopFrame) {
         }
     }
 }
+
+void genCode(vector<int>& codes, IStmtNode* ast) {
+}

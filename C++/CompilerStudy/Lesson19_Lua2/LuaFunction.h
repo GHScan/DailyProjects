@@ -5,6 +5,9 @@
 #include "LuaValue.h"
 #include "GCObject.h"
 
+struct IStmtNode;
+typedef shared_ptr<IStmtNode> StmtNodePtr;
+
 struct Function: 
     public GCObject {
     enum FuncType {
@@ -22,7 +25,12 @@ struct LuaFunctionMeta {
     int argCount, localCount;
     int level;
     vector<int> codes;
+    StmtNodePtr ast;
     vector<LuaValue> constTable;
+    vector<pair<int, int> > upValues;
+
+    LuaFunctionMeta(): argCount(0), localCount(0), level(0){}
+    int getConstIdx(const LuaValue& v);
 };
 
 struct LuaFunction:

@@ -28,6 +28,14 @@ void Function::destroy() {
     }
 }
 
+int LuaFunctionMeta::getConstIdx(const LuaValue& v) {
+    for (int i = 0; i < (int)constTable.size(); ++i) {
+        if (constTable[i] == v) return i;
+    }
+    constTable.push_back(v);
+    return (int)constTable.size() - 1;
+}
+
 void callFunc(int tempIdx) {
     auto stack = LuaVM::instance()->getCurrentStack();
     auto frame = stack->topFrame();
