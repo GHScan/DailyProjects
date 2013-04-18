@@ -24,7 +24,6 @@ struct LuaStackFrame {
 };
 
 struct LuaStack:
-    // TODO: should it derived from gcobject ???
     public GCObject {
     static LuaStack* create() {
         return new LuaStack();

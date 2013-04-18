@@ -5,16 +5,17 @@
 #include "Any.h"
 #include "AST.h"
 
-struct SyntaxUnit {
+struct TerminalSymbol {
+    string lexem;
     int line;
-    Any value;
-    SyntaxUnit(int _line, const Any& _value): line(_line), value(_value){}
-    SyntaxUnit(): line(0){}
+    TerminalSymbol(): line(0){}
+    TerminalSymbol(const string& _lexem, int _line): lexem(_lexem), line(_line){}
 };
-#define YYSTYPE SyntaxUnit
+#define YYSTYPE Any
 
 static void onTokenFound(bool isAttr);
 int isatty(int );
+int getTokenLine();
 
 #include "yacc.h"
 
@@ -96,7 +97,7 @@ static int g_parenthesisLevel = 0;
 static int g_bracketLevel = 0;
 static int g_braceLevel = 0;
 static void onTokenFound(bool isAttr) {
-    if (isAttr) yylval = SyntaxUnit(g_line, string(yytext, yytext + yyleng));
+    if (isAttr) yylval = TerminalSymbol(string(yytext, yytext + yyleng), g_line);
     g_column += yyleng;
     for (int i = 0; i < (int)yyleng; ++i) { 
         switch (yytext[i]) {
@@ -113,6 +114,10 @@ static void onTokenFound(bool isAttr) {
         default: break;
         }
     }
+}
+
+int getTokenLine() {
+    return g_line;
 }
 
 void yyerror(const char *msg) {

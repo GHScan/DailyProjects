@@ -9,6 +9,7 @@ static LuaValue invokeMeta(LuaTable* table, LuaValue& func, const LuaValue& arg0
     vector<LuaValue> params, rets;
     params.push_back(LuaValue(table));
     params.push_back(arg0);
+    params.push_back(arg1);
     callFunc(func, params, rets);
     return rets.empty() ? LuaValue::NIL : rets[0];
 }
@@ -58,8 +59,13 @@ void LuaTable::set(const LuaValue& k, const LuaValue& v, bool raw) {
 
     if (k.isTypeOf(LVT_Number)) {
         int idx = (int)k.getNumber() - 1;
-        if (idx >= 0 && idx < (int)m_array.size()) m_array[idx] = v;
-        else if (idx == (int)m_array.size()) m_array.push_back(v);
+        if (idx >= 0 && idx < (int)m_array.size()) {
+            m_array[idx] = v;
+            return;
+        } else if (idx == (int)m_array.size()) {
+            m_array.push_back(v);
+            return;
+        }
         else {}
     }
     m_dict[k] = v;
@@ -94,8 +100,7 @@ LuaValue& LuaTable::getNext(LuaValue& k) {
         if (idx >= 0 && idx < (int)m_array.size()) {
             k = LuaValue(idx + 1);
             return m_array[idx];
-        }
-        else if (idx == (int)m_array.size()) {
+        } else if (idx == (int)m_array.size()) {
             k = m_dict.begin()->first;
             return m_dict.begin()->second;
         }
@@ -114,9 +119,20 @@ LuaValue& LuaTable::getNext(LuaValue& k) {
     return LuaValue::NIL;
 }
 const LuaValue& LuaTable::getINext(LuaValue& k) const {
-    if (k.isNil()) return m_array.empty() ? LuaValue::NIL : m_array[0];
+    if (k.isNil()) {
+        if (!m_array.empty()) {
+            k = LuaValue(1);
+            return m_array[0];
+        }
+        return LuaValue::NIL;
+    }
+
     int idx = (int)k.getNumber();
-    if (idx >= 0 && idx < (int)m_array.size()) return m_array[idx];
+    if (idx >= 0 && idx < (int)m_array.size()) {
+        k = LuaValue(idx + 1);
+        return m_array[idx];
+    }
+    k = LuaValue::NIL;
     return LuaValue::NIL;
 }
 

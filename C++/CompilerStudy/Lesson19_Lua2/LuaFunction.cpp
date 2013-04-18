@@ -65,12 +65,12 @@ void callFunc(int tempIdx) {
     }
 }
 
-void callFunc(LuaValue &func, const vector<LuaValue>& params, vector<LuaValue>& rets) {
+void callFunc(const LuaValue &func, const vector<LuaValue>& args, vector<LuaValue>& rets) {
     auto stack = LuaVM::instance()->getCurrentStack();
     auto frame = stack->topFrame();
     int tempIdx = frame->tempCount;
     frame->pushTemp(func);
-    for (auto &v : params) frame->pushTemp(v);
+    for (auto &v : args) frame->pushTemp(v);
     callFunc(tempIdx);
     execute(frame);
     rets.assign(&frame->temp(tempIdx), &frame->temp(frame->tempExtCount));

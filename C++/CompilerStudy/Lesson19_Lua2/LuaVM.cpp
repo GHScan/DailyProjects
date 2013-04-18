@@ -7,6 +7,7 @@
 #include "LuaStack.h"
 
 void LuaVM::create() {
+    ASSERT(s_ins == NULL);
     s_ins = new LuaVM();
 }
 void LuaVM::destroy() {

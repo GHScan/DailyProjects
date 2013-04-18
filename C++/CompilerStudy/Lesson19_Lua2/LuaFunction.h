@@ -23,27 +23,28 @@ struct Function:
 
 struct LuaFunctionMeta {
     int argCount, localCount;
-    int level;
+    int level, line;
     vector<int> codes;
     StmtNodePtr ast;
     vector<LuaValue> constTable;
     vector<pair<int, int> > upValues;
 
-    LuaFunctionMeta(): argCount(0), localCount(0), level(0){}
+    LuaFunctionMeta(): argCount(0), localCount(0), level(0), line(0){}
     int getConstIdx(const LuaValue& v);
 };
+typedef shared_ptr<LuaFunctionMeta> LuaFunctionMetaPtr;
 
 struct LuaFunction:
     public Function {
 
-    static LuaFunction* create(LuaFunctionMeta *meta) {
+    static LuaFunction* create(const LuaFunctionMetaPtr &meta) {
         return new LuaFunction(meta);
     }
 
-    LuaFunctionMeta *meta;
+    LuaFunctionMetaPtr meta;
     vector<LuaValue> upValues;
 private:
-    LuaFunction(LuaFunctionMeta *_meta): Function(FT_Lua), meta(_meta){}
+    LuaFunction(const LuaFunctionMetaPtr &_meta): Function(FT_Lua), meta(_meta){}
 };
 
 typedef void (*CFuncT)(const vector<LuaValue>& args, vector<LuaValue>& rets);
@@ -65,7 +66,7 @@ struct CFuncEntry {
 };
 
 void callFunc(int tempIdx);
-void callFunc(LuaValue &func, const vector<LuaValue>& params, vector<LuaValue>& rets);
+void callFunc(const LuaValue &func, const vector<LuaValue>& args, vector<LuaValue>& rets);
 
 inline bool Function::equal(Function *o) {
     if (funcType == o->funcType) {

@@ -6,6 +6,7 @@ typedef double NumberType;
 
 class LuaString;
 class LuaTable;
+class LuaStack;
 struct Function;
 struct GCObject;
 
@@ -19,6 +20,7 @@ enum LuaValueType {
     LVT_String,
     LVT_Table,
     LVT_Function,
+    LVT_Stack,
     LVT_LightUserData,
 };
 class LuaValue {
@@ -29,6 +31,7 @@ public:
     LuaValue(const char *str, int size);
     explicit LuaValue(LuaTable* table);
     explicit LuaValue(Function* func);
+    explicit LuaValue(LuaStack* stack);
     explicit LuaValue(LightUserData lud);
     ~LuaValue(){ m_type = LVT_Nil; }
 
@@ -62,6 +65,8 @@ public:
     LuaTable* getTable() { ASSERT(isTypeOf(LVT_Table)); return m_data.table; }
     const Function* getFunction() const { ASSERT(isTypeOf(LVT_Function)); return m_data.func;}
     Function* getFunction() { ASSERT(isTypeOf(LVT_Function)); return m_data.func; }
+    const LuaStack* getStack() const { ASSERT(isTypeOf(LVT_Stack)); return m_data.stack;}
+    LuaStack* getStack() { ASSERT(isTypeOf(LVT_Stack)); return m_data.stack; }
     LightUserData getLightUserData() const { ASSERT(isTypeOf(LVT_LightUserData)); return m_data.lud; }
 
     GCObject* gcAccess() const;
@@ -86,6 +91,7 @@ private:
         LuaString* str;
         LuaTable* table;
         Function* func;
+        LuaStack* stack;
         LightUserData lud;
     } m_data;
 };
@@ -116,6 +122,7 @@ inline int LuaValue::getHash() const {
         case LVT_String: return hash<LuaString*>()(m_data.str);
         case LVT_Table: return hash<LuaTable*>()(m_data.table);
         case LVT_Function: return hash<Function*>()(m_data.func);
+        case LVT_Stack: return hash<LuaStack*>()(m_data.stack);
         case LVT_LightUserData: return hash<LightUserData>()(m_data.lud);
         default: ASSERT(0);
     }

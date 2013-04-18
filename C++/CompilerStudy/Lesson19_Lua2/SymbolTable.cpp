@@ -6,7 +6,7 @@
 
 stack<SymbolTable*> SymbolTable::s_stack;
 
-void SymbolTable::push(LuaFunctionMeta* meta) {
+void SymbolTable::push(const LuaFunctionMetaPtr& meta) {
     int level = (int)s_stack.size();
     s_stack.push(new SymbolTable(meta, s_stack.empty() ? NULL : s_stack.top(), level));
 }
@@ -15,16 +15,19 @@ void SymbolTable::pop() {
     s_stack.pop();
 }
 
-SymbolTable::SymbolTable(LuaFunctionMeta* meta, SymbolTable* prev, int level):
+SymbolTable::SymbolTable(const LuaFunctionMetaPtr& meta, SymbolTable* prev, int level):
     m_lastLocalIdx(0), m_meta(meta), m_prev(prev) {
     meta->level = level;
+    pushBlock();
 }
 SymbolTable::~SymbolTable() {
+    popBlock();
 }
 
 void SymbolTable::declareLocal(const string& name) {
     ASSERT(m_blocks.back().count(name) == 0);
     m_blocks.back()[name] = m_lastLocalIdx++;
+    m_meta->localCount = max(m_meta->localCount, m_lastLocalIdx);
 }
 int SymbolTable::getLocalIdx(const string& name) const {
     for (auto iter = m_blocks.rbegin(); iter != m_blocks.rend(); ++iter) {
@@ -33,16 +36,23 @@ int SymbolTable::getLocalIdx(const string& name) const {
     }
     return -1;
 }
-bool SymbolTable::getUpValue(const string& name, pair<int, int>& uvInfo) {
+int SymbolTable::getUpValueIdx(const string& name) {
     assert(getLocalIdx(name) == -1);
+    auto iter = m_upValues.find(name);
+    if (iter != m_upValues.end()) {
+        return iter->second;
+    }
+
     SymbolTable *t = m_prev;
     while (t != NULL) {
-        if ((uvInfo.second = t->getLocalIdx(name)) != -1) {
-            uvInfo.first = t->meta()->level;
-            return true;
+        int localIdx = -1;
+        if ((localIdx = t->getLocalIdx(name)) != -1) {
+            m_upValues[name] = (int)m_meta->upValues.size();
+            m_meta->upValues.push_back(make_pair(t->meta()->level, localIdx));
+            return m_upValues[name];
         }
     }
-    return false;
+    return -1;
 }
 
 void SymbolTable::pushBlock() {

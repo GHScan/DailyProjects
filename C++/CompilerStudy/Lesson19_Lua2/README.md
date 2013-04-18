@@ -1,7 +1,7 @@
 # TODO
-+ lexical analysis
-+ semantic analysis
-+ bytecode
++ design bytecode
++ gen bytecode
++ debug...
 + metatable
 + standard library
 + maybe string should not be implement as gcobject?

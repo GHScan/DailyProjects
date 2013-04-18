@@ -5,7 +5,6 @@
 #include "GCObject.h"
 #include "LuaValue.h"
 
-// TODO: add metatable
 class LuaTable:
     public GCObject {
 public:
