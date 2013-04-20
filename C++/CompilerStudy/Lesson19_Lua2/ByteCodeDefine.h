@@ -210,7 +210,7 @@ struct ByteCodeHandler<BC_PopTemps> {
         so << format("popTemps");
     }
     static void execute(int code, LuaStackFrame* frame) {
-        frame->popTemps(frame->tempBase);
+        frame->popTemps(0);
     }
 };
 template<>
@@ -231,7 +231,7 @@ struct ByteCodeHandler<BC_ResizeTemp2Ext> {
         code = BC_ResizeTemp2Ext;
     }
     static void disassemble(ostream& so, int code, LuaFunctionMeta* meta) {
-        so << format("resizeTemp");
+        so << format("resizeTemp2Ext");
     }
     static void execute(int code, LuaStackFrame* frame) {
         frame->resizeTemp2Ext();
@@ -259,9 +259,10 @@ struct ByteCodeHandler<BC_Return> {
     }
     static void execute(int code, LuaStackFrame* frame) {
         auto lastFrame = LuaVM::instance()->getCurrentStack()->topFrame(-1);
+        auto meta = static_cast<LuaFunction*>(frame->func)->meta;
         // TODO: optimize
-        vector<LuaValue> rets(&frame->temp(0), &frame->temp(frame->tempCount));
-        lastFrame->popTemps(frame->varParamBase - 2 - lastFrame->tempBase);
+        vector<LuaValue> rets(&frame->temp(0), &frame->temp(0) + frame->tempCount);
+        lastFrame->popTemps(frame->varParamBase - meta->argCount - 1 - lastFrame->tempBase);
         if (rets.empty()) lastFrame->pushTemp(LuaValue::NIL);
         else {
             lastFrame->pushTemp(rets[0]);
@@ -269,7 +270,7 @@ struct ByteCodeHandler<BC_Return> {
                 lastFrame->pushExtTemp(rets[i]);
             }
         }
-        frame->ip = (int)static_cast<LuaFunction*>(frame->func)->meta->codes.size();
+        frame->ip = (int)meta->codes.size() - 1;
     }
 };
 template<>
@@ -526,10 +527,10 @@ struct ByteCodeHandler<BC_Jump> {
         code = BC_Jump | (ip) << 8;
     }
     static void disassemble(ostream& so, int code, LuaFunctionMeta* meta) {
-        so << format("jump %d", code >> 8);
+        so << format("jump %d", (code >> 8) + 1);
     }
     static void execute(int code, LuaStackFrame* frame) {
-        frame->ip = code >> 8;
+        frame->ip = (code >> 8) - 1;
     }
 };
 template<>
@@ -538,11 +539,11 @@ struct ByteCodeHandler<BC_TrueJump> {
         code = BC_TrueJump | (ip) << 8;
     }
     static void disassemble(ostream& so, int code, LuaFunctionMeta* meta) {
-        so << format("tjump %d", code >> 8);
+        so << format("tjump %d", (code >> 8) + 1);
     }
     static void execute(int code, LuaStackFrame* frame) {
         if (frame->topTemp(0).getBoolean()) {
-            frame->ip = code >> 8;
+            frame->ip = (code >> 8) - 1;
         }
         frame->popTempN(1);
     }
@@ -553,11 +554,11 @@ struct ByteCodeHandler<BC_FalseJump> {
         code = BC_FalseJump | (ip) << 8;
     }
     static void disassemble(ostream& so, int code, LuaFunctionMeta* meta) {
-        so << format("fjump %d", code >> 8);
+        so << format("fjump %d", (code >> 8) + 1);
     }
     static void execute(int code, LuaStackFrame* frame) {
         if (!frame->topTemp(0).getBoolean()) {
-            frame->ip = code >> 8;
+            frame->ip = (code >> 8) - 1;
         }
         frame->popTempN(1);
     }

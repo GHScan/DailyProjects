@@ -36,7 +36,11 @@ static string unEscape(const string& s);
 
 %%
 
-Program : Block;
+Program : Block {
+            auto &meta = SymbolTable::top()->meta();
+            meta->ast = $1.get<StmtNodePtr>();
+            emitCode(meta.get());
+        };
 
 Block
     : StatementList {
@@ -171,8 +175,6 @@ Statement
         $$ = StmtNodePtr(new StmtNode_Assign(lvalues, rvalues));
     }
 
-//////////////// Complete //////////////////////////
-
     | LOCAL FUNCTION ID FuncBody {
         auto& term = $3.get<TerminalSymbol>();
         SymbolTable::top()->declareLocal(term.lexem);
@@ -185,6 +187,7 @@ Statement
         for (auto &term : $2.get<vector<TerminalSymbol> >()) {
             SymbolTable::top()->declareLocal(term.lexem);
         }
+        $$ = StmtNodePtr();
     }
 
     | LOCAL IDList OP_ASSIGN ExpList {
@@ -575,6 +578,8 @@ bool parseFile(const char *fname)
 
         yyrestart(f);
         yyparse();
+
+        disassemble(ofstream("disassemble.txt"), meta.get());
 
         vector<LuaValue> rets;
         callFunc(LuaValue(LuaFunction::create(meta)), vector<LuaValue>(), rets);

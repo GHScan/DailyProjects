@@ -4,7 +4,7 @@
 
 class GCObjectManager;
 class StringPool;
-class LuaStack;
+struct LuaStack;
 class LuaTable;
 struct LuaFunctionMeta;
 typedef shared_ptr<LuaFunctionMeta> LuaFunctionMetaPtr;

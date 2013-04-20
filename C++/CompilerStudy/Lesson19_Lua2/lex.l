@@ -127,7 +127,6 @@ void yyerror(const char *msg) {
 int yywrap() {
     g_line = 1;
     g_column = 1;
-    (void)yyunput;
     return 1;
 }
 

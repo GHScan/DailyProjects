@@ -31,6 +31,7 @@ public:
 
     void performFullGC();
     void linkObject(GCObject *obj);
+    int getObjCount() const { return m_objCount;}
 
 private:
     GCObjectManager(const GCObjectManager&);
@@ -38,6 +39,7 @@ private:
 
 private:
     GCObject *m_headObj;
+    int m_objCount;
 };
 
 #endif

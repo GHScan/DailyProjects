@@ -6,7 +6,7 @@
 #include "LuaValue.h"
 
 struct Function;
-class LuaStack;
+struct LuaStack;
 
 struct LuaStackFrame {
     LuaStack *stack;

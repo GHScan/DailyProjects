@@ -32,7 +32,7 @@ public:
     }
 private:
     virtual void visit(ExpNode_UnaryOp *node) {
-        (ExpNodeVisitor_CodeEmitor(m_meta, node->exp));
+        node->exp->acceptVisitor(this);
         switch (node->op) {
             case ExpNode_UnaryOp::OP_Not: EMIT0(BC_Not); break;
             case ExpNode_UnaryOp::OP_Minus: EMIT0(BC_Minus); break;
@@ -41,7 +41,7 @@ private:
         }
     }
     virtual void visit(ExpNode_BinaryOp *node) {
-        (ExpNodeVisitor_CodeEmitor(m_meta, node->lexp));
+        node->lexp->acceptVisitor(this);
         if (node->op == ExpNode_BinaryOp::OP_And || node->op == ExpNode_BinaryOp::OP_Or)  {
             /*
                push lval
@@ -55,15 +55,15 @@ label:
             int label = 0;
             PRE_EMIT(label);
             EMIT(BC_PopN, 1);
-            (ExpNodeVisitor_CodeEmitor(m_meta, node->rexp));
-            if (node->op == ExpNode_BinaryOp::OP_Add) {
+            node->rexp->acceptVisitor(this);
+            if (node->op == ExpNode_BinaryOp::OP_And) {
                 POST_EMIT(label, BC_FalseJump, CUR_CODE_OFF);
             } else {
                 POST_EMIT(label, BC_TrueJump, CUR_CODE_OFF);
             }
             return;
         }
-        (ExpNodeVisitor_CodeEmitor(m_meta, node->rexp));
+        node->rexp->acceptVisitor(this);
         switch (node->op) {
             case ExpNode_BinaryOp::OP_Less: EMIT0(BC_Less); break;
             case ExpNode_BinaryOp::OP_LessEq: EMIT0(BC_LessEq); break;
@@ -94,8 +94,8 @@ label:
         EMIT(BC_PushGlobal, node->constIdx);
     }
     virtual void visit(ExpNode_FieldAccess *node) {
-        (ExpNodeVisitor_CodeEmitor(m_meta, node->table));
-        (ExpNodeVisitor_CodeEmitor(m_meta, node->field));
+        node->table->acceptVisitor(this);
+        node->field->acceptVisitor(this);
         EMIT0(BC_GetTable);
     }
     virtual void visit(ExpNode_TableConstructor *node) {
@@ -103,15 +103,15 @@ label:
 
         EMIT(BC_PushTop, 0);
         for (int i = 0; i < (int)node->array.size(); ++i) {
-            (ExpNodeVisitor_CodeEmitor(m_meta, node->array[i]));
+            node->array[i]->acceptVisitor(this);
         }
         EMIT0(BC_ResizeTemp2Ext);
         EMIT(BC_PushAll2Table, (int)node->array.size());
 
         for (auto &pair : node->dict) {
             EMIT(BC_PushTop, 0);
-            (ExpNodeVisitor_CodeEmitor(m_meta, pair.first));
-            (ExpNodeVisitor_CodeEmitor(m_meta, pair.second));
+            pair.first->acceptVisitor(this);
+            pair.second->acceptVisitor(this);
             EMIT0(BC_SetTable);
         }
     }
@@ -120,9 +120,9 @@ label:
         EMIT(BC_PushNewFunction, idx);
     }
     virtual void visit(ExpNode_Call *node) {
-        (ExpNodeVisitor_CodeEmitor(m_meta, node->func));
+        node->func->acceptVisitor(this);
         for (auto &param : node->params) {
-            (ExpNodeVisitor_CodeEmitor(m_meta, param));
+            param->acceptVisitor(this);
         }
         EMIT0(BC_ResizeTemp2Ext);
         EMIT(BC_Call, (int)node->params.size());
@@ -173,6 +173,8 @@ private:
                 ASSERT(0);
             }
         }
+
+        EMIT0(BC_PopTemps);
     }
     virtual void visit(StmtNode_Break *node) {
         int jump_break;
@@ -193,7 +195,8 @@ private:
     }
     virtual void visit(StmtNode_Block *node) {
         for (int i = 0; i < (int)node->stmts.size(); ++i) {
-            (StmtNodeVisitor_CodeEmitor(m_meta, node->stmts[i]));
+            if (node->stmts[i] == NULL) continue;
+            node->stmts[i]->acceptVisitor(this);
         }
     }
     virtual void visit(StmtNode_IfElse *node) {
@@ -225,13 +228,13 @@ end:
         vector<int> labels, jumps_end;
         for (auto &pair : node->ifExpStmts) {
             labels.push_back(CUR_CODE_OFF);
-            (StmtNodeVisitor_CodeEmitor(m_meta, pair.second));
+            pair.second->acceptVisitor(this);
             jumps_end.push_back(0);
             PRE_EMIT(jumps_end.back());
         }
         if (node->elseStmt != NULL) {
             labels.push_back(CUR_CODE_OFF);
-            (StmtNodeVisitor_CodeEmitor(m_meta, node->elseStmt));
+            node->elseStmt->acceptVisitor(this);
             jumps_end.push_back(0);
             PRE_EMIT(jumps_end.back());
         }
@@ -306,7 +309,7 @@ continue:
 break:
          * */
         if (node->initStmt != NULL) {
-            (StmtNodeVisitor_CodeEmitor(m_meta, node->initStmt));
+            node->initStmt->acceptVisitor(this);
         }
 
         int l_loop = CUR_CODE_OFF;
@@ -314,7 +317,7 @@ break:
         int jump_break;
         PRE_EMIT(jump_break);
         if (node->bodyStmt != NULL) {
-            (StmtNodeVisitor_CodeEmitor(m_meta, node->bodyStmt));
+            node->bodyStmt->acceptVisitor(this);
         }
         EMIT_JUMPS(Continue);
         EMIT(BC_Jump, l_loop);
@@ -370,7 +373,7 @@ break:
         EMIT(BC_PushLocal, node->stateLocalIdx);
         EMIT(BC_PushLocal, localVars[0]);
         EMIT(BC_Call, 2);
-        EMIT(BC_ResizeTemp, localVars.size());
+        EMIT(BC_ResizeTemp, (int)localVars.size());
         for (auto riter = localVars.rbegin(); riter != localVars.rend(); ++riter) {
             EMIT(BC_PopLocal, *riter);
         }
@@ -381,9 +384,7 @@ break:
         int jump_break;
         PRE_EMIT(jump_break);
 
-        if (node->stmt != NULL) {
-            (StmtNodeVisitor_CodeEmitor(m_meta, node->stmt));
-        }
+        if (node->stmt != NULL) node->stmt->acceptVisitor(this);
         EMIT_JUMPS(Continue);
         EMIT(BC_Jump, l_loop);
 
@@ -402,7 +403,7 @@ private:
 loop:
             pushLocal var0
             pushLocal __last
-            less // greater
+            lessEq // greaterEq
             fjump break
 
             stmt
@@ -428,14 +429,12 @@ break:
         int l_loop = CUR_CODE_OFF;
         EMIT(BC_PushLocal, localIdx);
         EMIT(BC_PushLocal, node->lastLocalIdx);
-        if (isPositive) EMIT0(BC_Less)
-        else EMIT0(BC_Greater);
+        if (isPositive) EMIT0(BC_LessEq)
+        else EMIT0(BC_GreaterEq);
         int jump_break;
         PRE_EMIT(jump_break);
 
-        if (node->stmt != NULL) {
-            (StmtNodeVisitor_CodeEmitor(m_meta, node->stmt));
-        }
+        if (node->stmt != NULL) node->stmt->acceptVisitor(this);
 
         EMIT_JUMPS(Continue);
         EMIT(BC_PushLocal, localIdx);
@@ -465,49 +464,50 @@ void execute(LuaStackFrame *stopFrame) {
             continue;
         }
         int code = lfunc->meta->codes[frame->ip];
-        switch (code) {
-            case BC_PushLocal: ByteCodeHandler<BC_PushLocal>::execute(code, frame);
-            case BC_PushUpValue: ByteCodeHandler<BC_PushUpValue>::execute(code, frame);
-            case BC_PushGlobal: ByteCodeHandler<BC_PushGlobal>::execute(code, frame);
-            case BC_PushConst: ByteCodeHandler<BC_PushConst>::execute(code, frame);
-            case BC_PushVArgs: ByteCodeHandler<BC_PushVArgs>::execute(code, frame);
-            case BC_PushNewFunction: ByteCodeHandler<BC_PushNewFunction>::execute(code, frame);
-            case BC_PushNewTable: ByteCodeHandler<BC_PushNewTable>::execute(code, frame);
-            case BC_PushI: ByteCodeHandler<BC_PushI>::execute(code, frame);
-            case BC_PushTop: ByteCodeHandler<BC_PushTop>::execute(code, frame);
-            case BC_PopLocal: ByteCodeHandler<BC_PopLocal>::execute(code, frame);
-            case BC_PopUpValue: ByteCodeHandler<BC_PopUpValue>::execute(code, frame);
-            case BC_PopGlobal: ByteCodeHandler<BC_PopGlobal>::execute(code, frame);
-            case BC_PopN: ByteCodeHandler<BC_PopN>::execute(code, frame);
-            case BC_PopTemps: ByteCodeHandler<BC_PopTemps>::execute(code, frame);
-            case BC_ResizeTemp: ByteCodeHandler<BC_ResizeTemp>::execute(code, frame);
-            case BC_ResizeTemp2Ext: ByteCodeHandler<BC_ResizeTemp2Ext>::execute(code, frame);
-            case BC_Call: ByteCodeHandler<BC_Call>::execute(code, frame);
-            case BC_Return: ByteCodeHandler<BC_Return>::execute(code, frame);
-            case BC_Less: ByteCodeHandler<BC_Less>::execute(code, frame);
-            case BC_LessEq: ByteCodeHandler<BC_LessEq>::execute(code, frame);
-            case BC_Greater: ByteCodeHandler<BC_Greater>::execute(code, frame);
-            case BC_GreaterEq: ByteCodeHandler<BC_GreaterEq>::execute(code, frame);
-            case BC_Equal: ByteCodeHandler<BC_Equal>::execute(code, frame);
-            case BC_NEqual: ByteCodeHandler<BC_NEqual>::execute(code, frame);
-            case BC_Add: ByteCodeHandler<BC_Add>::execute(code, frame);
-            case BC_Sub: ByteCodeHandler<BC_Sub>::execute(code, frame);
-            case BC_Mul: ByteCodeHandler<BC_Mul>::execute(code, frame);
-            case BC_Div: ByteCodeHandler<BC_Div>::execute(code, frame);
-            case BC_Mod: ByteCodeHandler<BC_Mod>::execute(code, frame);
-            case BC_Pow: ByteCodeHandler<BC_Pow>::execute(code, frame);
-            case BC_Concat: ByteCodeHandler<BC_Concat>::execute(code, frame);
-            case BC_Not: ByteCodeHandler<BC_Not>::execute(code, frame);
-            case BC_Len: ByteCodeHandler<BC_Len>::execute(code, frame);
-            case BC_Minus: ByteCodeHandler<BC_Minus>::execute(code, frame);
-            case BC_GetTable: ByteCodeHandler<BC_GetTable>::execute(code, frame);
-            case BC_SetTable: ByteCodeHandler<BC_SetTable>::execute(code, frame);
-            case BC_PushAll2Table: ByteCodeHandler<BC_PushAll2Table>::execute(code, frame);
-            case BC_Jump: ByteCodeHandler<BC_Jump>::execute(code, frame);
-            case BC_TrueJump: ByteCodeHandler<BC_TrueJump>::execute(code, frame);
-            case BC_FalseJump: ByteCodeHandler<BC_FalseJump>::execute(code, frame);
+        switch (code & 0xff) {
+            case BC_PushLocal: ByteCodeHandler<BC_PushLocal>::execute(code, frame); break;
+            case BC_PushUpValue: ByteCodeHandler<BC_PushUpValue>::execute(code, frame); break;
+            case BC_PushGlobal: ByteCodeHandler<BC_PushGlobal>::execute(code, frame); break;
+            case BC_PushConst: ByteCodeHandler<BC_PushConst>::execute(code, frame); break;
+            case BC_PushVArgs: ByteCodeHandler<BC_PushVArgs>::execute(code, frame); break;
+            case BC_PushNewFunction: ByteCodeHandler<BC_PushNewFunction>::execute(code, frame); break;
+            case BC_PushNewTable: ByteCodeHandler<BC_PushNewTable>::execute(code, frame); break;
+            case BC_PushI: ByteCodeHandler<BC_PushI>::execute(code, frame); break;
+            case BC_PushTop: ByteCodeHandler<BC_PushTop>::execute(code, frame); break;
+            case BC_PopLocal: ByteCodeHandler<BC_PopLocal>::execute(code, frame); break;
+            case BC_PopUpValue: ByteCodeHandler<BC_PopUpValue>::execute(code, frame); break;
+            case BC_PopGlobal: ByteCodeHandler<BC_PopGlobal>::execute(code, frame); break;
+            case BC_PopN: ByteCodeHandler<BC_PopN>::execute(code, frame); break;
+            case BC_PopTemps: ByteCodeHandler<BC_PopTemps>::execute(code, frame); break;
+            case BC_ResizeTemp: ByteCodeHandler<BC_ResizeTemp>::execute(code, frame); break;
+            case BC_ResizeTemp2Ext: ByteCodeHandler<BC_ResizeTemp2Ext>::execute(code, frame); break;
+            case BC_Call: ByteCodeHandler<BC_Call>::execute(code, frame); break;
+            case BC_Return: ByteCodeHandler<BC_Return>::execute(code, frame); break;
+            case BC_Less: ByteCodeHandler<BC_Less>::execute(code, frame); break;
+            case BC_LessEq: ByteCodeHandler<BC_LessEq>::execute(code, frame); break;
+            case BC_Greater: ByteCodeHandler<BC_Greater>::execute(code, frame); break;
+            case BC_GreaterEq: ByteCodeHandler<BC_GreaterEq>::execute(code, frame); break;
+            case BC_Equal: ByteCodeHandler<BC_Equal>::execute(code, frame); break;
+            case BC_NEqual: ByteCodeHandler<BC_NEqual>::execute(code, frame); break;
+            case BC_Add: ByteCodeHandler<BC_Add>::execute(code, frame); break;
+            case BC_Sub: ByteCodeHandler<BC_Sub>::execute(code, frame); break;
+            case BC_Mul: ByteCodeHandler<BC_Mul>::execute(code, frame); break;
+            case BC_Div: ByteCodeHandler<BC_Div>::execute(code, frame); break;
+            case BC_Mod: ByteCodeHandler<BC_Mod>::execute(code, frame); break;
+            case BC_Pow: ByteCodeHandler<BC_Pow>::execute(code, frame); break;
+            case BC_Concat: ByteCodeHandler<BC_Concat>::execute(code, frame); break;
+            case BC_Not: ByteCodeHandler<BC_Not>::execute(code, frame); break;
+            case BC_Len: ByteCodeHandler<BC_Len>::execute(code, frame); break;
+            case BC_Minus: ByteCodeHandler<BC_Minus>::execute(code, frame); break;
+            case BC_GetTable: ByteCodeHandler<BC_GetTable>::execute(code, frame); break;
+            case BC_SetTable: ByteCodeHandler<BC_SetTable>::execute(code, frame); break;
+            case BC_PushAll2Table: ByteCodeHandler<BC_PushAll2Table>::execute(code, frame); break;
+            case BC_Jump: ByteCodeHandler<BC_Jump>::execute(code, frame); break;
+            case BC_TrueJump: ByteCodeHandler<BC_TrueJump>::execute(code, frame); break;
+            case BC_FalseJump: ByteCodeHandler<BC_FalseJump>::execute(code, frame); break;
             default: ASSERT(0);
         }
+        ++frame->ip;
     }
 }
 
@@ -515,48 +515,48 @@ void disassemble(ostream& so, LuaFunctionMeta* meta) {
     auto &codes = meta->codes;
     for (int i = 0; i < (int)codes.size(); ++i) {
         int code = codes[i];
-        so << tabString(meta->level) << format("%3d", i + 1);
+        so << tabString(meta->level) << format("%3d : ", i + 1);
         switch (code & 0xff) {
-            case BC_PushLocal: ByteCodeHandler<BC_PushLocal>::disassemble(so, code, meta);
-            case BC_PushUpValue: ByteCodeHandler<BC_PushUpValue>::disassemble(so, code, meta);
-            case BC_PushGlobal: ByteCodeHandler<BC_PushGlobal>::disassemble(so, code, meta);
-            case BC_PushConst: ByteCodeHandler<BC_PushConst>::disassemble(so, code, meta);
-            case BC_PushVArgs: ByteCodeHandler<BC_PushVArgs>::disassemble(so, code, meta);
-            case BC_PushNewFunction: ByteCodeHandler<BC_PushNewFunction>::disassemble(so, code, meta);
-            case BC_PushNewTable: ByteCodeHandler<BC_PushNewTable>::disassemble(so, code, meta);
-            case BC_PushI: ByteCodeHandler<BC_PushI>::disassemble(so, code, meta);
-            case BC_PushTop: ByteCodeHandler<BC_PushTop>::disassemble(so, code, meta);
-            case BC_PopLocal: ByteCodeHandler<BC_PopLocal>::disassemble(so, code, meta);
-            case BC_PopUpValue: ByteCodeHandler<BC_PopUpValue>::disassemble(so, code, meta);
-            case BC_PopGlobal: ByteCodeHandler<BC_PopGlobal>::disassemble(so, code, meta);
-            case BC_PopN: ByteCodeHandler<BC_PopN>::disassemble(so, code, meta);
-            case BC_PopTemps: ByteCodeHandler<BC_PopTemps>::disassemble(so, code, meta);
-            case BC_ResizeTemp: ByteCodeHandler<BC_ResizeTemp>::disassemble(so, code, meta);
-            case BC_ResizeTemp2Ext: ByteCodeHandler<BC_ResizeTemp2Ext>::disassemble(so, code, meta);
-            case BC_Call: ByteCodeHandler<BC_Call>::disassemble(so, code, meta);
-            case BC_Return: ByteCodeHandler<BC_Return>::disassemble(so, code, meta);
-            case BC_Less: ByteCodeHandler<BC_Less>::disassemble(so, code, meta);
-            case BC_LessEq: ByteCodeHandler<BC_LessEq>::disassemble(so, code, meta);
-            case BC_Greater: ByteCodeHandler<BC_Greater>::disassemble(so, code, meta);
-            case BC_GreaterEq: ByteCodeHandler<BC_GreaterEq>::disassemble(so, code, meta);
-            case BC_Equal: ByteCodeHandler<BC_Equal>::disassemble(so, code, meta);
-            case BC_NEqual: ByteCodeHandler<BC_NEqual>::disassemble(so, code, meta);
-            case BC_Add: ByteCodeHandler<BC_Add>::disassemble(so, code, meta);
-            case BC_Sub: ByteCodeHandler<BC_Sub>::disassemble(so, code, meta);
-            case BC_Mul: ByteCodeHandler<BC_Mul>::disassemble(so, code, meta);
-            case BC_Div: ByteCodeHandler<BC_Div>::disassemble(so, code, meta);
-            case BC_Mod: ByteCodeHandler<BC_Mod>::disassemble(so, code, meta);
-            case BC_Pow: ByteCodeHandler<BC_Pow>::disassemble(so, code, meta);
-            case BC_Concat: ByteCodeHandler<BC_Concat>::disassemble(so, code, meta);
-            case BC_Not: ByteCodeHandler<BC_Not>::disassemble(so, code, meta);
-            case BC_Len: ByteCodeHandler<BC_Len>::disassemble(so, code, meta);
-            case BC_Minus: ByteCodeHandler<BC_Minus>::disassemble(so, code, meta);
-            case BC_GetTable: ByteCodeHandler<BC_GetTable>::disassemble(so, code, meta);
-            case BC_SetTable: ByteCodeHandler<BC_SetTable>::disassemble(so, code, meta);
-            case BC_PushAll2Table: ByteCodeHandler<BC_PushAll2Table>::disassemble(so, code, meta);
-            case BC_Jump: ByteCodeHandler<BC_Jump>::disassemble(so, code, meta);
-            case BC_TrueJump: ByteCodeHandler<BC_TrueJump>::disassemble(so, code, meta);
-            case BC_FalseJump: ByteCodeHandler<BC_FalseJump>::disassemble(so, code, meta);
+            case BC_PushLocal: ByteCodeHandler<BC_PushLocal>::disassemble(so, code, meta); break;
+            case BC_PushUpValue: ByteCodeHandler<BC_PushUpValue>::disassemble(so, code, meta); break;
+            case BC_PushGlobal: ByteCodeHandler<BC_PushGlobal>::disassemble(so, code, meta); break;
+            case BC_PushConst: ByteCodeHandler<BC_PushConst>::disassemble(so, code, meta); break;
+            case BC_PushVArgs: ByteCodeHandler<BC_PushVArgs>::disassemble(so, code, meta); break;
+            case BC_PushNewFunction: ByteCodeHandler<BC_PushNewFunction>::disassemble(so, code, meta); break;
+            case BC_PushNewTable: ByteCodeHandler<BC_PushNewTable>::disassemble(so, code, meta); break;
+            case BC_PushI: ByteCodeHandler<BC_PushI>::disassemble(so, code, meta); break;
+            case BC_PushTop: ByteCodeHandler<BC_PushTop>::disassemble(so, code, meta); break;
+            case BC_PopLocal: ByteCodeHandler<BC_PopLocal>::disassemble(so, code, meta); break;
+            case BC_PopUpValue: ByteCodeHandler<BC_PopUpValue>::disassemble(so, code, meta); break;
+            case BC_PopGlobal: ByteCodeHandler<BC_PopGlobal>::disassemble(so, code, meta); break;
+            case BC_PopN: ByteCodeHandler<BC_PopN>::disassemble(so, code, meta); break;
+            case BC_PopTemps: ByteCodeHandler<BC_PopTemps>::disassemble(so, code, meta); break;
+            case BC_ResizeTemp: ByteCodeHandler<BC_ResizeTemp>::disassemble(so, code, meta); break;
+            case BC_ResizeTemp2Ext: ByteCodeHandler<BC_ResizeTemp2Ext>::disassemble(so, code, meta); break;
+            case BC_Call: ByteCodeHandler<BC_Call>::disassemble(so, code, meta); break;
+            case BC_Return: ByteCodeHandler<BC_Return>::disassemble(so, code, meta); break;
+            case BC_Less: ByteCodeHandler<BC_Less>::disassemble(so, code, meta); break;
+            case BC_LessEq: ByteCodeHandler<BC_LessEq>::disassemble(so, code, meta); break;
+            case BC_Greater: ByteCodeHandler<BC_Greater>::disassemble(so, code, meta); break;
+            case BC_GreaterEq: ByteCodeHandler<BC_GreaterEq>::disassemble(so, code, meta); break;
+            case BC_Equal: ByteCodeHandler<BC_Equal>::disassemble(so, code, meta); break;
+            case BC_NEqual: ByteCodeHandler<BC_NEqual>::disassemble(so, code, meta); break;
+            case BC_Add: ByteCodeHandler<BC_Add>::disassemble(so, code, meta); break;
+            case BC_Sub: ByteCodeHandler<BC_Sub>::disassemble(so, code, meta); break;
+            case BC_Mul: ByteCodeHandler<BC_Mul>::disassemble(so, code, meta); break;
+            case BC_Div: ByteCodeHandler<BC_Div>::disassemble(so, code, meta); break;
+            case BC_Mod: ByteCodeHandler<BC_Mod>::disassemble(so, code, meta); break;
+            case BC_Pow: ByteCodeHandler<BC_Pow>::disassemble(so, code, meta); break;
+            case BC_Concat: ByteCodeHandler<BC_Concat>::disassemble(so, code, meta); break;
+            case BC_Not: ByteCodeHandler<BC_Not>::disassemble(so, code, meta); break;
+            case BC_Len: ByteCodeHandler<BC_Len>::disassemble(so, code, meta); break;
+            case BC_Minus: ByteCodeHandler<BC_Minus>::disassemble(so, code, meta); break;
+            case BC_GetTable: ByteCodeHandler<BC_GetTable>::disassemble(so, code, meta); break;
+            case BC_SetTable: ByteCodeHandler<BC_SetTable>::disassemble(so, code, meta); break;
+            case BC_PushAll2Table: ByteCodeHandler<BC_PushAll2Table>::disassemble(so, code, meta); break;
+            case BC_Jump: ByteCodeHandler<BC_Jump>::disassemble(so, code, meta); break;
+            case BC_TrueJump: ByteCodeHandler<BC_TrueJump>::disassemble(so, code, meta); break;
+            case BC_FalseJump: ByteCodeHandler<BC_FalseJump>::disassemble(so, code, meta); break;
             default: ASSERT(0);
         }
         so << endl;

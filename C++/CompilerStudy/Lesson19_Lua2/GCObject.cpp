@@ -7,10 +7,11 @@
 #include "LuaStack.h"
 #include "LuaFunction.h"
 
-GCObjectManager::GCObjectManager(): m_headObj(NULL) {
+GCObjectManager::GCObjectManager(): m_headObj(NULL), m_objCount(0) {
 }
 GCObjectManager::~GCObjectManager() {
     ASSERT(m_headObj == NULL);
+    ASSERT(m_objCount == 0);
 }
 
 void GCObjectManager::performFullGC() {
@@ -20,7 +21,9 @@ void GCObjectManager::performFullGC() {
         if (auto gtable = vm->getGlobalTable()) {
             unscaned.push_back(gtable->gcAccess());
         }
-        unscaned.push_back(vm->getCurrentStack()->gcAccess());
+        if (auto stack = vm->getCurrentStack()) {
+            unscaned.push_back(stack->gcAccess());
+        }
     }
 
     while (!unscaned.empty()) {
@@ -45,6 +48,7 @@ void GCObjectManager::performFullGC() {
     {
         GCObject *obj = m_headObj;
         m_headObj = NULL;
+        m_objCount = 0;
         while (obj != NULL) {
             GCObject *temp = obj;
             obj = obj->next;
@@ -66,6 +70,7 @@ void GCObjectManager::performFullGC() {
                 }
             } else {
                 ASSERT(temp->gcState == GCObject::GCS_Scaned);
+                ++m_objCount;
                 temp->gcState = GCObject::GCS_Unaccess;
                 temp->next = m_headObj;
                 m_headObj = temp;
@@ -78,4 +83,5 @@ void GCObjectManager::performFullGC() {
 void GCObjectManager::linkObject(GCObject *obj) {
     obj->next = m_headObj;
     m_headObj = obj;
+    ++m_objCount;
 }

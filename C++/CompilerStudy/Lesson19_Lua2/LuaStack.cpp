@@ -14,7 +14,12 @@ LuaStackFrame::LuaStackFrame(LuaStack *_stack, Function *_func, int paramBase, i
     }
     tempBase = localBase + localCount;
     varParamBase = localBase - (paramCount - argCount);
+    stack->m_values.reserve(tempBase + 30); // FIXME:
     stack->m_values.resize(tempBase, LuaValue::NIL);
+    {
+        auto iter = stack->m_values.begin();
+        copy(iter + paramBase, iter + paramBase + argCount, iter + localBase);
+    }
 }
 
 //===== LuaStack =====
@@ -24,6 +29,9 @@ void LuaStack::pushFrame(Function *func, int paramBase, int paramCount) {
 void LuaStack::popFrame() {
     delete m_frames.back();
     m_frames.pop_back();
+    if (!m_frames.empty()) {
+        m_values.resize(m_frames.back()->tempBase + m_frames.back()->tempCount);
+    }
 }
 LuaStack::LuaStack():
     GCObject(OT_Stack) {

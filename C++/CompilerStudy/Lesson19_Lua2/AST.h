@@ -218,7 +218,7 @@ struct StmtNode_LoopFor:
     ExpNodePtr exp;
     StmtNodePtr bodyStmt;
     StmtNode_LoopFor(const StmtNodePtr& _initStmt, const ExpNodePtr& _exp, const StmtNodePtr& _bodyStmt):
-        IStmtNode(exp->line), initStmt(_initStmt), exp(_exp), bodyStmt(_bodyStmt){}
+        IStmtNode(_exp->line), initStmt(_initStmt), exp(_exp), bodyStmt(_bodyStmt){}
     virtual void acceptVisitor(IStmtNodeVisitor *v) {v->visit(this);}
 };
 struct StmtNode_IteratorFor:

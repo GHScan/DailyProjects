@@ -6,14 +6,16 @@
 //========== LuaString ==========
 LuaString::LuaString(const char *buf):
     GCObject(OT_String), m_contentHash(0) {
-    m_size = strlen(buf);
-    m_buf = new char[m_size];
+    m_size = (int)strlen(buf);
+    m_buf = new char[m_size + 1];
     memcpy(m_buf, buf, m_size);
+    m_buf[m_size] = 0;
 }
 LuaString::LuaString(const char *buf, int size):
     GCObject(OT_String), m_size(size), m_contentHash(0) {
-    m_buf = new char[m_size];
+    m_buf = new char[m_size + 1];
     memcpy(m_buf, buf, m_size);
+    m_buf[m_size] = 0;
 }
 LuaString::~LuaString() {
     sdelete(m_buf);
@@ -37,7 +39,7 @@ StringPool::~StringPool() {
 }
 LuaString* StringPool::createString(const char *buf) {
     // TODO: opmitize
-    return createString(buf, strlen(buf));
+    return createString(buf, (int)strlen(buf));
 }
 LuaString* StringPool::createString(const char *buf, int size) {
     LuaString *r = NULL;

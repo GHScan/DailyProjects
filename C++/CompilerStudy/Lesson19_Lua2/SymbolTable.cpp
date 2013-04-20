@@ -65,6 +65,7 @@ int SymbolTable::getUpValueIdx(const string& name) {
             m_meta->upValues.push_back(make_pair(t->meta()->level, localIdx));
             return m_upValues[name];
         }
+        t = t->m_prev;
     }
     return -1;
 }

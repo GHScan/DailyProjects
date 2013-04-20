@@ -61,7 +61,7 @@ struct CFunction:
 
     CFuncT func;
 private:
-    CFunction(CFuncT _func): Function(FT_C), func(func){}
+    CFunction(CFuncT _func): Function(FT_C), func(_func){}
 };
 
 struct CFuncEntry {

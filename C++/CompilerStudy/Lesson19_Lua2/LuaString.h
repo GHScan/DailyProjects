@@ -31,7 +31,7 @@ public:
         int msize = min(m_size, o.m_size);
         int r = memcmp(m_buf, o.m_buf, msize);
         if (r == 0) return m_size < o.m_size;
-        else return r;
+        else return r < 0;
     }
 private:
     friend class StringPool;

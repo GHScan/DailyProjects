@@ -6,7 +6,7 @@ typedef double NumberType;
 
 class LuaString;
 class LuaTable;
-class LuaStack;
+struct LuaStack;
 struct Function;
 struct GCObject;
 
@@ -118,14 +118,14 @@ LuaValue concat(const LuaValue& l, const LuaValue& r);
 
 inline int LuaValue::getHash() const {
     switch (m_type) {
-        case LVT_Boolean: return hash<bool>()(m_data.b);
-        case LVT_Number: return hash<NumberType>()(m_data.num);
+        case LVT_Boolean: return (int)hash<bool>()(m_data.b);
+        case LVT_Number: return (int)hash<NumberType>()(m_data.num);
         // TODO: check
-        case LVT_String: return hash<LuaString*>()(m_data.str);
-        case LVT_Table: return hash<LuaTable*>()(m_data.table);
-        case LVT_Function: return hash<Function*>()(m_data.func);
-        case LVT_Stack: return hash<LuaStack*>()(m_data.stack);
-        case LVT_LightUserData: return hash<LightUserData>()(m_data.lud);
+        case LVT_String: return (int)hash<LuaString*>()(m_data.str);
+        case LVT_Table: return (int)hash<LuaTable*>()(m_data.table);
+        case LVT_Function: return (int)hash<Function*>()(m_data.func);
+        case LVT_Stack: return (int)hash<LuaStack*>()(m_data.stack);
+        case LVT_LightUserData: return (int)hash<LightUserData>()(m_data.lud);
         default: ASSERT(0);
     }
     return 0;
