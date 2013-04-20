@@ -12,6 +12,7 @@ class SymbolTable { public:
 
 public:
     void declareLocal(const string& name);
+    int genInternalLocal(const string& name);
     int getLocalIdx(const string& name) const;
     int getUpValueIdx(const string& name);
 

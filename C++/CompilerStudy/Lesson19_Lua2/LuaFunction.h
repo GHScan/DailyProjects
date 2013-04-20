@@ -43,6 +43,10 @@ struct LuaFunction:
 
     LuaFunctionMetaPtr meta;
     vector<LuaValue> upValues;
+
+    LuaValue& upValue(int uvIdx) {
+        return upValues[uvIdx];
+    }
 private:
     LuaFunction(const LuaFunctionMetaPtr &_meta): Function(FT_Lua), meta(_meta){}
 };

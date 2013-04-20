@@ -72,6 +72,8 @@ public:
     GCObject* gcAccess() const;
 
     int getHash() const;
+    int getSize() const;
+    string toString() const;
 public:
     static LuaValue NIL;
     static LuaValue TRUE;

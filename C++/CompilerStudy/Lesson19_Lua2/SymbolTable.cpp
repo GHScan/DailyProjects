@@ -29,6 +29,20 @@ void SymbolTable::declareLocal(const string& name) {
     m_blocks.back()[name] = m_lastLocalIdx++;
     m_meta->localCount = max(m_meta->localCount, m_lastLocalIdx);
 }
+int SymbolTable::genInternalLocal(const string& name) {
+    int idx = -1;
+    for (int i = 0; i < 1000; ++i) {
+        string realName = format("%s_%d", name.c_str(), i);
+        if (m_blocks.back().count(realName) == 0) {
+            declareLocal(realName);
+            idx = getLocalIdx(realName);
+            break;
+        }
+    }
+    ASSERT(idx != -1);
+    return idx;
+}
+
 int SymbolTable::getLocalIdx(const string& name) const {
     for (auto iter = m_blocks.rbegin(); iter != m_blocks.rend(); ++iter) {
         auto iter2 = iter->find(name);

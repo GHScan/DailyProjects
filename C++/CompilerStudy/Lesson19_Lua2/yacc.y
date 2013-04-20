@@ -120,18 +120,30 @@ Statement
     | FOR ID OP_ASSIGN Exp ',' Exp DO {
         SymbolTable::top()->pushBlock();
         SymbolTable::top()->declareLocal($2.get<TerminalSymbol>().lexem);
+        int lastLocalIdx = SymbolTable::top()->genInternalLocal("__last");
+        int stepLocalIdx = SymbolTable::top()->genInternalLocal("__step");
+        $1 = make_pair(lastLocalIdx, stepLocalIdx);
     } Block END {
         auto varExp = getIDExp($2.get<TerminalSymbol>());
-        $$ = StmtNodePtr(new StmtNode_RangeFor(varExp, $4.get<ExpNodePtr>(), $6.get<ExpNodePtr>(), getConstExp(LuaValue(1), 0), $9.get<StmtNodePtr>()));
+        auto stmt = new StmtNode_RangeFor(varExp, $4.get<ExpNodePtr>(), $6.get<ExpNodePtr>(), getConstExp(LuaValue(1), 0), $9.get<StmtNodePtr>());
+        $$ = StmtNodePtr(stmt);
+        stmt->lastLocalIdx = $1.get<pair<int, int> >().first;
+        stmt->stepLocalIdx = $1.get<pair<int, int> >().second;
         SymbolTable::top()->popBlock();
     }
 
     | FOR ID OP_ASSIGN Exp ',' Exp ',' Exp DO {
         SymbolTable::top()->pushBlock();
         SymbolTable::top()->declareLocal($2.get<TerminalSymbol>().lexem);
+        int lastLocalIdx = SymbolTable::top()->genInternalLocal("__last");
+        int stepLocalIdx = SymbolTable::top()->genInternalLocal("__step");
+        $1 = make_pair(lastLocalIdx, stepLocalIdx);
     } Block END {
         auto varExp = getIDExp($2.get<TerminalSymbol>());
-        $$ = StmtNodePtr(new StmtNode_RangeFor(varExp, $4.get<ExpNodePtr>(), $6.get<ExpNodePtr>(), $8.get<ExpNodePtr>(), $11.get<StmtNodePtr>()));
+        auto stmt = new StmtNode_RangeFor(varExp, $4.get<ExpNodePtr>(), $6.get<ExpNodePtr>(), $8.get<ExpNodePtr>(), $11.get<StmtNodePtr>());
+        $$ = StmtNodePtr(stmt);
+        stmt->lastLocalIdx = $1.get<pair<int, int> >().first;
+        stmt->stepLocalIdx = $1.get<pair<int, int> >().second;
         SymbolTable::top()->popBlock();
     }
 
@@ -140,10 +152,16 @@ Statement
         for (auto &term : $2.get<vector<TerminalSymbol> >()) {
             SymbolTable::top()->declareLocal(term.lexem);
         }
+        int stateLocalIdx = SymbolTable::top()->genInternalLocal("__state_");
+        int funcLocalIdx = SymbolTable::top()->genInternalLocal("__func_");
+        $1 = make_pair(stateLocalIdx, funcLocalIdx);
     } Block END {
         vector<ExpNodePtr> vars;
         for (auto &term : $2.get<vector<TerminalSymbol> >()) vars.push_back(getIDExp(term));
-        $$ = StmtNodePtr(new StmtNode_IteratorFor(vars, $4.get<vector<ExpNodePtr> >(), $7.get<StmtNodePtr>()));
+        auto stmt = new StmtNode_IteratorFor(vars, $4.get<vector<ExpNodePtr> >(), $7.get<StmtNodePtr>());
+        stmt->stateLocalIdx = $1.get<pair<int, int> >().first;
+        stmt->funcLocalIdx = $1.get<pair<int, int> >().second;
+        $$ = StmtNodePtr(stmt);
         SymbolTable::top()->popBlock();
     }
 
@@ -382,7 +400,7 @@ FuncBody : '(' Opt_ArgList ')' {
          } Block END {
             auto &meta = SymbolTable::top()->meta();
             meta->ast = $5.get<StmtNodePtr>();
-            genCode(meta->codes, meta->ast.get());
+            emitCode(meta.get());
             $$ = ExpNodePtr(new ExpNode_Lambda(meta));
             SymbolTable::pop();
          }
@@ -581,7 +599,8 @@ static ExpNodePtr getIDExp(const TerminalSymbol& term) {
     if (localIdx != -1) return ExpNodePtr(new ExpNode_LocalVar(localIdx, term.line));
     int uvIdx = SymbolTable::top()->getUpValueIdx(term.lexem);
     if (uvIdx != -1) return ExpNodePtr(new ExpNode_UpValueVar(uvIdx, term.line));
-    return ExpNodePtr(new ExpNode_GlobalVar(term.lexem, term.line));
+    int constIdx = SymbolTable::top()->meta()->getConstIdx(LuaValue(term.lexem.c_str()));
+    return ExpNodePtr(new ExpNode_GlobalVar(constIdx, term.line));
 }
 static bool& isDefiningMethod() {
     static bool s_b = false;

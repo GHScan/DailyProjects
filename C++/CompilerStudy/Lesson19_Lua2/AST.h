@@ -58,8 +58,7 @@ struct ExpNode_BinaryOp:
         OP_Less, OP_LessEq,
         OP_Greater, OP_GreaterEq,
         OP_Equal, OP_NEqual,
-        OP_Add, OP_Sub, OP_Mul, OP_Div, OP_Mod,
-        OP_Pow,
+        OP_Add, OP_Sub, OP_Mul, OP_Div, OP_Mod, OP_Pow,
         OP_Concat,
     };
     ExpNodePtr lexp, rexp;
@@ -88,8 +87,8 @@ struct ExpNode_UpValueVar:
 };
 struct ExpNode_GlobalVar:
     public IExpNode {
-    string name;
-    ExpNode_GlobalVar(const string& _name, int line): IExpNode(line), name(_name){}
+    int constIdx;
+    ExpNode_GlobalVar(int _constIdx, int line): IExpNode(line), constIdx(_constIdx){}
     virtual void acceptVisitor(IExpNodeVisitor *v) {v->visit(this);}
 };
 struct ExpNode_FieldAccess:
@@ -208,8 +207,9 @@ struct StmtNode_RangeFor:
     ExpNodePtr first, last, step;
     ExpNodePtr var;
     StmtNodePtr stmt;
+    int lastLocalIdx, stepLocalIdx;
     StmtNode_RangeFor(const ExpNodePtr& _var, const ExpNodePtr& _first, const ExpNodePtr& _last, const ExpNodePtr& _step, const StmtNodePtr& _stmt):
-        IStmtNode(_var->line), first(_first), last(_last), step(_step), var(_var), stmt(_stmt){}
+        IStmtNode(_var->line), first(_first), last(_last), step(_step), var(_var), stmt(_stmt), lastLocalIdx(0), stepLocalIdx(0){}
     virtual void acceptVisitor(IStmtNodeVisitor *v) {v->visit(this);}
 };
 struct StmtNode_LoopFor:
@@ -225,8 +225,9 @@ struct StmtNode_IteratorFor:
     public IStmtNode {
     vector<ExpNodePtr> vars, iterExps;
     StmtNodePtr stmt;
+    int funcLocalIdx, stateLocalIdx;
     StmtNode_IteratorFor(const vector<ExpNodePtr>& _vars, const vector<ExpNodePtr>& _iterExps, const StmtNodePtr& _stmt):
-        IStmtNode(_vars[0]->line), vars(_vars), iterExps(_iterExps), stmt(_stmt){}
+        IStmtNode(_vars[0]->line), vars(_vars), iterExps(_iterExps), stmt(_stmt), funcLocalIdx(0), stateLocalIdx(0){}
     virtual void acceptVisitor(IStmtNodeVisitor *v) {v->visit(this);}
 };
 

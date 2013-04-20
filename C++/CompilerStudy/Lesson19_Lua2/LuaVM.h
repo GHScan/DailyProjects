@@ -6,6 +6,8 @@ class GCObjectManager;
 class StringPool;
 class LuaStack;
 class LuaTable;
+struct LuaFunctionMeta;
+typedef shared_ptr<LuaFunctionMeta> LuaFunctionMetaPtr;
 
 class LuaVM {
 public:
@@ -19,6 +21,11 @@ public:
     void setCurrentStack(LuaStack *stack) { m_curStack = stack; }
     LuaTable* getGlobalTable() { return m_gtable;}
     void setGlobalTable(LuaTable *t) { m_gtable = t; }
+
+    int getFunctionMetaIdx(const LuaFunctionMetaPtr &meta);
+    const LuaFunctionMetaPtr& getMeta(int idx) {
+        return m_metas[idx];
+    }
 public:
     LuaVM();
     ~LuaVM();
@@ -35,7 +42,16 @@ private:
     StringPool *m_strPool;
     LuaStack *m_curStack;
     LuaTable *m_gtable;
+    vector<LuaFunctionMetaPtr> m_metas;
 };
+
+inline int LuaVM::getFunctionMetaIdx(const LuaFunctionMetaPtr &meta) {
+    for (int i = 0; i < (int)m_metas.size(); ++i) {
+        if (meta == m_metas[i]) return i;
+    }
+    m_metas.push_back(meta);
+    return (int)m_metas.size() - 1;
+}
 
 #endif
 

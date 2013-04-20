@@ -106,6 +106,29 @@ GCObject* LuaValue::gcAccess() const {
     }
 }
 
+string LuaValue::toString() const {
+    switch (m_type) {
+    case LVT_Nil: return "nil";
+    case LVT_Boolean: return m_data.b ? "true" : "false";
+    case LVT_Number: return m_data.num == int(m_data.num) ? format("%d", int(m_data.num)) : format("%f", m_data.num);
+    case LVT_String: return m_data.str->buf();
+    case LVT_Table: return format("table: %p", m_data.table);
+    case LVT_Function: return format("function: %p", m_data.func);
+    case LVT_Stack: return format("thread: %p", m_data.stack);
+    case LVT_LightUserData: return format("lightuserdata: %p", m_data.lud);
+    default: ASSERT(0);
+    }
+}
+
+int LuaValue::getSize() const {
+    switch (m_type) {
+        case LVT_String: return m_data.str->size();
+        case LVT_Table: return m_data.table->size();
+        default: ASSERT(0);
+    }
+    return 0;
+}
+
 LuaValue LuaValue::NIL;
 LuaValue LuaValue::TRUE(LuaValue::fromBoolean(true));
 LuaValue LuaValue::FALSE(LuaValue::fromBoolean(false));

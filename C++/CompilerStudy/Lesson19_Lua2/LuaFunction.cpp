@@ -43,15 +43,15 @@ void callFunc(int tempIdx) {
     if (func->funcType == Function::FT_Lua) {
         {
             auto meta = static_cast<LuaFunction*>(func)->meta;
-            int paramCount = frame->tempExtCount - tempIdx - 1;
+            int paramCount = frame->tempCount - tempIdx - 1;
             for (; paramCount < meta->argCount; ++paramCount) frame->pushExtTemp(LuaValue::NIL);
         }
-        stack->pushFrame(func, tempIdx + 1, frame->tempExtCount - tempIdx - 1);
+        stack->pushFrame(func, tempIdx + 1, frame->tempCount - tempIdx - 1);
     } else if (func->funcType == Function::FT_C) {
         // TODO: optmize
-        vector<LuaValue> params(&frame->temp(tempIdx + 1), &frame->temp(frame->tempExtCount));
+        vector<LuaValue> params(&frame->temp(tempIdx + 1), &frame->temp(frame->tempCount));
         vector<LuaValue> rets;
-        stack->pushFrame(func, tempIdx + 1, frame->tempExtCount - tempIdx - 1);
+        stack->pushFrame(func, tempIdx + 1, frame->tempCount - tempIdx - 1);
         static_cast<CFunction*>(func)->func(params, rets);
         stack->popFrame();
         frame->popTemps(tempIdx);
@@ -73,6 +73,6 @@ void callFunc(const LuaValue &func, const vector<LuaValue>& args, vector<LuaValu
     for (auto &v : args) frame->pushTemp(v);
     callFunc(tempIdx);
     execute(frame);
-    rets.assign(&frame->temp(tempIdx), &frame->temp(frame->tempExtCount));
+    rets.assign(&frame->temp(tempIdx), &frame->temp(frame->tempCount));
     frame->popTemps(tempIdx);
 }
