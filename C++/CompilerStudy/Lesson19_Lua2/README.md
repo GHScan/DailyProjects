@@ -1,6 +1,5 @@
 # TODO
-+ debug...
-+ standard library
++ fenv
 + metatable
 + closure
 + traceback

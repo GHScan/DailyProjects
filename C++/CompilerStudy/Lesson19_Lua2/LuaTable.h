@@ -27,7 +27,7 @@ public:
     LuaValue getMeta(const char *metaName);
 
     void sort();
-    void sort(LuaValue& cmp);
+    void sort(const LuaValue& cmp);
 
     // TODO: add metatable support 
     LuaValue meta_add(const LuaValue& v);

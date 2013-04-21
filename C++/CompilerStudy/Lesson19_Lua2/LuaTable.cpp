@@ -147,7 +147,7 @@ LuaValue LuaTable::getMeta(const char *metaName) {
 void LuaTable::sort() {
     std::sort(m_array.begin(), m_array.end());
 }
-void LuaTable::sort(LuaValue& cmp) {
+void LuaTable::sort(const LuaValue& cmp) {
     vector<LuaValue> params, rets;
     std::sort(m_array.begin(), m_array.end(), [&params, &rets, &cmp]
             (const LuaValue& l, const LuaValue& r){

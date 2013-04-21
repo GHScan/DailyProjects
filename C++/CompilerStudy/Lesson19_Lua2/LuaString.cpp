@@ -49,7 +49,7 @@ LuaString* StringPool::createString(const char *buf, int size) {
     if (iter != m_strSet.end()) {
         r = *iter;
     } else {
-        r = new LuaString(buf);
+        r = new LuaString(buf, size);
         m_strSet.insert(r);
         LuaVM::instance()->getGCObjManager()->linkObject(r);
     }
