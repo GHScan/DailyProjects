@@ -59,6 +59,7 @@ void callFunc(int tempIdx) {
     } else if (func->funcType == Function::FT_C) {
         // TODO: optmize
         vector<LuaValue> params(&frame->temp(0) + tempIdx + 1, &frame->temp(0) + frame->tempExtCount);
+        while (!params.empty() && params.back().isNil()) params.pop_back();
         vector<LuaValue> rets;
         stack->pushFrame(func, frame->tempBase + tempIdx + 1, frame->tempExtCount - tempIdx - 1);
         static_cast<CFunction*>(func)->func(params, rets);

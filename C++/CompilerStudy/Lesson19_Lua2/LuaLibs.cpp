@@ -13,13 +13,12 @@ void runfile(int argc, char *argv[]) {
     openLib_os();
     openLib_io();
 
-    auto func = loadFile("test.lua");
     {
-        ofstream fo("disassembly.txt");
-        disassemble(fo, static_cast<LuaFunction*>(func.getFunction())->meta.get());
+        auto func = loadFile(argv[1]);
+        vector<LuaValue> args, rets;
+        for (int i = 2; i < argc; ++i) args.push_back(LuaValue(argv[i]));
+        callFunc(func, args, rets);
     }
-    vector<LuaValue> args, rets;
-    callFunc(func, args, rets);
 
     LuaVM::destroy();
 }

@@ -38,16 +38,10 @@ public:
     // LuaValue(const LuaValue& o);
     // LuaValue& operator = (const LuaValue& o);
 
-    LuaValue& operator += (const LuaValue& o);
-    LuaValue& operator -= (const LuaValue& o);
-    LuaValue& operator *= (const LuaValue& o);
-    LuaValue& operator /= (const LuaValue& o);
-    LuaValue& operator %= (const LuaValue& o);
-
     bool operator == (const LuaValue& o) const;
     bool operator != (const LuaValue& o) const { return !(*this == o); }
     bool operator < (const LuaValue& o) const;
-    bool operator <= (const LuaValue& o) const { return !(o < *this); }
+    bool operator <= (const LuaValue& o) const;
     bool operator > (const LuaValue& o) const { return o < *this; }
     bool operator >= (const LuaValue& o) const { return !(*this < o); }
 
@@ -77,6 +71,17 @@ public:
     static LuaValue FALSE;
 
 private:
+    LuaValue& operator += (const LuaValue& o);
+    LuaValue& operator -= (const LuaValue& o);
+    LuaValue& operator *= (const LuaValue& o);
+    LuaValue& operator /= (const LuaValue& o);
+    LuaValue& operator %= (const LuaValue& o);
+    friend LuaValue operator + (const LuaValue& l, const LuaValue& r);
+    friend LuaValue operator - (const LuaValue& l, const LuaValue& r);
+    friend LuaValue operator * (const LuaValue& l, const LuaValue& r);
+    friend LuaValue operator / (const LuaValue& l, const LuaValue& r);
+    friend LuaValue operator % (const LuaValue& l, const LuaValue& r);
+
     static LuaValue fromBoolean(bool b) {
         LuaValue r; r.m_type = LVT_Boolean; r.m_data.b = b;
         return r;
@@ -95,21 +100,32 @@ private:
     } m_data;
 };
 
-inline LuaValue operator + (const LuaValue& l, const LuaValue& r) {
-    return LuaValue(l) += r;
+inline LuaValue& LuaValue::operator += (const LuaValue& o) {
+    ASSERT(m_type == LVT_Number && o.m_type == LVT_Number);
+    m_data.num += o.m_data.num;
+    return *this;
 }
-inline LuaValue operator - (const LuaValue& l, const LuaValue& r) {
-    return LuaValue(l) -= r;
+inline LuaValue& LuaValue::operator -= (const LuaValue& o) {
+    ASSERT(m_type == LVT_Number && o.m_type == LVT_Number);
+    m_data.num -= o.m_data.num;
+    return *this;
 }
-inline LuaValue operator * (const LuaValue& l, const LuaValue& r) {
-    return LuaValue(l) *= r;
+inline LuaValue& LuaValue::operator *= (const LuaValue& o) {
+    ASSERT(m_type == LVT_Number && o.m_type == LVT_Number);
+    m_data.num *= o.m_data.num;
+    return *this;
 }
-inline LuaValue operator / (const LuaValue& l, const LuaValue& r) {
-    return LuaValue(l) /= r;
+inline LuaValue& LuaValue::operator /= (const LuaValue& o) {
+    ASSERT(m_type == LVT_Number && o.m_type == LVT_Number);
+    m_data.num /= o.m_data.num;
+    return *this;
 }
-inline LuaValue operator % (const LuaValue& l, const LuaValue& r) {
-    return LuaValue(l) %= r;
+inline LuaValue& LuaValue::operator %= (const LuaValue& o) {
+    ASSERT(m_type == LVT_Number && o.m_type == LVT_Number);
+    m_data.num = fmod(m_data.num, o.m_data.num);
+    return *this;
 }
+
 LuaValue power(const LuaValue& l, const LuaValue& r);
 LuaValue concat(const LuaValue& l, const LuaValue& r);
 
@@ -118,7 +134,6 @@ inline int LuaValue::getHash() const {
         case LVT_Nil: ASSERT(0);
         case LVT_Boolean: return (int)hash<bool>()(m_data.b);
         case LVT_Number: return (int)hash<NumberType>()(m_data.num);
-        // TODO: check
         case LVT_String: return (int)hash<LuaString*>()(m_data.str);
         case LVT_Table: return (int)hash<LuaTable*>()(m_data.table);
         case LVT_Function: return (int)hash<Function*>()(m_data.func);

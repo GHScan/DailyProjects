@@ -4,6 +4,7 @@
 #include "LuaFunction.h"
 #include "LuaVM.h"
 #include "GCObject.h"
+#include "LuaStack.h"
 
 static LuaValue invokeMeta(LuaTable* table, LuaValue& func, const LuaValue& arg0, const LuaValue& arg1 = LuaValue::NIL) {
     vector<LuaValue> params, rets;
@@ -191,11 +192,10 @@ LuaValue LuaTable::meta_le(const LuaValue& v) {
 LuaValue LuaTable::meta_unm() {
     return invokeMeta(this, m_metaTable, "__unm", LuaValue::NIL);
 }
-void LuaTable::meta_call(const vector<LuaValue>& args, vector<LuaValue>& rets) {
+void LuaTable::meta_call(int tempIdx, LuaStackFrame* frame) {
     LuaValue m = m_metaTable->get(LuaValue("__call"));
-    vector<LuaValue> params(args);
-    params.insert(params.begin(), LuaValue(this));
-    callFunc(m, params, rets);
+    frame->insertTemp(tempIdx, m);
+    callFunc(tempIdx);
 }
 
 void LuaTable::collectGCObject(vector<GCObject*>& unscaned) {

@@ -188,7 +188,9 @@ private:
         for (auto &exp : node->exps) {
             (ExpNodeVisitor_CodeEmitor(m_meta, exp));
         }
-        EMIT0(BC_Return);
+        int jump_return;
+        PRE_EMIT(jump_return);
+        m_jumpsReturn.push_back(jump_return);
     }
     virtual void visit(StmtNode_Block *node) {
         for (int i = 0; i < (int)node->stmts.size(); ++i) {
@@ -457,6 +459,20 @@ void execute(LuaStackFrame *stopFrame) {
         if (frame == stopFrame) break;
         auto lfunc = static_cast<LuaFunction*>(frame->func);
         if (frame->ip == (int)lfunc->meta->codes.size()) {
+            // TODO: optimize
+            auto lastFrame = stack->topFrame(-1);
+            auto meta = static_cast<LuaFunction*>(frame->func)->meta;
+            vector<LuaValue> rets;
+            if (frame->tempCount > 0) rets.assign(&frame->temp(0), &frame->temp(0) + frame->tempExtCount);
+            lastFrame->popTemps(frame->varParamBase - meta->argCount - 1 - lastFrame->tempBase);
+            if (rets.empty()) lastFrame->pushTemp(LuaValue::NIL);
+            else {
+                lastFrame->pushTemp(rets[0]);
+                for (int i = 1; i < (int)rets.size(); ++i) {
+                    lastFrame->pushExtTemp(rets[i]);
+                }
+            }
+
             stack->popFrame();
             continue;
         }
@@ -478,7 +494,6 @@ void execute(LuaStackFrame *stopFrame) {
             case BC_PopTemps: ByteCodeHandler<BC_PopTemps>::execute(code, frame); break;
             case BC_ResizeTemp: ByteCodeHandler<BC_ResizeTemp>::execute(code, frame); break;
             case BC_Call: ByteCodeHandler<BC_Call>::execute(code, frame); break;
-            case BC_Return: ByteCodeHandler<BC_Return>::execute(code, frame); break;
             case BC_Less: ByteCodeHandler<BC_Less>::execute(code, frame); break;
             case BC_LessEq: ByteCodeHandler<BC_LessEq>::execute(code, frame); break;
             case BC_Greater: ByteCodeHandler<BC_Greater>::execute(code, frame); break;
@@ -529,7 +544,6 @@ void disassemble(ostream& so, LuaFunctionMeta* meta) {
             case BC_PopTemps: ByteCodeHandler<BC_PopTemps>::disassemble(so, code, meta); break;
             case BC_ResizeTemp: ByteCodeHandler<BC_ResizeTemp>::disassemble(so, code, meta); break;
             case BC_Call: ByteCodeHandler<BC_Call>::disassemble(so, code, meta); break;
-            case BC_Return: ByteCodeHandler<BC_Return>::disassemble(so, code, meta); break;
             case BC_Less: ByteCodeHandler<BC_Less>::disassemble(so, code, meta); break;
             case BC_LessEq: ByteCodeHandler<BC_LessEq>::disassemble(so, code, meta); break;
             case BC_Greater: ByteCodeHandler<BC_Greater>::disassemble(so, code, meta); break;

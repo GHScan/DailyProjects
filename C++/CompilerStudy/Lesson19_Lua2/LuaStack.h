@@ -25,7 +25,7 @@ struct LuaStackFrame {
     void popTempN(int n);
     void popTemps(int startTempIdx);
     void resizeTemp(int n);
-    void resizeTemp2Ext();
+    void insertTemp(int tempIdx, const LuaValue& v);
 };
 
 struct LuaStack:
@@ -82,9 +82,9 @@ inline void LuaStackFrame::resizeTemp(int n) {
     tempCount = tempExtCount = n;
     stack->m_values.resize(tempBase + tempCount);
 }
-inline void LuaStackFrame::resizeTemp2Ext() {
-    tempCount = tempExtCount;
-    stack->m_values.resize(tempBase + tempCount);
+inline void LuaStackFrame::insertTemp(int tempIdx, const LuaValue& v) {
+    ++tempCount, ++tempExtCount;
+    stack->m_values.insert(stack->m_values.begin() + tempBase + tempIdx, v);
 }
 
 #endif

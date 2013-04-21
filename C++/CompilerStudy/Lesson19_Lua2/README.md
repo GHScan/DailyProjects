@@ -1,5 +1,4 @@
 # TODO
-+ metatable
 + closure
 + traceback
 + memory leaks detection

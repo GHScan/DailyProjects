@@ -15,7 +15,6 @@ enum ByteCode {
     BC_ResizeTemp, 
 
     BC_Call, 
-    BC_Return,
 
     BC_Less, BC_LessEq, BC_Greater, BC_GreaterEq, BC_Equal, BC_NEqual,
     BC_Add, BC_Sub, BC_Mul,
@@ -236,31 +235,12 @@ struct ByteCodeHandler<BC_Call> {
         so << format("call %d", code >> 8);
     }
     static void execute(int code, LuaStackFrame* frame) {
-        callFunc(frame->tempCount - (code >> 8) - 1);
-    }
-};
-template<>
-struct ByteCodeHandler<BC_Return> {
-    static void emit(int &code) {
-        code = BC_Return;
-    }
-    static void disassemble(ostream& so, int code, LuaFunctionMeta* meta) {
-        so << format("return");
-    }
-    static void execute(int code, LuaStackFrame* frame) {
-        auto lastFrame = LuaVM::instance()->getCurrentStack()->topFrame(-1);
-        auto meta = static_cast<LuaFunction*>(frame->func)->meta;
-        // TODO: optimize
-        vector<LuaValue> rets(&frame->temp(0), &frame->temp(0) + frame->tempExtCount);
-        lastFrame->popTemps(frame->varParamBase - meta->argCount - 1 - lastFrame->tempBase);
-        if (rets.empty()) lastFrame->pushTemp(LuaValue::NIL);
-        else {
-            lastFrame->pushTemp(rets[0]);
-            for (int i = 1; i < (int)rets.size(); ++i) {
-                lastFrame->pushExtTemp(rets[i]);
-            }
+        int tempIdx = frame->tempCount - (code >> 8) - 1;
+        if (frame->temp(tempIdx).isTypeOf(LVT_Table)) {
+            frame->temp(tempIdx).getTable()->meta_call(tempIdx, frame);
+        } else {
+            callFunc(tempIdx);
         }
-        frame->ip = (int)meta->codes.size() - 1;
     }
 };
 template<>
@@ -350,7 +330,8 @@ struct ByteCodeHandler<BC_Add> {
         so << format("add");
     }
     static void execute(int code, LuaStackFrame* frame) {
-        frame->topTemp(-1) += frame->topTemp(0);
+        auto& lv = frame->topTemp(-1);
+        lv = lv + frame->topTemp(0);
         frame->popTempN(1);
     }
 };
@@ -363,7 +344,8 @@ struct ByteCodeHandler<BC_Sub> {
         so << format("sub");
     }
     static void execute(int code, LuaStackFrame* frame) {
-        frame->topTemp(-1) -= frame->topTemp(0);
+        auto& lv = frame->topTemp(-1);
+        lv = lv - frame->topTemp(0);
         frame->popTempN(1);
     }
 };
@@ -376,7 +358,8 @@ struct ByteCodeHandler<BC_Mul> {
         so << format("mul");
     }
     static void execute(int code, LuaStackFrame* frame) {
-        frame->topTemp(-1) *= frame->topTemp(0);
+        auto& lv = frame->topTemp(-1);
+        lv = lv * frame->topTemp(0);
         frame->popTempN(1);
     }
 };
@@ -389,7 +372,8 @@ struct ByteCodeHandler<BC_Div> {
         so << format("div");
     }
     static void execute(int code, LuaStackFrame* frame) {
-        frame->topTemp(-1) /= frame->topTemp(0);
+        auto& lv = frame->topTemp(-1);
+        lv = lv / frame->topTemp(0);
         frame->popTempN(1);
     }
 };
@@ -402,7 +386,8 @@ struct ByteCodeHandler<BC_Mod> {
         so << format("mod");
     }
     static void execute(int code, LuaStackFrame* frame) {
-        frame->topTemp(-1) %= frame->topTemp(0);
+        auto& lv = frame->topTemp(-1);
+        lv = lv % frame->topTemp(0);
         frame->popTempN(1);
     }
 };
@@ -415,7 +400,8 @@ struct ByteCodeHandler<BC_Pow> {
         so << format("pow");
     }
     static void execute(int code, LuaStackFrame* frame) {
-        frame->topTemp(-1) = power(frame->topTemp(-1), frame->topTemp(0));
+        auto& lv = frame->topTemp(-1);
+        lv = power(lv, frame->topTemp(0));
         frame->popTempN(1);
     }
 };
@@ -428,7 +414,8 @@ struct ByteCodeHandler<BC_Concat> {
         so << format("concat");
     }
     static void execute(int code, LuaStackFrame* frame) {
-        frame->topTemp(-1) = concat(frame->topTemp(-1), frame->topTemp(0));
+        auto& lv = frame->topTemp(-1);
+        lv = concat(lv, frame->topTemp(0));
         frame->popTempN(1);
     }
 };
@@ -465,7 +452,9 @@ struct ByteCodeHandler<BC_Minus> {
         so << format("minus");
     }
     static void execute(int code, LuaStackFrame* frame) {
-        frame->topTemp(0) = LuaValue(-frame->topTemp(0).getNumber());
+        auto &v = frame->topTemp(0);
+        if (v.isTypeOf(LVT_Table)) v = v.getTable()->meta_unm();
+        else v = LuaValue(-v.getNumber());
     }
 };
 template<>

@@ -5,6 +5,8 @@
 #include "GCObject.h"
 #include "LuaValue.h"
 
+struct LuaStackFrame;
+
 class LuaTable:
     public GCObject {
 public:
@@ -22,6 +24,7 @@ public:
     LuaValue& getNext(LuaValue& k);
     LuaValue& getINext(LuaValue& k);
 
+    LuaTable* getMetatable() const { return m_metaTable; }
     void setMetatable(LuaTable *table) {m_metaTable = table;}
 
     LuaValue getMeta(const char *metaName);
@@ -29,7 +32,6 @@ public:
     void sort();
     void sort(const LuaValue& cmp);
 
-    // TODO: add metatable support 
     LuaValue meta_add(const LuaValue& v);
     LuaValue meta_sub(const LuaValue& v);
     LuaValue meta_mul(const LuaValue& v);
@@ -41,7 +43,7 @@ public:
     LuaValue meta_lt(const LuaValue& v);
     LuaValue meta_le(const LuaValue& v);
     LuaValue meta_unm();
-    void meta_call(const vector<LuaValue>& args, vector<LuaValue>& rets);
+    void meta_call(int tempIdx, LuaStackFrame* frame);
 
     void collectGCObject(vector<GCObject*>& unscaned);
 private:

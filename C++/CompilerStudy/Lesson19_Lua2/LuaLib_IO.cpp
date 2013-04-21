@@ -12,6 +12,7 @@
 #define FILEFIELD_TYPE "_type"
 #define OBJ_TYPE "file"
 
+// FIXME: this function will not be invoke!!!
 static void _gc(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     auto f = (FILE*)args[0].getTable()->get(LuaValue(NumberType(1))).getLightUserData();
     if (f != NULL) fclose(f);

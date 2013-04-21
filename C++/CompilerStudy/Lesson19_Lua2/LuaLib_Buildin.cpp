@@ -2,6 +2,7 @@
 #include "pch.h"
 
 #include "LuaLibs.h"
+#include "ByteCode.h"
 
 static void buildin_print(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     for (auto &arg : args) {
@@ -151,17 +152,13 @@ static void buildin_setfenv(const vector<LuaValue>& args, vector<LuaValue>& rets
         static_cast<LuaFunction*>(func)->fenvTable = args[1].getTable();
     }
 }
-// TODO:
 static void buildin_setmetatable(const vector<LuaValue>& args, vector<LuaValue>& rets) {
-//    args[0].getTable()->setMetaTable(args[1].getTable());
+    args[0].getTable()->setMetatable(args[1].getTable());
 }
 static void buildin_getmetatable(const vector<LuaValue>& args, vector<LuaValue>& rets) {
-//    auto table = args[0].getTable()->getMetaTable();
-//    if (table == NULL) rets.push_back(LuaValue::NIL);
-//    else {
-//        table->addRef();
-//        rets.push_back(LuaValue(table));
-//    }
+    auto table = args[0].getTable()->getMetatable();
+    if (table == NULL) rets.push_back(LuaValue::NIL);
+    else rets.push_back(LuaValue(table));
 }
 static void buildin_rawequal(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     auto &a1(args[0]), &a2(args[1]);
@@ -195,6 +192,25 @@ static void buildin_collectgarbage(const vector<LuaValue>& args, vector<LuaValue
     rets.push_back(LuaValue(oldObjCount));
     rets.push_back(LuaValue(newObjCount));
 }
+static void buildin_disassemble(const vector<LuaValue>& args, vector<LuaValue>& rets) {
+    Function* func = NULL;
+    if (args.empty()) func = LuaVM::instance()->getCurrentStack()->topFrame(-1)->func;
+    else if (args[0].isTypeOf(LVT_Number)) {
+        auto n = (int)args[0].getNumber();
+        ASSERT(n >= 0);
+        if (n > 0) func = LuaVM::instance()->getCurrentStack()->topFrame(-n)->func;
+    } else {
+        func = args[0].getFunction();
+    }
+
+    if (func != NULL && func->funcType == Function::FT_Lua) {
+        ostringstream so;
+        disassemble(so, static_cast<LuaFunction*>(func)->meta.get());
+        rets.push_back(LuaValue(so.str().c_str()));
+    } else {
+        rets.push_back(LuaValue("invalid function"));
+    }
+}
 
 extern void openLib_buildin() {
 #define ENTRY(name) {#name, &buildin_##name}
@@ -206,7 +222,7 @@ extern void openLib_buildin() {
         ENTRY(loadfile), ENTRY(dofile), ENTRY(getfenv),
         ENTRY(setfenv), ENTRY(getmetatable), ENTRY(setmetatable),
         ENTRY(rawequal), ENTRY(rawget), ENTRY(rawset),
-        ENTRY(pcall), ENTRY(collectgarbage),
+        ENTRY(pcall), ENTRY(collectgarbage), ENTRY(disassemble), 
     };
 #undef ENTRY
     for (auto &entry : entries) {
