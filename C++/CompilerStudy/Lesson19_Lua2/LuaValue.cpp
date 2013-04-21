@@ -67,6 +67,7 @@ LuaValue& LuaValue::operator %= (const LuaValue& o) {
 bool LuaValue::operator == (const LuaValue& o) const {
     if (m_type == o.m_type) {
         switch (m_type) {
+        case LVT_Nil: return true;
         case LVT_Boolean: return m_data.b == o.m_data.b;
         case LVT_Number: return m_data.num == o.m_data.num;
         case LVT_String: return m_data.str == o.m_data.str;
@@ -82,6 +83,7 @@ bool LuaValue::operator == (const LuaValue& o) const {
 bool LuaValue::operator < (const LuaValue& o) const {
     if (m_type == o.m_type) {
         switch (m_type) {
+        case LVT_Nil: ASSERT(0);
         case LVT_Boolean: ASSERT(0);
         case LVT_Number: return m_data.num < o.m_data.num;
         case LVT_String: return m_data.str->isContentLess(*o.m_data.str);

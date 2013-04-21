@@ -582,7 +582,7 @@ LuaValue loadFile(const char *name) {
         auto r = loadFile(f);
         fclose(f);
         return r;
-    } catch(const exception& e) {
+    } catch(const exception& ) {
         fclose(f);
         throw;
     }

@@ -101,8 +101,10 @@ LuaValue& LuaTable::getNext(LuaValue& k) {
             k = LuaValue(idx + 1);
             return m_array[idx];
         } else if (idx == (int)m_array.size()) {
-            k = m_dict.begin()->first;
-            return m_dict.begin()->second;
+            if (!m_dict.empty()) {
+                k = m_dict.begin()->first;
+                return m_dict.begin()->second;
+            }
         }
     }
 

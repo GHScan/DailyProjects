@@ -5,6 +5,7 @@
 #pragma warning(disable : 4267)
 #pragma warning(disable : 4065)
 #pragma warning(disable : 4244)
+#pragma warning(disable : 4551)
 #endif
 
 #include "lex.c"

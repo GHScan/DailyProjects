@@ -115,6 +115,7 @@ LuaValue concat(const LuaValue& l, const LuaValue& r);
 
 inline int LuaValue::getHash() const {
     switch (m_type) {
+        case LVT_Nil: ASSERT(0);
         case LVT_Boolean: return (int)hash<bool>()(m_data.b);
         case LVT_Number: return (int)hash<NumberType>()(m_data.num);
         // TODO: check

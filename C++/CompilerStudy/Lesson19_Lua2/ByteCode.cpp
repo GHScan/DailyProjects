@@ -105,7 +105,6 @@ label:
         for (int i = 0; i < (int)node->array.size(); ++i) {
             node->array[i]->acceptVisitor(this);
         }
-        EMIT0(BC_ResizeTemp2Ext);
         EMIT(BC_PushAll2Table, (int)node->array.size());
 
         for (auto &pair : node->dict) {
@@ -124,7 +123,6 @@ label:
         for (auto &param : node->params) {
             param->acceptVisitor(this);
         }
-        EMIT0(BC_ResizeTemp2Ext);
         EMIT(BC_Call, (int)node->params.size());
     }
     virtual void visit(ExpNode_Args *node) {
@@ -190,7 +188,6 @@ private:
         for (auto &exp : node->exps) {
             (ExpNodeVisitor_CodeEmitor(m_meta, exp));
         }
-        EMIT0(BC_ResizeTemp2Ext);
         EMIT0(BC_Return);
     }
     virtual void visit(StmtNode_Block *node) {
@@ -342,7 +339,7 @@ loop:
            ...
            popLocal var0
 
-           pushtop 0
+           pushLocal var0
            pushConst nil
            equal
            tjump break:
@@ -378,7 +375,7 @@ break:
             EMIT(BC_PopLocal, *riter);
         }
 
-        EMIT(BC_PushTop, 0);
+        EMIT(BC_PushLocal, localVars[0]);
         EMIT_PUSH_CONST(LuaValue::NIL);
         EMIT0(BC_Equal);
         int jump_break;
@@ -480,7 +477,6 @@ void execute(LuaStackFrame *stopFrame) {
             case BC_PopN: ByteCodeHandler<BC_PopN>::execute(code, frame); break;
             case BC_PopTemps: ByteCodeHandler<BC_PopTemps>::execute(code, frame); break;
             case BC_ResizeTemp: ByteCodeHandler<BC_ResizeTemp>::execute(code, frame); break;
-            case BC_ResizeTemp2Ext: ByteCodeHandler<BC_ResizeTemp2Ext>::execute(code, frame); break;
             case BC_Call: ByteCodeHandler<BC_Call>::execute(code, frame); break;
             case BC_Return: ByteCodeHandler<BC_Return>::execute(code, frame); break;
             case BC_Less: ByteCodeHandler<BC_Less>::execute(code, frame); break;
@@ -532,7 +528,6 @@ void disassemble(ostream& so, LuaFunctionMeta* meta) {
             case BC_PopN: ByteCodeHandler<BC_PopN>::disassemble(so, code, meta); break;
             case BC_PopTemps: ByteCodeHandler<BC_PopTemps>::disassemble(so, code, meta); break;
             case BC_ResizeTemp: ByteCodeHandler<BC_ResizeTemp>::disassemble(so, code, meta); break;
-            case BC_ResizeTemp2Ext: ByteCodeHandler<BC_ResizeTemp2Ext>::disassemble(so, code, meta); break;
             case BC_Call: ByteCodeHandler<BC_Call>::disassemble(so, code, meta); break;
             case BC_Return: ByteCodeHandler<BC_Return>::disassemble(so, code, meta); break;
             case BC_Less: ByteCodeHandler<BC_Less>::disassemble(so, code, meta); break;

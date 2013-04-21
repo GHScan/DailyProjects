@@ -30,7 +30,7 @@ void LuaStack::popFrame() {
     delete m_frames.back();
     m_frames.pop_back();
     if (!m_frames.empty()) {
-        m_values.resize(m_frames.back()->tempBase + m_frames.back()->tempCount);
+        m_values.resize(m_frames.back()->tempBase + m_frames.back()->tempExtCount);
     }
 }
 LuaStack::LuaStack():

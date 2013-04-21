@@ -13,8 +13,12 @@ Function::Function(FuncType _funcType): GCObject(OT_Function), funcType(_funcTyp
 
 void Function::collectGCObject(vector<GCObject*>& unscaned) {
     if (funcType == FT_Lua) {
-        for (auto &uv : static_cast<LuaFunction*>(this)->upValues) {
+        auto lfunc = static_cast<LuaFunction*>(this);
+        for (auto &uv : lfunc->upValues) {
             if (auto p = uv.gcAccess()) unscaned.push_back(p);
+        }
+        for (auto &c : lfunc->meta->constTable) {
+            if (auto p = c.gcAccess()) unscaned.push_back(p);
         }
     }
 }
@@ -43,15 +47,15 @@ void callFunc(int tempIdx) {
     if (func->funcType == Function::FT_Lua) {
         {
             auto meta = static_cast<LuaFunction*>(func)->meta;
-            int paramCount = frame->tempCount - tempIdx - 1;
-            for (; paramCount < meta->argCount; ++paramCount) frame->pushTemp(LuaValue::NIL);
+            int paramCount = frame->tempExtCount - tempIdx - 1;
+            for (; paramCount < meta->argCount; ++paramCount) frame->pushExtTemp(LuaValue::NIL);
         }
-        stack->pushFrame(func, frame->tempBase + tempIdx + 1, frame->tempCount - tempIdx - 1);
+        stack->pushFrame(func, frame->tempBase + tempIdx + 1, frame->tempExtCount - tempIdx - 1);
     } else if (func->funcType == Function::FT_C) {
         // TODO: optmize
-        vector<LuaValue> params(&frame->temp(0) + tempIdx + 1, &frame->temp(0) + frame->tempCount);
+        vector<LuaValue> params(&frame->temp(0) + tempIdx + 1, &frame->temp(0) + frame->tempExtCount);
         vector<LuaValue> rets;
-        stack->pushFrame(func, frame->tempBase + tempIdx + 1, frame->tempCount - tempIdx - 1);
+        stack->pushFrame(func, frame->tempBase + tempIdx + 1, frame->tempExtCount - tempIdx - 1);
         static_cast<CFunction*>(func)->func(params, rets);
         stack->popFrame();
         frame->popTemps(tempIdx);
@@ -73,6 +77,6 @@ void callFunc(const LuaValue &func, const vector<LuaValue>& args, vector<LuaValu
     for (auto &v : args) frame->pushTemp(v);
     callFunc(tempIdx);
     execute(frame);
-    rets.assign(&frame->temp(0) + tempIdx, &frame->temp(0) + frame->tempCount);
+    rets.assign(&frame->temp(0) + tempIdx, &frame->temp(0) + frame->tempExtCount);
     frame->popTemps(tempIdx);
 }

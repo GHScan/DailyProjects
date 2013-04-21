@@ -49,7 +49,7 @@ static void buildin_assert(const vector<LuaValue>& args, vector<LuaValue>& rets)
         rets.assign(args.begin(), args.end());
     } else {
         if (args.size() > 1) ASSERT1(0, args[1].toString());
-        else ASSERT("assertion failed!");
+        else ASSERT1(0, "assertion failed!");
     }
 }
 static void buildin_next(const vector<LuaValue>& args, vector<LuaValue>& rets) {

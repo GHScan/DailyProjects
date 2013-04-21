@@ -13,7 +13,7 @@ struct LuaStackFrame {
     Function *func; 
     int ip;
     int varParamBase, localBase;
-    int tempBase, tempCount;
+    int tempBase, tempCount, tempExtCount;
 
     LuaStackFrame(LuaStack *_stack, Function *func, int paramBase, int paramCount);
     LuaValue& local(int localIdx);
@@ -26,8 +26,6 @@ struct LuaStackFrame {
     void popTemps(int startTempIdx);
     void resizeTemp(int n);
     void resizeTemp2Ext();
-private:
-    int tempExtCount;
 };
 
 struct LuaStack:

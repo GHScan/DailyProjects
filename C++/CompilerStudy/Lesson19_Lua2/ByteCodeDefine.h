@@ -12,7 +12,7 @@ enum ByteCode {
     BC_PopLocal, BC_PopUpValue, BC_PopGlobal,
     BC_PopN, BC_PopTemps,
 
-    BC_ResizeTemp, BC_ResizeTemp2Ext, 
+    BC_ResizeTemp, 
 
     BC_Call, 
     BC_Return,
@@ -226,18 +226,6 @@ struct ByteCodeHandler<BC_ResizeTemp> {
     }
 };
 template<>
-struct ByteCodeHandler<BC_ResizeTemp2Ext> {
-    static void emit(int &code) {
-        code = BC_ResizeTemp2Ext;
-    }
-    static void disassemble(ostream& so, int code, LuaFunctionMeta* meta) {
-        so << format("resizeTemp2Ext");
-    }
-    static void execute(int code, LuaStackFrame* frame) {
-        frame->resizeTemp2Ext();
-    }
-};
-template<>
 struct ByteCodeHandler<BC_Call> {
     static void emit(int &code, int paramCount) {
         code = BC_Call | (paramCount) << 8;
@@ -261,7 +249,7 @@ struct ByteCodeHandler<BC_Return> {
         auto lastFrame = LuaVM::instance()->getCurrentStack()->topFrame(-1);
         auto meta = static_cast<LuaFunction*>(frame->func)->meta;
         // TODO: optimize
-        vector<LuaValue> rets(&frame->temp(0), &frame->temp(0) + frame->tempCount);
+        vector<LuaValue> rets(&frame->temp(0), &frame->temp(0) + frame->tempExtCount);
         lastFrame->popTemps(frame->varParamBase - meta->argCount - 1 - lastFrame->tempBase);
         if (rets.empty()) lastFrame->pushTemp(LuaValue::NIL);
         else {
@@ -515,10 +503,10 @@ struct ByteCodeHandler<BC_PushAll2Table> {
     static void execute(int code, LuaStackFrame* frame) {
         int tempIdx = frame->tempCount - (code >> 8) - 1;
         auto table = frame->temp(tempIdx).getTable();
-        for (int i = tempIdx + 1; i < frame->tempCount; ++i) {
+        for (int i = tempIdx + 1; i < frame->tempExtCount; ++i) {
             table->arrayInsert(table->size(), frame->temp(i));
         }
-        frame->popTemps(tempIdx - 1);
+        frame->popTemps(tempIdx);
     }
 };
 template<>
