@@ -194,7 +194,6 @@ private:
     }
     virtual void visit(StmtNode_Block *node) {
         for (int i = 0; i < (int)node->stmts.size(); ++i) {
-            if (node->stmts[i] == NULL) continue;
             node->stmts[i]->acceptVisitor(this);
         }
     }

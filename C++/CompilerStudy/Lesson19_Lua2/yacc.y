@@ -175,11 +175,13 @@ Statement
         $$ = StmtNodePtr(new StmtNode_Assign(lvalues, rvalues));
     }
 
-    | LOCAL FUNCTION ID FuncBody {
+    | LOCAL FUNCTION ID {
         auto& term = $3.get<TerminalSymbol>();
         SymbolTable::top()->declareLocal(term.lexem);
+    } FuncBody {
+        auto& term = $3.get<TerminalSymbol>();
         vector<ExpNodePtr> lvalues; lvalues.push_back(getIDExp(term));
-        vector<ExpNodePtr> rvalues; rvalues.push_back($4.get<ExpNodePtr>());
+        vector<ExpNodePtr> rvalues; rvalues.push_back($5.get<ExpNodePtr>());
         $$ = StmtNodePtr(new StmtNode_Assign(lvalues, rvalues));
     }
 

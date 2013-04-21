@@ -190,7 +190,12 @@ struct StmtNode_Block:
     public IStmtNode {
     vector<StmtNodePtr> stmts;
     StmtNode_Block(const vector<StmtNodePtr>& _stmts):
-        IStmtNode(_stmts.empty() ? 0 : _stmts[0]->line), stmts(_stmts){}
+        IStmtNode(0){
+            for (auto &stmt : _stmts) {
+                if (stmt != NULL) stmts.push_back(stmt);
+            }
+            if (!stmts.empty()) line = stmts[0]->line;
+        }
     virtual void acceptVisitor(IStmtNodeVisitor *v) {v->visit(this);}
 };
 typedef pair<ExpNodePtr, StmtNodePtr> ExpStmtPair;
