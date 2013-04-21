@@ -182,7 +182,7 @@ private:
     virtual void visit(StmtNode_Continue *node) {
         int jump_continue;
         PRE_EMIT(jump_continue);
-        m_jumpsBreak.push_back(jump_continue);
+        m_jumpsContinue.push_back(jump_continue);
     }
     virtual void visit(StmtNode_Return *node) {
         for (auto &exp : node->exps) {
