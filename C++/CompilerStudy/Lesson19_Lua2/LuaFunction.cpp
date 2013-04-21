@@ -6,6 +6,7 @@
 #include "LuaStack.h"
 #include "ByteCode.h"
 #include "GCObject.h"
+#include "LuaTable.h"
 
 Function::Function(FuncType _funcType): GCObject(OT_Function), funcType(_funcType){
     LuaVM::instance()->getGCObjManager()->linkObject(this);
@@ -20,6 +21,7 @@ void Function::collectGCObject(vector<GCObject*>& unscaned) {
         for (auto &c : lfunc->meta->constTable) {
             if (auto p = c.gcAccess()) unscaned.push_back(p);
         }
+        if (auto p = lfunc->fenvTable->gcAccess()) unscaned.push_back(p);
     }
 }
 void Function::destroy() {
@@ -32,6 +34,9 @@ void Function::destroy() {
     }
 }
 
+LuaFunction::LuaFunction(const LuaFunctionMetaPtr &_meta): 
+    Function(FT_Lua), meta(_meta), fenvTable(LuaVM::instance()->getGlobalTable()) {
+}
 int LuaFunctionMeta::getConstIdx(const LuaValue& v) {
     for (int i = 0; i < (int)constTable.size(); ++i) {
         if (constTable[i] == v) return i;

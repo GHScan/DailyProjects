@@ -3,6 +3,7 @@
 #define LUA_LIBS_H
 
 #include "LuaVM.h"
+#include "LuaStack.h"
 #include "LuaValue.h"
 #include "LuaTable.h"
 #include "LuaString.h"

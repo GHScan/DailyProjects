@@ -117,35 +117,39 @@ static void buildin_loadfile(const vector<LuaValue>& args, vector<LuaValue>& ret
 static void buildin_dofile(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     callFunc(loadFile(args[0].getString()->buf()), vector<LuaValue>(), rets);
 }
-// TODO:
 static void buildin_getfenv(const vector<LuaValue>& args, vector<LuaValue>& rets) {
-//    IFunction *func = NULL;
-//    if (args.empty()) func = Runtime::instance()->getFrame(-2)->getFunc();
-//    else if (args[0].isTypeOf(LVT_Number)) {
-//        auto n = (int)args[0].getNumber();
-//        ASSERT(n >= 0);
-//        if (n > 0) func = Runtime::instance()->getFrame(-n - 1)->getFunc();
-//    } else func = args[0].getFunction();
-//
-//    LuaTable* table = NULL;
-//    if (func == NULL) table = LuaVM::instance()->getGlobalTable();
-//    else table = func->getfenv();
-//    table->addRef();
-//    rets.push_back(LuaValue(table));
+    Function* func = NULL;
+    if (args.empty()) func = LuaVM::instance()->getCurrentStack()->topFrame(-1)->func;
+    else if (args[0].isTypeOf(LVT_Number)) {
+        auto n = (int)args[0].getNumber();
+        ASSERT(n >= 0);
+        if (n > 0) func = LuaVM::instance()->getCurrentStack()->topFrame(-n)->func;
+    } else {
+        func = args[0].getFunction();
+    }
+
+    LuaTable* table = NULL;
+    if (func == NULL) table = LuaVM::instance()->getGlobalTable();
+    else {
+        ASSERT(func->funcType == Function::FT_Lua);
+        table = static_cast<LuaFunction*>(func)->fenvTable;
+    }
+    rets.push_back(LuaValue(table));
 }
 static void buildin_setfenv(const vector<LuaValue>& args, vector<LuaValue>& rets) {
-//    IFunction *func = NULL;
-//    if (args[0].isTypeOf(LVT_Number)) {
-//        auto n = (int)args[0].getNumber();
-//        ASSERT(n >= 0);
-//        if (n > 0) func = Runtime::instance()->getFrame(-n - 1)->getFunc();
-//    } else func = args[0].getFunction();
-//
-//    if (func == NULL) {
-//        LuaVM::instance()->setGlobalTable(args[1].getTable());
-//    } else {
-//        func->setfenv(args[1].getTable());
-//    }
+    Function *func = NULL;
+    if (args[0].isTypeOf(LVT_Number)) {
+        auto n = (int)args[0].getNumber();
+        ASSERT(n >= 0);
+        if (n > 0) func = LuaVM::instance()->getCurrentStack()->topFrame(-n)->func;
+    } else func = args[0].getFunction();
+
+    if (func == NULL) {
+        LuaVM::instance()->setGlobalTable(args[1].getTable());
+    } else {
+        ASSERT(func->funcType == Function::FT_Lua);
+        static_cast<LuaFunction*>(func)->fenvTable = args[1].getTable();
+    }
 }
 // TODO:
 static void buildin_setmetatable(const vector<LuaValue>& args, vector<LuaValue>& rets) {

@@ -66,8 +66,9 @@ struct ByteCodeHandler<BC_PushGlobal> {
         so << format("pushGlobal %s", meta->constTable[code >> 8].getString()->buf());
     }
     static void execute(int code, LuaStackFrame* frame) {
-        LuaValue &k = static_cast<LuaFunction*>(frame->func)->meta->constTable[code >> 8];
-        frame->pushTemp(LuaVM::instance()->getGlobalTable()->get(k));
+        auto lfunc = static_cast<LuaFunction*>(frame->func);
+        LuaValue &k = lfunc->meta->constTable[code >> 8];
+        frame->pushTemp(lfunc->fenvTable->get(k));
     }
 };
 template<>
@@ -184,8 +185,9 @@ struct ByteCodeHandler<BC_PopGlobal> {
         so << format("popGlobal %s", meta->constTable[code >> 8].getString()->buf());
     }
     static void execute(int code, LuaStackFrame* frame) {
-        LuaValue &k = static_cast<LuaFunction*>(frame->func)->meta->constTable[code >> 8];
-        LuaVM::instance()->getGlobalTable()->set(k, frame->topTemp(0));
+        auto lfunc = static_cast<LuaFunction*>(frame->func);
+        LuaValue &k = lfunc->meta->constTable[code >> 8];
+        lfunc->fenvTable->set(k, frame->topTemp(0));
         frame->popTempN(1);
     }
 };
