@@ -567,32 +567,25 @@ Literal
 
 %%
 
-bool parseFile(const char *fname)
-{
-    bool succ = false;
-    FILE *f = fopen(fname, "r");
-    try
-    {
-        auto meta = LuaFunctionMetaPtr(new LuaFunctionMeta());
-        SymbolTable::push(meta);
-
-        yyrestart(f);
-        yyparse();
-
-        disassemble(ofstream("disassemble.txt"), meta.get());
-
-        vector<LuaValue> rets;
-        callFunc(LuaValue(LuaFunction::create(meta)), vector<LuaValue>(), rets);
-
-        succ = true;
-
-        SymbolTable::pop();
+LuaValue loadFile(FILE *f) {
+    auto meta = LuaFunctionMetaPtr(new LuaFunctionMeta());
+    SymbolTable::push(meta);
+    yyrestart(f);
+    yyparse();
+    SymbolTable::pop();
+    return LuaValue(LuaFunction::create(meta));
+}
+LuaValue loadFile(const char *name) {
+    FILE *f = fopen(name, "r");
+    ASSERT1(f != NULL, "Couldn't open the file");
+    try {
+        auto r = loadFile(f);
+        fclose(f);
+        return r;
+    } catch(const exception& e) {
+        fclose(f);
+        throw;
     }
-    catch(const exception& e) {
-        printf("Catch parse exception: %s\n", e.what());
-    }
-    fclose(f);
-    return succ;
 }
 
 static ExpNodePtr getConstExp(const LuaValue& v, int line) {

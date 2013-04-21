@@ -118,7 +118,7 @@ LuaValue& LuaTable::getNext(LuaValue& k) {
     k = LuaValue::NIL;
     return LuaValue::NIL;
 }
-const LuaValue& LuaTable::getINext(LuaValue& k) const {
+LuaValue& LuaTable::getINext(LuaValue& k) {
     if (k.isNil()) {
         if (!m_array.empty()) {
             k = LuaValue(1);

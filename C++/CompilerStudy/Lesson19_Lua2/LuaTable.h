@@ -20,7 +20,7 @@ public:
     int size() const { return (int)m_array.size();}
 
     LuaValue& getNext(LuaValue& k);
-    const LuaValue& getINext(LuaValue& k) const;
+    LuaValue& getINext(LuaValue& k);
 
     void setMetatable(LuaTable *table) {m_metaTable = table;}
 

@@ -61,12 +61,9 @@ public:
     }
     NumberType getNumber() const { ASSERT(isTypeOf(LVT_Number)); return m_data.num; }
     LuaString* getString() const { ASSERT(isTypeOf(LVT_String)); return m_data.str;}
-    const LuaTable* getTable() const { ASSERT(isTypeOf(LVT_Table)); return m_data.table; }
-    LuaTable* getTable() { ASSERT(isTypeOf(LVT_Table)); return m_data.table; }
-    const Function* getFunction() const { ASSERT(isTypeOf(LVT_Function)); return m_data.func;}
-    Function* getFunction() { ASSERT(isTypeOf(LVT_Function)); return m_data.func; }
-    const LuaStack* getStack() const { ASSERT(isTypeOf(LVT_Stack)); return m_data.stack;}
-    LuaStack* getStack() { ASSERT(isTypeOf(LVT_Stack)); return m_data.stack; }
+    LuaTable* getTable() const { ASSERT(isTypeOf(LVT_Table)); return m_data.table; }
+    Function* getFunction() const { ASSERT(isTypeOf(LVT_Function)); return m_data.func;}
+    LuaStack* getStack() const { ASSERT(isTypeOf(LVT_Stack)); return m_data.stack;}
     LightUserData getLightUserData() const { ASSERT(isTypeOf(LVT_LightUserData)); return m_data.lud; }
 
     GCObject* gcAccess() const;
