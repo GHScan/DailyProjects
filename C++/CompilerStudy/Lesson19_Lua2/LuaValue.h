@@ -13,6 +13,10 @@ struct GCObject;
 struct LightUserDataRef {};
 typedef LightUserDataRef* LightUserData;
 
+#undef NIL
+#undef TRUE
+#undef FALSE
+
 enum LuaValueType {
     LVT_Nil,
     LVT_Boolean,
@@ -26,13 +30,13 @@ enum LuaValueType {
 class LuaValue {
 public:
     LuaValue(): m_type(LVT_Nil){}
-    explicit LuaValue(NumberType num);
+    explicit LuaValue(NumberType num): m_type(LVT_Number) { m_data.num = num; }
     explicit LuaValue(const char *str);
     LuaValue(const char *str, int size);
-    explicit LuaValue(LuaTable* table);
-    explicit LuaValue(Function* func);
-    explicit LuaValue(LuaStack* stack);
-    explicit LuaValue(LightUserData lud);
+    explicit LuaValue(LuaTable* table): m_type(LVT_Table){ m_data.table = table; }
+    explicit LuaValue(Function* func): m_type(LVT_Function) { m_data.func = func; }
+    explicit LuaValue(LuaStack* stack): m_type(LVT_Stack) { m_data.stack = stack; }
+    explicit LuaValue(LightUserData lud): m_type(LVT_LightUserData) { m_data.lud = lud; }
     ~LuaValue(){ m_type = LVT_Nil; }
 
     // LuaValue(const LuaValue& o);

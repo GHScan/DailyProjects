@@ -9,10 +9,6 @@
 #include "LuaTable.h"
 #include "LuaStack.h"
 
-LuaValue::LuaValue(NumberType num): 
-    m_type(LVT_Number) {
-    m_data.num = num;
-}
 LuaValue::LuaValue(const char *str):
     m_type(LVT_String) {
     m_data.str = LuaVM::instance()->getStringPool()->createString(str);
@@ -20,22 +16,6 @@ LuaValue::LuaValue(const char *str):
 LuaValue::LuaValue(const char *str, int size):
     m_type(LVT_String) {
     m_data.str = LuaVM::instance()->getStringPool()->createString(str, size);
-}
-LuaValue::LuaValue(LuaTable* table):
-    m_type(LVT_Table) {
-    m_data.table = table;
-}
-LuaValue::LuaValue(Function* func):
-    m_type(LVT_Function) {
-    m_data.func = func;
-}
-LuaValue::LuaValue(LuaStack* stack):
-    m_type(LVT_Stack) {
-    m_data.stack = stack;
-}
-LuaValue::LuaValue(LightUserData lud):
-    m_type(LVT_LightUserData) {
-    m_data.lud = lud;
 }
 
 LuaValue operator + (const LuaValue& l, const LuaValue& r) {
