@@ -10,6 +10,10 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    runfile(argc, argv);
+    try {
+        runfile(argc, argv);
+    } catch(const exception& e) {
+        cout << "unhandled exception : \n" << e.what() << endl;
+    }
     return 0;
 }

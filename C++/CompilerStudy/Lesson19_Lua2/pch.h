@@ -51,7 +51,7 @@ class Exception:
     public exception {
 public:
     Exception(const string& s): m_s(s) {
-        assert(0);
+        //assert(0);
     }
     ~Exception() throw(){}
     const char* what() const throw() {

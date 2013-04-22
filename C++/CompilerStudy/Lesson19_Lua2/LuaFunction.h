@@ -22,14 +22,16 @@ struct Function:
 };
 
 struct LuaFunctionMeta {
+    string fileName;
     int argCount, localCount;
     int level, line;
     vector<int> codes;
+    vector<int> ip2line;
     StmtNodePtr ast;
     vector<LuaValue> constTable;
     vector<pair<int, int> > upValues;
 
-    LuaFunctionMeta(): argCount(0), localCount(0), level(0), line(0){}
+    LuaFunctionMeta(const string& _fileName): fileName(_fileName), argCount(0), localCount(0), level(0), line(0){}
     int getConstIdx(const LuaValue& v);
 };
 typedef shared_ptr<LuaFunctionMeta> LuaFunctionMetaPtr;

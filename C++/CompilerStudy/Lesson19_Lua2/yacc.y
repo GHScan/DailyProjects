@@ -30,6 +30,7 @@
 static ExpNodePtr getConstExp(const LuaValue& v, int line);
 static ExpNodePtr getIDExp(const TerminalSymbol& term);
 static bool& isDefiningMethod();
+static string& srcFileName();
 static string unEscape(const string& s);
 
 %}
@@ -395,7 +396,7 @@ Lambda : FUNCTION FuncBody {
        }
 FuncBody : '(' Opt_ArgList ')' {
             auto &args = $2.get<vector<TerminalSymbol> >();
-            auto meta = LuaFunctionMetaPtr(new LuaFunctionMeta());
+            auto meta = LuaFunctionMetaPtr(new LuaFunctionMeta(srcFileName()));
             meta->argCount = (int)args.size();
             meta->line = args.empty() ? 0 : args[0].line;
             SymbolTable::push(meta);
@@ -573,19 +574,29 @@ Literal
 
 %%
 
+LuaValue _loadFile(FILE *f) {
+    try {
+        auto meta = LuaFunctionMetaPtr(new LuaFunctionMeta(srcFileName()));
+        SymbolTable::push(meta);
+        yyrestart(f);
+        yyparse();
+        SymbolTable::pop();
+        return LuaValue(LuaFunction::create(meta));
+    } catch(Exception&) {
+        SymbolTable::pop();
+        throw;
+    }
+}
 LuaValue loadFile(FILE *f) {
-    auto meta = LuaFunctionMetaPtr(new LuaFunctionMeta());
-    SymbolTable::push(meta);
-    yyrestart(f);
-    yyparse();
-    SymbolTable::pop();
-    return LuaValue(LuaFunction::create(meta));
+    srcFileName() = "[????]";
+    return _loadFile(f);
 }
 LuaValue loadFile(const char *name) {
+    srcFileName() = name;
     FILE *f = fopen(name, "r");
     ASSERT1(f != NULL, "Couldn't open the file");
     try {
-        auto r = loadFile(f);
+        auto r = _loadFile(f);
         fclose(f);
         return r;
     } catch(const exception& ) {
@@ -609,6 +620,10 @@ static ExpNodePtr getIDExp(const TerminalSymbol& term) {
 static bool& isDefiningMethod() {
     static bool s_b = false;
     return s_b;
+}
+static string& srcFileName() {
+    static string s_fname;
+    return s_fname;
 }
 static string unEscape(const string& s) {
     string r;
