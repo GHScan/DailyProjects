@@ -185,13 +185,15 @@ Statement
         exps.push_back($3.get<ExpNodePtr>());
         $$ = StmtNodePtr(new AssignStmtNode(vars, exps));
     }
-    | LOCAL FUNCTION ID FuncBody {
+    | LOCAL FUNCTION ID {
         string name = $3.get<string>();
         SymbolTable::top()->declareLocal(name);
+    } FuncBody {
+        string name = $3.get<string>();
         auto vars = vector<ExpNodePtr>();
         auto exps = vector<ExpNodePtr>();
         vars.push_back(getLocalExp(name));
-        exps.push_back($4.get<ExpNodePtr>());
+        exps.push_back($5.get<ExpNodePtr>());
         $$ = StmtNodePtr(new AssignStmtNode(vars, exps));
     }
     | LOCAL IDList {
