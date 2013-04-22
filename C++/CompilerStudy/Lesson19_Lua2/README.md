@@ -1,5 +1,4 @@
 # TODO
-+ memory leaks detection
-+ maybe string should not be implement as gcobject?
++ performance
 + traceback for c function
 + coroutine

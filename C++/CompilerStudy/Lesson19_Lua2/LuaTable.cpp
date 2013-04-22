@@ -61,7 +61,11 @@ void LuaTable::set(const LuaValue& k, const LuaValue& v, bool raw) {
     if (k.isTypeOf(LVT_Number)) {
         int idx = (int)k.getNumber() - 1;
         if (idx >= 0 && idx < (int)m_array.size()) {
-            m_array[idx] = v;
+            if (idx == (int)m_array.size() - 1 && v.isNil()) {
+                m_array.pop_back();
+            } else {
+                m_array[idx] = v;
+            }
             return;
         } else if (idx == (int)m_array.size()) {
             m_array.push_back(v);
@@ -69,7 +73,8 @@ void LuaTable::set(const LuaValue& k, const LuaValue& v, bool raw) {
         }
         else {}
     }
-    m_dict[k] = v;
+    if (v.isNil()) m_dict.erase(k);
+    else m_dict[k] = v;
 }
 
 void LuaTable::arrayInsert(int off, const LuaValue& v) {
