@@ -262,8 +262,11 @@ struct ByteCodeHandler<BC_CloseBlock> {
     static void execute(int code, LuaStackFrame* frame) {
         code >>= 8;
         int localOff = code >> 8, localCount = code & 0xff;
+        if (localCount == 0) return;
         auto& closures = frame->closures;
         auto iter = closures.lower_bound(localOff);
+        if (iter == closures.end()) return;
+        auto _iter = iter;
         while (iter != closures.end()) {
             assert(iter->first >= localOff && iter->first < localOff + localCount);
             auto iter2 = iter;
@@ -277,6 +280,7 @@ struct ByteCodeHandler<BC_CloseBlock> {
                 funcUvIdx.first->upValues[funcUvIdx.second] = v.get();
             }
         }
+        closures.erase(_iter, closures.end());
     }
 };
 template<>

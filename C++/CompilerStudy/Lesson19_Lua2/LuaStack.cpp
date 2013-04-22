@@ -14,7 +14,6 @@ LuaStackFrame::LuaStackFrame(LuaStack *_stack, Function *_func, int paramBase, i
     }
     tempBase = localBase + localCount;
     varParamBase = localBase - (paramCount - argCount);
-    stack->m_values.reserve(tempBase + 30); // FIXME: remove the magic number
     stack->m_values.resize(tempBase, LuaValue::NIL);
     {
         auto iter = stack->m_values.begin();
@@ -27,7 +26,7 @@ void LuaStack::pushFrame(Function *func, int paramBase, int paramCount) {
     m_frames.push_back(new LuaStackFrame(this, func, paramBase, paramCount));
     if (func != NULL && func->funcType == Function::FT_Lua) {
         int level = static_cast<LuaFunction*>(func)->meta->level;
-        m_framesOfLevel.resize(level + 1);
+        if ((int)m_framesOfLevel.size() <= level) m_framesOfLevel.resize(level + 1);
         m_framesOfLevel[level].push_back(m_frames.back());
     }
 }
@@ -46,6 +45,7 @@ LuaStackFrame* LuaStack::topFrameOfLevel(int level) {
 }
 LuaStack::LuaStack():
     GCObject(OT_Stack) {
+    m_values.reserve(32 * 1024); // FIXME
     pushFrame(NULL, 0, 0);
     LuaVM::instance()->getGCObjManager()->linkObject(this);
 }
