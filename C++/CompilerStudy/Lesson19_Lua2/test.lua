@@ -1,6 +1,6 @@
 
-function func(a, b, c)
-    print(a, b, c)
+local a = 1
+function func()
+    print(a)
 end
-
-print(func(1, 2, 3), func(4, 5, 6), func(7, 8, 9))
+func()

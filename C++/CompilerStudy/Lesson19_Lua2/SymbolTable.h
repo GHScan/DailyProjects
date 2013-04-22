@@ -5,7 +5,8 @@
 struct LuaFunctionMeta;
 typedef shared_ptr<LuaFunctionMeta> LuaFunctionMetaPtr;
 
-class SymbolTable { public:
+class SymbolTable { 
+public:
     static SymbolTable* top(){ return s_stack.top();}
     static void push(const LuaFunctionMetaPtr& meta);
     static void pop();
@@ -18,6 +19,7 @@ public:
 
     void pushBlock();
     void popBlock();
+    pair<int, int> getBlockLocalRange();
 
     LuaFunctionMetaPtr& meta() { return m_meta; }
 private:

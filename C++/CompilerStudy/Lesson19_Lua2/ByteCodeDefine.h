@@ -15,6 +15,7 @@ enum ByteCode {
     BC_ResizeTemp, 
 
     BC_Call, 
+    BC_CloseBlock,
 
     BC_Less, BC_LessEq, BC_Greater, BC_GreaterEq, BC_Equal, BC_NEqual,
     BC_Add, BC_Sub, BC_Mul,
@@ -27,6 +28,8 @@ enum ByteCode {
 
     BC_Jump,
     BC_TrueJump, BC_FalseJump,
+
+    BC_Nop,
 };
 
 template<int n>
@@ -240,6 +243,39 @@ struct ByteCodeHandler<BC_Call> {
             frame->temp(tempIdx).getTable()->meta_call(tempIdx, frame);
         } else {
             callFunc(tempIdx);
+        }
+    }
+};
+template<>
+struct ByteCodeHandler<BC_CloseBlock> {
+    static void emit(int &code, int localOff, int localCount) {
+        ASSERT(localCount < (1 << 8) && localOff < (1 << 16));
+        code = BC_CloseBlock | (localOff << 8 | localCount) << 8;
+    }
+    static void emitOff(int &code, int localOff) {
+        code = (code & 0xffff) | (localOff << 16);
+    }
+    static void disassemble(ostream& so, int code, LuaFunctionMeta* meta) {
+        code >>= 8;
+        so << format("closeblock %d,%d", code >> 8, code & 0xff);
+    }
+    static void execute(int code, LuaStackFrame* frame) {
+        code >>= 8;
+        int localOff = code >> 8, localCount = code & 0xff;
+        auto& closures = frame->closures;
+        auto iter = closures.lower_bound(localOff);
+        while (iter != closures.end()) {
+            assert(iter->first >= localOff && iter->first < localOff + localCount);
+            auto iter2 = iter;
+            do {
+                ++iter2;
+            } while(iter2 != closures.end() && iter2->first == iter->first);
+            shared_ptr<LuaValue> v(new LuaValue(frame->local(iter->first)));
+            for (; iter != iter2; ++iter) {
+                auto& funcUvIdx = iter->second;
+                funcUvIdx.first->sharedUpValues.push_back(v);
+                funcUvIdx.first->upValues[funcUvIdx.second] = v.get();
+            }
         }
     }
 };
@@ -540,6 +576,17 @@ struct ByteCodeHandler<BC_FalseJump> {
             frame->ip = (code >> 8) - 1;
         }
         frame->popTempN(1);
+    }
+};
+template<>
+struct ByteCodeHandler<BC_Nop> {
+    static void emit(int &code) {
+        code = BC_Nop;
+    }
+    static void disassemble(ostream& so, int code, LuaFunctionMeta* meta) {
+        so << format("nop");
+    }
+    static void execute(int code, LuaStackFrame* frame) {
     }
 };
 

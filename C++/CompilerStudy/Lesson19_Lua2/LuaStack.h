@@ -6,6 +6,7 @@
 #include "LuaValue.h"
 
 struct Function;
+struct LuaFunction;
 struct LuaStack;
 
 struct LuaStackFrame {
@@ -14,6 +15,8 @@ struct LuaStackFrame {
     int ip;
     int varParamBase, localBase;
     int tempBase, tempCount, tempExtCount;
+    // TODO: replace it with priority_queue for performance
+    multimap<int, pair<LuaFunction*, int> > closures;
 
     LuaStackFrame(LuaStack *_stack, Function *func, int paramBase, int paramCount);
     LuaValue& local(int localIdx);
@@ -44,6 +47,7 @@ struct LuaStack:
     }
     void pushFrame(Function *func, int paramBase, int paramCount);
     void popFrame();
+    LuaStackFrame* topFrameOfLevel(int level);
 
     void collectGCObject(vector<GCObject*>& unscaned);
 
@@ -53,6 +57,9 @@ struct LuaStack:
 private:
     LuaStack();
     ~LuaStack();
+
+private:
+    vector<vector<LuaStackFrame*> > m_framesOfLevel;
 };
 
 inline LuaValue& LuaStackFrame::local(int localIdx) { return stack->m_values[localBase + localIdx];}

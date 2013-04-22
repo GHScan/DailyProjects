@@ -42,11 +42,12 @@ struct LuaFunction:
     }
 
     LuaFunctionMetaPtr meta;
-    vector<LuaValue> upValues;
     LuaTable *fenvTable;
+    vector<LuaValue*> upValues;
+    vector<shared_ptr<LuaValue> > sharedUpValues;
 
     LuaValue& upValue(int uvIdx) {
-        return upValues[uvIdx];
+        return *upValues[uvIdx];
     }
 private:
     LuaFunction(const LuaFunctionMetaPtr &_meta);

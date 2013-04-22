@@ -15,8 +15,8 @@ Function::Function(FuncType _funcType): GCObject(OT_Function), funcType(_funcTyp
 void Function::collectGCObject(vector<GCObject*>& unscaned) {
     if (funcType == FT_Lua) {
         auto lfunc = static_cast<LuaFunction*>(this);
-        for (auto &uv : lfunc->upValues) {
-            if (auto p = uv.gcAccess()) unscaned.push_back(p);
+        for (auto uv : lfunc->upValues) {
+            if (auto p = uv->gcAccess()) unscaned.push_back(p);
         }
         for (auto &c : lfunc->meta->constTable) {
             if (auto p = c.gcAccess()) unscaned.push_back(p);
@@ -36,7 +36,15 @@ void Function::destroy() {
 
 LuaFunction::LuaFunction(const LuaFunctionMetaPtr &_meta): 
     Function(FT_Lua), meta(_meta), fenvTable(LuaVM::instance()->getGlobalTable()) {
+    auto stack = LuaVM::instance()->getCurrentStack();
+    for (int i = 0; i < (int)meta->upValues.size(); ++i) {
+        auto& uvInfo = meta->upValues[i];
+        auto upFrame = stack->topFrameOfLevel(uvInfo.first);
+        upFrame->closures.insert(make_pair(uvInfo.second, make_pair(this, i)));
+        upValues.push_back(&upFrame->local(uvInfo.second));
+    }
 }
+
 int LuaFunctionMeta::getConstIdx(const LuaValue& v) {
     for (int i = 0; i < (int)constTable.size(); ++i) {
         if (constTable[i] == v) return i;

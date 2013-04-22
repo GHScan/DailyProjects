@@ -25,10 +25,24 @@ LuaStackFrame::LuaStackFrame(LuaStack *_stack, Function *_func, int paramBase, i
 //===== LuaStack =====
 void LuaStack::pushFrame(Function *func, int paramBase, int paramCount) {
     m_frames.push_back(new LuaStackFrame(this, func, paramBase, paramCount));
+    if (func != NULL && func->funcType == Function::FT_Lua) {
+        int level = static_cast<LuaFunction*>(func)->meta->level;
+        m_framesOfLevel.resize(level + 1);
+        m_framesOfLevel[level].push_back(m_frames.back());
+    }
 }
 void LuaStack::popFrame() {
+    auto func = m_frames.back()->func;
+    if (func != NULL && func->funcType == Function::FT_Lua) {
+        int level = static_cast<LuaFunction*>(func)->meta->level;
+        m_framesOfLevel[level].pop_back();
+    }
+
     delete m_frames.back();
     m_frames.pop_back();
+}
+LuaStackFrame* LuaStack::topFrameOfLevel(int level) {
+    return m_framesOfLevel[level].back();
 }
 LuaStack::LuaStack():
     GCObject(OT_Stack) {

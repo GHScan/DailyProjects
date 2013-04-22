@@ -77,3 +77,10 @@ void SymbolTable::popBlock() {
     m_lastLocalIdx -= (int)m_blocks.back().size();
     m_blocks.pop_back();
 }
+pair<int, int> SymbolTable::getBlockLocalRange() {
+    int off = 0;
+    for (int i = 0; i < (int)m_blocks.size() - 1; ++i) {
+        off += (int)m_blocks[i].size();
+    }
+    return make_pair(off, (int)m_blocks.back().size());
+}

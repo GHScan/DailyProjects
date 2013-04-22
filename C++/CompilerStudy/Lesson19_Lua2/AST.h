@@ -189,8 +189,9 @@ struct StmtNode_Return:
 struct StmtNode_Block:
     public IStmtNode {
     vector<StmtNodePtr> stmts;
-    StmtNode_Block(const vector<StmtNodePtr>& _stmts):
-        IStmtNode(0){
+    int localOff, localCount;
+    StmtNode_Block(const vector<StmtNodePtr>& _stmts, int _localOff, int _localCount):
+        IStmtNode(0), localOff(_localOff), localCount(_localCount){
             for (auto &stmt : _stmts) {
                 if (stmt != NULL) stmts.push_back(stmt);
             }

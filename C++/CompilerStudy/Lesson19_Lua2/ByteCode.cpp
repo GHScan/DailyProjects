@@ -11,7 +11,7 @@
 
 #define EMIT0(code) { m_codes.push_back(0); ByteCodeHandler<code>::emit(m_codes.back()); }
 #define EMIT(code, ...) { m_codes.push_back(0); ByteCodeHandler<code>::emit(m_codes.back(), __VA_ARGS__); }
-#define PRE_EMIT(off) { off = (int)m_codes.size(); m_codes.push_back(0); }
+#define PRE_EMIT(off) { EMIT0(BC_Nop); off = (int)m_codes.size(); m_codes.push_back(0); }
 #define POST_EMIT0(off, code) { ByteCodeHandler<code>::emit(m_codes[off]); }
 #define POST_EMIT(off, code, ...) {ByteCodeHandler<code>::emit(m_codes[off], __VA_ARGS__); }
 #define EMIT_PUSH_CONST(v) {m_codes.push_back(0); ByteCodeHandler<BC_PushConst>::emit(m_codes.back(), m_meta->getConstIdx(v)); }
@@ -21,6 +21,16 @@
         POST_EMIT(jump##type, BC_Jump, CUR_CODE_OFF);\
     }\
     m_jumps##type.clear();\
+}
+#define EMIT_CLOSE_BLOCK_FOR_JUMPS(type, node) {\
+    for (auto jump##type : m_jumps##type) {\
+        int &code = m_codes[jump##type - 1];\
+        if ((code & 0xff) == BC_Nop) {\
+            ByteCodeHandler<BC_CloseBlock>::emit(code, node->localOff, node->localCount);\
+        } else {\
+            ByteCodeHandler<BC_CloseBlock>::emitOff(code, node->localOff);\
+        }\
+    }\
 }
 
 class ExpNodeVisitor_CodeEmitor:
@@ -196,6 +206,10 @@ private:
         for (int i = 0; i < (int)node->stmts.size(); ++i) {
             node->stmts[i]->acceptVisitor(this);
         }
+        EMIT_CLOSE_BLOCK_FOR_JUMPS(Continue, node);
+        EMIT_CLOSE_BLOCK_FOR_JUMPS(Break, node);
+        EMIT_CLOSE_BLOCK_FOR_JUMPS(Return, node);
+        EMIT(BC_CloseBlock, node->localOff, node->localCount);
     }
     virtual void visit(StmtNode_IfElse *node) {
         /*
@@ -493,6 +507,7 @@ void execute(LuaStackFrame *stopFrame) {
             case BC_PopTemps: ByteCodeHandler<BC_PopTemps>::execute(code, frame); break;
             case BC_ResizeTemp: ByteCodeHandler<BC_ResizeTemp>::execute(code, frame); break;
             case BC_Call: ByteCodeHandler<BC_Call>::execute(code, frame); break;
+            case BC_CloseBlock: ByteCodeHandler<BC_CloseBlock>::execute(code, frame); break;
             case BC_Less: ByteCodeHandler<BC_Less>::execute(code, frame); break;
             case BC_LessEq: ByteCodeHandler<BC_LessEq>::execute(code, frame); break;
             case BC_Greater: ByteCodeHandler<BC_Greater>::execute(code, frame); break;
@@ -515,6 +530,7 @@ void execute(LuaStackFrame *stopFrame) {
             case BC_Jump: ByteCodeHandler<BC_Jump>::execute(code, frame); break;
             case BC_TrueJump: ByteCodeHandler<BC_TrueJump>::execute(code, frame); break;
             case BC_FalseJump: ByteCodeHandler<BC_FalseJump>::execute(code, frame); break;
+            case BC_Nop: ByteCodeHandler<BC_Nop>::execute(code, frame); break;
             default: ASSERT(0);
         }
         ++frame->ip;
@@ -543,6 +559,7 @@ void disassemble(ostream& so, LuaFunctionMeta* meta) {
             case BC_PopTemps: ByteCodeHandler<BC_PopTemps>::disassemble(so, code, meta); break;
             case BC_ResizeTemp: ByteCodeHandler<BC_ResizeTemp>::disassemble(so, code, meta); break;
             case BC_Call: ByteCodeHandler<BC_Call>::disassemble(so, code, meta); break;
+            case BC_CloseBlock: ByteCodeHandler<BC_CloseBlock>::disassemble(so, code, meta); break;
             case BC_Less: ByteCodeHandler<BC_Less>::disassemble(so, code, meta); break;
             case BC_LessEq: ByteCodeHandler<BC_LessEq>::disassemble(so, code, meta); break;
             case BC_Greater: ByteCodeHandler<BC_Greater>::disassemble(so, code, meta); break;
@@ -565,6 +582,7 @@ void disassemble(ostream& so, LuaFunctionMeta* meta) {
             case BC_Jump: ByteCodeHandler<BC_Jump>::disassemble(so, code, meta); break;
             case BC_TrueJump: ByteCodeHandler<BC_TrueJump>::disassemble(so, code, meta); break;
             case BC_FalseJump: ByteCodeHandler<BC_FalseJump>::disassemble(so, code, meta); break;
+            case BC_Nop: ByteCodeHandler<BC_Nop>::disassemble(so, code, meta); break;
             default: ASSERT(0);
         }
         so << endl;

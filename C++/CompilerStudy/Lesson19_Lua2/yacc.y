@@ -44,20 +44,24 @@ Program : Block {
 
 Block
     : StatementList {
-        $$ = StmtNodePtr(new StmtNode_Block($1.get<vector<StmtNodePtr> >()));
+        auto lrange = SymbolTable::top()->getBlockLocalRange();
+        $$ = StmtNodePtr(new StmtNode_Block($1.get<vector<StmtNodePtr> >(), lrange.first, lrange.second));
     }
     | LastStatement {
         auto stmts = vector<StmtNodePtr>();
         stmts.push_back($1.get<StmtNodePtr>());
-        $$ = StmtNodePtr(new StmtNode_Block(stmts));
+        auto lrange = SymbolTable::top()->getBlockLocalRange();
+        $$ = StmtNodePtr(new StmtNode_Block(stmts, lrange.first, lrange.second));
     }
     | StatementList StatementSep LastStatement {
         auto& stmts = $1.get<vector<StmtNodePtr> >();
         stmts.push_back($3.get<StmtNodePtr>());
-        $$ = StmtNodePtr(new StmtNode_Block(stmts));
+        auto lrange = SymbolTable::top()->getBlockLocalRange();
+        $$ = StmtNodePtr(new StmtNode_Block(stmts, lrange.first, lrange.second));
     }
     | {
-        $$ = StmtNodePtr(new StmtNode_Block(vector<StmtNodePtr>()));
+        auto lrange = SymbolTable::top()->getBlockLocalRange();
+        $$ = StmtNodePtr(new StmtNode_Block(vector<StmtNodePtr>(), lrange.first, lrange.second));
     }
     ;
 
