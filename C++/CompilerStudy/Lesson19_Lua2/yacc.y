@@ -543,14 +543,14 @@ Number
     }
     | NUMBER2 {
         auto &term = $1.get<TerminalSymbol>();
-        float num = 0;
-        sscanf(term.lexem.c_str(), "%f", &num);
+        double num = 0;
+        sscanf(term.lexem.c_str(), "%lf", &num);
         $$ = getConstExp(LuaValue(num), term.line);
     }
     | NUMBER3 {
         auto &term = $1.get<TerminalSymbol>();
-        float num = 0;
-        sscanf(term.lexem.c_str(), "%f", &num);
+        double num = 0;
+        sscanf(term.lexem.c_str(), "%lf", &num);
         $$ = getConstExp(LuaValue(num), term.line);
     }
     ;
