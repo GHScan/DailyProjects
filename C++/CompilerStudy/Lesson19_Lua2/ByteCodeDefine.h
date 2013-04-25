@@ -107,13 +107,13 @@ struct ByteCodeHandler<BC_Move> {
 };
 template<>
 struct ByteCodeHandler<BC_LoadVArgs> {
-    static void emit(int &code, int destIdx, bool isMultiValue) {
-        SET_CODE2(BC_LoadVArgs, BIT_W_VAR, 8, destIdx, isMultiValue ? 1 : 0);
+    static void emit(int &code, int destIdx, bool isMulti) {
+        SET_CODE2(BC_LoadVArgs, BIT_W_VAR, 8, destIdx, isMulti ? 1 : 0);
     }
     static void disassemble(ostream& so, int code, LuaFunctionMeta* meta) {
-        GET_CODE2(BIT_W_VAR, 8, destIdx, isMultiValue);
+        GET_CODE2(BIT_W_VAR, 8, destIdx, isMulti);
         GET_STRING_FROM_META(destStr, destIdx);
-        so << format("loadVArgs %s,%s", destStr.c_str(), isMultiValue == 1 ? "singleV" : "multiV");
+        so << format("loadVArgs %s,%s", destStr.c_str(), isMulti == 1 ? "singleV" : "multiV");
     }
     static void execute(int code, LuaStackFrame* frame) {
         // TODO
@@ -165,7 +165,7 @@ struct ByteCodeHandler<BC_NewFunction> {
     static void disassemble(ostream& so, int code, LuaFunctionMeta* meta) {
         GET_CODE2(BIT_W_VAR, 16, destIdx, metaIdx);
         GET_STRING_FROM_META(destStr, destIdx);
-        so << format("newfunction %s=fucntion(%d)", destStr.c_str(), metaIdx);
+        so << format("newfunction %s=function(%d)", destStr.c_str(), metaIdx);
     }
     static void execute(int code, LuaStackFrame* frame) {
         GET_CODE2(BIT_W_VAR, 16, destIdx, metaIdx);
@@ -191,18 +191,18 @@ struct ByteCodeHandler<BC_NewTable> {
 };
 template<>
 struct ByteCodeHandler<BC_Call> {
-    static void emit(int &code, int funcIdx, int paramCount, bool isMultiValue) {
-        SET_CODE3(BC_Call, BIT_W_VAR, 8, 8, funcIdx, paramCount, isMultiValue ? 1 : 0);
+    static void emit(int &code, int funcIdx, int paramCount, bool isMulti) {
+        SET_CODE3(BC_Call, BIT_W_VAR, 8, 8, funcIdx, paramCount, isMulti ? 1 : 0);
     }
     static void disassemble(ostream& so, int code, LuaFunctionMeta* meta) {
-        GET_CODE3(BIT_W_VAR, 8, 8, funcIdx, paramCount, isMultiValue);
+        GET_CODE3(BIT_W_VAR, 8, 8, funcIdx, paramCount, isMulti);
         GET_STRING_FROM_META(funcStr, funcIdx);
-        so << format("call %s,%d,%s", funcStr.c_str(), paramCount, isMultiValue == 1 ? "singleV" : "multiV");
+        so << format("call %s,%d,%s", funcStr.c_str(), paramCount, isMulti == 1 ? "singleV" : "multiV");
     }
     static void execute(int code, LuaStackFrame* frame) {
         // TODO:
-        GET_CODE3(BIT_W_VAR, 8, 8, funcIdx, paramCount, isMultiValue);
-        cout << funcIdx << paramCount << isMultiValue << endl;
+        GET_CODE3(BIT_W_VAR, 8, 8, funcIdx, paramCount, isMulti);
+        cout << funcIdx << paramCount << isMulti << endl;
     }
 };
 template<>

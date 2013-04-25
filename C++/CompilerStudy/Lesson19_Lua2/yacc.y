@@ -129,30 +129,20 @@ Statement
     | FOR ID OP_ASSIGN Exp ',' Exp DO {
         SymbolTable::top()->pushBlock();
         SymbolTable::top()->declareLocal($2.get<TerminalSymbol>().lexem);
-        int lastLocalIdx = SymbolTable::top()->genInternalLocal("__last");
-        int stepLocalIdx = SymbolTable::top()->genInternalLocal("__step");
-        $1 = make_pair(lastLocalIdx, stepLocalIdx);
     } Block END {
         auto varExp = getIDExp($2.get<TerminalSymbol>());
         auto stmt = new StmtNode_RangeFor(varExp, $4.get<ExpNodePtr>(), $6.get<ExpNodePtr>(), getConstExp(LuaValue(1), 0), $9.get<StmtNodePtr>());
         $$ = StmtNodePtr(stmt);
-        stmt->lastLocalIdx = $1.get<pair<int, int> >().first;
-        stmt->stepLocalIdx = $1.get<pair<int, int> >().second;
         SymbolTable::top()->popBlock();
     }
 
     | FOR ID OP_ASSIGN Exp ',' Exp ',' Exp DO {
         SymbolTable::top()->pushBlock();
         SymbolTable::top()->declareLocal($2.get<TerminalSymbol>().lexem);
-        int lastLocalIdx = SymbolTable::top()->genInternalLocal("__last");
-        int stepLocalIdx = SymbolTable::top()->genInternalLocal("__step");
-        $1 = make_pair(lastLocalIdx, stepLocalIdx);
     } Block END {
         auto varExp = getIDExp($2.get<TerminalSymbol>());
         auto stmt = new StmtNode_RangeFor(varExp, $4.get<ExpNodePtr>(), $6.get<ExpNodePtr>(), $8.get<ExpNodePtr>(), $11.get<StmtNodePtr>());
         $$ = StmtNodePtr(stmt);
-        stmt->lastLocalIdx = $1.get<pair<int, int> >().first;
-        stmt->stepLocalIdx = $1.get<pair<int, int> >().second;
         SymbolTable::top()->popBlock();
     }
 
