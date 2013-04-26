@@ -5,36 +5,33 @@
 #include "LuaVM.h"
 #include "GCObject.h"
 
-LuaStackFrame::LuaStackFrame(LuaStack *_stack, Function *_func, int paramBase, int paramCount):
-    stack(_stack), func(_func), ip(0), localBase(paramBase + paramCount), tempCount(0), tempExtCount(0){ 
-    int localCount = 0, argCount = 0;
-    if (func != NULL && func->funcType == Function::FT_Lua) {
-        localCount = static_cast<LuaFunction*>(func)->meta->localCount;
-        argCount = static_cast<LuaFunction*>(func)->meta->argCount;
+LuaStackFrame::LuaStackFrame(LuaStack *_stack, LuaFunction *_func, int paramBase, int paramCount) 
+    : stack(_stack), func(_func), localPtr(NULL), varParamPtr(NULL), ip(0), retN(0), extCount(-1) {
+    assert(paramCount >= func->meta->argCount);
+    auto &values = stack->values();
+    if (paramCount > func->meta->argCount) {
+        auto iter = values.begin() + paramBase;
+        std::rotate(iter, iter + func->meta->argCount, iter + paramCount);
     }
-    tempBase = localBase + localCount;
-    varParamBase = localBase - (paramCount - argCount);
-    stack->m_values.resize(tempBase, LuaValue::NIL);
-    {
-        auto iter = stack->m_values.begin();
-        copy(iter + paramBase, iter + paramBase + argCount, iter + localBase);
-    }
+    varParamPtr = &values[0] + paramBase;
+    localPtr = varParamPtr + (paramCount - func->meta->argCount);
+    stack->reserveValueSpace(paramBase + (paramCount - func->meta->argCount) + 
+        func->meta->localCount + func->meta->tempCount);
 }
 
 //===== LuaStack =====
-void LuaStack::pushFrame(Function *func, int paramBase, int paramCount) {
+void LuaStack::pushFrame(LuaFunction *func, int paramBase, int paramCount) {
     m_frames.push_back(new LuaStackFrame(this, func, paramBase, paramCount));
-    if (func != NULL && func->funcType == Function::FT_Lua) {
-        int level = static_cast<LuaFunction*>(func)->meta->level;
+    if (func != NULL) {
+        int level = func->meta->level;
         if ((int)m_framesOfLevel.size() <= level) m_framesOfLevel.resize(level + 1);
         m_framesOfLevel[level].push_back(m_frames.back());
     }
 }
 void LuaStack::popFrame() {
     auto func = m_frames.back()->func;
-    if (func != NULL && func->funcType == Function::FT_Lua) {
-        int level = static_cast<LuaFunction*>(func)->meta->level;
-        m_framesOfLevel[level].pop_back();
+    if (func != NULL) {
+        m_framesOfLevel[func->meta->level].pop_back();
     }
 
     delete m_frames.back();
@@ -46,11 +43,9 @@ LuaStackFrame* LuaStack::topFrameOfLevel(int level) {
 LuaStack::LuaStack():
     GCObject(OT_Stack) {
     m_values.reserve(32 * 1024); // FIXME
-    pushFrame(NULL, 0, 0);
     LuaVM::instance()->getGCObjManager()->linkObject(this);
 }
 LuaStack::~LuaStack() {
-    popFrame();
     ASSERT(m_frames.empty());
 }
 

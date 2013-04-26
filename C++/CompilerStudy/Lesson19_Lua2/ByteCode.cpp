@@ -6,8 +6,8 @@
 #include "LuaFunction.h"
 #include "LuaString.h"
 #include "LuaTable.h"
-#include "ByteCodeDefine.h"
 #include "AST.h"
+#include "ByteCodeDefine.h"
 
 #define EMIT0(code) { m_ip2line.push_back(node->line); m_codes.push_back(0); ByteCodeHandler<code>::emit(m_codes.back()); }
 #define EMIT(code, ...) { m_ip2line.push_back(node->line); m_codes.push_back(0); ByteCodeHandler<code>::emit(m_codes.back(), __VA_ARGS__); }
@@ -413,30 +413,29 @@ private:
 };
 
 //====================
-static void return2PrevFrame(LuaStack* stack, LuaStackFrame* frame) {
-    // TODO: optimize
+static void return2PrevFrame(LuaStack* stack, LuaStackFrame* frame, bool isMulti) {
     auto lastFrame = stack->topFrame(-1);
-    auto meta = static_cast<LuaFunction*>(frame->func)->meta;
-    vector<LuaValue> rets;
-    if (frame->tempCount > 0) rets.assign(&frame->temp(0), &frame->temp(0) + frame->tempExtCount);
-    lastFrame->popTemps(frame->varParamBase - meta->argCount - 1 - lastFrame->tempBase);
-    if (rets.empty()) lastFrame->pushTemp(LuaValue::NIL);
-    else {
-        lastFrame->pushTemp(rets[0]);
-        for (int i = 1; i < (int)rets.size(); ++i) {
-            lastFrame->pushExtTemp(rets[i]);
-        }
+    auto meta = frame->func->meta;
+    LuaValue *destPtr = frame->varParamPtr - 1;
+    if (!isMulti) frame->retN = min(frame->retN, 1);
+    if (frame->retN == 0) {
+        *destPtr = LuaValue::NIL;
+    } else {
+        LuaValue *srcPtr = frame->localPtr + meta->localCount;
+        for (int i = 0; i < frame->retN; ++i) *destPtr++ = *srcPtr;
     }
+    // FIXME: while call from lua ?
+    lastFrame->setExtCount(frame->retN);
     stack->popFrame();
 }
-void execute(LuaStackFrame *stopFrame) {
+void execute(LuaStackFrame *stopFrame, bool isMulti) {
     auto stack = LuaVM::instance()->getCurrentStack();
     for (;;) {
         auto frame = stack->topFrame();
         if (frame == stopFrame) break;
         auto &codes = static_cast<LuaFunction*>(frame->func)->meta->codes;
         if (frame->ip == (int)codes.size()) {
-            return2PrevFrame(stack, frame);
+            return2PrevFrame(stack, frame, isMulti);
             continue;
         }
         try {
@@ -451,8 +450,7 @@ void execute(LuaStackFrame *stopFrame) {
             for (; frame != stopFrame; frame = stack->topFrame()) {
                 auto lfunc = static_cast<LuaFunction*>(frame->func);
                 e.addLine(format("%s(%d):", lfunc->meta->fileName.c_str(), lfunc->meta->ip2line[frame->ip]));
-                frame->popTemps(0);
-                return2PrevFrame(stack, frame);
+                return2PrevFrame(stack, frame, isMulti);
             }
             throw;
         }

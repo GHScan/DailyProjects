@@ -41,7 +41,7 @@ LuaFunction::LuaFunction(const LuaFunctionMetaPtr &_meta):
         auto& uvInfo = meta->upValues[i];
         auto upFrame = stack->topFrameOfLevel(uvInfo.first);
         upFrame->closures.insert(make_pair(uvInfo.second, make_pair(this, i)));
-        upValues.push_back(&upFrame->local(uvInfo.second));
+        upValues.push_back(&upFrame->localPtr[uvInfo.second]);
     }
 }
 
@@ -53,44 +53,52 @@ int LuaFunctionMeta::getConstIdx(const LuaValue& v) {
     return (int)constTable.size() - 1;
 }
 
-void callFunc(int tempIdx) {
+void call(int funcIdx, int paramCount, bool isMulti) {
     auto stack = LuaVM::instance()->getCurrentStack();
-    auto frame = stack->topFrame();
-    auto func = frame->temp(tempIdx).getFunction();
+    auto func = stack->values()[funcIdx].getFunction();
     if (func->funcType == Function::FT_Lua) {
+        auto stack = LuaVM::instance()->getCurrentStack();
+        auto lfunc = static_cast<LuaFunction*>(func);
+        int paramBase = funcIdx + 1;
         {
-            auto meta = static_cast<LuaFunction*>(func)->meta;
-            int paramCount = frame->tempExtCount - tempIdx - 1;
-            for (; paramCount < meta->argCount; ++paramCount) frame->pushExtTemp(LuaValue::NIL);
+            // TODO: more graceful
+            int reqParamCount = lfunc->meta->argCount;
+            if (paramCount < reqParamCount) {
+                stack->reserveValueSpace(paramBase + reqParamCount);
+                for (int i = paramCount; i < reqParamCount; ++i) {
+                    stack->values()[paramBase + i] = LuaValue::NIL;
+                }
+                paramCount = reqParamCount;
+            }
         }
-        stack->pushFrame(func, frame->tempBase + tempIdx + 1, frame->tempExtCount - tempIdx - 1);
+        stack->pushFrame(lfunc, paramBase, paramCount);
     } else if (func->funcType == Function::FT_C) {
-        // TODO: optmize
-        vector<LuaValue> params(&frame->temp(0) + tempIdx + 1, &frame->temp(0) + frame->tempExtCount);
-        while (!params.empty() && params.back().isNil()) params.pop_back();
+        // TODO: optimize
+        auto stack = LuaVM::instance()->getCurrentStack();
+        auto &values = stack->values();
+        vector<LuaValue> args(values.begin() + funcIdx + 1, values.begin() + funcIdx + 1 + paramCount); 
         vector<LuaValue> rets;
-        stack->pushFrame(func, frame->tempBase + tempIdx + 1, frame->tempExtCount - tempIdx - 1);
-        static_cast<CFunction*>(func)->func(params, rets);
-        stack->popFrame();
-        frame->popTemps(tempIdx);
-        if (rets.empty()) frame->pushTemp(LuaValue::NIL);
-        else {
-            frame->pushTemp(rets[0]);
-            for (int i = 1; i < (int)rets.size(); ++i) frame->pushExtTemp(rets[i]);
-        }
+        static_cast<CFunction*>(func)->func(args, rets);
+        if (!isMulti) rets.resize(1, LuaValue::NIL);
+        if (rets.empty()) rets.push_back(LuaValue::NIL);
+        stack->reserveValueSpace(funcIdx + (int)rets.size());
+        std::copy(rets.begin(), rets.end(), values.begin() + funcIdx);
+        stack->topFrame()->setExtCount((int)rets.size());
     } else {
         ASSERT(0);
     }
 }
 
-void callFunc(const LuaValue &func, const vector<LuaValue>& args, vector<LuaValue>& rets) {
+void callFunc(const LuaValue& func, const vector<LuaValue>& args, vector<LuaValue>& rets) {
     auto stack = LuaVM::instance()->getCurrentStack();
+    auto &values = stack->values();
+    int funcIdx = (int)values.size();
+    values.push_back(func);
+    values.insert(values.end(), args.begin(), args.end());
     auto frame = stack->topFrame();
-    int tempIdx = frame->tempCount;
-    frame->pushTemp(func);
-    for (auto &v : args) frame->pushTemp(v);
-    callFunc(tempIdx);
-    execute(frame);
-    rets.assign(&frame->temp(0) + tempIdx, &frame->temp(0) + frame->tempExtCount);
-    frame->popTemps(tempIdx);
+    callFunc(funcIdx, (int)args.size(), true);
+    execute(frame, true);
+    rets.assign(values.begin() + funcIdx, values.begin() + funcIdx + frame->getExtCount());
+    values.resize(funcIdx);
 }
+

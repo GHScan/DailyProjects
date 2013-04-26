@@ -24,7 +24,7 @@ enum ByteCode {
     BC_Jump,
     BC_TrueJump, BC_FalseJump,
 
-    BC_Nop,
+    BC_Nop, BC_ReturnN,
 };
 
 class VarIndex {
@@ -80,7 +80,7 @@ private:
     {\
         VarIndex varIdx(idx);\
         if (varIdx.isConst()) var = &static_cast<LuaFunction*>(frame->func)->meta->constTable[varIdx.getConstIdx()];\
-        else if (varIdx.isLocal()) var = &frame->local(varIdx.getLocalIdx());\
+        else if (varIdx.isLocal()) var = &frame->localPtr[varIdx.getLocalIdx()];\
         else var = &static_cast<LuaFunction*>(frame->func)->upValue(varIdx.getUpValueIdx());\
     }
 
@@ -116,9 +116,22 @@ struct ByteCodeHandler<BC_LoadVArgs> {
         so << format("loadVArgs %s,%s", destStr.c_str(), isMulti == 1 ? "singleV" : "multiV");
     }
     static void execute(int code, LuaStackFrame* frame) {
-        // TODO
-        GET_CODE1(destIdx);
-        cout << destIdx << endl;
+        GET_CODE2(BIT_W_VAR, 8, destIdx, isMulti);
+        GET_VAR_FROM_FRAME(dest, destIdx);
+        if (isMulti == 1) {
+            int n = frame->localPtr - frame->varParamPtr;
+            if (n == 0) {
+                *dest = LuaValue::NIL;
+            } else {
+                frame->setExtCount(n);
+                frame->stack->reserveValueSpace(destIdx + n);
+                for (auto p = frame->varParamPtr; p < frame->localPtr; ++p) {
+                    *dest++ = *p;
+                }
+            }
+        } else {
+            *dest = frame->varParamPtr == frame->localPtr ? LuaValue::NIL : *frame->varParamPtr;
+        }
     }
 };
 template<>
@@ -200,9 +213,8 @@ struct ByteCodeHandler<BC_Call> {
         so << format("call %s,%d,%s", funcStr.c_str(), paramCount, isMulti == 1 ? "singleV" : "multiV");
     }
     static void execute(int code, LuaStackFrame* frame) {
-        // TODO:
         GET_CODE3(BIT_W_VAR, 8, 8, funcIdx, paramCount, isMulti);
-        cout << funcIdx << paramCount << isMulti << endl;
+        callFunc(funcIdx, paramCount - 1 + frame->getExtCount(), isMulti == 1);
     }
 };
 template<>
@@ -220,7 +232,6 @@ struct ByteCodeHandler<BC_ExitBlock> {
     }
     static void execute(int code, LuaStackFrame* frame) {
         GET_CODE2(8, 8, localOff, localCount);
-        // TODO:
         if (localCount == 0) return;
         auto& closures = frame->closures;
         auto iter = closures.lower_bound(localOff);
@@ -232,7 +243,7 @@ struct ByteCodeHandler<BC_ExitBlock> {
             do {
                 ++iter2;
             } while(iter2 != closures.end() && iter2->first == iter->first);
-            shared_ptr<LuaValue> v(new LuaValue(frame->local(iter->first)));
+            shared_ptr<LuaValue> v(new LuaValue(frame->localPtr[iter->first]));
             for (; iter != iter2; ++iter) {
                 auto& funcUvIdx = iter->second;
                 funcUvIdx.first->sharedUpValues.push_back(v);
@@ -652,6 +663,20 @@ struct ByteCodeHandler<BC_Nop> {
         so << format("nop");
     }
     static void execute(int code, LuaStackFrame* frame) {
+    }
+};
+template<>
+struct ByteCodeHandler<BC_ReturnN> {
+    static void emit(int &code, int paramCount) {
+        SET_CODE1(BC_ReturnN, paramCount);
+    }
+    static void disassemble(ostream& so, int code, LuaFunctionMeta* meta) {
+        GET_CODE1(paramCount);
+        so << format("returnN %d", paramCount);
+    }
+    static void execute(int code, LuaStackFrame* frame) {
+        GET_CODE1(paramCount);
+        frame->retN = paramCount - 1 + frame->getExtCount();
     }
 };
 

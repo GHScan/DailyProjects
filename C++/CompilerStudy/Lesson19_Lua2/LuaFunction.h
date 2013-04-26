@@ -23,7 +23,7 @@ struct Function:
 
 struct LuaFunctionMeta {
     string fileName;
-    int argCount, localCount;
+    int argCount, localCount, tempCount;
     int level, line;
     vector<int> codes;
     vector<int> ip2line;
@@ -31,7 +31,7 @@ struct LuaFunctionMeta {
     vector<LuaValue> constTable;
     vector<pair<int, int> > upValues;
 
-    LuaFunctionMeta(const string& _fileName): fileName(_fileName), argCount(0), localCount(0), level(0), line(0){}
+    LuaFunctionMeta(const string& _fileName): fileName(_fileName), argCount(0), localCount(0), tempCount(0), level(0), line(0){}
     int getConstIdx(const LuaValue& v);
 };
 typedef shared_ptr<LuaFunctionMeta> LuaFunctionMetaPtr;
@@ -73,9 +73,6 @@ struct CFuncEntry {
     CFuncT func;
 };
 
-void callFunc(int tempIdx);
-void callFunc(const LuaValue &func, const vector<LuaValue>& args, vector<LuaValue>& rets);
-
 inline bool Function::equal(Function *o) {
     if (funcType == o->funcType) {
         if (funcType == FT_Lua) {
@@ -90,5 +87,8 @@ inline bool Function::equal(Function *o) {
     }
     return false;
 }
+
+void callFunc(const LuaValue& func, const vector<LuaValue>& args, vector<LuaValue>& rets);
+void callFunc(int funcIdx, int paramCount, bool isMulti);
 
 #endif
