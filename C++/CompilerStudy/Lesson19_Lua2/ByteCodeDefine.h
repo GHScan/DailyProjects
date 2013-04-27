@@ -25,6 +25,7 @@ enum ByteCode {
     BC_TrueJump, BC_FalseJump,
 
     BC_Nop, BC_ReturnN,
+    BC_PushValues2Table,
 };
 
 class VarIndex {
@@ -677,6 +678,27 @@ struct ByteCodeHandler<BC_ReturnN> {
     static void execute(int code, LuaStackFrame* frame) {
         GET_CODE1(paramCount);
         frame->retN = paramCount - 1 + frame->getExtCount();
+    }
+};
+template<>
+struct ByteCodeHandler<BC_PushValues2Table> {
+    static void emit(int &code, int tableIdx, int localIdx, int count) {
+        SET_CODE3(BC_PushValues2Table, BIT_W_VAR, BIT_W_VAR, 8, tableIdx, localIdx, count);
+    }
+    static void disassemble(ostream& so, int code, LuaFunctionMeta* meta) {
+        GET_CODE3(BIT_W_VAR, BIT_W_VAR, 8, tableIdx, localIdx, count);
+        GET_STRING_FROM_META(tableStr, tableIdx);
+        GET_STRING_FROM_META(localStr, localIdx);
+        so << format("pushValues2Table %s<-%s,%d", tableStr.c_str(), localStr.c_str(), count);
+    }
+    static void execute(int code, LuaStackFrame* frame) {
+        GET_CODE3(BIT_W_VAR, BIT_W_VAR, 8, tableIdx, localIdx, count);
+        GET_VAR_FROM_FRAME(table, tableIdx);
+        GET_VAR_FROM_FRAME(local, localIdx);
+        count += frame->getExtCount() - 1;
+        for (int i = 0; i < count; ++i) {
+            table->getTable()->arrayInsert(table->getSize(), *local++);
+        }
     }
 };
 

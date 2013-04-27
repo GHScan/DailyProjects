@@ -53,7 +53,7 @@ int LuaFunctionMeta::getConstIdx(const LuaValue& v) {
     return (int)constTable.size() - 1;
 }
 
-void call(int funcIdx, int paramCount, bool isMulti) {
+void callFunc(int funcIdx, int paramCount, bool isMulti) {
     auto stack = LuaVM::instance()->getCurrentStack();
     auto func = stack->values()[funcIdx].getFunction();
     if (func->funcType == Function::FT_Lua) {

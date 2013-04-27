@@ -213,6 +213,7 @@ struct StmtNode_RangeFor:
     ExpNodePtr first, last, step;
     ExpNodePtr var;
     StmtNodePtr stmt;
+    int lastLocalIdx,  stepLocalIdx; // TODO
     StmtNode_RangeFor(const ExpNodePtr& _var, const ExpNodePtr& _first, const ExpNodePtr& _last, const ExpNodePtr& _step, const StmtNodePtr& _stmt):
         IStmtNode(_var->line), first(_first), last(_last), step(_step), var(_var), stmt(_stmt){}
     virtual void acceptVisitor(IStmtNodeVisitor *v) {v->visit(this);}
