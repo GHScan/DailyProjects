@@ -213,9 +213,9 @@ struct StmtNode_RangeFor:
     ExpNodePtr first, last, step;
     ExpNodePtr var;
     StmtNodePtr stmt;
-    int lastLocalIdx,  stepLocalIdx; // TODO
+    int lastLocalIdx,  stepLocalIdx; 
     StmtNode_RangeFor(const ExpNodePtr& _var, const ExpNodePtr& _first, const ExpNodePtr& _last, const ExpNodePtr& _step, const StmtNodePtr& _stmt):
-        IStmtNode(_var->line), first(_first), last(_last), step(_step), var(_var), stmt(_stmt){}
+        IStmtNode(_var->line), first(_first), last(_last), step(_step), var(_var), stmt(_stmt), lastLocalIdx(0), stepLocalIdx(0){}
     virtual void acceptVisitor(IStmtNodeVisitor *v) {v->visit(this);}
 };
 struct StmtNode_LoopFor:

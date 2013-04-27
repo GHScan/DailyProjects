@@ -374,7 +374,8 @@ l_end:
     }
     virtual void visit(StmtNode_RangeFor *node) {
         /*
-           less caseidx step 0
+           var, lastIdx, stepIdx <- first, last, step
+           less caseidx stepidx 0
            tjump caseidx l_negative
            emitCode_RangeFor true
            jump l_end
@@ -382,11 +383,16 @@ l_negative:
            emitCode_RangeFor false
 l_end:
          * */
+        ExpNodeVisitor_CodeEmitor(m_meta, node->first, &m_idxAllocator, 
+                VarIndex::fromLocal(static_cast<ExpNode_LocalVar*>(node->var.get())->localIdx).toInt());
+        ExpNodeVisitor_CodeEmitor(m_meta, node->last, &m_idxAllocator, VarIndex::fromLocal(node->lastLocalIdx).toInt());
+        ExpNodeVisitor_CodeEmitor(m_meta, node->step, &m_idxAllocator, VarIndex::fromLocal(node->stepLocalIdx).toInt());
+
         int caseIdx = m_idxAllocator.alloc();
-        int stepIdx = ExpNodeVisitor_CodeEmitor(m_meta, node->step, &m_idxAllocator).getVarIdx();
         m_idxAllocator.free(caseIdx);
-        int zeroIdx = VarIndex::fromConst(m_meta->getConstIdx(LuaValue(NumberType(0)))).toInt();
-        EMIT(BC_Less, caseIdx, stepIdx, zeroIdx);
+        EMIT(BC_Less, caseIdx, 
+                VarIndex::fromLocal(node->stepLocalIdx).toInt(), 
+                VarIndex::fromConst(m_meta->getConstIdx(LuaValue(NumberType(0)))).toInt());
         int jump_negative;
         PRE_EMIT(jump_negative);
 
@@ -424,7 +430,6 @@ l_break:
         EMIT_JUMPS(Break);
     }
     virtual void visit(StmtNode_IteratorFor *node) {
-        // TODO
         /*
            move 3 nil
            eval iterExps
@@ -432,8 +437,8 @@ l_break:
 l_loop:
            move n nil
            call func state k
-           equal k nil
-           tjump l_break
+           equal tempidx k nil
+           tjump tempidx l_break
 
            stmt
 l_continue:
@@ -441,33 +446,117 @@ l_continue:
 l_break:
 
          * */
+        // TODO: refactor
+        ASSERT(!node->vars.empty());
+
+        vector<int> varIdxs;
+        for (int i = 0; i < 3; ++i) {
+            varIdxs.push_back(m_idxAllocator.alloc());
+            EMIT(BC_Move, varIdxs.back(), 
+                    VarIndex::fromConst(m_meta->getConstIdx(LuaValue::NIL)).toInt());
+        }
+        while (!varIdxs.empty()) {
+            m_idxAllocator.free(varIdxs.back());
+            varIdxs.pop_back();
+        }
+
+        for (int i = 0; i < (int)node->iterExps.size(); ++i) {
+            varIdxs.push_back(m_idxAllocator.alloc());
+            ExpNodeVisitor_CodeEmitor(m_meta, node->iterExps[i], &m_idxAllocator, 
+                    varIdxs.back(), i == (int)node->iterExps.size() - 1);
+        }
+        while (!varIdxs.empty()) {
+            m_idxAllocator.free(varIdxs.back());
+            varIdxs.pop_back();
+        }
+
+        vector<int> localIdxs;
+        for (auto &exp : node->vars) {
+            localIdxs.push_back(static_cast<ExpNode_LocalVar*>(exp.get())->localIdx);
+        }
+
+        for (int i = 0; i < 3; ++i) {
+            varIdxs.push_back(m_idxAllocator.alloc());
+        }
+        EMIT(BC_Move, VarIndex::fromLocal(node->funcLocalIdx).toInt(), varIdxs[0]);
+        EMIT(BC_Move, VarIndex::fromLocal(node->stateLocalIdx).toInt(), varIdxs[1]);
+        EMIT(BC_Move, VarIndex::fromLocal(localIdxs[0]).toInt(), varIdxs[1]);
+        while (!varIdxs.empty()) {
+            m_idxAllocator.free(varIdxs.back());
+            varIdxs.pop_back();
+        }
+
+        // 
+        int l_loop = CUR_CODE_OFF;
+
+        for (int i = 0; i < (int)localIdxs.size(); ++i) {
+            varIdxs.push_back(m_idxAllocator.alloc());
+            EMIT(BC_Move, varIdxs.back(), VarIndex::fromConst(m_meta->getConstIdx(LuaValue::NIL)).toInt());
+        }
+        while (!varIdxs.empty()) {
+            m_idxAllocator.free(varIdxs.back());
+            varIdxs.pop_back();
+        }
+
+        for (int i = 0; i < 3; ++i) {
+            varIdxs.push_back(m_idxAllocator.alloc());
+        }
+        {
+            EMIT(BC_Move, varIdxs[0], VarIndex::fromLocal(node->funcLocalIdx).toInt());
+            EMIT(BC_Move, varIdxs[1], VarIndex::fromLocal(node->stateLocalIdx).toInt());
+            EMIT(BC_Move, varIdxs[2], VarIndex::fromLocal(localIdxs[0]).toInt());
+            EMIT(BC_Call, varIdxs[0], 2, true);
+        }
+        while (!varIdxs.empty()) {
+            m_idxAllocator.free(varIdxs.back());
+            varIdxs.pop_back();
+        }
+
+        for (int i = 0; i < (int)localIdxs.size(); ++i) {
+            varIdxs.push_back(m_idxAllocator.alloc());
+            EMIT(BC_Move, VarIndex::fromLocal(localIdxs[i]).toInt(), varIdxs.back());
+        }
+        while (!varIdxs.empty()) {
+            m_idxAllocator.free(varIdxs.back());
+            varIdxs.pop_back();
+        }
+
+        int tempidx = m_idxAllocator.alloc();
+        EMIT(BC_Equal, tempidx, 
+                VarIndex::fromLocal(localIdxs[0]).toInt(), 
+                VarIndex::fromConst(m_meta->getConstIdx(LuaValue::NIL)).toInt());
+        int jump_break;
+        PRE_EMIT(jump_break);
+
+        if (node->stmt != NULL) node->stmt->acceptVisitor(this);
+
+        EMIT_JUMPS(Continue);
+        EMIT(BC_Jump, l_loop);
+
+        POST_EMIT(jump_break, BC_TrueJump, tempidx, CUR_CODE_OFF);
+        EMIT_JUMPS(Break);
     }
 private:
     void emitCode_RangeFor(StmtNode_RangeFor *node, bool isPositive) {
         /*
-           lastidx <- last
-           stepidx <- step
-           varidx <- first
 l_loop:
            lessEq tempidx varidx lastidx // greaterEq
            fjump tempidx l_break
+
            stmt
 l_continue:
            add varidx varidx stepidx
            jump l_loop
 l_break:
          * */
-        ExpNodeVisitor_CodeEmitor lastExp(m_meta, node->last, &m_idxAllocator);
-        ExpNodeVisitor_CodeEmitor stepExp(m_meta, node->last, &m_idxAllocator);
         int varIdx = VarIndex::fromLocal(static_cast<ExpNode_LocalVar*>(node->var.get())->localIdx).toInt();
-        ExpNodeVisitor_CodeEmitor(m_meta, node->first, &m_idxAllocator, varIdx);
 
         int l_loop = CUR_CODE_OFF;
         int tempIdx = m_idxAllocator.alloc();
         if (isPositive) {
-            EMIT(BC_LessEq, tempIdx, varIdx, lastExp.getVarIdx());
+            EMIT(BC_LessEq, tempIdx, varIdx, VarIndex::fromLocal(node->lastLocalIdx).toInt());
         } else { 
-            EMIT(BC_GreaterEq, tempIdx, varIdx, lastExp.getVarIdx());
+            EMIT(BC_GreaterEq, tempIdx, varIdx, VarIndex::fromLocal(node->lastLocalIdx).toInt());
         }
         m_idxAllocator.free(tempIdx);
         int jump_break;
@@ -476,7 +565,7 @@ l_break:
         if (node->stmt != NULL) node->stmt->acceptVisitor(this);
 
         EMIT_JUMPS(Continue);
-        EMIT(BC_Add, varIdx, varIdx, stepExp.getVarIdx());
+        EMIT(BC_Add, varIdx, varIdx, VarIndex::fromLocal(node->stepLocalIdx).toInt());
         EMIT(BC_Jump, l_loop);
 
         POST_EMIT(jump_break, BC_FalseJump, tempIdx, CUR_CODE_OFF);
@@ -518,8 +607,38 @@ void execute(LuaStackFrame *stopFrame, bool isMulti) {
         try {
             int code = codes[frame->ip];
             switch (code & 0xff) {
-                // TODO
+                case BC_Move: ByteCodeHandler<BC_Move>::execute(code, frame); break;
+                case BC_LoadVArgs: ByteCodeHandler<BC_LoadVArgs>::execute(code, frame); break;
+                case BC_GetGlobal: ByteCodeHandler<BC_GetGlobal>::execute(code, frame); break;
+                case BC_SetGlobal: ByteCodeHandler<BC_SetGlobal>::execute(code, frame); break;
+                case BC_NewFunction: ByteCodeHandler<BC_NewFunction>::execute(code, frame); break;
+                case BC_NewTable: ByteCodeHandler<BC_NewTable>::execute(code, frame); break;
+                case BC_Call: ByteCodeHandler<BC_Call>::execute(code, frame); break;
+                case BC_ExitBlock: ByteCodeHandler<BC_ExitBlock>::execute(code, frame); break;
+                case BC_Less: ByteCodeHandler<BC_Less>::execute(code, frame); break;
+                case BC_LessEq: ByteCodeHandler<BC_LessEq>::execute(code, frame); break;
+                case BC_Greater: ByteCodeHandler<BC_Greater>::execute(code, frame); break;
+                case BC_GreaterEq: ByteCodeHandler<BC_GreaterEq>::execute(code, frame); break;
+                case BC_Equal: ByteCodeHandler<BC_Equal>::execute(code, frame); break;
+                case BC_NEqual: ByteCodeHandler<BC_NEqual>::execute(code, frame); break;
+                case BC_Add: ByteCodeHandler<BC_Add>::execute(code, frame); break;
+                case BC_Sub: ByteCodeHandler<BC_Sub>::execute(code, frame); break;
+                case BC_Mul: ByteCodeHandler<BC_Mul>::execute(code, frame); break;
+                case BC_Div: ByteCodeHandler<BC_Div>::execute(code, frame); break;
+                case BC_Mod: ByteCodeHandler<BC_Mod>::execute(code, frame); break;
+                case BC_Pow: ByteCodeHandler<BC_Pow>::execute(code, frame); break;
+                case BC_Concat: ByteCodeHandler<BC_Concat>::execute(code, frame); break;
+                case BC_Not: ByteCodeHandler<BC_Not>::execute(code, frame); break;
+                case BC_Len: ByteCodeHandler<BC_Len>::execute(code, frame); break;
+                case BC_Minus: ByteCodeHandler<BC_Minus>::execute(code, frame); break;
+                case BC_GetTable: ByteCodeHandler<BC_GetTable>::execute(code, frame); break;
+                case BC_SetTable: ByteCodeHandler<BC_SetTable>::execute(code, frame); break;
+                case BC_Jump: ByteCodeHandler<BC_Jump>::execute(code, frame); break;
+                case BC_TrueJump: ByteCodeHandler<BC_TrueJump>::execute(code, frame); break;
+                case BC_FalseJump: ByteCodeHandler<BC_FalseJump>::execute(code, frame); break;
                 case BC_Nop: ByteCodeHandler<BC_Nop>::execute(code, frame); break;
+                case BC_ReturnN: ByteCodeHandler<BC_ReturnN>::execute(code, frame); break;
+                case BC_PushValues2Table: ByteCodeHandler<BC_PushValues2Table>::execute(code, frame); break;
                 default: ASSERT(0);
             }
             ++frame->ip;
@@ -540,8 +659,38 @@ void disassemble(ostream& so, LuaFunctionMeta* meta) {
         int code = codes[i];
         so << tabString(meta->level) << format("%3d : ", i + 1);
         switch (code & 0xff) {
-            // TODO
+            case BC_Move: ByteCodeHandler<BC_Move>::disassemble(so, code, meta); break;
+            case BC_LoadVArgs: ByteCodeHandler<BC_LoadVArgs>::disassemble(so, code, meta); break;
+            case BC_GetGlobal: ByteCodeHandler<BC_GetGlobal>::disassemble(so, code, meta); break;
+            case BC_SetGlobal: ByteCodeHandler<BC_SetGlobal>::disassemble(so, code, meta); break;
+            case BC_NewFunction: ByteCodeHandler<BC_NewFunction>::disassemble(so, code, meta); break;
+            case BC_NewTable: ByteCodeHandler<BC_NewTable>::disassemble(so, code, meta); break;
+            case BC_Call: ByteCodeHandler<BC_Call>::disassemble(so, code, meta); break;
+            case BC_ExitBlock: ByteCodeHandler<BC_ExitBlock>::disassemble(so, code, meta); break;
+            case BC_Less: ByteCodeHandler<BC_Less>::disassemble(so, code, meta); break;
+            case BC_LessEq: ByteCodeHandler<BC_LessEq>::disassemble(so, code, meta); break;
+            case BC_Greater: ByteCodeHandler<BC_Greater>::disassemble(so, code, meta); break;
+            case BC_GreaterEq: ByteCodeHandler<BC_GreaterEq>::disassemble(so, code, meta); break;
+            case BC_Equal: ByteCodeHandler<BC_Equal>::disassemble(so, code, meta); break;
+            case BC_NEqual: ByteCodeHandler<BC_NEqual>::disassemble(so, code, meta); break;
+            case BC_Add: ByteCodeHandler<BC_Add>::disassemble(so, code, meta); break;
+            case BC_Sub: ByteCodeHandler<BC_Sub>::disassemble(so, code, meta); break;
+            case BC_Mul: ByteCodeHandler<BC_Mul>::disassemble(so, code, meta); break;
+            case BC_Div: ByteCodeHandler<BC_Div>::disassemble(so, code, meta); break;
+            case BC_Mod: ByteCodeHandler<BC_Mod>::disassemble(so, code, meta); break;
+            case BC_Pow: ByteCodeHandler<BC_Pow>::disassemble(so, code, meta); break;
+            case BC_Concat: ByteCodeHandler<BC_Concat>::disassemble(so, code, meta); break;
+            case BC_Not: ByteCodeHandler<BC_Not>::disassemble(so, code, meta); break;
+            case BC_Len: ByteCodeHandler<BC_Len>::disassemble(so, code, meta); break;
+            case BC_Minus: ByteCodeHandler<BC_Minus>::disassemble(so, code, meta); break;
+            case BC_GetTable: ByteCodeHandler<BC_GetTable>::disassemble(so, code, meta); break;
+            case BC_SetTable: ByteCodeHandler<BC_SetTable>::disassemble(so, code, meta); break;
+            case BC_Jump: ByteCodeHandler<BC_Jump>::disassemble(so, code, meta); break;
+            case BC_TrueJump: ByteCodeHandler<BC_TrueJump>::disassemble(so, code, meta); break;
+            case BC_FalseJump: ByteCodeHandler<BC_FalseJump>::disassemble(so, code, meta); break;
             case BC_Nop: ByteCodeHandler<BC_Nop>::disassemble(so, code, meta); break;
+            case BC_ReturnN: ByteCodeHandler<BC_ReturnN>::disassemble(so, code, meta); break;
+            case BC_PushValues2Table: ByteCodeHandler<BC_PushValues2Table>::disassemble(so, code, meta); break;
             default: ASSERT(0);
         }
         so << endl;
