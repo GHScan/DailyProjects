@@ -22,17 +22,13 @@ LuaStackFrame::LuaStackFrame(LuaStack *_stack, LuaFunction *_func, int paramBase
 //===== LuaStack =====
 void LuaStack::pushFrame(LuaFunction *func, int paramBase, int paramCount) {
     m_frames.push_back(new LuaStackFrame(this, func, paramBase, paramCount));
-    if (func != NULL) {
-        int level = func->meta->level;
-        if ((int)m_framesOfLevel.size() <= level) m_framesOfLevel.resize(level + 1);
-        m_framesOfLevel[level].push_back(m_frames.back());
-    }
+    int level = func->meta->level;
+    if ((int)m_framesOfLevel.size() <= level) m_framesOfLevel.resize(level + 1);
+    m_framesOfLevel[level].push_back(m_frames.back());
 }
 void LuaStack::popFrame() {
     auto func = m_frames.back()->func;
-    if (func != NULL) {
-        m_framesOfLevel[func->meta->level].pop_back();
-    }
+    m_framesOfLevel[func->meta->level].pop_back();
 
     delete m_frames.back();
     m_frames.pop_back();

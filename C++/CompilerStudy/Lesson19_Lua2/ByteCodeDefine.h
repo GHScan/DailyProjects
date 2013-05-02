@@ -120,7 +120,7 @@ struct ByteCodeHandler<BC_LoadVArgs> {
         GET_CODE2(BIT_W_VAR, 8, destIdx, isMulti);
         GET_VAR_FROM_FRAME(dest, destIdx);
         if (isMulti == 1) {
-            int n = frame->localPtr - frame->varParamPtr;
+            int n = int(frame->localPtr - frame->varParamPtr);
             if (n == 0) {
                 *dest = LuaValue::NIL;
             } else {
@@ -206,7 +206,7 @@ struct ByteCodeHandler<BC_NewTable> {
 template<>
 struct ByteCodeHandler<BC_Call> {
     static void emit(int &code, int funcIdx, int paramCount, bool isMulti) {
-        SET_CODE3(BC_Call, BIT_W_VAR, 8, 8, funcIdx, paramCount, isMulti ? 1 : 0);
+        SET_CODE3(BC_Call, BIT_W_VAR, 8, 8, funcIdx, paramCount, (isMulti ? 1 : 0));
     }
     static void disassemble(ostream& so, int code, LuaFunctionMeta* meta) {
         GET_CODE3(BIT_W_VAR, 8, 8, funcIdx, paramCount, isMulti);
