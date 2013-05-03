@@ -232,6 +232,7 @@ struct ByteCodeHandler<BC_ExitBlock> {
         so << format("exitBlock %d,%d", localOff, localCount);
     }
     static void execute(int code, LuaStackFrame* frame) {
+        // FIXME
         GET_CODE2(8, 8, localOff, localCount);
         if (localCount == 0) return;
         auto& closures = frame->closures;

@@ -155,6 +155,7 @@ label:
             EMIT(BC_SetTable, m_varIdx, kexp.getVarIdx(), vIdx);
         }
         if (node->array.empty()) return;
+        // TODO
         vector<int> varIdxs;
         for (int i = 0; i < (int)node->array.size(); ++i) {
             varIdxs.push_back(m_idxAllocator->allocIdx());
@@ -186,15 +187,14 @@ label:
         }
     }
     virtual void visit(ExpNode_Args *node) {
-        if (m_isMulti) {
-            ASSERT(m_varIdx == -1);
-        }
+        if (m_isMulti) ASSERT(m_varIdx != -1);
         makesureVarIdxValid();
         EMIT(BC_LoadVArgs, m_varIdx, m_isMulti);
     }
 private:
     void emitCode_Call(ExpNode_Call *node, int varIdx) {
         ExpNodeVisitor_CodeEmitor(m_meta, node->func, m_idxAllocator, varIdx);
+        // TODO
         vector<int> paramIdxs;
         for (int i = 0; i < (int)node->params.size(); ++i) {
             paramIdxs.push_back(m_idxAllocator->allocIdx());
@@ -244,14 +244,14 @@ private:
             } else if (auto uvExp = dynamic_cast<ExpNode_UpValueVar*>(node->lvalues[i].get())) {
                 ExpNodeVisitor_CodeEmitor(m_meta, node->rvalues[i], &m_idxAllocator, VarIndex::fromUpValue(uvExp->uvIdx).toInt());
             } else if (auto globalExp = dynamic_cast<ExpNode_GlobalVar*>(node->lvalues[i].get())) {
-                int vIdx = ExpNodeVisitor_CodeEmitor(m_meta, node->rvalues[i], &m_idxAllocator, -1).getVarIdx();
+                int vIdx = ExpNodeVisitor_CodeEmitor(m_meta, node->rvalues[i], &m_idxAllocator).getVarIdx();
                 EMIT(BC_SetGlobal, VarIndex::fromConst(globalExp->constIdx).toInt(), vIdx);
             } else {
                 auto lexp = dynamic_cast<ExpNode_FieldAccess*>(node->lvalues[i].get());
                 ASSERT(lexp != NULL);
-                ExpNodeVisitor_CodeEmitor tableExp(m_meta, lexp->table, &m_idxAllocator, -1);
-                ExpNodeVisitor_CodeEmitor kExp(m_meta, lexp->field, &m_idxAllocator, -1);
-                int vIdx = ExpNodeVisitor_CodeEmitor(m_meta, node->rvalues[i], &m_idxAllocator, -1).getVarIdx();
+                ExpNodeVisitor_CodeEmitor tableExp(m_meta, lexp->table, &m_idxAllocator);
+                ExpNodeVisitor_CodeEmitor kExp(m_meta, lexp->field, &m_idxAllocator);
+                int vIdx = ExpNodeVisitor_CodeEmitor(m_meta, node->rvalues[i], &m_idxAllocator).getVarIdx();
                 EMIT(BC_SetTable, tableExp.getVarIdx(), kExp.getVarIdx(), vIdx);
             }
         }
@@ -259,6 +259,7 @@ private:
 
         ASSERT(m_idxAllocator.getLocalOff() == m_meta->localCount);
 
+        // TODO
         vector<int> varIdxs;
         for (int i = (int)node->rvalues.size() - 1; i < (int)node->lvalues.size(); ++i) {
             varIdxs.push_back(m_idxAllocator.allocIdx());
@@ -279,7 +280,7 @@ private:
             varIdxs.push_back(m_idxAllocator.allocIdx());
         }
         for (int i = (int)node->rvalues.size() - 1; i < (int)node->lvalues.size(); ++i) {
-            int j = i - (int)node->rvalues.size() - 1;
+            int j = i - (int)node->rvalues.size() + 1;
             if (auto localExp = dynamic_cast<ExpNode_LocalVar*>(node->lvalues[i].get())) {
                 EMIT(BC_Move, VarIndex::fromLocal(localExp->localIdx).toInt(), varIdxs[j]);
             } else if (auto uvExp = dynamic_cast<ExpNode_UpValueVar*>(node->lvalues[i].get())) {
@@ -289,8 +290,8 @@ private:
             } else {
                 auto lexp = dynamic_cast<ExpNode_FieldAccess*>(node->lvalues[i].get());
                 ASSERT(lexp != NULL);
-                ExpNodeVisitor_CodeEmitor tableExp(m_meta, lexp->table, &m_idxAllocator, -1);
-                ExpNodeVisitor_CodeEmitor kExp(m_meta, lexp->field, &m_idxAllocator, -1);
+                ExpNodeVisitor_CodeEmitor tableExp(m_meta, lexp->table, &m_idxAllocator);
+                ExpNodeVisitor_CodeEmitor kExp(m_meta, lexp->field, &m_idxAllocator);
                 EMIT(BC_SetTable, tableExp.getVarIdx(), kExp.getVarIdx(), varIdxs[j]);
             }
         }
@@ -310,6 +311,7 @@ private:
         m_jumpsContinue.push_back(jump_continue);
     }
     virtual void visit(StmtNode_Return *node) {
+        // TODO
         vector<int> varIdxs;
         for (int i = 0; i < (int)node->exps.size(); ++i) {
             varIdxs.push_back(m_idxAllocator.allocIdx());
@@ -358,7 +360,7 @@ l_end:
             PRE_EMIT(jumpLast);
             auto& expStmt = node->ifExpStmts[i];
             expIdxLast = ExpNodeVisitor_CodeEmitor(m_meta, expStmt.first, &m_idxAllocator).getVarIdx();
-            expStmt.second->acceptVisitor(this);
+            if (expStmt != NULL) expStmt.second->acceptVisitor(this);
             int jump_end;
             PRE_EMIT(jump_end);
             jumpsEnd.push_back(jump_end);
