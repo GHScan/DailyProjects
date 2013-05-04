@@ -40,18 +40,35 @@ public:
         ASSERT(m_localOff == m_initLocalOff);
     }
     int allocIdx() {
+        int localOff = m_localOff;
         m_maxLocalOff = max(++m_localOff, m_maxLocalOff);
-        return m_localOff;
+        return VarIndex::fromLocal(localOff).toInt();
     }
     void freeIdx(int idx) {
-        ASSERT(idx == m_localOff);
+        ASSERT(VarIndex(idx).getLocalIdx() == m_localOff - 1);
         --m_localOff;
     }
     int getMaxLocalOff() const { return m_maxLocalOff; }
     int getLocalOff() const { return m_localOff; }
+    int getNextIdx() const {
+        return VarIndex::fromLocal(m_localOff).toInt();
+    }
+    vector<int> allocIdxList(int n) {
+        vector<int> r;
+        for (int i = 0; i < n; ++i) r.push_back(allocIdx());
+        return r;
+    }
+    void freeIdxList(vector<int>& idxs) {
+        while (!idxs.empty()) {
+            freeIdx(idxs.back());
+            idxs.pop_back();
+        }
+    }
 private:
     int m_initLocalOff, m_localOff, m_maxLocalOff;
 };
+
+static void multiEval(LuaFunctionMeta *meta, LocalIdxAllocator *idxAllocator, const vector<ExpNodePtr>& exps);
 
 class ExpNodeVisitor_CodeEmitor:
     public IExpNodeVisitor {
@@ -155,17 +172,8 @@ label:
             EMIT(BC_SetTable, m_varIdx, kexp.getVarIdx(), vIdx);
         }
         if (node->array.empty()) return;
-        // TODO
-        vector<int> varIdxs;
-        for (int i = 0; i < (int)node->array.size(); ++i) {
-            varIdxs.push_back(m_idxAllocator->allocIdx());
-            ExpNodeVisitor_CodeEmitor(m_meta, node->array[i], m_idxAllocator, varIdxs.back(), i == (int)node->array.size() - 1);
-        }
-        EMIT(BC_PushValues2Table, m_varIdx, varIdxs.front(), (int)node->array.size());
-        while (!varIdxs.empty()) {
-            m_idxAllocator->freeIdx(varIdxs.back());
-            varIdxs.pop_back();
-        }
+        multiEval(m_meta, m_idxAllocator, node->array);
+        EMIT(BC_PushValues2Table, m_varIdx, m_idxAllocator->getNextIdx(), (int)node->array.size());
     }
     virtual void visit(ExpNode_Lambda *node) {
         makesureVarIdxValid();
@@ -187,24 +195,17 @@ label:
         }
     }
     virtual void visit(ExpNode_Args *node) {
-        if (m_isMulti) ASSERT(m_varIdx != -1);
+        if (m_isMulti) {
+            ASSERT(m_varIdx != -1);
+        }
         makesureVarIdxValid();
         EMIT(BC_LoadVArgs, m_varIdx, m_isMulti);
     }
 private:
     void emitCode_Call(ExpNode_Call *node, int varIdx) {
         ExpNodeVisitor_CodeEmitor(m_meta, node->func, m_idxAllocator, varIdx);
-        // TODO
-        vector<int> paramIdxs;
-        for (int i = 0; i < (int)node->params.size(); ++i) {
-            paramIdxs.push_back(m_idxAllocator->allocIdx());
-            ExpNodeVisitor_CodeEmitor(m_meta, node->params[i], m_idxAllocator, paramIdxs.back(), i == (int)node->params.size() - 1);
-        }
+        multiEval(m_meta, m_idxAllocator, node->params);
         EMIT(BC_Call, varIdx, (int)node->params.size(), m_isMulti);
-        while (!paramIdxs.empty()) {
-            m_idxAllocator->freeIdx(paramIdxs.back());
-            paramIdxs.pop_back();
-        }
     }
 
     void makesureVarIdxValid() {
@@ -221,6 +222,23 @@ private:
     bool m_isAllocated;
     bool m_isMulti;
 };
+
+#define multiLoadConst(idxAllocator, n, v) \
+    {\
+        vector<int> varIdxs((idxAllocator)->allocIdxList(n));\
+        for (int i = 0; i < n; ++i) {\
+            EMIT(BC_Move, varIdxs[i], VarIndex::fromConst(m_meta->getConstIdx(v)).toInt());\
+        }\
+        (idxAllocator)->freeIdxList(varIdxs);\
+    }
+    
+static void multiEval(LuaFunctionMeta *meta, LocalIdxAllocator *idxAllocator, const vector<ExpNodePtr>& exps) {
+    vector<int> varIdxs(idxAllocator->allocIdxList((int)exps.size()));
+    for (int i = 0; i < (int)exps.size(); ++i) {
+        ExpNodeVisitor_CodeEmitor(meta, exps[i], idxAllocator, varIdxs[i], i == (int)exps.size() - 1);
+    }
+    idxAllocator->freeIdxList(varIdxs);
+}
 
 class StmtNodeVisitor_CodeEmitor:
     public IStmtNodeVisitor {
@@ -259,26 +277,11 @@ private:
 
         ASSERT(m_idxAllocator.getLocalOff() == m_meta->localCount);
 
-        // TODO
-        vector<int> varIdxs;
-        for (int i = (int)node->rvalues.size() - 1; i < (int)node->lvalues.size(); ++i) {
-            varIdxs.push_back(m_idxAllocator.allocIdx());
-            EMIT(BC_Move, varIdxs.back(), VarIndex::fromConst(m_meta->getConstIdx(LuaValue::NIL)).toInt());
-        }
-        while (!varIdxs.empty()) {
-            m_idxAllocator.freeIdx(varIdxs.back());
-            varIdxs.pop_back();
-        }
+        multiLoadConst(&m_idxAllocator, int(node->lvalues.size() - node->rvalues.size() + 1), LuaValue::NIL);
 
-        {
-            int tempIdx = m_idxAllocator.allocIdx();
-            ExpNodeVisitor_CodeEmitor(m_meta, node->rvalues.back(), &m_idxAllocator, tempIdx, true);
-            m_idxAllocator.freeIdx(tempIdx);
-        }
+        ExpNodeVisitor_CodeEmitor(m_meta, node->rvalues.back(), &m_idxAllocator, m_idxAllocator.getNextIdx(), true);
 
-        for (int i = (int)node->rvalues.size() - 1; i < (int)node->lvalues.size(); ++i) {
-            varIdxs.push_back(m_idxAllocator.allocIdx());
-        }
+        vector<int> varIdxs(m_idxAllocator.allocIdxList(int(node->lvalues.size() - node->rvalues.size() + 1)));
         for (int i = (int)node->rvalues.size() - 1; i < (int)node->lvalues.size(); ++i) {
             int j = i - (int)node->rvalues.size() + 1;
             if (auto localExp = dynamic_cast<ExpNode_LocalVar*>(node->lvalues[i].get())) {
@@ -295,10 +298,7 @@ private:
                 EMIT(BC_SetTable, tableExp.getVarIdx(), kExp.getVarIdx(), varIdxs[j]);
             }
         }
-        while (!varIdxs.empty()) {
-            m_idxAllocator.freeIdx(varIdxs.back());
-            varIdxs.pop_back();
-        }
+        m_idxAllocator.freeIdxList(varIdxs);
     }
     virtual void visit(StmtNode_Break *node) {
         int jump_break;
@@ -311,16 +311,7 @@ private:
         m_jumpsContinue.push_back(jump_continue);
     }
     virtual void visit(StmtNode_Return *node) {
-        // TODO
-        vector<int> varIdxs;
-        for (int i = 0; i < (int)node->exps.size(); ++i) {
-            varIdxs.push_back(m_idxAllocator.allocIdx());
-            ExpNodeVisitor_CodeEmitor(m_meta, node->exps[i], &m_idxAllocator, varIdxs.back(), i == (int)node->exps.size() - 1);
-        }
-        while (!varIdxs.empty()) {
-            m_idxAllocator.freeIdx(varIdxs.back());
-            varIdxs.pop_back();
-        }
+        multiEval(m_meta, &m_idxAllocator, node->exps);
         EMIT(BC_ReturnN, (int)node->exps.size());
 
         int jump_return;
@@ -360,7 +351,7 @@ l_end:
             PRE_EMIT(jumpLast);
             auto& expStmt = node->ifExpStmts[i];
             expIdxLast = ExpNodeVisitor_CodeEmitor(m_meta, expStmt.first, &m_idxAllocator).getVarIdx();
-            if (expStmt != NULL) expStmt.second->acceptVisitor(this);
+            if (expStmt.second != NULL) expStmt.second->acceptVisitor(this);
             int jump_end;
             PRE_EMIT(jump_end);
             jumpsEnd.push_back(jump_end);
@@ -391,8 +382,7 @@ l_end:
         ExpNodeVisitor_CodeEmitor(m_meta, node->last, &m_idxAllocator, VarIndex::fromLocal(node->lastLocalIdx).toInt());
         ExpNodeVisitor_CodeEmitor(m_meta, node->step, &m_idxAllocator, VarIndex::fromLocal(node->stepLocalIdx).toInt());
 
-        int caseIdx = m_idxAllocator.allocIdx();
-        m_idxAllocator.freeIdx(caseIdx);
+        int caseIdx = m_idxAllocator.getNextIdx();
         EMIT(BC_Less, caseIdx, 
                 VarIndex::fromLocal(node->stepLocalIdx).toInt(), 
                 VarIndex::fromConst(m_meta->getConstIdx(LuaValue(NumberType(0)))).toInt());
@@ -419,6 +409,7 @@ l_continue:
 l_break:
          * */
         if (node->initStmt != NULL) node->initStmt->acceptVisitor(this);
+
         int l_loop = CUR_CODE_OFF;
         int expIdx = ExpNodeVisitor_CodeEmitor(m_meta, node->exp, &m_idxAllocator).getVarIdx();
         int jump_break;
@@ -449,82 +440,41 @@ l_continue:
 l_break:
 
          * */
-        // TODO: refactor
         ASSERT(!node->vars.empty());
-
-        vector<int> varIdxs;
-        for (int i = 0; i < 3; ++i) {
-            varIdxs.push_back(m_idxAllocator.allocIdx());
-            EMIT(BC_Move, varIdxs.back(), 
-                    VarIndex::fromConst(m_meta->getConstIdx(LuaValue::NIL)).toInt());
-        }
-        while (!varIdxs.empty()) {
-            m_idxAllocator.freeIdx(varIdxs.back());
-            varIdxs.pop_back();
-        }
-
-        for (int i = 0; i < (int)node->iterExps.size(); ++i) {
-            varIdxs.push_back(m_idxAllocator.allocIdx());
-            ExpNodeVisitor_CodeEmitor(m_meta, node->iterExps[i], &m_idxAllocator, 
-                    varIdxs.back(), i == (int)node->iterExps.size() - 1);
-        }
-        while (!varIdxs.empty()) {
-            m_idxAllocator.freeIdx(varIdxs.back());
-            varIdxs.pop_back();
-        }
-
         vector<int> localIdxs;
         for (auto &exp : node->vars) {
             localIdxs.push_back(static_cast<ExpNode_LocalVar*>(exp.get())->localIdx);
         }
 
-        for (int i = 0; i < 3; ++i) {
-            varIdxs.push_back(m_idxAllocator.allocIdx());
-        }
+        multiLoadConst(&m_idxAllocator, 3, LuaValue::NIL);
+
+        multiEval(m_meta, &m_idxAllocator, node->iterExps);
+
+        vector<int> varIdxs(m_idxAllocator.allocIdxList(3));
         EMIT(BC_Move, VarIndex::fromLocal(node->funcLocalIdx).toInt(), varIdxs[0]);
         EMIT(BC_Move, VarIndex::fromLocal(node->stateLocalIdx).toInt(), varIdxs[1]);
-        EMIT(BC_Move, VarIndex::fromLocal(localIdxs[0]).toInt(), varIdxs[1]);
-        while (!varIdxs.empty()) {
-            m_idxAllocator.freeIdx(varIdxs.back());
-            varIdxs.pop_back();
-        }
+        EMIT(BC_Move, VarIndex::fromLocal(localIdxs[0]).toInt(), varIdxs[2]);
+        m_idxAllocator.freeIdxList(varIdxs);
 
         // 
         int l_loop = CUR_CODE_OFF;
 
+        multiLoadConst(&m_idxAllocator, (int)localIdxs.size(), LuaValue::NIL);
+
+        varIdxs = m_idxAllocator.allocIdxList(3);
+        EMIT(BC_Move, varIdxs[0], VarIndex::fromLocal(node->funcLocalIdx).toInt());
+        EMIT(BC_Move, varIdxs[1], VarIndex::fromLocal(node->stateLocalIdx).toInt());
+        EMIT(BC_Move, varIdxs[2], VarIndex::fromLocal(localIdxs[0]).toInt());
+        EMIT(BC_Call, varIdxs[0], 2, true);
+        m_idxAllocator.freeIdxList(varIdxs);
+
+        varIdxs = m_idxAllocator.allocIdxList((int)localIdxs.size());
         for (int i = 0; i < (int)localIdxs.size(); ++i) {
-            varIdxs.push_back(m_idxAllocator.allocIdx());
-            EMIT(BC_Move, varIdxs.back(), VarIndex::fromConst(m_meta->getConstIdx(LuaValue::NIL)).toInt());
+            EMIT(BC_Move, VarIndex::fromLocal(localIdxs[i]).toInt(), varIdxs[i]);
         }
-        while (!varIdxs.empty()) {
-            m_idxAllocator.freeIdx(varIdxs.back());
-            varIdxs.pop_back();
-        }
+        m_idxAllocator.freeIdxList(varIdxs);
 
-        for (int i = 0; i < 3; ++i) {
-            varIdxs.push_back(m_idxAllocator.allocIdx());
-        }
-        {
-            EMIT(BC_Move, varIdxs[0], VarIndex::fromLocal(node->funcLocalIdx).toInt());
-            EMIT(BC_Move, varIdxs[1], VarIndex::fromLocal(node->stateLocalIdx).toInt());
-            EMIT(BC_Move, varIdxs[2], VarIndex::fromLocal(localIdxs[0]).toInt());
-            EMIT(BC_Call, varIdxs[0], 2, true);
-        }
-        while (!varIdxs.empty()) {
-            m_idxAllocator.freeIdx(varIdxs.back());
-            varIdxs.pop_back();
-        }
-
-        for (int i = 0; i < (int)localIdxs.size(); ++i) {
-            varIdxs.push_back(m_idxAllocator.allocIdx());
-            EMIT(BC_Move, VarIndex::fromLocal(localIdxs[i]).toInt(), varIdxs.back());
-        }
-        while (!varIdxs.empty()) {
-            m_idxAllocator.freeIdx(varIdxs.back());
-            varIdxs.pop_back();
-        }
-
-        int tempidx = m_idxAllocator.allocIdx();
+        int tempidx = m_idxAllocator.getNextIdx();
         EMIT(BC_Equal, tempidx, 
                 VarIndex::fromLocal(localIdxs[0]).toInt(), 
                 VarIndex::fromConst(m_meta->getConstIdx(LuaValue::NIL)).toInt());
@@ -555,13 +505,12 @@ l_break:
         int varIdx = VarIndex::fromLocal(static_cast<ExpNode_LocalVar*>(node->var.get())->localIdx).toInt();
 
         int l_loop = CUR_CODE_OFF;
-        int tempIdx = m_idxAllocator.allocIdx();
+        int tempIdx = m_idxAllocator.getNextIdx();
         if (isPositive) {
             EMIT(BC_LessEq, tempIdx, varIdx, VarIndex::fromLocal(node->lastLocalIdx).toInt());
         } else { 
             EMIT(BC_GreaterEq, tempIdx, varIdx, VarIndex::fromLocal(node->lastLocalIdx).toInt());
         }
-        m_idxAllocator.freeIdx(tempIdx);
         int jump_break;
         PRE_EMIT(jump_break);
 
@@ -697,6 +646,11 @@ void disassemble(ostream& so, LuaFunctionMeta* meta) {
             default: ASSERT(0);
         }
         so << endl;
+
+        if ((code & 0xff) == BC_NewFunction) {
+            auto meta = ByteCodeHandler<BC_NewFunction>::getMetaFromCode(code);
+            disassemble(so, meta);
+        }
     }
 }
 

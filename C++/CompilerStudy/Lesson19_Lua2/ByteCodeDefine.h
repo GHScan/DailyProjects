@@ -181,6 +181,11 @@ struct ByteCodeHandler<BC_NewFunction> {
         GET_STRING_FROM_META(destStr, destIdx);
         so << format("newfunction %s=function(%d)", destStr.c_str(), metaIdx);
     }
+    static LuaFunctionMeta* getMetaFromCode(int code) {
+        GET_CODE2(BIT_W_VAR, 16, destIdx, metaIdx);
+        (void)destIdx;
+        return LuaVM::instance()->getMeta(metaIdx).get();
+    }
     static void execute(int code, LuaStackFrame* frame) {
         GET_CODE2(BIT_W_VAR, 16, destIdx, metaIdx);
         GET_VAR_FROM_FRAME(dest, destIdx);
