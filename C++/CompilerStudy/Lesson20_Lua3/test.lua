@@ -1,24 +1,9 @@
 
-a = {}
-for i = 1, 10 do
-    table.insert(a, tostring(i))
+local start = os.clock()
+for i = 0, 100 do
+    for j = 0, 100 do
+        for k = 0, 1000 do
+        end 
+    end 
 end
-print(collectgarbage())
-a = nil
-print(collectgarbage())
-
-parent = {}
-child = {}
-parent.child = child
-child.parent = parent
-print(collectgarbage())
-parent = nil
-child = nil
-print(collectgarbage())
-
-a = {a={tostring(1), tostring(2), tostring('3')}, b=tostring(123), c=tostring(456)}
-print(collectgarbage())
-a.a = nil
-a.b = nil
-a.c = nil
-print(collectgarbage())
+print("perform2: ", os.clock() - start)

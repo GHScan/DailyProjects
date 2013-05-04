@@ -347,7 +347,7 @@ l_else:
 l_end:
          * */
         vector<int> jumpsEnd;
-        int jumpLast, expIdxLast;
+        int jumpLast = -1, expIdxLast = -1;
 
         for (int i = 0; i < (int)node->ifExpStmts.size(); ++i) {
             if (i > 0) {
@@ -362,6 +362,7 @@ l_end:
             jumpsEnd.push_back(jump_end);
         }
 
+        ASSERT(jumpLast != -1 && expIdxLast != -1);
         POST_EMIT(jumpLast, BC_FalseJump, expIdxLast, CUR_CODE_OFF);
         if (node->elseStmt != NULL) {
             node->elseStmt->acceptVisitor(this);

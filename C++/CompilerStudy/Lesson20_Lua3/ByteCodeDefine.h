@@ -104,7 +104,7 @@ struct ByteCodeHandler<BC_Move> {
         GET_STRING_FROM_META(srcStr, srcIdx);
         so << format("move %s<-%s", destStr.c_str(), srcStr.c_str());
     }
-    static void execute(int code, LuaStackFrame* frame) {
+    FORCE_INLINE static void execute(int code, LuaStackFrame* frame) {
         GET_CODE2(BIT_W_VAR, BIT_W_VAR, destIdx, srcIdx);
         GET_VAR_FROM_FRAME(dest, destIdx);
         GET_VAR_FROM_FRAME(src, srcIdx);
@@ -121,7 +121,7 @@ struct ByteCodeHandler<BC_LoadVArgs> {
         GET_STRING_FROM_META(destStr, destIdx);
         so << format("loadVArgs %s,r[%d]", destStr.c_str(), requireRetN);
     }
-    static void execute(int code, LuaStackFrame* frame) {
+    FORCE_INLINE static void execute(int code, LuaStackFrame* frame) {
         GET_CODE2(BIT_W_VAR, 8, destIdx, requireRetN);
         GET_VAR_FROM_FRAME(dest, destIdx);
 
@@ -148,7 +148,7 @@ struct ByteCodeHandler<BC_GetGlobal> {
         GET_STRING_FROM_META(kStr, kIdx);
         so << format("getglobal %s=_G[%s]", destStr.c_str(), kStr.c_str());
     }
-    static void execute(int code, LuaStackFrame* frame) {
+    FORCE_INLINE static void execute(int code, LuaStackFrame* frame) {
         GET_CODE2(BIT_W_VAR, BIT_W_VAR, destIdx, kIdx);
         GET_VAR_FROM_FRAME(dest, destIdx);
         GET_VAR_FROM_FRAME(k, kIdx);
@@ -166,7 +166,7 @@ struct ByteCodeHandler<BC_SetGlobal> {
         GET_STRING_FROM_META(vStr, vIdx);
         so << format("setglobal _G[%s]=%s", kStr.c_str(), vStr.c_str());
     }
-    static void execute(int code, LuaStackFrame* frame) {
+    FORCE_INLINE static void execute(int code, LuaStackFrame* frame) {
         GET_CODE2(BIT_W_VAR, BIT_W_VAR, kIdx, vIdx);
         GET_VAR_FROM_FRAME(k, kIdx);
         GET_VAR_FROM_FRAME(v, vIdx);
@@ -188,7 +188,7 @@ struct ByteCodeHandler<BC_NewFunction> {
         (void)destIdx;
         return LuaVM::instance()->getMeta(metaIdx).get();
     }
-    static void execute(int code, LuaStackFrame* frame) {
+    FORCE_INLINE static void execute(int code, LuaStackFrame* frame) {
         GET_CODE2(BIT_W_VAR, 16, destIdx, metaIdx);
         GET_VAR_FROM_FRAME(dest, destIdx);
         *dest = LuaValue(LuaFunction::create(LuaVM::instance()->getMeta(metaIdx)));
@@ -204,7 +204,7 @@ struct ByteCodeHandler<BC_NewTable> {
         GET_STRING_FROM_META(destStr, destIdx);
         so << format("newtable %s={}", destStr.c_str());
     }
-    static void execute(int code, LuaStackFrame* frame) {
+    FORCE_INLINE static void execute(int code, LuaStackFrame* frame) {
         GET_CODE1(destIdx);
         GET_VAR_FROM_FRAME(dest, destIdx);
         *dest = LuaValue(LuaTable::create());
@@ -220,7 +220,7 @@ struct ByteCodeHandler<BC_Call> {
         GET_STRING_FROM_META(funcStr, funcIdx);
         so << format("call %s,%d,r[%d]", funcStr.c_str(), paramCount, requireRetN);
     }
-    static void execute(int code, LuaStackFrame* frame) {
+    FORCE_INLINE static void execute(int code, LuaStackFrame* frame) {
         GET_CODE3(BIT_W_VAR, 8, 8, funcIdx, paramCount, requireRetN);
         GET_VAR_FROM_FRAME(func, funcIdx);
         funcIdx = frame->localIdx2StackIdx(VarIndex(funcIdx).getLocalIdx());
@@ -228,7 +228,7 @@ struct ByteCodeHandler<BC_Call> {
         if (func->isTypeOf(LVT_Function)) {
             callFunc(funcIdx, paramCount, requireRetN);
         } else {
-            func->getTable()->meta_call(frame, funcIdx, paramCount, requireRetN);
+            meta_call(func->getTable(), frame, funcIdx, paramCount, requireRetN);
         }
     }
 };
@@ -247,7 +247,7 @@ struct ByteCodeHandler<BC_ExitBlock> {
         GET_CODE2(8, 8, localOff, localEnd);
         so << format("exitBlock %d,%d", localOff, localEnd);
     }
-    static void execute(int code, LuaStackFrame* frame) {
+    FORCE_INLINE static void execute(int code, LuaStackFrame* frame) {
         GET_CODE2(8, 8, localOff, localEnd);
         if (localEnd == localOff) return;
         auto& closures = frame->closures;
@@ -282,12 +282,12 @@ struct ByteCodeHandler<BC_Less> {
         GET_STRING_FROM_META(rightStr, rightIdx);
         so << format("less %s=%s < %s", destStr.c_str(), leftStr.c_str(), rightStr.c_str());
     }
-    static void execute(int code, LuaStackFrame* frame) {
+    FORCE_INLINE static void execute(int code, LuaStackFrame* frame) {
         GET_CODE3(BIT_W_VAR, BIT_W_VAR, BIT_W_VAR, destIdx, leftIdx, rightIdx);
         GET_VAR_FROM_FRAME(dest, destIdx);
         GET_VAR_FROM_FRAME(left, leftIdx);
         GET_VAR_FROM_FRAME(right, rightIdx);
-        *dest = *left < *right ? LuaValue::TRUE : LuaValue::FALSE;
+        dest->lessFrom(*left, *right);
     }
 };
 template<>
@@ -302,12 +302,12 @@ struct ByteCodeHandler<BC_LessEq> {
         GET_STRING_FROM_META(rightStr, rightIdx);
         so << format("lessEq %s=%s <= %s", destStr.c_str(), leftStr.c_str(), rightStr.c_str());
     }
-    static void execute(int code, LuaStackFrame* frame) {
+    FORCE_INLINE static void execute(int code, LuaStackFrame* frame) {
         GET_CODE3(BIT_W_VAR, BIT_W_VAR, BIT_W_VAR, destIdx, leftIdx, rightIdx);
         GET_VAR_FROM_FRAME(dest, destIdx);
         GET_VAR_FROM_FRAME(left, leftIdx);
         GET_VAR_FROM_FRAME(right, rightIdx);
-        *dest = *left <= *right ? LuaValue::TRUE : LuaValue::FALSE;
+        dest->lessEqFrom(*left, *right);
     }
 };
 template<>
@@ -322,12 +322,12 @@ struct ByteCodeHandler<BC_Greater> {
         GET_STRING_FROM_META(rightStr, rightIdx);
         so << format("greate %s=%s > %s", destStr.c_str(), leftStr.c_str(), rightStr.c_str());
     }
-    static void execute(int code, LuaStackFrame* frame) {
+    FORCE_INLINE static void execute(int code, LuaStackFrame* frame) {
         GET_CODE3(BIT_W_VAR, BIT_W_VAR, BIT_W_VAR, destIdx, leftIdx, rightIdx);
         GET_VAR_FROM_FRAME(dest, destIdx);
         GET_VAR_FROM_FRAME(left, leftIdx);
         GET_VAR_FROM_FRAME(right, rightIdx);
-        *dest = *left > *right ? LuaValue::TRUE : LuaValue::FALSE;
+        dest->greaterFrom(*left, *right);
     }
 };
 template<>
@@ -342,12 +342,12 @@ struct ByteCodeHandler<BC_GreaterEq> {
         GET_STRING_FROM_META(rightStr, rightIdx);
         so << format("greateEq %s=%s >= %s", destStr.c_str(), leftStr.c_str(), rightStr.c_str());
     }
-    static void execute(int code, LuaStackFrame* frame) {
+    FORCE_INLINE static void execute(int code, LuaStackFrame* frame) {
         GET_CODE3(BIT_W_VAR, BIT_W_VAR, BIT_W_VAR, destIdx, leftIdx, rightIdx);
         GET_VAR_FROM_FRAME(dest, destIdx);
         GET_VAR_FROM_FRAME(left, leftIdx);
         GET_VAR_FROM_FRAME(right, rightIdx);
-        *dest = *left >= *right ? LuaValue::TRUE : LuaValue::FALSE;
+        dest->greaterEqFrom(*left, *right);
     }
 };
 template<>
@@ -362,12 +362,12 @@ struct ByteCodeHandler<BC_Equal> {
         GET_STRING_FROM_META(rightStr, rightIdx);
         so << format("equal %s=%s == %s", destStr.c_str(), leftStr.c_str(), rightStr.c_str());
     }
-    static void execute(int code, LuaStackFrame* frame) {
+    FORCE_INLINE static void execute(int code, LuaStackFrame* frame) {
         GET_CODE3(BIT_W_VAR, BIT_W_VAR, BIT_W_VAR, destIdx, leftIdx, rightIdx);
         GET_VAR_FROM_FRAME(dest, destIdx);
         GET_VAR_FROM_FRAME(left, leftIdx);
         GET_VAR_FROM_FRAME(right, rightIdx);
-        *dest = *left == *right ? LuaValue::TRUE : LuaValue::FALSE;
+        dest->equalFrom(*left, *right);
     }
 };
 template<>
@@ -382,12 +382,12 @@ struct ByteCodeHandler<BC_NEqual> {
         GET_STRING_FROM_META(rightStr, rightIdx);
         so << format("nequal %s=%s ~= %s", destStr.c_str(), leftStr.c_str(), rightStr.c_str());
     }
-    static void execute(int code, LuaStackFrame* frame) {
+    FORCE_INLINE static void execute(int code, LuaStackFrame* frame) {
         GET_CODE3(BIT_W_VAR, BIT_W_VAR, BIT_W_VAR, destIdx, leftIdx, rightIdx);
         GET_VAR_FROM_FRAME(dest, destIdx);
         GET_VAR_FROM_FRAME(left, leftIdx);
         GET_VAR_FROM_FRAME(right, rightIdx);
-        *dest = *left != *right ? LuaValue::TRUE : LuaValue::FALSE;
+        dest->nequalFrom(*left, *right);
     }
 };
 template<>
@@ -402,12 +402,12 @@ struct ByteCodeHandler<BC_Add> {
         GET_STRING_FROM_META(rightStr, rightIdx);
         so << format("add %s=%s + %s", destStr.c_str(), leftStr.c_str(), rightStr.c_str());
     }
-    static void execute(int code, LuaStackFrame* frame) {
+    FORCE_INLINE static void execute(int code, LuaStackFrame* frame) {
         GET_CODE3(BIT_W_VAR, BIT_W_VAR, BIT_W_VAR, destIdx, leftIdx, rightIdx);
         GET_VAR_FROM_FRAME(dest, destIdx);
         GET_VAR_FROM_FRAME(left, leftIdx);
         GET_VAR_FROM_FRAME(right, rightIdx);
-        *dest = *left + *right;
+        dest->addFrom(*left, *right);
     }
 };
 template<>
@@ -422,12 +422,12 @@ struct ByteCodeHandler<BC_Sub> {
         GET_STRING_FROM_META(rightStr, rightIdx);
         so << format("sub %s=%s - %s", destStr.c_str(), leftStr.c_str(), rightStr.c_str());
     }
-    static void execute(int code, LuaStackFrame* frame) {
+    FORCE_INLINE static void execute(int code, LuaStackFrame* frame) {
         GET_CODE3(BIT_W_VAR, BIT_W_VAR, BIT_W_VAR, destIdx, leftIdx, rightIdx);
         GET_VAR_FROM_FRAME(dest, destIdx);
         GET_VAR_FROM_FRAME(left, leftIdx);
         GET_VAR_FROM_FRAME(right, rightIdx);
-        *dest = *left - *right;
+        dest->subFrom(*left, *right);
     }
 };
 template<>
@@ -442,12 +442,12 @@ struct ByteCodeHandler<BC_Mul> {
         GET_STRING_FROM_META(rightStr, rightIdx);
         so << format("mul %s=%s * %s", destStr.c_str(), leftStr.c_str(), rightStr.c_str());
     }
-    static void execute(int code, LuaStackFrame* frame) {
+    FORCE_INLINE static void execute(int code, LuaStackFrame* frame) {
         GET_CODE3(BIT_W_VAR, BIT_W_VAR, BIT_W_VAR, destIdx, leftIdx, rightIdx);
         GET_VAR_FROM_FRAME(dest, destIdx);
         GET_VAR_FROM_FRAME(left, leftIdx);
         GET_VAR_FROM_FRAME(right, rightIdx);
-        *dest = *left * *right;
+        dest->mulFrom(*left, *right);
     }
 };
 template<>
@@ -462,12 +462,12 @@ struct ByteCodeHandler<BC_Div> {
         GET_STRING_FROM_META(rightStr, rightIdx);
         so << format("div %s=%s / %s", destStr.c_str(), leftStr.c_str(), rightStr.c_str());
     }
-    static void execute(int code, LuaStackFrame* frame) {
+    FORCE_INLINE static void execute(int code, LuaStackFrame* frame) {
         GET_CODE3(BIT_W_VAR, BIT_W_VAR, BIT_W_VAR, destIdx, leftIdx, rightIdx);
         GET_VAR_FROM_FRAME(dest, destIdx);
         GET_VAR_FROM_FRAME(left, leftIdx);
         GET_VAR_FROM_FRAME(right, rightIdx);
-        *dest = *left / *right;
+        dest->divFrom(*left, *right);
     }
 };
 template<>
@@ -482,12 +482,12 @@ struct ByteCodeHandler<BC_Mod> {
         GET_STRING_FROM_META(rightStr, rightIdx);
         so << format("mod %s=%s %% %s", destStr.c_str(), leftStr.c_str(), rightStr.c_str());
     }
-    static void execute(int code, LuaStackFrame* frame) {
+    FORCE_INLINE static void execute(int code, LuaStackFrame* frame) {
         GET_CODE3(BIT_W_VAR, BIT_W_VAR, BIT_W_VAR, destIdx, leftIdx, rightIdx);
         GET_VAR_FROM_FRAME(dest, destIdx);
         GET_VAR_FROM_FRAME(left, leftIdx);
         GET_VAR_FROM_FRAME(right, rightIdx);
-        *dest = *left % *right;
+        dest->modFrom(*left, *right);
     }
 };
 template<>
@@ -502,12 +502,12 @@ struct ByteCodeHandler<BC_Pow> {
         GET_STRING_FROM_META(rightStr, rightIdx);
         so << format("pow %s=%s ^ %s", destStr.c_str(), leftStr.c_str(), rightStr.c_str());
     }
-    static void execute(int code, LuaStackFrame* frame) {
+    FORCE_INLINE static void execute(int code, LuaStackFrame* frame) {
         GET_CODE3(BIT_W_VAR, BIT_W_VAR, BIT_W_VAR, destIdx, leftIdx, rightIdx);
         GET_VAR_FROM_FRAME(dest, destIdx);
         GET_VAR_FROM_FRAME(left, leftIdx);
         GET_VAR_FROM_FRAME(right, rightIdx);
-        *dest = power(*left, *right);
+        dest->powFrom(*left, *right);
     }
 };
 template<>
@@ -522,12 +522,12 @@ struct ByteCodeHandler<BC_Concat> {
         GET_STRING_FROM_META(rightStr, rightIdx);
         so << format("concat %s=%s .. %s", destStr.c_str(), leftStr.c_str(), rightStr.c_str());
     }
-    static void execute(int code, LuaStackFrame* frame) {
+    FORCE_INLINE static void execute(int code, LuaStackFrame* frame) {
         GET_CODE3(BIT_W_VAR, BIT_W_VAR, BIT_W_VAR, destIdx, leftIdx, rightIdx);
         GET_VAR_FROM_FRAME(dest, destIdx);
         GET_VAR_FROM_FRAME(left, leftIdx);
         GET_VAR_FROM_FRAME(right, rightIdx);
-        *dest = concat(*left, *right);
+        dest->concatFrom(*left, *right);
     }
 };
 template<>
@@ -541,11 +541,11 @@ struct ByteCodeHandler<BC_Not> {
         GET_STRING_FROM_META(srcStr, srcIdx);
         so << format("not %s=not %s", destStr.c_str(), srcStr.c_str());
     }
-    static void execute(int code, LuaStackFrame* frame) {
+    FORCE_INLINE static void execute(int code, LuaStackFrame* frame) {
         GET_CODE2(BIT_W_VAR, BIT_W_VAR, destIdx, srcIdx);
         GET_VAR_FROM_FRAME(dest, destIdx);
         GET_VAR_FROM_FRAME(src, srcIdx);
-        *dest = src->getBoolean() ? LuaValue::FALSE : LuaValue::TRUE;
+        dest->notFrom(*src);
     }
 };
 template<>
@@ -559,11 +559,11 @@ struct ByteCodeHandler<BC_Len> {
         GET_STRING_FROM_META(srcStr, srcIdx);
         so << format("len %s=#%s", destStr.c_str(), srcStr.c_str());
     }
-    static void execute(int code, LuaStackFrame* frame) {
+    FORCE_INLINE static void execute(int code, LuaStackFrame* frame) {
         GET_CODE2(BIT_W_VAR, BIT_W_VAR, destIdx, srcIdx);
         GET_VAR_FROM_FRAME(dest, destIdx);
         GET_VAR_FROM_FRAME(src, srcIdx);
-        *dest = LuaValue(src->getSize());
+        dest->lenFrom(*src);
     }
 };
 template<>
@@ -577,12 +577,11 @@ struct ByteCodeHandler<BC_Minus> {
         GET_STRING_FROM_META(srcStr, srcIdx);
         so << format("minus %s=-%s", destStr.c_str(), srcStr.c_str());
     }
-    static void execute(int code, LuaStackFrame* frame) {
+    FORCE_INLINE static void execute(int code, LuaStackFrame* frame) {
         GET_CODE2(BIT_W_VAR, BIT_W_VAR, destIdx, srcIdx);
         GET_VAR_FROM_FRAME(dest, destIdx);
         GET_VAR_FROM_FRAME(src, srcIdx);
-        if (src->isTypeOf(LVT_Table)) *dest = src->getTable()->meta_unm();
-        else *dest = LuaValue(-src->getNumber());
+        dest->minusFrom(*src);
     }
 };
 template<>
@@ -597,7 +596,7 @@ struct ByteCodeHandler<BC_GetTable> {
         GET_STRING_FROM_META(kStr, kIdx);
         so << format("gettable %s=%s[%s]", destStr.c_str(), tableStr.c_str(), kStr.c_str());
     }
-    static void execute(int code, LuaStackFrame* frame) {
+    FORCE_INLINE static void execute(int code, LuaStackFrame* frame) {
         GET_CODE3(BIT_W_VAR, BIT_W_VAR, BIT_W_VAR, destIdx, tableIdx, kIdx);
         GET_VAR_FROM_FRAME(dest, destIdx);
         GET_VAR_FROM_FRAME(table, tableIdx);
@@ -617,7 +616,7 @@ struct ByteCodeHandler<BC_SetTable> {
         GET_STRING_FROM_META(vStr, vIdx);
         so << format("settable %s[%s]=%s", tableStr.c_str(), kStr.c_str(), vStr.c_str());
     }
-    static void execute(int code, LuaStackFrame* frame) {
+    FORCE_INLINE static void execute(int code, LuaStackFrame* frame) {
         GET_CODE3(BIT_W_VAR, BIT_W_VAR, BIT_W_VAR, tableIdx, kIdx, vIdx);
         GET_VAR_FROM_FRAME(table, tableIdx);
         GET_VAR_FROM_FRAME(k, kIdx);
@@ -634,7 +633,7 @@ struct ByteCodeHandler<BC_Jump> {
         GET_CODE1(ip);
         so << format("jump %d", ip + 1);
     }
-    static void execute(int code, LuaStackFrame* frame) {
+    FORCE_INLINE static void execute(int code, LuaStackFrame* frame) {
         GET_CODE1(ip);
         frame->ip = ip - 1;
     }
@@ -649,7 +648,7 @@ struct ByteCodeHandler<BC_TrueJump> {
         GET_STRING_FROM_META(str, idx);
         so << format("tjump %s,%d", str.c_str(), ip + 1);
     }
-    static void execute(int code, LuaStackFrame* frame) {
+    FORCE_INLINE static void execute(int code, LuaStackFrame* frame) {
         GET_CODE2(BIT_W_VAR, BIT_W_IP, idx, ip);
         GET_VAR_FROM_FRAME(var, idx);
         if (var->getBoolean()) frame->ip = ip - 1;
@@ -665,7 +664,7 @@ struct ByteCodeHandler<BC_FalseJump> {
         GET_STRING_FROM_META(str, idx);
         so << format("fjump %s,%d", str.c_str(), ip + 1);
     }
-    static void execute(int code, LuaStackFrame* frame) {
+    FORCE_INLINE static void execute(int code, LuaStackFrame* frame) {
         GET_CODE2(BIT_W_VAR, BIT_W_IP, idx, ip);
         GET_VAR_FROM_FRAME(var, idx);
         if (!var->getBoolean()) frame->ip = ip - 1;
@@ -679,7 +678,7 @@ struct ByteCodeHandler<BC_Nop> {
     static void disassemble(ostream& so, int code, LuaFunctionMeta* meta) {
         so << format("nop");
     }
-    static void execute(int code, LuaStackFrame* frame) {
+    FORCE_INLINE static void execute(int code, LuaStackFrame* frame) {
     }
 };
 template<>
@@ -691,7 +690,7 @@ struct ByteCodeHandler<BC_ReturnN> {
         GET_CODE1(paramCount);
         so << format("returnN %d", paramCount);
     }
-    static void execute(int code, LuaStackFrame* frame) {
+    FORCE_INLINE static void execute(int code, LuaStackFrame* frame) {
         GET_CODE1(paramCount);
         frame->retN = paramCount + frame->getExtCount() - 1;
     }
@@ -707,7 +706,7 @@ struct ByteCodeHandler<BC_PushValues2Table> {
         GET_STRING_FROM_META(localStr, localIdx);
         so << format("pushValues2Table %s<-%s,%d", tableStr.c_str(), localStr.c_str(), count);
     }
-    static void execute(int code, LuaStackFrame* frame) {
+    FORCE_INLINE static void execute(int code, LuaStackFrame* frame) {
         GET_CODE3(BIT_W_VAR, BIT_W_VAR, 8, tableIdx, localIdx, count);
         GET_VAR_FROM_FRAME(table, tableIdx);
         GET_VAR_FROM_FRAME(local, localIdx);
@@ -726,7 +725,7 @@ struct ByteCodeHandler<BC_SetExtCount> {
         GET_CODE1(extCount);
         so << format("setExtCount %d", extCount);
     }
-    static void execute(int code, LuaStackFrame* frame) {
+    FORCE_INLINE static void execute(int code, LuaStackFrame* frame) {
         GET_CODE1(extCount);
         frame->setExtCount(extCount);
     }

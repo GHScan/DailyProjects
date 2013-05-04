@@ -32,18 +32,18 @@ public:
     void sort();
     void sort(const LuaValue& cmp);
 
-    LuaValue meta_add(const LuaValue& v);
-    LuaValue meta_sub(const LuaValue& v);
-    LuaValue meta_mul(const LuaValue& v);
-    LuaValue meta_div(const LuaValue& v);
-    LuaValue meta_mod(const LuaValue& v);
-    LuaValue meta_pow(const LuaValue& v);
-    LuaValue meta_concat(const LuaValue& v);
-    LuaValue meta_eq(const LuaValue& v);
-    LuaValue meta_lt(const LuaValue& v);
-    LuaValue meta_le(const LuaValue& v);
-    LuaValue meta_unm();
-    void meta_call(LuaStackFrame* frame, int tableIdx, int paramCount, int requireRetN);
+    friend LuaValue meta_add(LuaTable *table, const LuaValue& v);
+    friend LuaValue meta_sub(LuaTable *table, const LuaValue& v);
+    friend LuaValue meta_mul(LuaTable *table, const LuaValue& v);
+    friend LuaValue meta_div(LuaTable *table, const LuaValue& v);
+    friend LuaValue meta_mod(LuaTable *table, const LuaValue& v);
+    friend LuaValue meta_pow(LuaTable *table, const LuaValue& v);
+    friend LuaValue meta_concat(LuaTable *table, const LuaValue& v);
+    friend LuaValue meta_eq(LuaTable *table, const LuaValue& v);
+    friend LuaValue meta_lt(LuaTable *table, const LuaValue& v);
+    friend LuaValue meta_le(LuaTable *table, const LuaValue& v);
+    friend LuaValue meta_unm(LuaTable *table);
+    friend void meta_call(LuaTable *table, LuaStackFrame* frame, int tableIdx, int paramCount, int requireRetN);
 
     void collectGCObject(vector<GCObject*>& unscaned);
 private:

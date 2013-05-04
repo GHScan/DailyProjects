@@ -164,41 +164,44 @@ void LuaTable::sort(const LuaValue& cmp) {
     });
 }
 
-LuaValue LuaTable::meta_add(const LuaValue& v) {
-    return invokeMeta(this, m_metaTable, "__add", v);
+LuaValue meta_add(LuaTable *table, const LuaValue& v) {
+    return invokeMeta(table, table->m_metaTable, "__add", v);
 }
-LuaValue LuaTable::meta_sub(const LuaValue& v) {
-    return invokeMeta(this, m_metaTable, "__sub", v);
+LuaValue meta_sub(LuaTable *table, const LuaValue& v) {
+    return invokeMeta(table, table->m_metaTable, "__sub", v);
 }
-LuaValue LuaTable::meta_mul(const LuaValue& v) {
-    return invokeMeta(this, m_metaTable, "__mul", v);
+LuaValue meta_mul(LuaTable *table, const LuaValue& v) {
+    return invokeMeta(table, table->m_metaTable, "__mul", v);
 }
-LuaValue LuaTable::meta_div(const LuaValue& v) {
-    return invokeMeta(this, m_metaTable, "__div", v);
+LuaValue meta_div(LuaTable *table, const LuaValue& v) {
+    return invokeMeta(table, table->m_metaTable, "__div", v);
 }
-LuaValue LuaTable::meta_mod(const LuaValue& v) {
-    return invokeMeta(this, m_metaTable, "__mod", v);
+LuaValue meta_mod(LuaTable *table, const LuaValue& v) {
+    return invokeMeta(table, table->m_metaTable, "__mod", v);
 }
-LuaValue LuaTable::meta_pow(const LuaValue& v) {
-    return invokeMeta(this, m_metaTable, "__pow", v);
+LuaValue meta_pow(LuaTable *table, const LuaValue& v) {
+    return invokeMeta(table, table->m_metaTable, "__pow", v);
 }
-LuaValue LuaTable::meta_concat(const LuaValue& v) {
-    return invokeMeta(this, m_metaTable, "__concat", v);
+LuaValue meta_concat(LuaTable *table, const LuaValue& v) {
+    return invokeMeta(table, table->m_metaTable, "__concat", v);
 }
-LuaValue LuaTable::meta_eq(const LuaValue& v) {
-    return invokeMeta(this, m_metaTable, "__eq", v);
+LuaValue meta_eq(LuaTable *table, const LuaValue& v) {
+    if (table->getMeta("__eq").isNil()) {
+        return table == v.getTable() ? LuaValue::TRUE : LuaValue::FALSE;
+    }
+    return invokeMeta(table, table->m_metaTable, "__eq", v);
 }
-LuaValue LuaTable::meta_lt(const LuaValue& v) {
-    return invokeMeta(this, m_metaTable, "__lt", v);
+LuaValue meta_lt(LuaTable *table, const LuaValue& v) {
+    return invokeMeta(table, table->m_metaTable, "__lt", v);
 }
-LuaValue LuaTable::meta_le(const LuaValue& v) {
-    return invokeMeta(this, m_metaTable, "__le", v);
+LuaValue meta_le(LuaTable *table, const LuaValue& v) {
+    return invokeMeta(table, table->m_metaTable, "__le", v);
 }
-LuaValue LuaTable::meta_unm() {
-    return invokeMeta(this, m_metaTable, "__unm", LuaValue::NIL);
+LuaValue meta_unm(LuaTable *table) {
+    return invokeMeta(table, table->m_metaTable, "__unm", LuaValue::NIL);
 }
-void LuaTable::meta_call(LuaStackFrame* frame, int tableIdx, int paramCount, int requireRetN) {
-    LuaValue m = m_metaTable->get(LuaValue("__call"));
+void meta_call(LuaTable *table, LuaStackFrame* frame, int tableIdx, int paramCount, int requireRetN) {
+    LuaValue m = table->m_metaTable->get(LuaValue("__call"));
     auto &values = frame->stack->values();
     values.insert(values.begin() + tableIdx, m);
     callFunc(tableIdx, paramCount + 1, requireRetN);

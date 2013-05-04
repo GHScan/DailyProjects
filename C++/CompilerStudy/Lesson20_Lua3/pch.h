@@ -71,5 +71,12 @@ inline void hash_combine(int & seed, const T & v) {
 }
 
 #define sdelete(p) (delete (p), (p) = NULL)
+
+#ifdef _MSC_VER
+#define FORCE_INLINE  __forceinline
+#else
+// TODO: for gcc
+#define FORCE_INLINE inline
+#endif
  
 #endif
