@@ -554,57 +554,61 @@ void execute(LuaStackFrame *stopFrame) {
     for (;;) {
         auto frame = stack->topFrame();
         if (frame == stopFrame) break;
+
         auto &codes = static_cast<LuaFunction*>(frame->func)->meta->codes;
+        for (; frame->ip < (int)codes.size(); ++frame->ip) {
+            try {
+                int code = codes[frame->ip];
+                switch (code & 0xff) {
+                    case BC_Move: ByteCodeHandler<BC_Move>::execute(code, frame); break;
+                    case BC_LoadVArgs: ByteCodeHandler<BC_LoadVArgs>::execute(code, frame); break;
+                    case BC_GetGlobal: ByteCodeHandler<BC_GetGlobal>::execute(code, frame); break;
+                    case BC_SetGlobal: ByteCodeHandler<BC_SetGlobal>::execute(code, frame); break;
+                    case BC_NewFunction: ByteCodeHandler<BC_NewFunction>::execute(code, frame); break;
+                    case BC_NewTable: ByteCodeHandler<BC_NewTable>::execute(code, frame); break;
+                    case BC_Call: ByteCodeHandler<BC_Call>::execute(code, frame); 
+                                  ++frame->ip;
+                                  goto l_ipfor;
+                    case BC_ExitBlock: ByteCodeHandler<BC_ExitBlock>::execute(code, frame); break;
+                    case BC_Less: ByteCodeHandler<BC_Less>::execute(code, frame); break;
+                    case BC_LessEq: ByteCodeHandler<BC_LessEq>::execute(code, frame); break;
+                    case BC_Greater: ByteCodeHandler<BC_Greater>::execute(code, frame); break;
+                    case BC_GreaterEq: ByteCodeHandler<BC_GreaterEq>::execute(code, frame); break;
+                    case BC_Equal: ByteCodeHandler<BC_Equal>::execute(code, frame); break;
+                    case BC_NEqual: ByteCodeHandler<BC_NEqual>::execute(code, frame); break;
+                    case BC_Add: ByteCodeHandler<BC_Add>::execute(code, frame); break;
+                    case BC_Sub: ByteCodeHandler<BC_Sub>::execute(code, frame); break;
+                    case BC_Mul: ByteCodeHandler<BC_Mul>::execute(code, frame); break;
+                    case BC_Div: ByteCodeHandler<BC_Div>::execute(code, frame); break;
+                    case BC_Mod: ByteCodeHandler<BC_Mod>::execute(code, frame); break;
+                    case BC_Pow: ByteCodeHandler<BC_Pow>::execute(code, frame); break;
+                    case BC_Concat: ByteCodeHandler<BC_Concat>::execute(code, frame); break;
+                    case BC_Not: ByteCodeHandler<BC_Not>::execute(code, frame); break;
+                    case BC_Len: ByteCodeHandler<BC_Len>::execute(code, frame); break;
+                    case BC_Minus: ByteCodeHandler<BC_Minus>::execute(code, frame); break;
+                    case BC_GetTable: ByteCodeHandler<BC_GetTable>::execute(code, frame); break;
+                    case BC_SetTable: ByteCodeHandler<BC_SetTable>::execute(code, frame); break;
+                    case BC_Jump: ByteCodeHandler<BC_Jump>::execute(code, frame); break;
+                    case BC_TrueJump: ByteCodeHandler<BC_TrueJump>::execute(code, frame); break;
+                    case BC_FalseJump: ByteCodeHandler<BC_FalseJump>::execute(code, frame); break;
+                    case BC_Nop: ByteCodeHandler<BC_Nop>::execute(code, frame); break;
+                    case BC_ReturnN: ByteCodeHandler<BC_ReturnN>::execute(code, frame); break;
+                    case BC_PushValues2Table: ByteCodeHandler<BC_PushValues2Table>::execute(code, frame); break;
+                    case BC_SetExtCount: ByteCodeHandler<BC_SetExtCount>::execute(code, frame); break;
+                    default: ASSERT(0);
+                }
+            } catch(Exception& e) {
+                for (; frame != stopFrame; frame = stack->topFrame()) {
+                    auto lfunc = static_cast<LuaFunction*>(frame->func);
+                    e.addLine(format("%s(%d):", lfunc->meta->fileName.c_str(), lfunc->meta->ip2line[frame->ip]));
+                    return2PrevFrame(stack, frame);
+                }
+                throw;
+            }
+        }
+l_ipfor:
         if (frame->ip == (int)codes.size()) {
             return2PrevFrame(stack, frame);
-            continue;
-        }
-        try {
-            int code = codes[frame->ip];
-            switch (code & 0xff) {
-                case BC_Move: ByteCodeHandler<BC_Move>::execute(code, frame); break;
-                case BC_LoadVArgs: ByteCodeHandler<BC_LoadVArgs>::execute(code, frame); break;
-                case BC_GetGlobal: ByteCodeHandler<BC_GetGlobal>::execute(code, frame); break;
-                case BC_SetGlobal: ByteCodeHandler<BC_SetGlobal>::execute(code, frame); break;
-                case BC_NewFunction: ByteCodeHandler<BC_NewFunction>::execute(code, frame); break;
-                case BC_NewTable: ByteCodeHandler<BC_NewTable>::execute(code, frame); break;
-                case BC_Call: ByteCodeHandler<BC_Call>::execute(code, frame); break;
-                case BC_ExitBlock: ByteCodeHandler<BC_ExitBlock>::execute(code, frame); break;
-                case BC_Less: ByteCodeHandler<BC_Less>::execute(code, frame); break;
-                case BC_LessEq: ByteCodeHandler<BC_LessEq>::execute(code, frame); break;
-                case BC_Greater: ByteCodeHandler<BC_Greater>::execute(code, frame); break;
-                case BC_GreaterEq: ByteCodeHandler<BC_GreaterEq>::execute(code, frame); break;
-                case BC_Equal: ByteCodeHandler<BC_Equal>::execute(code, frame); break;
-                case BC_NEqual: ByteCodeHandler<BC_NEqual>::execute(code, frame); break;
-                case BC_Add: ByteCodeHandler<BC_Add>::execute(code, frame); break;
-                case BC_Sub: ByteCodeHandler<BC_Sub>::execute(code, frame); break;
-                case BC_Mul: ByteCodeHandler<BC_Mul>::execute(code, frame); break;
-                case BC_Div: ByteCodeHandler<BC_Div>::execute(code, frame); break;
-                case BC_Mod: ByteCodeHandler<BC_Mod>::execute(code, frame); break;
-                case BC_Pow: ByteCodeHandler<BC_Pow>::execute(code, frame); break;
-                case BC_Concat: ByteCodeHandler<BC_Concat>::execute(code, frame); break;
-                case BC_Not: ByteCodeHandler<BC_Not>::execute(code, frame); break;
-                case BC_Len: ByteCodeHandler<BC_Len>::execute(code, frame); break;
-                case BC_Minus: ByteCodeHandler<BC_Minus>::execute(code, frame); break;
-                case BC_GetTable: ByteCodeHandler<BC_GetTable>::execute(code, frame); break;
-                case BC_SetTable: ByteCodeHandler<BC_SetTable>::execute(code, frame); break;
-                case BC_Jump: ByteCodeHandler<BC_Jump>::execute(code, frame); break;
-                case BC_TrueJump: ByteCodeHandler<BC_TrueJump>::execute(code, frame); break;
-                case BC_FalseJump: ByteCodeHandler<BC_FalseJump>::execute(code, frame); break;
-                case BC_Nop: ByteCodeHandler<BC_Nop>::execute(code, frame); break;
-                case BC_ReturnN: ByteCodeHandler<BC_ReturnN>::execute(code, frame); break;
-                case BC_PushValues2Table: ByteCodeHandler<BC_PushValues2Table>::execute(code, frame); break;
-                case BC_SetExtCount: ByteCodeHandler<BC_SetExtCount>::execute(code, frame); break;
-                default: ASSERT(0);
-            }
-            ++frame->ip;
-        } catch(Exception& e) {
-            for (; frame != stopFrame; frame = stack->topFrame()) {
-                auto lfunc = static_cast<LuaFunction*>(frame->func);
-                e.addLine(format("%s(%d):", lfunc->meta->fileName.c_str(), lfunc->meta->ip2line[frame->ip]));
-                return2PrevFrame(stack, frame);
-            }
-            throw;
         }
     }
 }
