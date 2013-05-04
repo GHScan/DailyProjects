@@ -74,8 +74,10 @@ inline void hash_combine(int & seed, const T & v) {
 
 #ifdef _MSC_VER
 #define FORCE_INLINE  __forceinline
+#elif __GNUC__
+//#define FORCE_INLINE  __attribute__((always_inline))
+#define FORCE_INLINE  inline
 #else
-// TODO: for gcc
 #define FORCE_INLINE inline
 #endif
  
