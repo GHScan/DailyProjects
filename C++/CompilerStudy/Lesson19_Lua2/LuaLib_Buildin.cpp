@@ -120,11 +120,11 @@ static void buildin_dofile(const vector<LuaValue>& args, vector<LuaValue>& rets)
 }
 static void buildin_getfenv(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     Function* func = NULL;
-    if (args.empty()) func = LuaVM::instance()->getCurrentStack()->topFrame(-1)->func;
+    if (args.empty()) func = LuaVM::instance()->getCurrentStack()->topFrame()->func;
     else if (args[0].isTypeOf(LVT_Number)) {
         auto n = (int)args[0].getNumber();
         ASSERT(n >= 0);
-        if (n > 0) func = LuaVM::instance()->getCurrentStack()->topFrame(-n)->func;
+        if (n > 0) func = LuaVM::instance()->getCurrentStack()->topFrame(-n + 1)->func;
     } else {
         func = args[0].getFunction();
     }
@@ -142,7 +142,7 @@ static void buildin_setfenv(const vector<LuaValue>& args, vector<LuaValue>& rets
     if (args[0].isTypeOf(LVT_Number)) {
         auto n = (int)args[0].getNumber();
         ASSERT(n >= 0);
-        if (n > 0) func = LuaVM::instance()->getCurrentStack()->topFrame(-n)->func;
+        if (n > 0) func = LuaVM::instance()->getCurrentStack()->topFrame(-n + 1)->func;
     } else func = args[0].getFunction();
 
     if (func == NULL) {
@@ -194,11 +194,11 @@ static void buildin_collectgarbage(const vector<LuaValue>& args, vector<LuaValue
 }
 static void buildin_disassemble(const vector<LuaValue>& args, vector<LuaValue>& rets) {
     Function* func = NULL;
-    if (args.empty()) func = LuaVM::instance()->getCurrentStack()->topFrame(-1)->func;
+    if (args.empty()) func = LuaVM::instance()->getCurrentStack()->topFrame()->func;
     else if (args[0].isTypeOf(LVT_Number)) {
         auto n = (int)args[0].getNumber();
         ASSERT(n >= 0);
-        if (n > 0) func = LuaVM::instance()->getCurrentStack()->topFrame(-n)->func;
+        if (n > 0) func = LuaVM::instance()->getCurrentStack()->topFrame(-n + 1)->func;
     } else {
         func = args[0].getFunction();
     }

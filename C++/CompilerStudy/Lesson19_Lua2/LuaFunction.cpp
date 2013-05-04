@@ -53,7 +53,7 @@ int LuaFunctionMeta::getConstIdx(const LuaValue& v) {
     return (int)constTable.size() - 1;
 }
 
-void callFunc(int funcIdx, int paramCount, bool isMulti) {
+void callFunc(int funcIdx, int paramCount, int requireRetN) {
     auto stack = LuaVM::instance()->getCurrentStack();
     auto func = stack->values()[funcIdx].getFunction();
     if (func->funcType == Function::FT_Lua) {
@@ -61,7 +61,6 @@ void callFunc(int funcIdx, int paramCount, bool isMulti) {
         auto lfunc = static_cast<LuaFunction*>(func);
         int paramBase = funcIdx + 1;
         {
-            // TODO: more graceful
             int reqParamCount = lfunc->meta->argCount;
             if (paramCount < reqParamCount) {
                 stack->reserveValueSpace(paramBase + reqParamCount);
@@ -71,15 +70,14 @@ void callFunc(int funcIdx, int paramCount, bool isMulti) {
                 paramCount = reqParamCount;
             }
         }
-        stack->pushFrame(lfunc, paramBase, paramCount);
+        stack->pushFrame(lfunc, paramBase, paramCount, requireRetN);
     } else if (func->funcType == Function::FT_C) {
-        // TODO: optimize
         auto stack = LuaVM::instance()->getCurrentStack();
         auto &values = stack->values();
         vector<LuaValue> args(values.begin() + funcIdx + 1, values.begin() + funcIdx + 1 + paramCount); 
         vector<LuaValue> rets;
         static_cast<CFunction*>(func)->func(args, rets);
-        if (!isMulti) rets.resize(1, LuaValue::NIL);
+        if (requireRetN > 0) rets.resize(requireRetN, LuaValue::NIL);
         if (rets.empty()) rets.push_back(LuaValue::NIL);
         stack->reserveValueSpace(funcIdx + (int)rets.size());
         std::copy(rets.begin(), rets.end(), values.begin() + funcIdx);
@@ -96,8 +94,8 @@ void callFunc(const LuaValue& func, const vector<LuaValue>& args, vector<LuaValu
     values.push_back(func);
     values.insert(values.end(), args.begin(), args.end());
     auto frame = stack->topFrame();
-    callFunc(funcIdx, (int)args.size(), true);
-    execute(frame, true);
+    callFunc(funcIdx, (int)args.size(), 0);
+    execute(frame);
     rets.assign(values.begin() + funcIdx, values.begin() + funcIdx + frame->getExtCount());
     values.resize(funcIdx);
 }

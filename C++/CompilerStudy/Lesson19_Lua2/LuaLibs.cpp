@@ -17,12 +17,6 @@ void runfile(int argc, char *argv[]) {
         auto func = loadFile(argv[1]);
         vector<LuaValue> args, rets;
         for (int i = 2; i < argc; ++i) args.push_back(LuaValue(argv[i]));
-
-        {
-            ofstream fo("dis.txt");
-            disassemble(fo, static_cast<LuaFunction*>(func.getFunction())->meta.get());
-        }
-
         callFunc(func, args, rets);
     }
 

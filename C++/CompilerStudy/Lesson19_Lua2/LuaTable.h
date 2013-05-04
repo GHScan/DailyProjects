@@ -43,7 +43,7 @@ public:
     LuaValue meta_lt(const LuaValue& v);
     LuaValue meta_le(const LuaValue& v);
     LuaValue meta_unm();
-    void meta_call(int tempIdx, LuaStackFrame* frame);
+    void meta_call(LuaStackFrame* frame, int tableIdx, int paramCount, int requireRetN);
 
     void collectGCObject(vector<GCObject*>& unscaned);
 private:

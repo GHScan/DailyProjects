@@ -89,6 +89,6 @@ inline bool Function::equal(Function *o) {
 }
 
 void callFunc(const LuaValue& func, const vector<LuaValue>& args, vector<LuaValue>& rets);
-void callFunc(int funcIdx, int paramCount, bool isMulti);
+void callFunc(int funcIdx, int paramCount, int requireRetN);
 
 #endif

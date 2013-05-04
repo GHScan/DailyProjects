@@ -73,9 +73,17 @@ static void multiEval(LuaFunctionMeta *meta, LocalIdxAllocator *idxAllocator, co
 class ExpNodeVisitor_CodeEmitor:
     public IExpNodeVisitor {
 public:
-    ExpNodeVisitor_CodeEmitor(LuaFunctionMeta* meta, const ExpNodePtr &exp, LocalIdxAllocator *idxAllocator, int varIdx = -1, bool isMulti = false):
-        m_codes(meta->codes), m_ip2line(meta->ip2line), m_meta(meta), m_idxAllocator(idxAllocator), m_varIdx(varIdx), m_isAllocated(false), m_isMulti(isMulti) {
-        exp->acceptVisitor(this);
+    ExpNodeVisitor_CodeEmitor(LuaFunctionMeta* meta, const ExpNodePtr &node, LocalIdxAllocator *idxAllocator, int varIdx = -1, int requireRetN = 1):
+        m_codes(meta->codes), m_ip2line(meta->ip2line), m_meta(meta), m_idxAllocator(idxAllocator), m_varIdx(varIdx), m_isAllocated(false), m_requireRetN(requireRetN) {
+        node->acceptVisitor(this);
+
+        if (m_requireRetN > 1) {
+            ASSERT(varIdx != -1);
+            int localIdx = VarIndex(varIdx).getLocalIdx();
+            for (int i = 1; i < m_requireRetN; ++i) {
+                EMIT(BC_Move, VarIndex::fromLocal(localIdx + i).toInt(), VarIndex::fromConst(m_meta->getConstIdx(LuaValue::NIL)).toInt());
+            }
+        }
     }
     ~ExpNodeVisitor_CodeEmitor() {
         if (m_isAllocated) {
@@ -181,7 +189,7 @@ label:
         EMIT(BC_NewFunction, m_varIdx, metaIdx);
     }
     virtual void visit(ExpNode_Call *node) {
-        if (m_isMulti) {
+        if (m_requireRetN != 1) {
             ASSERT(m_varIdx != -1);
             emitCode_Call(node, m_varIdx);
         } else {
@@ -193,19 +201,21 @@ label:
                 EMIT(BC_Move, m_varIdx, varIdx);
             }
         }
+        m_requireRetN = 1;
     }
     virtual void visit(ExpNode_Args *node) {
-        if (m_isMulti) {
+        if (m_requireRetN != 1) {
             ASSERT(m_varIdx != -1);
         }
         makesureVarIdxValid();
-        EMIT(BC_LoadVArgs, m_varIdx, m_isMulti);
+        EMIT(BC_LoadVArgs, m_varIdx, m_requireRetN);
+        m_requireRetN = 1;
     }
 private:
     void emitCode_Call(ExpNode_Call *node, int varIdx) {
         ExpNodeVisitor_CodeEmitor(m_meta, node->func, m_idxAllocator, varIdx);
         multiEval(m_meta, m_idxAllocator, node->params);
-        EMIT(BC_Call, varIdx, (int)node->params.size(), m_isMulti);
+        EMIT(BC_Call, varIdx, (int)node->params.size(), m_requireRetN);
     }
 
     void makesureVarIdxValid() {
@@ -220,22 +230,21 @@ private:
     LocalIdxAllocator *m_idxAllocator;
     int m_varIdx;
     bool m_isAllocated;
-    bool m_isMulti;
+    int m_requireRetN;
 };
 
-#define multiLoadConst(idxAllocator, n, v) \
-    {\
-        vector<int> varIdxs((idxAllocator)->allocIdxList(n));\
-        for (int i = 0; i < n; ++i) {\
-            EMIT(BC_Move, varIdxs[i], VarIndex::fromConst(m_meta->getConstIdx(v)).toInt());\
-        }\
-        (idxAllocator)->freeIdxList(varIdxs);\
+static void fixedMultiEval(LuaFunctionMeta *meta, LocalIdxAllocator *idxAllocator, int n, const vector<ExpNodePtr>& exps) {
+    ASSERT(n >= (int)exps.size());
+    vector<int> varIdxs(idxAllocator->allocIdxList((int)exps.size()));
+    for (int i = 0; i < (int)exps.size(); ++i) {
+        ExpNodeVisitor_CodeEmitor(meta, exps[i], idxAllocator, varIdxs[i], i == (int)exps.size() - 1 ? (1 + n - (int)exps.size()) : 1);
     }
-    
+    idxAllocator->freeIdxList(varIdxs);
+}
 static void multiEval(LuaFunctionMeta *meta, LocalIdxAllocator *idxAllocator, const vector<ExpNodePtr>& exps) {
     vector<int> varIdxs(idxAllocator->allocIdxList((int)exps.size()));
     for (int i = 0; i < (int)exps.size(); ++i) {
-        ExpNodeVisitor_CodeEmitor(meta, exps[i], idxAllocator, varIdxs[i], i == (int)exps.size() - 1);
+        ExpNodeVisitor_CodeEmitor(meta, exps[i], idxAllocator, varIdxs[i], i == (int)exps.size() - 1 ? 0 : 1);
     }
     idxAllocator->freeIdxList(varIdxs);
 }
@@ -255,47 +264,43 @@ private:
     }
     virtual void visit(StmtNode_Assign *node) {
         ASSERT(!node->rvalues.empty() && !node->lvalues.empty());
-        bool hasMulti = node->rvalues.size() < node->lvalues.size();
-        for (int i = 0 ; i < int(hasMulti ? node->rvalues.size() - 1 : node->lvalues.size()); ++i) {
-            if (auto localExp = dynamic_cast<ExpNode_LocalVar*>(node->lvalues[i].get())) {
-                ExpNodeVisitor_CodeEmitor(m_meta, node->rvalues[i], &m_idxAllocator, VarIndex::fromLocal(localExp->localIdx).toInt());
-            } else if (auto uvExp = dynamic_cast<ExpNode_UpValueVar*>(node->lvalues[i].get())) {
-                ExpNodeVisitor_CodeEmitor(m_meta, node->rvalues[i], &m_idxAllocator, VarIndex::fromUpValue(uvExp->uvIdx).toInt());
-            } else if (auto globalExp = dynamic_cast<ExpNode_GlobalVar*>(node->lvalues[i].get())) {
-                int vIdx = ExpNodeVisitor_CodeEmitor(m_meta, node->rvalues[i], &m_idxAllocator).getVarIdx();
+
+        if (node->lvalues.size() == 1) {
+            if (auto localExp = dynamic_cast<ExpNode_LocalVar*>(node->lvalues.front().get())) {
+                ExpNodeVisitor_CodeEmitor(m_meta, node->rvalues.front(), &m_idxAllocator, VarIndex::fromLocal(localExp->localIdx).toInt());
+            } else if (auto uvExp = dynamic_cast<ExpNode_UpValueVar*>(node->lvalues.front().get())) {
+                ExpNodeVisitor_CodeEmitor(m_meta, node->rvalues.front(), &m_idxAllocator, VarIndex::fromUpValue(uvExp->uvIdx).toInt());
+            } else if (auto globalExp = dynamic_cast<ExpNode_GlobalVar*>(node->lvalues.front().get())) {
+                int vIdx = ExpNodeVisitor_CodeEmitor(m_meta, node->rvalues.front(), &m_idxAllocator).getVarIdx();
                 EMIT(BC_SetGlobal, VarIndex::fromConst(globalExp->constIdx).toInt(), vIdx);
             } else {
-                auto lexp = dynamic_cast<ExpNode_FieldAccess*>(node->lvalues[i].get());
+                auto lexp = dynamic_cast<ExpNode_FieldAccess*>(node->lvalues.front().get());
                 ASSERT(lexp != NULL);
                 ExpNodeVisitor_CodeEmitor tableExp(m_meta, lexp->table, &m_idxAllocator);
                 ExpNodeVisitor_CodeEmitor kExp(m_meta, lexp->field, &m_idxAllocator);
-                int vIdx = ExpNodeVisitor_CodeEmitor(m_meta, node->rvalues[i], &m_idxAllocator).getVarIdx();
+                int vIdx = ExpNodeVisitor_CodeEmitor(m_meta, node->rvalues.front(), &m_idxAllocator).getVarIdx();
                 EMIT(BC_SetTable, tableExp.getVarIdx(), kExp.getVarIdx(), vIdx);
             }
+            return;
         }
-        if (!hasMulti) return;
 
-        ASSERT(m_idxAllocator.getLocalOff() == m_meta->localCount);
+        fixedMultiEval(m_meta, &m_idxAllocator, (int)node->lvalues.size(), node->rvalues);
+        EMIT(BC_SetExtCount, -1);
 
-        multiLoadConst(&m_idxAllocator, int(node->lvalues.size() - node->rvalues.size() + 1), LuaValue::NIL);
-
-        ExpNodeVisitor_CodeEmitor(m_meta, node->rvalues.back(), &m_idxAllocator, m_idxAllocator.getNextIdx(), true);
-
-        vector<int> varIdxs(m_idxAllocator.allocIdxList(int(node->lvalues.size() - node->rvalues.size() + 1)));
-        for (int i = (int)node->rvalues.size() - 1; i < (int)node->lvalues.size(); ++i) {
-            int j = i - (int)node->rvalues.size() + 1;
+        vector<int>varIdxs = m_idxAllocator.allocIdxList((int)node->lvalues.size());
+        for (int i = 0; i < (int)node->lvalues.size(); ++i) {
             if (auto localExp = dynamic_cast<ExpNode_LocalVar*>(node->lvalues[i].get())) {
-                EMIT(BC_Move, VarIndex::fromLocal(localExp->localIdx).toInt(), varIdxs[j]);
+                EMIT(BC_Move, VarIndex::fromLocal(localExp->localIdx).toInt(), varIdxs[i]);
             } else if (auto uvExp = dynamic_cast<ExpNode_UpValueVar*>(node->lvalues[i].get())) {
-                EMIT(BC_Move, VarIndex::fromUpValue(uvExp->uvIdx).toInt(), varIdxs[j]);
+                EMIT(BC_Move, VarIndex::fromUpValue(uvExp->uvIdx).toInt(), varIdxs[i]);
             } else if (auto globalExp = dynamic_cast<ExpNode_GlobalVar*>(node->lvalues[i].get())) {
-                EMIT(BC_SetGlobal, VarIndex::fromConst(globalExp->constIdx).toInt(), varIdxs[j]);
+                EMIT(BC_SetGlobal, VarIndex::fromConst(globalExp->constIdx).toInt(), varIdxs[i]);
             } else {
                 auto lexp = dynamic_cast<ExpNode_FieldAccess*>(node->lvalues[i].get());
                 ASSERT(lexp != NULL);
                 ExpNodeVisitor_CodeEmitor tableExp(m_meta, lexp->table, &m_idxAllocator);
                 ExpNodeVisitor_CodeEmitor kExp(m_meta, lexp->field, &m_idxAllocator);
-                EMIT(BC_SetTable, tableExp.getVarIdx(), kExp.getVarIdx(), varIdxs[j]);
+                EMIT(BC_SetTable, tableExp.getVarIdx(), kExp.getVarIdx(), varIdxs[i]);
             }
         }
         m_idxAllocator.freeIdxList(varIdxs);
@@ -348,9 +353,9 @@ l_end:
             if (i > 0) {
                 POST_EMIT(jumpLast, BC_FalseJump, expIdxLast, CUR_CODE_OFF);
             }
-            PRE_EMIT(jumpLast);
             auto& expStmt = node->ifExpStmts[i];
             expIdxLast = ExpNodeVisitor_CodeEmitor(m_meta, expStmt.first, &m_idxAllocator).getVarIdx();
+            PRE_EMIT(jumpLast);
             if (expStmt.second != NULL) expStmt.second->acceptVisitor(this);
             int jump_end;
             PRE_EMIT(jump_end);
@@ -446,9 +451,8 @@ l_break:
             localIdxs.push_back(static_cast<ExpNode_LocalVar*>(exp.get())->localIdx);
         }
 
-        multiLoadConst(&m_idxAllocator, 3, LuaValue::NIL);
-
-        multiEval(m_meta, &m_idxAllocator, node->iterExps);
+        fixedMultiEval(m_meta, &m_idxAllocator, 3, node->iterExps);
+        EMIT(BC_SetExtCount, -1);
 
         vector<int> varIdxs(m_idxAllocator.allocIdxList(3));
         EMIT(BC_Move, VarIndex::fromLocal(node->funcLocalIdx).toInt(), varIdxs[0]);
@@ -459,13 +463,12 @@ l_break:
         // 
         int l_loop = CUR_CODE_OFF;
 
-        multiLoadConst(&m_idxAllocator, (int)localIdxs.size(), LuaValue::NIL);
-
         varIdxs = m_idxAllocator.allocIdxList(3);
         EMIT(BC_Move, varIdxs[0], VarIndex::fromLocal(node->funcLocalIdx).toInt());
         EMIT(BC_Move, varIdxs[1], VarIndex::fromLocal(node->stateLocalIdx).toInt());
         EMIT(BC_Move, varIdxs[2], VarIndex::fromLocal(localIdxs[0]).toInt());
-        EMIT(BC_Call, varIdxs[0], 2, true);
+        EMIT(BC_Call, varIdxs[0], 2, (int)localIdxs.size());
+        EMIT(BC_SetExtCount, -1);
         m_idxAllocator.freeIdxList(varIdxs);
 
         varIdxs = m_idxAllocator.allocIdxList((int)localIdxs.size());
@@ -531,29 +534,28 @@ private:
 };
 
 //====================
-static void return2PrevFrame(LuaStack* stack, LuaStackFrame* frame, bool isMulti) {
+static void return2PrevFrame(LuaStack* stack, LuaStackFrame* frame) {
     auto lastFrame = stack->topFrame(-1);
     auto meta = frame->func->meta;
     LuaValue *destPtr = frame->varParamPtr - 1;
-    if (!isMulti) frame->retN = min(frame->retN, 1);
-    if (frame->retN == 0) {
-        *destPtr = LuaValue::NIL;
-    } else {
-        LuaValue *srcPtr = frame->localPtr + meta->localCount;
-        for (int i = 0; i < frame->retN; ++i) *destPtr++ = *srcPtr;
+    LuaValue *srcPtr = frame->localPtr + meta->localCount;
+    int n = frame->requireRetN > 0 ? frame->requireRetN : max(frame->retN, 1);
+    stack->reserveValueSpace(int(destPtr - &stack->values()[0]) + n);
+    for (int i = 0; i < n; ++i) {
+        if (i < frame->retN) *destPtr++ = *srcPtr++;
+        else *destPtr++ = LuaValue::NIL;
     }
-    // FIXME: while call from lua ?
-    lastFrame->setExtCount(frame->retN);
+    lastFrame->setExtCount(n);
     stack->popFrame();
 }
-void execute(LuaStackFrame *stopFrame, bool isMulti) {
+void execute(LuaStackFrame *stopFrame) {
     auto stack = LuaVM::instance()->getCurrentStack();
     for (;;) {
         auto frame = stack->topFrame();
         if (frame == stopFrame) break;
         auto &codes = static_cast<LuaFunction*>(frame->func)->meta->codes;
         if (frame->ip == (int)codes.size()) {
-            return2PrevFrame(stack, frame, isMulti);
+            return2PrevFrame(stack, frame);
             continue;
         }
         try {
@@ -591,6 +593,7 @@ void execute(LuaStackFrame *stopFrame, bool isMulti) {
                 case BC_Nop: ByteCodeHandler<BC_Nop>::execute(code, frame); break;
                 case BC_ReturnN: ByteCodeHandler<BC_ReturnN>::execute(code, frame); break;
                 case BC_PushValues2Table: ByteCodeHandler<BC_PushValues2Table>::execute(code, frame); break;
+                case BC_SetExtCount: ByteCodeHandler<BC_SetExtCount>::execute(code, frame); break;
                 default: ASSERT(0);
             }
             ++frame->ip;
@@ -598,7 +601,7 @@ void execute(LuaStackFrame *stopFrame, bool isMulti) {
             for (; frame != stopFrame; frame = stack->topFrame()) {
                 auto lfunc = static_cast<LuaFunction*>(frame->func);
                 e.addLine(format("%s(%d):", lfunc->meta->fileName.c_str(), lfunc->meta->ip2line[frame->ip]));
-                return2PrevFrame(stack, frame, isMulti);
+                return2PrevFrame(stack, frame);
             }
             throw;
         }
@@ -643,6 +646,7 @@ void disassemble(ostream& so, LuaFunctionMeta* meta) {
             case BC_Nop: ByteCodeHandler<BC_Nop>::disassemble(so, code, meta); break;
             case BC_ReturnN: ByteCodeHandler<BC_ReturnN>::disassemble(so, code, meta); break;
             case BC_PushValues2Table: ByteCodeHandler<BC_PushValues2Table>::disassemble(so, code, meta); break;
+            case BC_SetExtCount: ByteCodeHandler<BC_SetExtCount>::disassemble(so, code, meta); break;
             default: ASSERT(0);
         }
         so << endl;

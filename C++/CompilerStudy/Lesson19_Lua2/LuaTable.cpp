@@ -197,11 +197,11 @@ LuaValue LuaTable::meta_le(const LuaValue& v) {
 LuaValue LuaTable::meta_unm() {
     return invokeMeta(this, m_metaTable, "__unm", LuaValue::NIL);
 }
-void LuaTable::meta_call(int tempIdx, LuaStackFrame* frame) {
-    // TODO
-    //LuaValue m = m_metaTable->get(LuaValue("__call"));
-    //frame->insertTemp(tempIdx, m);
-    //callFunc(tempIdx);
+void LuaTable::meta_call(LuaStackFrame* frame, int tableIdx, int paramCount, int requireRetN) {
+    LuaValue m = m_metaTable->get(LuaValue("__call"));
+    auto &values = frame->stack->values();
+    values.insert(values.begin() + tableIdx, m);
+    callFunc(tableIdx, paramCount + 1, requireRetN);
 }
 
 void LuaTable::collectGCObject(vector<GCObject*>& unscaned) {

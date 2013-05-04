@@ -580,6 +580,7 @@ LuaValue _loadFile(FILE *f) {
         SymbolTable::push(meta);
         yyrestart(f);
         yyparse();
+        yylex_destroy();
         SymbolTable::pop();
         return LuaValue(LuaFunction::create(meta));
     } catch(Exception&) {
