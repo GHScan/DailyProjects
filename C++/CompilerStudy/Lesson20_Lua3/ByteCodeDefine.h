@@ -240,6 +240,7 @@ struct ByteCodeHandler<BC_ExitBlock> {
     }
     static void emitOff(int &code, int localOff) {
         GET_CODE2(8, 8, _localOff, localEnd);
+        (void)_localOff;
         SET_CODE2(BC_ExitBlock, 8, 8, localOff, localEnd);
     }
     static void disassemble(ostream& so, int code, LuaFunctionMeta* meta) {

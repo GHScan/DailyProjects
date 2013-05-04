@@ -6,7 +6,7 @@
 #include "GCObject.h"
 
 LuaStackFrame::LuaStackFrame(LuaStack *_stack, LuaFunction *_func, int paramBase, int paramCount, int _requireRetN) 
-    : stack(_stack), func(_func), localPtr(NULL), varParamPtr(NULL), ip(0), retN(0), extCount(-1), requireRetN(_requireRetN) {
+    : stack(_stack), func(_func), localPtr(NULL), varParamPtr(NULL), ip(0), retN(0), requireRetN(_requireRetN), extCount(-1) {
     int argCount = 0, localCount = 0, tempCount = 0;
     if (func != NULL) {
         argCount = func->meta->argCount;
