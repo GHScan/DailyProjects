@@ -79,3 +79,8 @@ let clang_library_path = "" "libclang的路径
 let clang_sort_algo = "priority" "排序方法
 let clang_complete_macros = 1 "补全宏
 let clang_complete_patterns = 1 "补全代码块，如循环结构
+
+if has("autocmd")
+  autocmd Filetype java setlocal omnifunc=javacomplete#Complete
+  autocmd Filetype java setlocal completefunc=javacomplete#CompleteParamsInfo
+endif
