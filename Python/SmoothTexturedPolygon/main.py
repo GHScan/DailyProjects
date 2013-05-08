@@ -40,6 +40,7 @@ def drawGLScene():
     if program:
         glUseProgram(program)
 
+    # FIXME: use 4 instead of 8 in windows, because of the different implemention of PyOpenGL
     glUniform2fv(glGetUniformLocation(program, 'g_points'), 8, numpy.array(points, 'f'))
     glUniform2fv(glGetUniformLocation(program, 'g_uvs'), 8, numpy.array(pointsUV, 'f'))
 
