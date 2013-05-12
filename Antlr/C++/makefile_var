@@ -1,0 +1,15 @@
+use_cpp0x=0
+build_dll=0
+macro_defs=
+include_dirs=E:\Library\antlr3-antlr-3.5\runtime\Cpp\include
+lib_dirs=
+lib_files=
+.PHONY: 
+
+build_actions: Expr.tokens
+
+clean_actions:
+	rm -f *.tokens *.hpp *Lexer.cpp *Parser.cpp
+
+Expr.tokens: Expr.g
+	java org.antlr.Tool Expr.g

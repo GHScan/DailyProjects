@@ -10,7 +10,7 @@ class_files=$(java_files:.java=.class)
 all: build
 build: build_gfile build_java_files
 clean:
-	rm -f $(lex_file) $(parse_file) $(token_file) $(class_files)
+	rm -f $(lex_file) $(parse_file) $(token_file) *.class $(gfile:.g=.java)
 
 build_gfile: $(lex_file)
 $(lex_file): $(gfile)
