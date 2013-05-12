@@ -1,0 +1,15 @@
+use_cpp0x=0
+build_dll=0
+macro_defs=
+include_dirs=/home/scan/Libraries/Antlr/CppRuntime
+lib_dirs=
+lib_files=
+.PHONY: 
+
+build_actions: JSMinus.tokens
+
+clean_actions:
+	rm -f *.tokens *.hpp JSMinusLexer.* JSMinusParser.*
+
+JSMinus.tokens: JSMinus.g
+	java org.antlr.Tool JSMinus.g
