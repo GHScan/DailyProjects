@@ -1,7 +1,7 @@
 use_cpp0x=0
 build_dll=0
 macro_defs=
-include_dirs=E:\Library\antlr3-antlr-3.5\runtime\Cpp\include
+include_dirs=/home/scan/Libraries/Antlr/CppRuntime
 lib_dirs=
 lib_files=
 .PHONY: 

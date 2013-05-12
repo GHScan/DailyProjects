@@ -1,74 +1,56 @@
-.PHONY: all build rebuild rel_build rel_rebuild clean build_actions clean_actions
+.PHONY: all build rebuild rel_build rel_rebuild clean update_pch build_actions clean_actions
 all: build
+
 include makefile_var
 
 build_type = debug
 
-cxx = cl
-cxx_flags += -nologo -W3 -Wp64 -DWIN32 -D_CONSOLE -EHsc -fp:precise -GR -Zc:wchar_t -Zc:forScope -Gd -TP
-cxx_flags += $(foreach i,$(include_dirs),-I"$(subst ?, ,$(i))")
-cxx_flags += $(foreach i,$(macro_defs),-D$(i))
-ifeq ($(build_type),debug)
-cxx_flags += -D_DEBUG -Od -Gm -RTCsu -MDd -ZI
-else
-cxx_flags += -DNDEBUG -O2 -GL -MD -Zi
+CXX = g++
+CXXFLAGS += -MMD
+CXXFLAGS += -Wall
+CXXFLAGS += $(foreach i,$(macro_defs),-D $(i))
+CXXFLAGS += $(foreach i,$(include_dirs),-I '$(i)')
+CXXFLAGS += $(foreach i,$(lib_dirs),-L '$(i)')
+CXXFLAGS += $(foreach i,$(lib_files),-l '$(i)')
+ifeq ($(use_cpp0x),1)
+CXXFLAGS += -std=c++0x	
 endif
-
-pch_cxx_flags += $(if $(filter-out pch.obj,$@),-Yu,-Yc)pch.h
-
-link = link
-link_flags += -NOLOGO -DEBUG -MACHINE:X86 -MANIFEST
-link_flags += $(lib_files) kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib
-link_flags += $(foreach i,$(lib_dirs),-LIBPATH:"$(subst ?, ,$(i))")
-ifeq ($(build_type),debug)
-link_flags += -INCREMENTAL
-else
-link_flags += -INCREMENTAL:NO -OPT:REF -OPT:ICF -LTCG
-endif
-
 ifeq ($(build_dll),1)
-link_flags += -DLL
-manifest_type =2
-target_file =main.dll
+CXXFLAGS += -shared -fPIC
+endif
+ifeq ($(build_type),debug)
+CXXFLAGS += -g
 else
-manifest_type =1
-target_file =main.exe
+CXXFLAGS += -O3 -DNDEBUG
 endif
 
-depends_gen_cmd = g++ -MM $< | sed "1 s/^\(.\+\)\.o:/\1.obj:/" > $(patsubst %.cpp,%.d,$<)
-
-temp_file_ext = ilk pdb exp lib manifest idb ib_tag pch
-temp_files = $(foreach i,$(temp_file_ext),$(wildcard *.$(i)))
-
-srcs = pch.cpp $(filter-out pch.cpp,$(wildcard *.cpp))
-objs = $(srcs:.cpp=.obj)
+srcs = $(wildcard *.cpp)
+objs = $(srcs:.cpp=.o)
 all_deps = $(srcs:.cpp=.d)
 exist_deps = $(wildcard *.d)
-not_exist_deps = $(filter-out $(exist_deps),$(all_deps))
+not_exist_deps = $(filter-out $(exist_deps), $(all_deps))
+pch_file =pch.h
 
-build: build_actions $(target_file)
+build: build_actions update_pch main
 rebuild: clean
 	$(MAKE) build
-rel_build:
+rel_build: 
 	$(MAKE) build -e build_type=release
 rel_rebuild: clean
 	$(MAKE) rel_build
-
 clean: clean_actions
-	rm -f $(objs) $(all_deps)
-	rm -f $(temp_files) main.exe main.dll
+	rm -f main $(objs) $(all_deps) $(pch_file).gch
+update_pch: $(pch_file).gch
 
-$(target_file): $(objs)
-	$(link) $(link_flags) -OUT:$(target_file) $^
-	mt.exe -nologo -manifest $(target_file).manifest "-outputresource:$(target_file);$(manifest_type)"
+main: $(objs)
+	$(CXX) $(CXXFLAGS) -o $@ $(objs)
+
+$(pch_file).gch: $(pch_file)
+	$(CXX) $(filter-out -MMD,$(CXXFLAGS)) $<
 
 ifneq ($(exist_deps),)
 include $(exist_deps)
 endif
 ifneq ($(not_exist_deps),)
-$(not_exist_deps:.d=.obj):%.obj:%.cpp
+$(not_exist_deps:.d=.o):%.o:%.cpp
 endif
-
-$(objs):
-	$(depends_gen_cmd)
-	$(cxx) $(cxx_flags) $(pch_cxx_flags) -c $<

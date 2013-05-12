@@ -19,9 +19,9 @@ stat
 expr returns [value]
     : NUMBER { value = int($NUMBER.text) }
     | ID { value = self.m_memory[$ID.text]; }
-    | ^('+' a=expr b=expr) { value = $a.value + $a.value }
-    | ^('-' a=expr b=expr) { value = $a.value - $a.value }
-    | ^('*' a=expr b=expr) { value = $a.value * $a.value }
-    | ^('/' a=expr b=expr) { value = $a.value / $a.value }
-    | ^('%' a=expr b=expr) { value = $a.value \% $a.value }
+    | ^('+' a=expr b=expr) { value = $a.value + $b.value }
+    | ^('-' a=expr b=expr) { value = $a.value - $b.value }
+    | ^('*' a=expr b=expr) { value = $a.value * $b.value }
+    | ^('/' a=expr b=expr) { value = $a.value / $b.value }
+    | ^('%' a=expr b=expr) { value = $a.value \% $b.value }
     ;
