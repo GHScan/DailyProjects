@@ -10,6 +10,12 @@ struct JSArray:
     vector<JSValue> array;
 
     JSArray(): GCObject(GCT_Array){}
+
+    void accessGCObjects(vector<GCObject*> &objs) {
+        for (auto &value : array) {
+            if (auto obj = value.gcAccess()) objs.push_back(obj);
+        }
+    }
 };
 
 #endif

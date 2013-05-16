@@ -7,10 +7,26 @@ struct GCObject {
         GCT_String,
         GCT_Array,
     };
+    enum GCState {
+        GCS_Unaccess,
+        GCS_Unscan,
+        GCS_Scan,
+    };
     GCObjectType type;
+    mutable GCState state;
+    GCObject *next;
+
+    GCObject* gcAccess() const {
+        if (state == GCS_Unaccess) {
+            state = GCS_Unscan;
+            return (GCObject*)this;
+        }
+        return NULL;
+    }
 
 protected:
-    GCObject(GCObjectType _type): type(_type){}
+    GCObject(GCObjectType _type): type(_type), state(GCS_Unaccess){}
+
 private:
     GCObject& operator = (const GCObject &);
     GCObject(const GCObject& );
@@ -27,7 +43,12 @@ public:
     }
 
 private:
-    GCObjectManager(){}
+    GCObject *m_head;
+
+private:
+    GCObjectManager(): m_head(NULL){}
+    ~GCObjectManager();
+
     GCObjectManager(const GCObjectManager&);
     GCObjectManager& operator = (const GCObjectManager&);
 };
