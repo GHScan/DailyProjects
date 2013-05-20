@@ -21,6 +21,7 @@ public:
     pair<int, int> getLocalOffSize();
     void declareLocal(const string& name);
     int getLocalIdx(const string& name);
+    int getMaxLocalIdx() const { return m_maxLocalIdx; }
 
 private:
     FuncMetaPtr m_meta;

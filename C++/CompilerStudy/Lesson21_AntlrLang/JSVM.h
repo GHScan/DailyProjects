@@ -8,6 +8,8 @@
 struct JSString;
 struct GCObject;
 struct JSFunction;
+struct FuncMeta;
+typedef shared_ptr<FuncMeta> FuncMetaPtr;
 
 struct StackFrame {
     JSValue* stack;
@@ -33,6 +35,16 @@ public:
         assert(topIdx <= 0);
         return &m_frames[m_frames.size() - 1 + topIdx];
     }
+    int getMetaIdx(const FuncMetaPtr& meta) {
+        for (int i = 0; i < (int)m_metas.size(); ++i) {
+            if (m_metas[i] == meta) return i;
+        }
+        m_metas.push_back(meta);
+        return (int)m_metas.size() - 1;
+    }
+    const FuncMetaPtr& getMetaFromIdx(int idx) {
+        return m_metas[idx];
+    }
 
     void accessGCObjects(vector<GCObject*> &objs);
 private:
@@ -45,6 +57,7 @@ private:
     unordered_map<JSValue, JSValue> m_globals;
     vector<JSValue> m_values;
     vector<StackFrame> m_frames;
+    vector<FuncMetaPtr> m_metas;
 };
 
 #endif

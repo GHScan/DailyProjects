@@ -2,8 +2,10 @@
 #ifndef JS_FUNCTION_H
 #define JS_FUNCTION_H
 
-struct StmtNode;
-typedef shared_ptr<StmtNode> StmtNodePtr;
+#include "JSValue.h"
+
+struct IStmtNode;
+typedef shared_ptr<IStmtNode> StmtNodePtr;
 
 struct Function {
     enum FuncType {
@@ -18,7 +20,16 @@ struct FuncMeta {
     int localCount, tempCount;
     vector<int> codes;
     StmtNodePtr stmt;
+    vector<JSValue> constTable;
+    FuncMeta(): argCount(0), localCount(0), tempCount(0){}
     int getLocalSpace() const { return localCount + tempCount; }
+    int getConstIdx(const JSValue& cv) {
+        for (int i = 0; i < (int)constTable.size(); ++i) {
+            if (cv == constTable[i]) return i;
+        }
+        constTable.push_back(cv);
+        return (int)constTable.size() - 1;
+    }
 };
 typedef shared_ptr<FuncMeta> FuncMetaPtr;
 

@@ -9,13 +9,16 @@ void SymbolTable::pushTable(FuncMetaPtr &meta) {
     s_tables.push_back(new SymbolTable(meta));
 }
 void SymbolTable::popTable() {
+    delete s_tables.back();
     s_tables.pop_back();
 }
 
 SymbolTable::SymbolTable(FuncMetaPtr &meta): 
     m_meta(meta), m_maxLocalIdx(0), m_curLocalIdx(0) {
+    pushBlock();
 }
 SymbolTable::~SymbolTable() {
+    popBlock();
     ASSERT(m_blockNames.empty() && m_curLocalIdx == 0);
 }
 
