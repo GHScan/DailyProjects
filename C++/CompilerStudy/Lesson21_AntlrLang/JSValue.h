@@ -26,6 +26,10 @@ struct JSValue {
     JSValueType type;
 
     bool isNil() const { return type == JSVT_Nil; }
+    bool getBoolean() const {
+        if (type == JSVT_Nil || (type == JSVT_Boolean && !data.b)) return false;
+        return true;
+    }
     GCObject* gcAccess() const;
 
     JSValue(): type(JSVT_Nil){}

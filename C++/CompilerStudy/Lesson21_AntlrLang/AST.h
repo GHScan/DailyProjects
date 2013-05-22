@@ -33,8 +33,8 @@ typedef shared_ptr<IExprNode> ExprNodePtr;
 
 struct ExprNode_Global: 
     public IExprNode {
-    string name;
-    ExprNode_Global(int line, const string& _name): IExprNode(line), name(_name){}
+    int constIdx;
+    ExprNode_Global(int line, int _constIdx): IExprNode(line), constIdx(_constIdx){}
     virtual void acceptVisitor(IExprNodeVisitor* v){ v->visit(this);}
 };
 struct ExprNode_Local:

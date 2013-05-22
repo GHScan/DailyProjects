@@ -3,6 +3,7 @@
 #include "JSString.h"
 #include "JSVM.h"
 #include "JSArray.h"
+#include "JSFunction.h"
 
 GCObjectManager::~GCObjectManager() {
     ASSERT(m_head == NULL);
@@ -22,6 +23,9 @@ void GCObjectManager::performFullGC() {
         switch (obj->type) {
             case GCObject::GCT_Array:
                 static_cast<JSArray*>(obj)->accessGCObjects(unscans);
+            case GCObject::GCT_Function:
+                static_cast<JSFunction*>(obj)->accessGCObjects(unscans);
+                break;
             default: break;
         }
         obj->state = GCObject::GCS_Scan;
@@ -39,7 +43,10 @@ void GCObjectManager::performFullGC() {
                 case GCObject::GCT_String:
                     delete static_cast<JSString*>(oldHead);
                     break;
-                default: break;
+                case GCObject::GCT_Function:
+                    static_cast<Function*>(oldHead)->destroy();
+                    break;
+                default: ASSERT(0); break;
             }
         } else {
             ASSERT(oldHead->state == GCObject::GCS_Scan);

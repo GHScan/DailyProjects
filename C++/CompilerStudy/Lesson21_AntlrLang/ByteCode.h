@@ -5,8 +5,8 @@
 struct StackFrame;
 struct FuncMeta;
 
-void genCode(FuncMeta *meta);
-void execute(StackFrame *frame);
+void emitCode(FuncMeta *meta);
+void execute(StackFrame *stopFrame);
 void disassemble(FuncMeta *meta, int depth);
 
 #endif

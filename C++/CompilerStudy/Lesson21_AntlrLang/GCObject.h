@@ -6,6 +6,7 @@ struct GCObject {
     enum GCObjectType {
         GCT_String,
         GCT_Array,
+        GCT_Function,
     };
     enum GCState {
         GCS_Unaccess,

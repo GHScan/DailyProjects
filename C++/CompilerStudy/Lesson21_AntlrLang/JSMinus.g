@@ -30,7 +30,10 @@ options {
 
 ExprNodePtr getExprNodeFromID(int line, const string& name) {
     int localIdx = SymbolTable::topTable()->getLocalIdx(name);
-    if (localIdx == -1) return ExprNodePtr(new ExprNode_Global(line, name));
+    if (localIdx == -1) {
+        int constIdx = SymbolTable::topTable()->getMeta()->getConstIdx(JSValue::fromString(name.c_str()));
+        return ExprNodePtr(new ExprNode_Global(line, constIdx));
+    }
     else return ExprNodePtr(new ExprNode_Local(line, localIdx));
 }
 ExprNodePtr getExprNodeFromConst(int line, const JSValue& cv) {
@@ -54,7 +57,7 @@ program returns[FuncMetaPtr value]: {
                   })*  EOF {
         value->localCount = SymbolTable::topTable()->getMaxLocalIdx();
         SymbolTable::popTable();
-        genCode(value.get());
+        emitCode(value.get());
           };
 
 statement returns[StmtNodePtr value]
@@ -177,7 +180,7 @@ scope {
         auto meta = $funcBody::meta;
         meta->localCount = SymbolTable::topTable()->getMaxLocalIdx();
         SymbolTable::popTable();
-        genCode(meta.get());
+        emitCode(meta.get());
         value = ExprNodePtr(new ExprNode_Lambda($lp.line, JSVM::instance()->getMetaIdx(meta)));
     }
     ;

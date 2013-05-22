@@ -12,9 +12,11 @@ struct FuncMeta;
 typedef shared_ptr<FuncMeta> FuncMetaPtr;
 
 struct StackFrame {
-    JSValue* stack;
-    JSValue *ret;
+    int oldStackSize;
     JSFunction *func;
+    JSValue *localConstPtr[2];
+    int ip;
+    StackFrame(JSFunction *_func, JSValue *_local);
 };
 
 class JSVM {
@@ -29,7 +31,7 @@ public:
         if (value.isNil()) m_globals.erase(key);
         else m_globals[key] = value;
     }
-    void pushFrame(JSFunction *func, int retStackIdx);
+    void pushFrame(JSFunction *func, JSValue *argsBegin);
     void popFrame();
     StackFrame* topFrame(int topIdx = 0) { 
         assert(topIdx <= 0);
@@ -46,10 +48,17 @@ public:
         return m_metas[idx];
     }
 
+    JSValue* pushStack(JSValue *begin, JSValue* end) { 
+        JSValue *r = &m_values.back();
+        m_values.insert(m_values.end(), begin, end);
+        return r;
+    }
+    void popStack(int n) { m_values.resize(m_values.size() - n);}
+
     void accessGCObjects(vector<GCObject*> &objs);
 private:
     JSVM();
-    ~JSVM(){}
+    ~JSVM();
     JSVM& operator = (const JSVM& o);
     JSVM(const JSVM& o);
 
