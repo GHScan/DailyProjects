@@ -7,12 +7,13 @@
 
 GCObjectManager* GCObjectManager::s_ins;
 GCObjectManager::~GCObjectManager() {
-    ASSERT(m_head == NULL);
+    ASSERT(m_head == NULL && m_objCount == 0);
 }
 
 void GCObjectManager::link(GCObject *obj) {
     obj->next = m_head;
     m_head = obj;
+    ++m_objCount;
 }
 void GCObjectManager::performFullGC() {
     vector<GCObject*> unscans;
@@ -54,6 +55,7 @@ void GCObjectManager::performFullGC() {
             oldHead->state = GCObject::GCS_Unaccess;
             oldHead->next = m_head;
             m_head = oldHead;
+            ++m_objCount;
         }
         oldHead = next;
     }

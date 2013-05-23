@@ -1,12 +1,22 @@
 
 TODO:
-    disassemble
-    collectgarbage
-    memory leaks
+    string concat
     traceback
+    fold const expr
+    remove todos
+    memory leaks
 
 buildin functions:
     print
     println
     clock
     format
+    disassemble
+    collectgarbage
+    readfile
+    writefile
+    loadfile
+    type
+    insert
+    remove
+    tostring

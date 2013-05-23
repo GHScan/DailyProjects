@@ -41,6 +41,25 @@ ExprNodePtr getExprNodeFromConst(int line, const JSValue& cv) {
     return ExprNodePtr(new ExprNode_Const(line, constIdx));
 }
 
+string unEscape(const string& s) {
+    string r;
+    for (int i = 0; i < (int)s.size(); ++i) {
+        if (s[i] == '\\') {
+            switch (s[i + 1]) {
+            case 'a': r.push_back('\a'); break;
+            case 'n': r.push_back('\n'); break;
+            case 'r': r.push_back('\r'); break;
+            case 't': r.push_back('\t'); break;
+            default: r.push_back(s[i + 1]); break;
+            }
+            ++i;
+        } else {
+            r.push_back(s[i]);
+        }
+    }
+    return r;
+}
+
 }
 
 
@@ -250,7 +269,8 @@ mulExpr returns[ExprNodePtr value]
     ; 
 
 unaryExpr returns[ExprNodePtr value]
-    : op=('not' | '-')? atom {
+    : op=('not' | '-' | '#') ? atom {
+        // TODO: 
         value = $atom.value;
         if ($op != NULL) {
             value = ExprNodePtr(new ExprNode_UnaryOp($op.line, $op.text, value));
@@ -272,7 +292,8 @@ literalAtom returns[ExprNodePtr value]
     }
     | STRING_LITERAL { 
         string str = $STRING_LITERAL.text;
-        value = getExprNodeFromConst($STRING_LITERAL.line, JSValue::fromString(str.substr(1, str.size() - 2).c_str()));
+        str = unEscape(str.substr(1, str.size() - 2));
+        value = getExprNodeFromConst($STRING_LITERAL.line, JSValue::fromString(str.c_str()));
     }
     | arrayExpr { value = $arrayExpr.value; }
     | lambdaExpr { value = $lambdaExpr.value; }

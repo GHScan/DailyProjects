@@ -37,6 +37,7 @@ class GCObjectManager {
 public:
     void link(GCObject *obj);
     void performFullGC();
+    int getObjectCount() const { return m_objCount; }
 
     static void createInstance() { s_ins = new GCObjectManager(); }
     static void destroyInstance() { delete s_ins; }
@@ -44,9 +45,10 @@ public:
 
 private:
     GCObject *m_head;
+    int m_objCount;
 
 private:
-    GCObjectManager(): m_head(NULL){}
+    GCObjectManager(): m_head(NULL), m_objCount(0) {}
     ~GCObjectManager();
 
     GCObjectManager(const GCObjectManager&);

@@ -117,6 +117,7 @@ private:
         switch (node->op) {
             case ExprNode_UnaryOp::OT_Not: EMIT(BC_Not, m_varID, exprID); break;
             case ExprNode_UnaryOp::OT_Minus: EMIT(BC_Minus, m_varID, exprID); break;
+            case ExprNode_UnaryOp::OT_Len: EMIT(BC_Len, m_varID, exprID); break;
             default: ASSERT(0); break;
         }
     }
@@ -294,6 +295,7 @@ static void _execute(StackFrame *stopFrame) {
             case BC_Move: ByteCodeHandler<BC_Move>::execute(code, frame); break;
             case BC_Not: ByteCodeHandler<BC_Not>::execute(code, frame); break;
             case BC_Minus: ByteCodeHandler<BC_Minus>::execute(code, frame); break;
+            case BC_Len: ByteCodeHandler<BC_Len>::execute(code, frame); break;
             case BC_SetGlobal: ByteCodeHandler<BC_SetGlobal>::execute(code, frame); break;
             case BC_GetGlobal: ByteCodeHandler<BC_GetGlobal>::execute(code, frame); break;
             case BC_Add: ByteCodeHandler<BC_Add>::execute(code, frame); break;
@@ -353,6 +355,7 @@ void disassemble(ostream& so, const FuncMetaPtr &meta, int depth) {
             case BC_Move: str = ByteCodeHandler<BC_Move>::disassemble(code, meta.get()); break;
             case BC_Not: str = ByteCodeHandler<BC_Not>::disassemble(code, meta.get()); break;
             case BC_Minus: str = ByteCodeHandler<BC_Minus>::disassemble(code, meta.get()); break;
+            case BC_Len: str = ByteCodeHandler<BC_Len>::disassemble(code, meta.get()); break;
             case BC_SetGlobal: str = ByteCodeHandler<BC_SetGlobal>::disassemble(code, meta.get()); break;
             case BC_GetGlobal: str = ByteCodeHandler<BC_GetGlobal>::disassemble(code, meta.get()); break;
             case BC_Add: str = ByteCodeHandler<BC_Add>::disassemble(code, meta.get()); break;

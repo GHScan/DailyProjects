@@ -80,13 +80,18 @@ struct ExprNode_Call:
 struct ExprNode_UnaryOp:
     public IExprNode {
     enum OpType {
-        OT_Not, OT_Minus,
+        OT_Not, OT_Minus, OT_Len,
     };
     OpType op;
     ExprNodePtr expr;
     static OpType string2op(const string& opStr) {
         if (opStr == "not") return OT_Not;
-        else return OT_Minus;
+        else if (opStr == "-") return OT_Minus;
+        else if (opStr == "#") return OT_Len;
+        else {
+            ASSERT(0);
+            return OT_Not;
+        }
     }
     ExprNode_UnaryOp(int line, const string& opStr, const ExprNodePtr &_expr):
         IExprNode(line), op(string2op(opStr)), expr(_expr){}

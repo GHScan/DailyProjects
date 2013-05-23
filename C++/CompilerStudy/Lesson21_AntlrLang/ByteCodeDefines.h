@@ -11,7 +11,7 @@ enum ByteCodeType {
     BC_NewFunction, BC_NewArray,
 
     BC_Move,
-    BC_Not, BC_Minus,
+    BC_Not, BC_Minus, BC_Len,
     BC_SetGlobal, BC_GetGlobal,
 
     BC_Add, BC_Sub, BC_Mul, BC_Div, BC_Mod, BC_Pow,
@@ -153,6 +153,24 @@ struct ByteCodeHandler<BC_Not> {
     FORCE_INLINE static string disassemble(int code, FuncMeta* meta) {
         DECODE_2(BIT_W_VAR_ID, BIT_W_VAR_ID, destID, srcID);
         return format("not %s<-%s", VarID(destID).toString(meta).c_str(), VarID(srcID).toString(meta).c_str());
+    }
+};
+template<>
+struct ByteCodeHandler<BC_Len> {
+    FORCE_INLINE static void emitCode(int &code, int destID, int srcID) {
+        ENCODE_2(BC_Len, BIT_W_VAR_ID, BIT_W_VAR_ID, destID, srcID);
+    }
+    FORCE_INLINE static void execute(int code, StackFrame* frame) {
+        DECODE_2(BIT_W_VAR_ID, BIT_W_VAR_ID, destID, srcID);
+        auto dest = VarID(destID).toValue(frame->localConstPtr);
+        auto src = VarID(srcID).toValue(frame->localConstPtr);
+        ASSERT(src->type == JSVT_Array);
+        dest->data.num = (int)src->data.array->array.size();
+        dest->type = JSVT_Number;
+    }
+    FORCE_INLINE static string disassemble(int code, FuncMeta* meta) {
+        DECODE_2(BIT_W_VAR_ID, BIT_W_VAR_ID, destID, srcID);
+        return format("len %s<-#%s", VarID(destID).toString(meta).c_str(), VarID(srcID).toString(meta).c_str());
     }
 };
 template<>
