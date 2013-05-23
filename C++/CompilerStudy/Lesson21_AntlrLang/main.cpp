@@ -88,7 +88,10 @@ static void runFile(int argc, char *argv[]) {
     }
     if (args.empty()) args.push_back(JSValue::NIL);
     auto func = loadFile(argv[1]);
-    disassemble(ofstream("dis.txt"), static_cast<JSFunction*>(func.data.func)->meta, 0);
+    {
+        ofstream fo("dis.txt");
+        disassemble(fo, static_cast<JSFunction*>(func.data.func)->meta, 0);
+    }
     func.data.func->callFromC(&args[0], &args[0] + args.size());
 
     JSVM::destroyInstance();
