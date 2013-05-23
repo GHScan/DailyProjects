@@ -54,6 +54,10 @@ private:
 };
 
 typedef int (*CFuncT)(JSValue* argsBegin, JSValue* argsEnd);
+struct CFuncEntry {
+    const char *name;
+    CFuncT func;
+};
 struct CFunction:
     public Function {
     CFuncT func;

@@ -5,6 +5,7 @@
 #include "JSArray.h"
 #include "JSFunction.h"
 
+GCObjectManager* GCObjectManager::s_ins;
 GCObjectManager::~GCObjectManager() {
     ASSERT(m_head == NULL);
 }

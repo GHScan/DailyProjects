@@ -1,0 +1,12 @@
+
+TODO:
+    disassemble
+    collectgarbage
+    memory leaks
+    traceback
+
+buildin functions:
+    print
+    println
+    clock
+    format

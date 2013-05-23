@@ -15,6 +15,10 @@ enum JSValueType {
     JSVT_Array,
     JSVT_Function,
 };
+
+#undef TRUE
+#undef FALSE
+
 struct JSValue {
     union {
         JSString *str;
@@ -31,6 +35,7 @@ struct JSValue {
         return true;
     }
     GCObject* gcAccess() const;
+    string toString() const;
 
     JSValue(): type(JSVT_Nil){}
     static JSValue fromBoolean(bool b){ JSValue r; r.type = JSVT_Boolean; r.data.b = b;  return r;}
@@ -53,11 +58,11 @@ struct hash<JSValue> {
     int operator () (const JSValue& v) const {
         switch (v.type) {
             case JSVT_Nil: ASSERT(0);
-            case JSVT_Boolean: return std::hash<bool>()(v.data.b);
-            case JSVT_Number: return std::hash<double>()(v.data.num);
-            case JSVT_String: return std::hash<JSString*>()(v.data.str);
-            case JSVT_Array: return std::hash<JSArray*>()(v.data.array);
-            case JSVT_Function: return std::hash<Function*>()(v.data.func);
+            case JSVT_Boolean: return (int)std::hash<bool>()(v.data.b);
+            case JSVT_Number: return (int)std::hash<double>()(v.data.num);
+            case JSVT_String: return (int)std::hash<JSString*>()(v.data.str);
+            case JSVT_Array: return (int)std::hash<JSArray*>()(v.data.array);
+            case JSVT_Function: return (int)std::hash<Function*>()(v.data.func);
             default: ASSERT(0);
         }
         return 0;

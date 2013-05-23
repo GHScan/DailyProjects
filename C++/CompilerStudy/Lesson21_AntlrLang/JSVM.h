@@ -21,10 +21,9 @@ struct StackFrame {
 
 class JSVM {
 public:
-    static JSVM* instance() {
-        static JSVM s_ins;
-        return &s_ins;
-    }
+    static void createInstance() { s_ins = new JSVM(); }
+    static void destroyInstance() { delete s_ins; }
+    static JSVM* instance() { return s_ins; }
 
     const JSValue& getGlobal(const JSValue &key) { return m_globals[key]; }
     void setGlobal(const JSValue& key, const JSValue& value) {
@@ -62,6 +61,7 @@ private:
     JSVM& operator = (const JSVM& o);
     JSVM(const JSVM& o);
 
+    static JSVM *s_ins;
 private:
     unordered_map<JSValue, JSValue> m_globals;
     vector<JSValue> m_values;

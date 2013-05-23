@@ -199,6 +199,9 @@ private:
             ExprNodeVisitor_CodEmitor indexExpr(m_meta, &m_allocator, indexOf->index);
             int vID = ExprNodeVisitor_CodEmitor(m_meta, &m_allocator, node->right).getVarID();
             EMIT(BC_SetArray, arrayExpr.getVarID(), indexExpr.getVarID(), vID);
+        } else if (auto global = dynamic_cast<ExprNode_Global*>(node->left.get())) {
+            int vID = ExprNodeVisitor_CodEmitor(m_meta, &m_allocator, node->right).getVarID();
+            EMIT(BC_SetGlobal, VarID::fromConst(global->constIdx).getInt(), vID);
         } else {
             ASSERT(0);
         }

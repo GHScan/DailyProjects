@@ -2,6 +2,7 @@
 #include "pch.h"
 #include "JSString.h"
 
+JSStringManager* JSStringManager::s_ins;
 JSString* JSStringManager::get(const char *str) {
     JSString *r = NULL;
     JSString test;

@@ -1,53 +1,89 @@
+function echo(str, b) {
+    println('echo', str)
+    return b
+}
+function testAnd() {
+    println('jfkd')
+    println('========== testAnd 1 ==========')
+    var b = echo('1', true) && echo('1', true)
+    println('========== testAnd 2 ==========')
+    b = echo('0', false) && echo('1', true)
+}
+function testOr() {
+    println('========== testOr 1 ==========')
+    var b = echo('0', false) || echo('0', false)
+    println('========== testOr 1 ==========')
+    b = echo('1', true) || echo('0', false)
+}
 function printPrime(n) {
-    var start = clock()
+    println('========== printPrime ==========')
     for (var i = 2; i < n; ++i) {
         var flag = true
-        for (var j = 2; j < i / 2; ++j) {
+        for (var j = 2; j <= i / 2; ++j) {
             if (i % j == 0) {
                 flag = false
                 break
             }
         }
-        if (flag);
+        if (flag) println(i) 
     }
-    print('printPrime: ', clock() - start)
+    println()
+}
+function factorial(n) {
+    if (n <= 1) return 1
+    return n * factorial(n - 1)
+}
+function printFeb1() {
+    println('========== printFeb1 ==========')
+    var i = 1 
+    var j = 1
+    while (i < 100) {
+        println(j)
+        var t = i + j
+        j = i
+        i = t
+    }
+    println()
+}
+function feb2(n) {
+    // it's hard to print function name, so...
+    if (n <= 2) { return 1 }
+    return feb2(n - 1) + feb2(n - 2)
+}
+function printFeb2() {
+    println('========== printFeb2 ==========')
+    var i = 1
+    while (i <= 10) {
+        println(feb2(i)) 
+        i = i + 1
+    }
+    println()
+}
+function print9x9() {
+    println('========== print9x9 ==========')
+    for (var i = 1; i <= 9; ++i) {
+        for (var j = 1; j <= i; ++j) {
+            print(format('%dx%d=%-2d ', j, i, i * j))
+        }
+        println()
+    }
 }
 function perform() {
+    println('========== perform ==========')
     var start = clock()
     for (var i = 0; i < 1000000; ++i);
-    print('perform: ', clock() - start)
-}
-function perform_1_5() {
-    var start = clock()
-    var i = 0
-    while (i < 100000) i += 1
-    print('perform 1.5: ', clock() - start)
-}
-function perform2() {
-    var start = clock()
-    for (var i = 0; i < 100; ++i) {
-        for (var j = 0; j < 1000; ++j) {
-            for (var k = 0; k < 1000; ++k) {
-            }
-        }
-    }
-    print('perform2: ', clock() - start)
-}
-function feb(n) {
-    if (n <= 2) return 1;
-    return feb(n - 1) + feb(n - 2)
-}
-function perform3() {
-    var start = clock()
-    for (var i = 0; i < 30; ++i) feb(i)
-    print('perform3: ', clock() - start)
+    println('loop 1000000 times: ', clock() - start)
 }
 function main()  {
-    printPrime(10000)
+    // test for comment
+    testAnd() // test for comment too
+    testOr()
+    printPrime(30)
+    println('factorial', 10, factorial(10))
+    printFeb1()
+    printFeb2()
+    print9x9()
     perform()
-    perform_1_5()
-    perform2()
-    perform3()
+    println('15-3*(2*2+(7-2)) = ', 15-3*(2*2+(7-2)))
 }
 main()
-

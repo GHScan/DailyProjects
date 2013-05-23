@@ -38,10 +38,9 @@ public:
     void link(GCObject *obj);
     void performFullGC();
 
-    static GCObjectManager* instance() {
-        static GCObjectManager s_ins;
-        return &s_ins;
-    }
+    static void createInstance() { s_ins = new GCObjectManager(); }
+    static void destroyInstance() { delete s_ins; }
+    static GCObjectManager* instance() { return s_ins; }
 
 private:
     GCObject *m_head;
@@ -52,6 +51,8 @@ private:
 
     GCObjectManager(const GCObjectManager&);
     GCObjectManager& operator = (const GCObjectManager&);
+
+    static GCObjectManager *s_ins;
 };
 
 #endif

@@ -2,6 +2,8 @@
 #include "pch.h"
 #include "JSVM.h"
 #include "JSFunction.h"
+#include "JSString.h"
+#include "GCObject.h"
 
 StackFrame::StackFrame(JSFunction *_func, JSValue *_local):
     oldStackSize(0), func(_func), ip(0){
@@ -9,6 +11,7 @@ StackFrame::StackFrame(JSFunction *_func, JSValue *_local):
     localConstPtr[1] = func != NULL ? &func->meta->constTable[0] : NULL;
 }
 
+JSVM* JSVM::s_ins;
 void JSVM::accessGCObjects(vector<GCObject*> &objs) {
     for (auto &kv : m_globals) {
         if (auto obj = kv.first.gcAccess()) objs.push_back(obj);
@@ -20,18 +23,25 @@ void JSVM::accessGCObjects(vector<GCObject*> &objs) {
 }
 
 JSVM::JSVM() {
+    GCObjectManager::createInstance();
+    JSStringManager::createInstance();
     m_frames.reserve(1024);
     m_values.reserve(1024 * 64);
-    pushFrame(NULL, NULL);
+    m_values.push_back(JSValue::NIL);
+    pushFrame(NULL, &m_values[0]);
 }
 JSVM::~JSVM() {
     popFrame();
+    JSStringManager::destroyInstance();
+    GCObjectManager::destroyInstance();
 }
 
 void JSVM::pushFrame(JSFunction *func, JSValue *argsBegin) {
     m_frames.push_back(StackFrame(func, argsBegin));
     m_frames.back().oldStackSize = (int)m_values.size();
-    m_values.resize((argsBegin - &m_values[0]) + func->meta->getLocalSpace());
+    if (func != NULL) {
+        m_values.resize((argsBegin - &m_values[0]) + func->meta->getLocalSpace());
+    }
 }
 void JSVM::popFrame() {
     m_values.resize(m_frames.back().oldStackSize);

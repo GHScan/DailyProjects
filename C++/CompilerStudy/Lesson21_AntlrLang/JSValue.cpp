@@ -21,6 +21,18 @@ JSValue JSValue::fromString(const char *str) {
     return r;
 }
 
+string JSValue::toString() const {
+    switch (type) {
+        case JSVT_Nil: return "nil";
+        case JSVT_Boolean: return data.b ? "true" : "false";
+        case JSVT_Number: return (int)data.num == data.num ? format("%d", (int)data.num) : format("%lf", data.num);
+        case JSVT_String: return data.str->buf;
+        case JSVT_Array: return format("[array %p]", data.array);
+        case JSVT_Function: return format("[function %p]", data.func);
+        default: ASSERT(0); return "";
+    }
+}
+
 JSValue JSValue::NIL;
 JSValue JSValue::TRUE(fromBoolean(true));
 JSValue JSValue::FALSE(fromBoolean(false));

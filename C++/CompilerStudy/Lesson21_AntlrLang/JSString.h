@@ -48,10 +48,9 @@ public:
 
     void notifyValidGCObjects(GCObject *obj);
 
-    static JSStringManager* instance() {
-        static JSStringManager s_ins;
-        return &s_ins;
-    }
+    static void createInstance() { s_ins = new JSStringManager(); }
+    static void destroyInstance() { delete s_ins; }
+    static JSStringManager* instance() { return s_ins; }
 
 private:
     unordered_set<JSString*, JSStringContentHash, JSStringContentEqual> m_strs;
@@ -60,6 +59,8 @@ private:
     JSStringManager(){}
     JSStringManager& operator = (const JSStringManager&);
     JSStringManager(const JSStringManager&);
+
+    static JSStringManager *s_ins;
 };
 
 #endif

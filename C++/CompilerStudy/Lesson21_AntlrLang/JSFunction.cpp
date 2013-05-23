@@ -12,7 +12,7 @@ JSValue Function::callFromC(JSValue* argsBegin, JSValue* argsEnd) {
     callFromVM(ret, ret + (argsEnd - argsBegin));
     execute(frame);
     r = *ret;
-    vm->popStack(argsEnd - argsBegin);
+    vm->popStack(int(argsEnd - argsBegin));
     return r;
 }
 void Function::callFromVM(JSValue *argsBegin, JSValue* argsEnd) {
