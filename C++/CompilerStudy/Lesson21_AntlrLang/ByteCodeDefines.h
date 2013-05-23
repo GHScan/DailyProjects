@@ -81,6 +81,11 @@ struct ByteCodeHandler<BC_NewFunction> {
     static void emitCode(int &code, int destID, int metaIdx) {
         ENCODE_2(BC_NewFunction, BIT_W_VAR_ID, BIT_W_META_IDX, destID, metaIdx);
     }
+    static FuncMetaPtr getMetaFromCode(int code) {
+        DECODE_2(BIT_W_VAR_ID, BIT_W_META_IDX, destID, metaIdx);
+        (void)destID;
+        return JSVM::instance()->getMetaFromIdx(metaIdx);
+    }
     static void execute(int code, StackFrame* frame) {
         DECODE_2(BIT_W_VAR_ID, BIT_W_META_IDX, destID, metaIdx);
         auto dest = VarID(destID).toValue(frame->localConstPtr);

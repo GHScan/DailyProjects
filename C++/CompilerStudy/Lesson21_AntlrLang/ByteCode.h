@@ -4,9 +4,10 @@
 
 struct StackFrame;
 struct FuncMeta;
-
-void emitCode(FuncMeta *meta);
+typedef shared_ptr<FuncMeta> FuncMetaPtr;
+ 
+void emitCode(const FuncMetaPtr &meta);
 void execute(StackFrame *stopFrame);
-void disassemble(FuncMeta *meta, int depth);
+void disassemble(ostream& so, const FuncMetaPtr &meta, int depth);
 
 #endif

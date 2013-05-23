@@ -35,15 +35,22 @@ private:
 };
 
 #define EMIT(codeType, ...) {m_ip2line.push_back(node->line); m_codes.push_back(0); ByteCodeHandler<codeType>::emitCode(m_codes.back(), __VA_ARGS__);}
-#define PRE_EMIT(off)  {m_ip2line.push_back(node->line); off = CUR_CODE_OFF; m_codes.push_back(0);}
+#define PRE_EMIT(off)  m_ip2line.push_back(node->line); int off = CUR_CODE_OFF; m_codes.push_back(0);
 #define POST_EMIT(off, codeType, ...) { ByteCodeHandler<codeType>::emitCode(m_codes[off], __VA_ARGS__); }
 #define CUR_CODE_OFF int(m_codes.size())
+#define POST_EMIT_JUMPS(jumpType) {\
+    for (auto &jump : m_jumps##jumpType) {\
+        POST_EMIT(jump, BC_Jump, CUR_CODE_OFF);\
+    }\
+    m_jumps##jumpType.clear();\
+}
 
 class ExprNodeVisitor_CodEmitor:
     public IExprNodeVisitor {
 public:
-    ExprNodeVisitor_CodEmitor(FuncMetaPtr& meta, LocalVarIDAllocator* allocator, const ExprNodePtr &expr, int varID = -1)
+    ExprNodeVisitor_CodEmitor(const FuncMetaPtr& meta, LocalVarIDAllocator* allocator, const ExprNodePtr &node, int varID = -1)
         : m_meta(meta), m_codes(meta->codes), m_ip2line(meta->ip2line), m_varID(varID), m_isAlloced(false), m_allocator(allocator) {
+        node->acceptVisitor(this);
     }
     ~ExprNodeVisitor_CodEmitor() {
         if (m_isAlloced) {
@@ -123,7 +130,6 @@ private:
 l_end:
              * */
             ExprNodeVisitor_CodEmitor(m_meta, m_allocator, node->lexpr, m_varID);
-            int jump_end;
             PRE_EMIT(jump_end);
             ExprNodeVisitor_CodEmitor(m_meta, m_allocator, node->rexpr, m_varID);
             if (node->op == ExprNode_BinaryOp::OT_And) {
@@ -172,29 +178,204 @@ private:
 class StmtNodeVisitor_CodeEmitor:
     public IStmtNodeVisitor {
 public:
+    StmtNodeVisitor_CodeEmitor(const FuncMetaPtr& meta, const StmtNodePtr& node):
+        m_meta(meta), m_codes(meta->codes), m_ip2line(meta->ip2line), m_allocator(meta->localCount) {
+        node->acceptVisitor(this);
+
+        {
+            int retID = VarID::fromLocal(0).getInt();
+            EMIT(BC_Move, retID, VarID::fromConst(m_meta->getConstIdx(JSValue::NIL)).getInt());
+            POST_EMIT_JUMPS(Return);
+        }
+
+        meta->tempCount = m_allocator.getMaxLocalIdx();
+    }
 private:
     virtual void visit(StmtNode_Assign *node) {
+        if (auto local = dynamic_cast<ExprNode_Local*>(node->left.get())) {
+            ExprNodeVisitor_CodEmitor(m_meta, &m_allocator, node->right, VarID::fromLocal(local->localIdx).getInt());
+        } else if (auto indexOf = dynamic_cast<ExprNode_IndexOf*>(node->left.get())) {
+            ExprNodeVisitor_CodEmitor arrayExpr(m_meta, &m_allocator, indexOf->array);
+            ExprNodeVisitor_CodEmitor indexExpr(m_meta, &m_allocator, indexOf->index);
+            int vID = ExprNodeVisitor_CodEmitor(m_meta, &m_allocator, node->right).getVarID();
+            EMIT(BC_SetArray, arrayExpr.getVarID(), indexExpr.getVarID(), vID);
+        } else {
+            ASSERT(0);
+        }
     }
     virtual void visit(StmtNode_Call *node) {
+        ExprNodeVisitor_CodEmitor(m_meta, &m_allocator, node->callExpr);
     }
     virtual void visit(StmtNode_Block *node) {
+        for (auto &stmt : node->stmts) stmt->acceptVisitor(this);
     }
     virtual void visit(StmtNode_If *node) {
+        /*
+           exprID<-expr
+           tjump exprID l_if
+           gen elseStmt
+           jump l_end
+l_if:
+           gen ifStmt
+l_end:
+         * */
+        int exprID = ExprNodeVisitor_CodEmitor(m_meta, &m_allocator, node->expr).getVarID();
+        PRE_EMIT(jump_if);
+        if (node->elseStmt) node->elseStmt->acceptVisitor(this);
+        PRE_EMIT(jump_end);
+        POST_EMIT(jump_if, BC_TrueJump, exprID, CUR_CODE_OFF);
+        if (node->ifStmt) node->ifStmt->acceptVisitor(this);
+        POST_EMIT(jump_end, BC_Jump, CUR_CODE_OFF);
     }
     virtual void visit(StmtNode_For *node) {
+        /*
+           gen first
+l_loop:
+           expr<-second
+           fjump expr l_break
+           gen body
+l_continue:
+           gen last
+           jump l_loop
+l_break:
+         * */
+        if (node->first != NULL) node->first->acceptVisitor(this);
+        int l_loop = CUR_CODE_OFF;
+        int exprID = ExprNodeVisitor_CodEmitor(m_meta, &m_allocator, node->second).getVarID();
+        PRE_EMIT(jump_break);
+        if (node->body != NULL) node->body->acceptVisitor(this);
+        POST_EMIT_JUMPS(Continue);
+        if (node->last != NULL) node->last->acceptVisitor(this);
+        EMIT(BC_Jump, l_loop);
+        POST_EMIT(jump_break, BC_FalseJump, exprID, CUR_CODE_OFF);
+        POST_EMIT_JUMPS(Break);
     }
     virtual void visit(StmtNode_Break *node) {
+        PRE_EMIT(jump_break);
+        m_jumpsBreak.push_back(jump_break);
     }
     virtual void visit(StmtNode_Continue *node) {
+        PRE_EMIT(jump_continue);
+        m_jumpsContinue.push_back(jump_continue);
     }
     virtual void visit(StmtNode_Return *node) {
+        int retID = VarID::fromLocal(0).getInt();
+        if (node->expr != NULL) {
+            ExprNodeVisitor_CodEmitor(m_meta, &m_allocator, node->expr, retID);
+        } else {
+            EMIT(BC_Move, retID, VarID::fromConst(m_meta->getConstIdx(JSValue::NIL)).getInt());
+        }
+        PRE_EMIT(jump_return);
+        m_jumpsReturn.push_back(jump_return);
     }
 private:
+    FuncMetaPtr m_meta;
+    vector<int> &m_codes, &m_ip2line;
+    LocalVarIDAllocator m_allocator;
+    vector<int> m_jumpsBreak, m_jumpsContinue, m_jumpsReturn;
 };
 
-void emitCode(FuncMeta *meta) {
+void emitCode(const FuncMetaPtr &meta) {
+    StmtNodeVisitor_CodeEmitor(meta, meta->stmt);
+}
+static void _execute(StackFrame *stopFrame) {
+    auto vm = JSVM::instance();
+    for (auto frame = vm->topFrame(); frame != stopFrame; frame = vm->topFrame()) {
+        auto maxIp = (int)frame->func->meta->codes.size();
+        auto codes = &frame->func->meta->codes[0];
+        while (frame->ip < maxIp) {
+            int code = codes[frame->ip];
+            switch (code & 0xff) {
+            case BC_NewFunction: ByteCodeHandler<BC_NewFunction>::execute(code, frame); break;
+            case BC_NewArray: ByteCodeHandler<BC_NewArray>::execute(code, frame); break;
+            case BC_Move: ByteCodeHandler<BC_Move>::execute(code, frame); break;
+            case BC_Not: ByteCodeHandler<BC_Not>::execute(code, frame); break;
+            case BC_Minus: ByteCodeHandler<BC_Minus>::execute(code, frame); break;
+            case BC_SetGlobal: ByteCodeHandler<BC_SetGlobal>::execute(code, frame); break;
+            case BC_GetGlobal: ByteCodeHandler<BC_GetGlobal>::execute(code, frame); break;
+            case BC_Add: ByteCodeHandler<BC_Add>::execute(code, frame); break;
+            case BC_Sub: ByteCodeHandler<BC_Sub>::execute(code, frame); break;
+            case BC_Mul: ByteCodeHandler<BC_Mul>::execute(code, frame); break;
+            case BC_Div: ByteCodeHandler<BC_Div>::execute(code, frame); break;
+            case BC_Mod: ByteCodeHandler<BC_Mod>::execute(code, frame); break;
+            case BC_Pow: ByteCodeHandler<BC_Pow>::execute(code, frame); break;
+            case BC_Less: ByteCodeHandler<BC_Less>::execute(code, frame); break;
+            case BC_LessEq: ByteCodeHandler<BC_LessEq>::execute(code, frame); break;
+            case BC_Greater: ByteCodeHandler<BC_Greater>::execute(code, frame); break;
+            case BC_GreaterEq: ByteCodeHandler<BC_GreaterEq>::execute(code, frame); break;
+            case BC_Equal: ByteCodeHandler<BC_Equal>::execute(code, frame); break;
+            case BC_NEqual: ByteCodeHandler<BC_NEqual>::execute(code, frame); break;
+            case BC_SetArray: ByteCodeHandler<BC_SetArray>::execute(code, frame); break;
+            case BC_GetArray: ByteCodeHandler<BC_GetArray>::execute(code, frame); break;
+            case BC_Jump: ByteCodeHandler<BC_Jump>::execute(code, frame); break;
+            case BC_TrueJump: ByteCodeHandler<BC_TrueJump>::execute(code, frame); break;
+            case BC_FalseJump: ByteCodeHandler<BC_FalseJump>::execute(code, frame); break;
+            case BC_Call: ByteCodeHandler<BC_Call>::execute(code, frame); 
+                          ++frame->ip;
+                          goto l_endWhile;
+            default: ASSERT(0); break;
+            }
+            ++frame->ip;
+        }
+l_endWhile:
+        if (frame->ip == maxIp) {
+            vm->popFrame();
+        }
+    }
 }
 void execute(StackFrame *stopFrame) {
+    try {
+        _execute(stopFrame);
+    } catch(Exception& e) {
+        for (;;) {
+            auto frame = JSVM::instance()->topFrame();
+            if (frame == stopFrame) break;
+            auto meta = frame->func->meta;
+            int line = meta->ip2line[frame->ip];
+            e.addLine(format("%s(%d):\n", meta->fileName.c_str(), line));
+            JSVM::instance()->popFrame();
+        }
+        throw;
+    }
 }
-void disassemble(FuncMeta *meta, int depth) {
+void disassemble(ostream& so, const FuncMetaPtr &meta, int depth) {
+    for (int i = 0; i < (int)meta->codes.size(); ++i) {
+        int code = meta->codes[i];
+
+        so << format("%s%3d:", tabString(depth).c_str(), i + 1);
+        string str;
+        switch (code & 0xff) {
+            case BC_NewFunction: str = ByteCodeHandler<BC_NewFunction>::disassemble(code, meta.get()); break;
+            case BC_NewArray: str = ByteCodeHandler<BC_NewArray>::disassemble(code, meta.get()); break;
+            case BC_Move: str = ByteCodeHandler<BC_Move>::disassemble(code, meta.get()); break;
+            case BC_Not: str = ByteCodeHandler<BC_Not>::disassemble(code, meta.get()); break;
+            case BC_Minus: str = ByteCodeHandler<BC_Minus>::disassemble(code, meta.get()); break;
+            case BC_SetGlobal: str = ByteCodeHandler<BC_SetGlobal>::disassemble(code, meta.get()); break;
+            case BC_GetGlobal: str = ByteCodeHandler<BC_GetGlobal>::disassemble(code, meta.get()); break;
+            case BC_Add: str = ByteCodeHandler<BC_Add>::disassemble(code, meta.get()); break;
+            case BC_Sub: str = ByteCodeHandler<BC_Sub>::disassemble(code, meta.get()); break;
+            case BC_Mul: str = ByteCodeHandler<BC_Mul>::disassemble(code, meta.get()); break;
+            case BC_Div: str = ByteCodeHandler<BC_Div>::disassemble(code, meta.get()); break;
+            case BC_Mod: str = ByteCodeHandler<BC_Mod>::disassemble(code, meta.get()); break;
+            case BC_Pow: str = ByteCodeHandler<BC_Pow>::disassemble(code, meta.get()); break;
+            case BC_Less: str = ByteCodeHandler<BC_Less>::disassemble(code, meta.get()); break;
+            case BC_LessEq: str = ByteCodeHandler<BC_LessEq>::disassemble(code, meta.get()); break;
+            case BC_Greater: str = ByteCodeHandler<BC_Greater>::disassemble(code, meta.get()); break;
+            case BC_GreaterEq: str = ByteCodeHandler<BC_GreaterEq>::disassemble(code, meta.get()); break;
+            case BC_Equal: str = ByteCodeHandler<BC_Equal>::disassemble(code, meta.get()); break;
+            case BC_NEqual: str = ByteCodeHandler<BC_NEqual>::disassemble(code, meta.get()); break;
+            case BC_SetArray: str = ByteCodeHandler<BC_SetArray>::disassemble(code, meta.get()); break;
+            case BC_GetArray: str = ByteCodeHandler<BC_GetArray>::disassemble(code, meta.get()); break;
+            case BC_Jump: str = ByteCodeHandler<BC_Jump>::disassemble(code, meta.get()); break;
+            case BC_TrueJump: str = ByteCodeHandler<BC_TrueJump>::disassemble(code, meta.get()); break;
+            case BC_FalseJump: str = ByteCodeHandler<BC_FalseJump>::disassemble(code, meta.get()); break;
+            case BC_Call: str = ByteCodeHandler<BC_Call>::disassemble(code, meta.get()); break;
+            default: ASSERT(0); break;
+        }
+        so << str << endl;
+        if ((code & 0xff) == BC_NewFunction) {
+            disassemble(so, ByteCodeHandler<BC_NewFunction>::getMetaFromCode(code), depth + 1);
+        }
+    }
+
 }

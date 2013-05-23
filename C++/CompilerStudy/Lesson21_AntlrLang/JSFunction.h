@@ -30,6 +30,7 @@ struct FuncMeta {
     vector<int> ip2line;
     StmtNodePtr stmt;
     vector<JSValue> constTable;
+    string fileName;
     FuncMeta(): argCount(0), localCount(0), tempCount(0){}
     int getLocalSpace() const { return localCount + tempCount; }
     int getConstIdx(const JSValue& cv) {

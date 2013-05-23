@@ -57,7 +57,7 @@ program returns[FuncMetaPtr value]: {
                   })*  EOF {
         value->localCount = SymbolTable::topTable()->getMaxLocalIdx();
         SymbolTable::popTable();
-        emitCode(value.get());
+        emitCode(value);
           };
 
 statement returns[StmtNodePtr value]
@@ -180,7 +180,7 @@ scope {
         auto meta = $funcBody::meta;
         meta->localCount = SymbolTable::topTable()->getMaxLocalIdx();
         SymbolTable::popTable();
-        emitCode(meta.get());
+        emitCode(meta);
         value = ExprNodePtr(new ExprNode_Lambda($lp.line, JSVM::instance()->getMetaIdx(meta)));
     }
     ;
