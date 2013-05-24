@@ -4,7 +4,7 @@ macro_defs=
 include_dirs=/home/scan/Libraries/Antlr/CppRuntime
 lib_dirs=
 lib_files=
-.PHONY: 
+.PHONY: build_actions clean_actions
 
 build_actions: Expr.tokens
 

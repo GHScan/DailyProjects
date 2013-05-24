@@ -1,7 +1,2 @@
 
-println(time())
-srand(time())
-println(random())
-println(random())
-println(random())
-println(random())
+print('abc' + (2+3))

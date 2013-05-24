@@ -167,8 +167,7 @@ static int buildin_srand(JSValue *begin, JSValue *end) {
     return 0;
 }
 static int buildin_random(JSValue *begin, JSValue *end) {
-    //FIXME:
-    *begin = JSValue::fromNumber(::random());
+    *begin = JSValue::fromNumber(::rand());
     return 1;
 }
 static int buildin_time(JSValue *begin, JSValue *end) {

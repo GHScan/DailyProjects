@@ -1,11 +1,10 @@
 
 TODO:
-    string concat
+    test/performance2.js
     traceback
     fold const expr
     remove todos
-    memory leaks
-    test/performance2.js
+    memory leaks(GCObjectManager::link)
 
 buildin functions:
     print

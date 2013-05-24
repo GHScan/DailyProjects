@@ -1,10 +1,10 @@
 use_cpp0x=1
 build_dll=0
 macro_defs=
-include_dirs=/home/scan/Libraries/Antlr/CppRuntime
+include_dirs=/Users/chenzhonglei/Projects/Libraries/Antlr/CppRuntime
 lib_dirs=
 lib_files=
-.PHONY: 
+.PHONY: build_actions clean_actions
 
 build_actions: JSMinus.tokens
 

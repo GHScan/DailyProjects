@@ -232,9 +232,15 @@ struct ByteCodeHandler<BC_Add> {
         auto dest = VarID(destID).toValue(frame->localConstPtr);
         auto l = VarID(lID).toValue(frame->localConstPtr);
         auto r = VarID(rID).toValue(frame->localConstPtr);
-        ASSERT(l->type == JSVT_Number && r->type == JSVT_Number);
-        dest->data.num = l->data.num + r->data.num;
-        dest->type = JSVT_Number;
+        if (l->type == JSVT_Number) {
+            ASSERT(r->type == JSVT_Number);
+            dest->data.num = l->data.num + r->data.num;
+            dest->type = JSVT_Number;
+        } else if (l->type == JSVT_String) {
+            *dest = JSValue::fromString((string(l->data.str->buf) + r->toString()).c_str());
+        } else {
+            ASSERT(0);
+        }
     }
     FORCE_INLINE static string disassemble(int code, FuncMeta* meta) {
         DECODE_3(BIT_W_VAR_ID, BIT_W_VAR_ID, BIT_W_VAR_ID, destID, lID, rID);
