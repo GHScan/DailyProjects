@@ -1,11 +1,3 @@
-
-TODO:
-    test/performance2.js
-    traceback
-    fold const expr
-    remove todos
-    memory leaks(GCObjectManager::link)
-
 buildin functions:
     print
     println

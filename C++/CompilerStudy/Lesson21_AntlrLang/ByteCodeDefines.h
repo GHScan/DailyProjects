@@ -467,9 +467,11 @@ struct ByteCodeHandler<BC_SetArray> {
         auto array = VarID(arrayID).toValue(frame->localConstPtr);
         auto k = VarID(kID).toValue(frame->localConstPtr);
         auto v = VarID(vID).toValue(frame->localConstPtr);
-        ASSERT(array->type == JSVT_Array);
-        ASSERT(k->type == JSVT_Number);
-        array->data.array->array[(int)k->data.num] = *v;
+        ASSERT(array->type == JSVT_Array && k->type == JSVT_Number);
+        int i = (int)k->data.num;
+        auto &vec = array->data.array->array;
+        ASSERT(i >= 0 && i < (int)vec.size());
+        vec[i] = *v;
     }
     FORCE_INLINE static string disassemble(int code, FuncMeta* meta) {
         DECODE_3(BIT_W_VAR_ID, BIT_W_VAR_ID, BIT_W_VAR_ID, arrayID, kID, vID);
@@ -487,7 +489,10 @@ struct ByteCodeHandler<BC_GetArray> {
         auto array = VarID(arrayID).toValue(frame->localConstPtr);
         auto k = VarID(kID).toValue(frame->localConstPtr);
         ASSERT(array->type == JSVT_Array && k->type == JSVT_Number);
-        *dest = array->data.array->array[(int)k->data.num];
+        int i = (int)k->data.num;
+        auto &vec = array->data.array->array;
+        ASSERT(i >= 0 && i < (int)vec.size());
+        *dest = vec[i];
     }
     FORCE_INLINE static string disassemble(int code, FuncMeta* meta) {
         DECODE_3(BIT_W_VAR_ID, BIT_W_VAR_ID, BIT_W_VAR_ID, destID, arrayID, kID);

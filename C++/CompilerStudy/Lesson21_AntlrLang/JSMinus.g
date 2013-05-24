@@ -28,7 +28,7 @@ options {
 }
 @parser::members {
 
-ExprNodePtr getExprNodeFromID(int line, const string& name) {
+static ExprNodePtr getExprNodeFromID(int line, const string& name) {
     int localIdx = SymbolTable::topTable()->getLocalIdx(name);
     if (localIdx == -1) {
         int constIdx = SymbolTable::topTable()->getMeta()->getConstIdx(JSValue::fromString(name.c_str()));
@@ -36,12 +36,12 @@ ExprNodePtr getExprNodeFromID(int line, const string& name) {
     }
     else return ExprNodePtr(new ExprNode_Local(line, localIdx));
 }
-ExprNodePtr getExprNodeFromConst(int line, const JSValue& cv) {
+static ExprNodePtr getExprNodeFromConst(int line, const JSValue& cv) {
     int constIdx = SymbolTable::topTable()->getMeta()->getConstIdx(cv);
     return ExprNodePtr(new ExprNode_Const(line, constIdx));
 }
 
-string unEscape(const string& s) {
+static string unEscape(const string& s) {
     string r;
     for (int i = 0; i < (int)s.size(); ++i) {
         if (s[i] == '\\') {
@@ -65,8 +65,8 @@ string unEscape(const string& s) {
 
 // syntax
 
-program returns[FuncMetaPtr value]: {
-        value.reset(new FuncMeta());
+program [const char *fileName]returns[FuncMetaPtr value]: {
+        value.reset(new FuncMeta(fileName));
         value->stmt.reset(new StmtNode_Block());
         SymbolTable::pushTable(value);
           }(statement {
@@ -190,7 +190,7 @@ scope {
     FuncMetaPtr meta;
 }
     : lp='(' idList? ')' {
-        $funcBody::meta.reset(new FuncMeta());
+        $funcBody::meta.reset(new FuncMeta(SymbolTable::topTable()->getMeta()->fileName));
         auto meta = $funcBody::meta;
         SymbolTable::pushTable(meta);
         meta->stmt.reset(new StmtNode_Block());

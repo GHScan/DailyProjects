@@ -16,7 +16,7 @@ static JSValue loadFile(const char* fileName) {
     JSMinusLexer lxr(&input); 
     JSMinusParser::TokenStreamType tstream(ANTLR_SIZE_HINT, lxr.get_tokSource() );
     JSMinusParser psr(&tstream); 
-    return JSValue::fromFunction(JSFunction::create(psr.program()));
+    return JSValue::fromFunction(JSFunction::create(psr.program(fileName)));
 }
 
 static int buildin_print(JSValue* begin, JSValue *end) {
@@ -82,7 +82,6 @@ static int buildin_disassemble(JSValue *begin, JSValue *end) {
     return 1;
 }
 static int buildin_collectgarbage(JSValue *begin, JSValue *end) {
-    // TODO
     auto mgr = GCObjectManager::instance();
     int oldCount = mgr->getObjectCount();
     mgr->performFullGC();
@@ -208,6 +207,12 @@ int main(int argc, char *argv[]) {
         puts("Usage : main filename [args ...]");
         return 1;
     }
+
+#ifdef CHECK_MEMORY_LEAKS
+#ifdef _MSC_VER
+    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+#endif
+#endif
 
     try {
         runFile(argc, argv);

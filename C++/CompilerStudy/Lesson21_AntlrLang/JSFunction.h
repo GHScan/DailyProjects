@@ -20,18 +20,20 @@ struct Function:
     JSValue callFromC(JSValue* argsBegin, JSValue* argsEnd);
     void callFromVM(JSValue *argsBegin, JSValue* argsEnd);
 protected:
-    Function(FuncType _funcType): GCObject(GCT_Function), funcType(_funcType){}
+    Function(FuncType _funcType): GCObject(GCT_Function), funcType(_funcType){ 
+        GCObjectManager::instance()->link(this);
+    }
 };
 
 struct FuncMeta {
+    string fileName;
     int argCount;
     int localCount, tempCount;
     vector<int> codes;
     vector<int> ip2line;
     StmtNodePtr stmt;
     vector<JSValue> constTable;
-    string fileName;
-    FuncMeta(): argCount(0), localCount(0), tempCount(0){}
+    FuncMeta(const string &_fileName): fileName(_fileName), argCount(0), localCount(0), tempCount(0){}
     int getLocalSpace() const { return localCount + tempCount; }
     int getConstIdx(const JSValue& cv) {
         for (int i = 0; i < (int)constTable.size(); ++i) {
@@ -39,6 +41,11 @@ struct FuncMeta {
         }
         constTable.push_back(cv);
         return (int)constTable.size() - 1;
+    }
+    void accessGCObjects(vector<GCObject*> &objs) {
+        for (auto &v : constTable) {
+            if (auto obj = v.gcAccess()) objs.push_back(obj);
+        }
     }
 };
 typedef shared_ptr<FuncMeta> FuncMetaPtr;
@@ -73,14 +80,6 @@ inline void Function::destroy() {
         case Function::FT_C: delete static_cast<CFunction*>(this); break;
         case Function::FT_JS: delete static_cast<JSFunction*>(this); break;
         default: ASSERT(0); break;
-    }
-}
-inline void Function::accessGCObjects(vector<GCObject*> &objs) {
-    if (funcType == Function::FT_JS) {
-        auto jsFunc = static_cast<JSFunction*>(this);
-        for (auto &v : jsFunc->meta->constTable) {
-            if (auto obj = v.gcAccess()) objs.push_back(obj);
-        }
     }
 }
 

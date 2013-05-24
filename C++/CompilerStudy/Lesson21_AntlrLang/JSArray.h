@@ -9,7 +9,9 @@ struct JSArray:
     public GCObject {
     vector<JSValue> array;
 
-    JSArray(): GCObject(GCT_Array){}
+    JSArray(): GCObject(GCT_Array){ 
+        GCObjectManager::instance()->link(this);
+    }
 
     void accessGCObjects(vector<GCObject*> &objs) {
         for (auto &value : array) {

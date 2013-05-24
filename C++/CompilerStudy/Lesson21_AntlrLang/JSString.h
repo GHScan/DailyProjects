@@ -23,6 +23,7 @@ private:
         size = (int)strlen(str);
         buf = (char*)malloc(size + 1);
         strcpy(buf, str);
+        GCObjectManager::instance()->link(this);
     }
     JSString(): GCObject(GCT_String), buf(NULL), size(0), hashCode(0){}
 

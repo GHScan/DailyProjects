@@ -20,11 +20,19 @@ void JSVM::accessGCObjects(vector<GCObject*> &objs) {
     for (auto &value : m_values) {
         if (auto obj = value.gcAccess()) objs.push_back(obj);
     }
+    for (auto &meta : m_metas) {
+        meta->accessGCObjects(objs);
+    }
+    for (auto &frame : m_frames) {
+        if (frame.func == NULL) continue;
+        if (auto obj = frame.func->gcAccess()) objs.push_back(obj);
+    }
 }
 
 JSVM::JSVM() {
     GCObjectManager::createInstance();
     JSStringManager::createInstance();
+
     m_frames.reserve(1024);
     m_values.reserve(1024 * 64);
     m_values.push_back(JSValue::NIL);
@@ -32,6 +40,12 @@ JSVM::JSVM() {
 }
 JSVM::~JSVM() {
     popFrame();
+    ASSERT(m_values.size() == 1 && m_frames.empty());
+    m_values.clear();
+    m_globals.clear();
+    m_metas.clear();
+    GCObjectManager::instance()->performFullGC();
+
     JSStringManager::destroyInstance();
     GCObjectManager::destroyInstance();
 }

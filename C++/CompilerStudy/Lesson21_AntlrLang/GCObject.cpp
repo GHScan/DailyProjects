@@ -25,9 +25,6 @@ void GCObjectManager::performFullGC() {
         switch (obj->type) {
             case GCObject::GCT_Array:
                 static_cast<JSArray*>(obj)->accessGCObjects(unscans);
-            case GCObject::GCT_Function:
-                static_cast<JSFunction*>(obj)->accessGCObjects(unscans);
-                break;
             default: break;
         }
         obj->state = GCObject::GCS_Scan;
@@ -35,6 +32,7 @@ void GCObjectManager::performFullGC() {
 
     GCObject *oldHead = m_head;
     m_head = NULL;
+    m_objCount = 0;
     while (oldHead != NULL) {
         GCObject *next = oldHead->next;
         if (oldHead->state == GCObject::GCS_Unaccess) {

@@ -47,7 +47,7 @@ public:
         return m_metas[idx];
     }
 
-    JSValue* pushStack(JSValue *begin, JSValue* end) { 
+    JSValue* pushStack(const JSValue *begin, const JSValue* end) { 
         JSValue *r = &m_values.back();
         m_values.insert(m_values.end(), begin, end);
         return r;
