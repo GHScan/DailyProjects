@@ -147,7 +147,7 @@ struct ByteCodeHandler<BC_Not> {
         DECODE_2(BIT_W_VAR_ID, BIT_W_VAR_ID, destID, srcID);
         auto dest = VarID(destID).toValue(frame->localConstPtr);
         auto src = VarID(srcID).toValue(frame->localConstPtr);
-        dest->data.b = src->getBoolean();
+        dest->data.b = !src->getBoolean();
         dest->type = JSVT_Boolean;
     }
     FORCE_INLINE static string disassemble(int code, FuncMeta* meta) {
@@ -184,6 +184,7 @@ struct ByteCodeHandler<BC_Minus> {
         auto src = VarID(srcID).toValue(frame->localConstPtr);
         ASSERT(src->type == JSVT_Number);
         dest->data.num = -src->data.num;
+        dest->type = JSVT_Number;
     }
     FORCE_INLINE static string disassemble(int code, FuncMeta* meta) {
         DECODE_2(BIT_W_VAR_ID, BIT_W_VAR_ID, destID, srcID);

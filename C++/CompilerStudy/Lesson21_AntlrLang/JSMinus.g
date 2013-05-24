@@ -269,8 +269,7 @@ mulExpr returns[ExprNodePtr value]
     ; 
 
 unaryExpr returns[ExprNodePtr value]
-    : op=('not' | '-' | '#') ? atom {
-        // TODO: 
+    : (op=('not' | '-' | '#'))? atom {
         value = $atom.value;
         if ($op != NULL) {
             value = ExprNodePtr(new ExprNode_UnaryOp($op.line, $op.text, value));
@@ -279,9 +278,9 @@ unaryExpr returns[ExprNodePtr value]
     ;
 
 atom returns[ExprNodePtr value]
-    : literalAtom { value = $literalAtom.value;}
-    | rtTypeAtom { value = $rtTypeAtom.value; }
-    | '(' expr ')' { value = $expr.value; }
+    : literalAtom { $value = $literalAtom.value;}
+    | rtTypeAtom { $value = $rtTypeAtom.value; }
+    | '(' expr ')' { $value = $expr.value; }
     ;
 
 literalAtom returns[ExprNodePtr value]
