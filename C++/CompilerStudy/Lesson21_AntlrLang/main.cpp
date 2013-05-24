@@ -160,6 +160,21 @@ static int buildin_tostring(JSValue *begin, JSValue *end) {
     *begin = JSValue::fromString(begin->toString().c_str());
     return 1;
 }
+static int buildin_srand(JSValue *begin, JSValue *end) {
+    ASSERT(end > begin);
+    ASSERT(begin->type == JSVT_Number);
+    ::srand((int)begin->data.num);
+    return 0;
+}
+static int buildin_random(JSValue *begin, JSValue *end) {
+    //FIXME:
+    *begin = JSValue::fromNumber(::random());
+    return 1;
+}
+static int buildin_time(JSValue *begin, JSValue *end) {
+    *begin = JSValue::fromNumber(::time(NULL));
+    return 1;
+}
 
 static void registerBuildins() {
 #define ENTRY(name) {#name, buildin_##name}
@@ -167,7 +182,7 @@ static void registerBuildins() {
         ENTRY(print), ENTRY(println), ENTRY(format), ENTRY(clock),
         ENTRY(disassemble), ENTRY(collectgarbage), ENTRY(readfile), ENTRY(writefile),
         ENTRY(loadfile), ENTRY(type), ENTRY(insert), ENTRY(remove),
-        ENTRY(tostring),
+        ENTRY(tostring), ENTRY(srand), ENTRY(random), ENTRY(time),
     };
 #undef ENTRY
     for (auto entry : entries) {

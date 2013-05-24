@@ -5,6 +5,7 @@ TODO:
     fold const expr
     remove todos
     memory leaks
+    test/performance2.js
 
 buildin functions:
     print
