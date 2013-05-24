@@ -8,8 +8,8 @@ function partition(array, left, right, pivotIndex)
 	        array[i], array[storeIndex] = array[storeIndex], array[i]
 	        storeIndex = storeIndex + 1
 		end
-		array[storeIndex], array[right] = array[right], array[storeIndex]
 	end
+    array[storeIndex], array[right] = array[right], array[storeIndex]
    return storeIndex
 end
 function quicksort(array, left, right)

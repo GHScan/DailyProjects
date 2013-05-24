@@ -7,17 +7,17 @@ function partition(array, left, right, pivotIndex) {
     array[pivotIndex] = temp
 	var storeIndex = left
     for (var i = left; i <= right - 1; ++i) {
-    	if (array[i] <= pivotValue) {
+        if (array[i] <= pivotValue) {
             temp = array[i] 
             array[i] = array[storeIndex]
             array[storeIndex] = temp
-	        storeIndex = storeIndex + 1
+            storeIndex = storeIndex + 1
         }
-        temp = array[storeIndex]
-        array[storeIndex] = array[right]
-        array[right] = temp
     }
-   return storeIndex
+    temp = array[storeIndex]
+    array[storeIndex] = array[right]
+    array[right] = temp
+    return storeIndex
 }
 function quicksort(array, left, right) {
 	if (right > left) {
@@ -38,11 +38,12 @@ function copytable(t)  {
 //==============================
 function permutations(a, i, n) {
     if (i == n) {
-        //println(unpack(a))
+        //for (var i = 0; i < #a; ++i) print(a[i])
+        //println()
         return
     }
     var temp
-    for (var j = i; j <= n; ++j) {
+    for (var j = i; j < n; ++j) {
         temp = a[i]
         a[i] = a[j]
         a[j] = temp
@@ -57,28 +58,28 @@ function bst_insert(t, k, v) {
     if (not t) {
         t = [k, v, nil, nil]
     } else {
-        if (t[1] == k) {
-            t[2] = v
+        if (t[0] == k) {
+            t[1] = v
         }
         else {
-            if (k < t[1]) {
-                t[3] = bst_insert(t[3], k, v)
+            if (k < t[0]) {
+                t[2] = bst_insert(t[2], k, v)
             } else {
-                t[4] = bst_insert(t[4], k, v)
+                t[3] = bst_insert(t[3], k, v)
             }
         }
-        return t
     }
+    return t
 }
 function bst_query(t, k) {
     if (not t) return
-    if (t[1] == k) {
-        return t[2]
+    if (t[0] == k) {
+        return t[1]
     } else {
-        if (k < t[1]) {
-            return bst_query(t[3], k)
+        if (k < t[0]) {
+            return bst_query(t[2], k)
         } else {
-            return bst_query(t[4], k)
+            return bst_query(t[3], k)
         }
     }
 }
@@ -97,7 +98,7 @@ function test_quicksort(loop, n) {
     }
     var start = clock()
     for (var i = 0; i < loop; ++i) {
-        quicksort(arrays[i], 1, n)
+        quicksort(arrays[i], 0, n - 1)
     }
     println(format('test_quicksort(loop=%d,n=%d): %f', loop, n, clock() - start))
 }
@@ -107,7 +108,7 @@ function test_permutations(loop, n) {
     for (var i = 1; i <= n; ++i) insert(a, i)
     var start = clock()
     for (var i = 1; i <= loop; ++i) {
-        permutations(a, 1, n)
+        permutations(a, 0, n)
     }
     println(format('test_permutations(loop=%d,n=%d): %f', loop, n, clock() - start))
 }
@@ -118,12 +119,12 @@ function test_bst(loop, n) {
     for (var i = 1; i <= n; ++i) insert(data, random() % n)
     for (var i = 1; i <= n; ++i) insert(query, random() % n)
     var start = clock()
-    for (var i = 1; i <= loop; ++i) {
+    for (var i = 0; i < loop; ++i) {
         var t = nil
-        for (var i = 1; i <= n; ++i) {
+        for (var i = 0; i < n; ++i) {
             t = bst_insert(t, data[i], data[i])
         }
-        for (var i = 1; i <= n; ++i) {
+        for (var i = 0; i < n; ++i) {
             bst_query(t, query[i])
         }
     }
