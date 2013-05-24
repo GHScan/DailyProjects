@@ -100,15 +100,22 @@ statement returns[StmtNodePtr value]
     | varDeclares
     | {
         value.reset(new StmtNode_Block());
-    } '{' (a=statement{
+    } '{' {
+        SymbolTable::topTable()->pushBlock();
+    } (a=statement{
             if ($a.value != NULL) {
                 static_cast<StmtNode_Block*>(value.get())->stmts.push_back($a.value);
             }
-            })* '}' 
+            })* '}' {
+        SymbolTable::topTable()->popBlock();
+    }
     | if_='if' '(' expr ')' ifStmt=statement (('else')=>'else' elseStmt=statement)? {
         value = StmtNodePtr(new StmtNode_If($if_.line, $expr.value, $ifStmt.value, $elseStmt.value));
     }
-    | for_='for' '(' forStart? ';' expr? ';' a=statement? ')' body=statement {
+    | for_='for' {
+        SymbolTable::topTable()->pushBlock();
+    } '(' forStart? ';' expr? ';' a=statement? ')' body=statement {
+        SymbolTable::topTable()->popBlock();
         StmtNodePtr first, last;
         ExprNodePtr second;
         if ($forStart.value != NULL) first = $forStart.value;

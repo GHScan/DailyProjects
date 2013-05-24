@@ -337,7 +337,7 @@ void execute(StackFrame *stopFrame) {
             if (frame == stopFrame) break;
             auto meta = frame->func->meta;
             int line = meta->ip2line[frame->ip];
-            e.addLine(format("%s(%d):\n", meta->fileName.c_str(), line));
+            e.addLine(format("%s(%d):", meta->fileName.c_str(), line));
             JSVM::instance()->popFrame();
         }
         throw;

@@ -1,14 +1,21 @@
 //==============================
 function partition(array, left, right, pivotIndex) {
 	var pivotValue = array[pivotIndex]
-	array[pivotIndex], array[right] = array[right], array[pivotIndex]
+    var temp
+    temp = array[right]
+    array[right] = array[pivotIndex]
+    array[pivotIndex] = temp
 	var storeIndex = left
     for (var i = left; i <= right - 1; ++i) {
     	if (array[i] <= pivotValue) {
-	        array[i], array[storeIndex] = array[storeIndex], array[i]
+            temp = array[i] 
+            array[i] = array[storeIndex]
+            array[storeIndex] = temp
 	        storeIndex = storeIndex + 1
         }
-		array[storeIndex], array[right] = array[right], array[storeIndex]
+        temp = array[storeIndex]
+        array[storeIndex] = array[right]
+        array[right] = temp
     }
    return storeIndex
 }
@@ -34,16 +41,21 @@ function permutations(a, i, n) {
         //println(unpack(a))
         return
     }
+    var temp
     for (var j = i; j <= n; ++j) {
-        a[i], a[j] = a[j], a[i]
+        temp = a[i]
+        a[i] = a[j]
+        a[j] = temp
         permutations(a, i + 1, n)
-        a[i], a[j] = a[j], a[i]
+        temp = a[i]
+        a[i] = a[j]
+        a[j] = temp
     }
 }
 //==============================
 function bst_insert(t, k, v) {
     if (not t) {
-        t = {k, v, nil, nil}
+        t = [k, v, nil, nil]
     } else {
         if (t[1] == k) {
             t[2] = v

@@ -209,5 +209,9 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    runFile(argc, argv);
+    try {
+        runFile(argc, argv);
+    } catch(const exception& e) {
+        printf("Unhandled exception: %s\n", e.what());
+    }
 }
