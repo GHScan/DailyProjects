@@ -113,7 +113,7 @@ struct ByteCodeHandler<BC_NewArray> {
         auto array = new JSArray();
         if (len > 0) {
             auto src = VarID(srcID).toValue(frame->localConstPtr);
-            for (int i = 0; i < len; ++i) array->array.push_back(src[i]);
+            array->array.insert(array->array.end(), src, src + len);
         }
         *dest = JSValue::fromArray(array);
     }
