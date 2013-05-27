@@ -1,0 +1,16 @@
+Compare with C++\CompilerStudy\Lesson21_AntlrLang
+
+Buildin functions:
+    print
+    println
+    clock
+    format
+    disassemble
+    collectgarbage
+    readfile
+    writefile
+    loadfile
+    type
+    insert
+    remove
+    tostring
