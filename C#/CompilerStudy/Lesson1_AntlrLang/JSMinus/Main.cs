@@ -13,8 +13,9 @@ public class JSMinusMain {
             JSMinusLexer lexer = new JSMinusLexer(input);
             CommonTokenStream tokens = new CommonTokenStream(lexer);
             JSMinusParser parser = new JSMinusParser(tokens);
-            var funcs = parser.program();
-            System.Console.WriteLine(funcs);
+            CodeEmitor emitor = new CodeEmitor("JSMinus", parser.program());
+            emitor.save();
+            emitor.run();
 
         } catch (System.Exception e) {
             Console.Error.WriteLine(e.StackTrace);

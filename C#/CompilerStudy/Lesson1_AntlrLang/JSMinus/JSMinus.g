@@ -12,6 +12,7 @@ options {
 
 @parser::header {
 using System.Text;
+using System.Diagnostics;
 }
 @parser::members {
 
@@ -47,18 +48,18 @@ static string unEscape(string s) {
 // syntax
 
 public
-program returns[Dictionary<string, StmtNode> values]
+program returns[Dictionary<string, FuncMeta> values]
 scope {
-    Dictionary<string, StmtNode> funcs;
+    Dictionary<string, FuncMeta> funcs;
     StmtNode_Block block;
 }
     : {
         $program::block = new StmtNode_Block(1);
-        $program::funcs = new Dictionary<string, StmtNode>();
+        $program::funcs = new Dictionary<string, FuncMeta>();
     } (statement{
             $program::block.Stmts.Add($statement.value);
             })*  EOF {
-        $program::funcs["Main"] = $program::block;
+        $program::funcs["Main"] = new FuncMeta("Main", 0, $program::block);
         values = $program::funcs;
     };
 
@@ -67,7 +68,7 @@ statement returns[StmtNode value]
     | op=('++' | '--') leftValue {
         int line = $op.line;
         value = new StmtNode_Assign(line, $leftValue.value, 
-                new ExprNode_BinaryOp(line, $op.text,
+                new ExprNode_BinaryOp(line, $op.text.Substring(0, 1),
                     $leftValue.value, new ExprNode_ConstNumber(line, 1)));
     }
     | ('function')=>funcDefine 
@@ -75,6 +76,7 @@ statement returns[StmtNode value]
     | rtTypeAtom // '(' exprList? ')' 
     {
         value = new StmtNode_Call($rtTypeAtom.value.Line, $rtTypeAtom.value as ExprNode_Call);
+        Trace.Assert($rtTypeAtom.value is ExprNode_Call);
     }
     | varDeclares { value = $varDeclares.value; }
     |  lb='{' {
@@ -125,7 +127,7 @@ scope {
         var block = new StmtNode_Block($ID.line);
         if ($idList.values != null) {
             foreach(var name in $idList.values) {
-                block.Stmts.Add(new StmtNode_DeclareLocal($ID.line, name));
+                block.Stmts.Add(new StmtNode_DeclareArg($ID.line, name));
             }
         }
         $funcDefine::block = block;
@@ -134,7 +136,7 @@ scope {
                 $funcDefine::block.Stmts.Add($statement.value);
             }
             })* '}' {
-        $program::funcs[$ID.text] = $funcDefine::block;
+        $program::funcs[$ID.text] = new FuncMeta($ID.text, $idList.values.Count, $funcDefine::block);
     }
     ;
 
@@ -166,6 +168,7 @@ leftValue returns[ExprNode value]
     : rtTypeAtom //'[' expr ']' 
     {
         value = $rtTypeAtom.value;
+        Trace.Assert((value is ExprNode_ID) || (value is ExprNode_IndexOf));
     }
     ;
 

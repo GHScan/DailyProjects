@@ -68,6 +68,7 @@ public class ExprNode_Call : ExprNode {
 // StmtNode
 public interface IStmtNodeVisitor {
     void visit(StmtNode_DeclareLocal node);
+    void visit(StmtNode_DeclareArg node);
     void visit(StmtNode_Block node);
     void visit(StmtNode_Stmts node);
     void visit(StmtNode_Assign node);
@@ -87,6 +88,11 @@ public abstract class StmtNode {
 
 public class StmtNode_DeclareLocal : StmtNode {
     public StmtNode_DeclareLocal(int line, string name) : base(line) { Name = name;  }
+    public string Name { get; private set; }
+    public override void acceptVisitor(IStmtNodeVisitor v) { v.visit(this); }
+}
+public class StmtNode_DeclareArg : StmtNode {
+    public StmtNode_DeclareArg(int line, string name): base(line) { Name = name; }
     public string Name { get; private set; }
     public override void acceptVisitor(IStmtNodeVisitor v) { v.visit(this); }
 }
