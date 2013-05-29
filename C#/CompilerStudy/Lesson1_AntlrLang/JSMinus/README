@@ -5,12 +5,5 @@ Buildin functions:
     println
     clock
     format
-    disassemble
-    collectgarbage
-    readfile
-    writefile
-    loadfile
-    type
-    insert
-    remove
-    tostring
+    push
+    random

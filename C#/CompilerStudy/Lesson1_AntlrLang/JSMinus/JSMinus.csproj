@@ -54,6 +54,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AST.cs" />
+    <Compile Include="BuildinCodeEmitor.cs" />
     <Compile Include="CodeEmitor.cs" />
     <Compile Include="FuncMeta.cs" />
     <Compile Include="JSMinusLexer.cs" />

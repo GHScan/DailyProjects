@@ -10,18 +10,18 @@ function printPrime(n) {
         }
         if (flag);
     }
-    println('printPrime: ', clock() - start)
+    println(['printPrime: ', clock() - start])
 }
 function perform() {
     var start = clock()
     for (var i = 0; i < 1000000; ++i);
-    println('perform: ', clock() - start)
+    println(['perform: ', clock() - start])
 }
 function perform_1_5() {
     var start = clock()
     var i = 0
     while (i < 1000000) i += 1
-    println('perform 1.5: ', clock() - start)
+    println(['perform 1.5: ', clock() - start])
 }
 function perform2() {
     var start = clock()
@@ -31,7 +31,7 @@ function perform2() {
             }
         }
     }
-    println('perform2: ', clock() - start)
+    println(['perform2: ', clock() - start])
 }
 function feb(n) {
     if (n <= 2) return 1
@@ -40,7 +40,7 @@ function feb(n) {
 function perform3() {
     var start = clock()
     for (var i = 0; i < 30; ++i) feb(i)
-    println('perform3: ', clock() - start)
+    println(['perform3: ', clock() - start])
 }
 function main()  {
     printPrime(10000)

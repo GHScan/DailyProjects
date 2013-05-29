@@ -57,7 +57,9 @@ scope {
         $program::block = new StmtNode_Block(1);
         $program::funcs = new Dictionary<string, FuncMeta>();
     } (statement{
-            $program::block.Stmts.Add($statement.value);
+            if ($statement.value != null) {
+                $program::block.Stmts.Add($statement.value);
+            }
             })*  EOF {
         $program::funcs["Main"] = new FuncMeta("Main", 0, $program::block);
         values = $program::funcs;
@@ -91,6 +93,9 @@ statement returns[StmtNode value]
     }
     | for_='for'  '(' forStart? ';' expr? ';' third=statement? ')' bodyStmt=statement {
         value = new StmtNode_For($for_.line, $forStart.value, $expr.value, $third.value, $bodyStmt.value);
+        var block = new StmtNode_Block($for_.line);
+        block.Stmts.Add(value);
+        value = block;
     }
     | while_='while' '(' expr ')' bodyStmt=statement {
         value = new StmtNode_For($while_.line, null, $expr.value, null, $bodyStmt.value);
@@ -136,7 +141,7 @@ scope {
                 $funcDefine::block.Stmts.Add($statement.value);
             }
             })* '}' {
-        $program::funcs[$ID.text] = new FuncMeta($ID.text, $idList.values.Count, $funcDefine::block);
+        $program::funcs[$ID.text] = new FuncMeta($ID.text, $idList.values == null ? 0 : $idList.values.Count, $funcDefine::block);
     }
     ;
 
@@ -232,11 +237,13 @@ atom returns[ExprNode value]
 
 literalAtom returns[ExprNode value]
     : NUMBER_LITERAL { value = new ExprNode_ConstNumber($NUMBER_LITERAL.line, double.Parse($NUMBER_LITERAL.text)); }
-    | STRING_LITERAL { value = new ExprNode_ConstString($STRING_LITERAL.line, unEscape($STRING_LITERAL.text)); }
+    | STRING_LITERAL { value = new
+        ExprNode_ConstString($STRING_LITERAL.line,
+                unEscape($STRING_LITERAL.text.Substring(1, $STRING_LITERAL.text.Length - 2))); }
     | arrayExpr { value = $arrayExpr.value; }
     | lex='true' { value = new ExprNode_ConstNumber($lex.line, 1);}
     | lex='false' { value = new ExprNode_ConstNumber($lex.line, 0);}
-    | lex='null' { value = new ExprNode_ConstString($lex.line, null);}
+    | lex='nil' { value = new ExprNode_ConstString($lex.line, null);}
     ;
 
 rtTypeAtomHead returns[ExprNode value]

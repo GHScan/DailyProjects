@@ -8,8 +8,12 @@ using Antlr.Runtime;
 public class JSMinusMain {
     public static void Main(string[] args) {
         try {
+            if (args.Length < 1) {
+                System.Console.WriteLine("Usage : JSMinus file");
+                return;
+            }
 
-            ICharStream input = new ANTLRFileStream("../../test/test.js");
+            ICharStream input = new ANTLRFileStream(args[0]);
             JSMinusLexer lexer = new JSMinusLexer(input);
             CommonTokenStream tokens = new CommonTokenStream(lexer);
             JSMinusParser parser = new JSMinusParser(tokens);

@@ -31,7 +31,7 @@ function copytable(t)  {
     var r = []
     var n = #t
     for (var i = 0; i < n; ++i) {
-        insert(r, v)
+        push(r, v)
     }
     return r
 }
@@ -55,7 +55,7 @@ function permutations(a, i, n) {
 }
 //==============================
 function bst_insert(t, k, v) {
-    if (not t) {
+    if (t == nil) {
         t = [k, v, nil, nil]
     } else {
         if (t[0] == k) {
@@ -72,7 +72,7 @@ function bst_insert(t, k, v) {
     return t
 }
 function bst_query(t, k) {
-    if (not t) return
+    if (t == nil) return
     if (t[0] == k) {
         return t[1]
     } else {
@@ -85,39 +85,37 @@ function bst_query(t, k) {
 }
 //==============================
 
-srand(time())
-
 function test_quicksort(loop, n) {
     var arrays = []
     for (var i = 1; i <= loop; ++i) {
         var a = []
-        for (var i = 1; i <= n; ++i) {
-            insert(a, random())
+        for (var j = 1; j <= n; ++j) {
+            push(a, random())
         }
-        insert(arrays, a)
+        push(arrays, a)
     }
     var start = clock()
     for (var i = 0; i < loop; ++i) {
         quicksort(arrays[i], 0, n - 1)
     }
-    println(format('test_quicksort(loop=%d,n=%d): %f', loop, n, clock() - start))
+    println([format('test_quicksort(loop={0},n={1}): {2}', [loop, n, clock() - start])])
 }
 
 function test_permutations(loop, n) {
     var a = []
-    for (var i = 1; i <= n; ++i) insert(a, i)
+    for (var i = 1; i <= n; ++i) push(a, i)
     var start = clock()
     for (var i = 1; i <= loop; ++i) {
         permutations(a, 0, n)
     }
-    println(format('test_permutations(loop=%d,n=%d): %f', loop, n, clock() - start))
+    println([format('test_permutations(loop={0},n={1}): {2}', [loop, n, clock() - start])])
 }
 
 function test_bst(loop, n) {
     var data = []
     var query = []
-    for (var i = 1; i <= n; ++i) insert(data, random() % n)
-    for (var i = 1; i <= n; ++i) insert(query, random() % n)
+    for (var i = 1; i <= n; ++i) push(data, random() % n)
+    for (var i = 1; i <= n; ++i) push(query, random() % n)
     var start = clock()
     for (var i = 0; i < loop; ++i) {
         var t = nil
@@ -128,7 +126,7 @@ function test_bst(loop, n) {
             bst_query(t, query[i])
         }
     }
-    println(format('test_bst(loop=%d,n=%d): %f', loop, n, clock() - start))
+    println([format('test_bst(loop={0},n={1}): {2}', [loop, n, clock() - start])])
 }
 
 test_quicksort(10, 10000)
