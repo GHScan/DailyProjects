@@ -12,3 +12,6 @@ buildin functions:
     insert
     remove
     tostring
+    random
+    srand
+    time
