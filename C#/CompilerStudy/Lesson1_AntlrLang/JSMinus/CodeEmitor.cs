@@ -233,8 +233,7 @@ public class StmtNodeVisitor_CodeEmitor : IStmtNodeVisitor {
 
     public void visit(StmtNode_DeclareLocal node) {
         Trace.Assert(!m_locals[m_locals.Count - 1].ContainsKey(node.Name));
-        var local = ILGenerator.DeclareLocal(typeof(object));
-        //local.SetLocalSymInfo(node.Name);
+        var local = allocLocal();
         m_locals[m_locals.Count - 1][node.Name] = local;
     }
     public void visit(StmtNode_DeclareArg node) {
@@ -244,6 +243,9 @@ public class StmtNodeVisitor_CodeEmitor : IStmtNodeVisitor {
     public void visit(StmtNode_Block node) {
         m_locals.Add(new Dictionary<string, LocalBuilder>());
         foreach (var stmt in node.Stmts) stmt.acceptVisitor(this);
+        foreach (var kv in m_locals[m_locals.Count - 1]) {
+            freeLocal(kv.Value);
+        }
         m_locals.RemoveAt(m_locals.Count - 1);
     }
     public void visit(StmtNode_Stmts node) {
@@ -342,11 +344,21 @@ public class StmtNodeVisitor_CodeEmitor : IStmtNodeVisitor {
         if (m_args.TryGetValue(name, out r)) return r;
         else return -1;
     }
+    private LocalBuilder allocLocal() {
+        if (m_localPool.Count == 0) m_localPool.Add(ILGenerator.DeclareLocal(typeof(object)));
+        var r = m_localPool[m_localPool.Count - 1];
+        m_localPool.RemoveAt(m_localPool.Count - 1);
+        return r;
+    }
+    private void freeLocal(LocalBuilder l) {
+        m_localPool.Add(l);
+    }
     private Dictionary<string, int> m_args = new Dictionary<string,int>();
     private List<Dictionary<string, LocalBuilder>> m_locals = new List<Dictionary<string,LocalBuilder>>();
     private List<Label> m_breakLabels = new List<Label>();
     private List<Label> m_continueLabels = new List<Label>();
     private Label m_retLabel;
+    private List<LocalBuilder> m_localPool = new List<LocalBuilder>();
 }
 
 public class CodeEmitor {
