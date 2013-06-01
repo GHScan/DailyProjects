@@ -25,7 +25,7 @@ function printPrime(n) {
                 break
             }
         }
-        if (flag) println([i)] 
+        if (flag) println([i])
     }
     println([])
 }
@@ -54,7 +54,7 @@ function printFeb2() {
     println(['========== printFeb2 =========='])
     var i = 1
     while (i <= 10) {
-        println([feb2(i))] 
+        println([feb2(i)])
         i = i + 1
     }
     println([])
