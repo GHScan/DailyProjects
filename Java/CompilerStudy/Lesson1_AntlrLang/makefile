@@ -3,10 +3,10 @@
 all: build
 
 build: JSMinusParser.java
-	javac -g *java template/*java
+	javac -g -Xlint:all *java template/*java
 
 rel_build: JSMinusParser.java
-	javac *java template/*java
+	javac -Xlint:all *java template/*java
 
 JSMinusParser.java: JSMinus.g
 	java org.antlr.Tool JSMinus.g

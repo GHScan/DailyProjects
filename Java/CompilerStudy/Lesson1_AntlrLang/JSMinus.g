@@ -60,7 +60,7 @@ scope {
                 $program::block.stmts.add($statement.value);
             }
             })*  EOF {
-        $program::funcs.put("main", new FuncMeta("main", 0, $program::block));
+        $program::funcs.put("__main", new FuncMeta("__main", 0, $program::block));
         value = $program::funcs;
     };
 
@@ -163,7 +163,7 @@ assignment returns[StmtNode value]
     : leftValue assignOp expr {
         ExprNode rexpr = $expr.value;
         String op = $assignOp.text;
-        if (op != "=") {
+        if (!op.equals("=")) {
             rexpr = new ExprNode_BinaryOp($leftValue.value.line, op.substring(0, 1), $leftValue.value, rexpr);
         }
         value = new StmtNode_Assign($leftValue.value.line, $leftValue.value, rexpr);

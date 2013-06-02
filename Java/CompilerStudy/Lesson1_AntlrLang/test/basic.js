@@ -63,7 +63,7 @@ function print9x9() {
     println(['========== print9x9 =========='])
     for (var i = 1; i <= 9; ++i) {
         for (var j = 1; j <= i; ++j) {
-            print([format('{0}x{1}={2,-2} ', [j, i, i * j])])
+            print([format('%.0fx%.0f=%-2.0f ', [j, i, i * j])])
         }
         println([])
     }

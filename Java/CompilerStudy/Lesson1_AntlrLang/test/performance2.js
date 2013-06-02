@@ -38,8 +38,7 @@ function copytable(t)  {
 //==============================
 function permutations(a, i, n) {
     if (i == n) {
-        //for (var i = 0; i < #a; ++i) print(a[i])
-        //println()
+        //println([a])
         return
     }
     var temp
@@ -98,7 +97,7 @@ function test_quicksort(loop, n) {
     for (var i = 0; i < loop; ++i) {
         quicksort(arrays[i], 0, n - 1)
     }
-    println([format('test_quicksort(loop={0},n={1}): {2}', [loop, n, clock() - start])])
+    println([format('test_quicksort(loop=%.0f,n=%.0f):', [loop, n]), clock() - start])
 }
 
 function test_permutations(loop, n) {
@@ -108,7 +107,7 @@ function test_permutations(loop, n) {
     for (var i = 1; i <= loop; ++i) {
         permutations(a, 0, n)
     }
-    println([format('test_permutations(loop={0},n={1}): {2}', [loop, n, clock() - start])])
+    println([format('test_permutations(loop=%.0f,n=%.0f):', [loop, n]), clock() - start])
 }
 
 function test_bst(loop, n) {
@@ -126,7 +125,7 @@ function test_bst(loop, n) {
             bst_query(t, query[i])
         }
     }
-    println([format('test_bst(loop={0},n={1}): {2}', [loop, n, clock() - start])])
+    println([format('test_bst(loop=%.0f,n=%.0f):', [loop, n]), clock() - start])
 }
 
 test_quicksort(10, 10000)
