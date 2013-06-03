@@ -97,25 +97,28 @@ class ExprNodeVisitor_CodeEmitor implements IExprNodeVisitor {
     }
     @Override
     public void visit(ExprNode_UnaryOp node) {
-        switch (node.op) {
-            case "not":
-                new ExprNodeVisitor_CodeEmitor(m_stmt, int.class, node.expr);
-                m_currentType = Object.class;
-                break;
-            case "-":
-                new ExprNodeVisitor_CodeEmitor(m_stmt, double.class, node.expr);
-                m_stmt.mbuilder.math(GeneratorAdapter.NEG, Type.getType(double.class));
-                m_currentType = double.class;
-                break;
-            case "#":
-                new ExprNodeVisitor_CodeEmitor(m_stmt, Object.class, node.expr);
-                m_stmt.mbuilder.checkCast(Type.getType(ArrayList.class));
-                m_stmt.mbuilder.invokeVirtual(Type.getType(ArrayList.class), Method.getMethod("int size()"));
-                m_currentType = int.class;
-                break;
-            default:
-                assert false;
-                break;
+        if (node.op.equals("not")) {
+            new ExprNodeVisitor_CodeEmitor(m_stmt, int.class, node.expr);
+            Label trueLabel = m_stmt.mbuilder.newLabel();
+            Label endLabel = m_stmt.mbuilder.newLabel();
+            m_stmt.mbuilder.ifZCmp(GeneratorAdapter.NE, trueLabel);
+            m_stmt.mbuilder.push(true);
+            m_stmt.mbuilder.goTo(endLabel);
+            m_stmt.mbuilder.mark(trueLabel);
+            m_stmt.mbuilder.push(false);
+            m_stmt.mbuilder.mark(endLabel);
+            m_currentType = int.class;
+        } else if (node.op.equals("-")) {
+            new ExprNodeVisitor_CodeEmitor(m_stmt, double.class, node.expr);
+            m_stmt.mbuilder.math(GeneratorAdapter.NEG, Type.getType(double.class));
+            m_currentType = double.class;
+        } else if (node.op.equals("#")) {
+            new ExprNodeVisitor_CodeEmitor(m_stmt, Object.class, node.expr);
+            m_stmt.mbuilder.checkCast(Type.getType(ArrayList.class));
+            m_stmt.mbuilder.invokeVirtual(Type.getType(ArrayList.class), Method.getMethod("int size()"));
+            m_currentType = int.class;
+        } else {
+            assert false;
         }
     }
     @Override
@@ -150,59 +153,43 @@ class ExprNodeVisitor_CodeEmitor implements IExprNodeVisitor {
 
         new ExprNodeVisitor_CodeEmitor(m_stmt, double.class, node.lexpr);
         new ExprNodeVisitor_CodeEmitor(m_stmt, double.class, node.rexpr);
-        switch (node.op) {
-            case "+":
-                m_stmt.mbuilder.math(GeneratorAdapter.ADD, Type.getType(double.class));
-                m_currentType = double.class;
-                break;
-            case "-":
-                m_stmt.mbuilder.math(GeneratorAdapter.SUB, Type.getType(double.class));
-                m_currentType = double.class;
-                break;
-            case "*":
-                m_stmt.mbuilder.math(GeneratorAdapter.MUL, Type.getType(double.class));
-                m_currentType = double.class;
-                break;
-            case "/":
-                m_stmt.mbuilder.math(GeneratorAdapter.DIV, Type.getType(double.class));
-                m_currentType = double.class;
-                break;
-            case "%":
-                m_stmt.mbuilder.math(GeneratorAdapter.REM, Type.getType(double.class));
-                m_currentType = double.class;
-                break;
-            case "<":
-            case "<=":
-            case ">":
-            case ">=":
-                {
-                    Label trueLabel = m_stmt.mbuilder.newLabel();
-                    Label endLabel = m_stmt.mbuilder.newLabel();
-                    switch (node.op) {
-                        case "<":
-                            m_stmt.mbuilder.ifCmp(Type.getType(double.class), GeneratorAdapter.LT, trueLabel);
-                            break;
-                        case "<=":
-                            m_stmt.mbuilder.ifCmp(Type.getType(double.class), GeneratorAdapter.LE, trueLabel);
-                            break;
-                        case ">":
-                            m_stmt.mbuilder.ifCmp(Type.getType(double.class), GeneratorAdapter.GT, trueLabel);
-                            break;
-                        case ">=":
-                            m_stmt.mbuilder.ifCmp(Type.getType(double.class), GeneratorAdapter.GE, trueLabel);
-                            break;
-                    }
-                    m_stmt.mbuilder.push(false);
-                    m_stmt.mbuilder.goTo(endLabel);
-                    m_stmt.mbuilder.mark(trueLabel);
-                    m_stmt.mbuilder.push(true);
-                    m_stmt.mbuilder.mark(endLabel);
-                }
-                m_currentType = int.class;
-                break;
-            default:
-                assert false : String.format("line:%d,op:%s", node.line, node.op);
-                break;
+        if (node.op.equals("+")) {
+            m_stmt.mbuilder.math(GeneratorAdapter.ADD, Type.getType(double.class));
+            m_currentType = double.class;
+        } else if (node.op.equals("-")) {
+            m_stmt.mbuilder.math(GeneratorAdapter.SUB, Type.getType(double.class));
+            m_currentType = double.class;
+        } else if (node.op.equals("*")) {
+            m_stmt.mbuilder.math(GeneratorAdapter.MUL, Type.getType(double.class));
+            m_currentType = double.class;
+        } else if (node.op.equals("/")) {
+            m_stmt.mbuilder.math(GeneratorAdapter.DIV, Type.getType(double.class));
+            m_currentType = double.class;
+        } else if (node.op.equals("%")) {
+            m_stmt.mbuilder.math(GeneratorAdapter.REM, Type.getType(double.class));
+            m_currentType = double.class;
+        } else if (node.op.equals("<") || node.op.equals("<=") || node.op.equals(">") || node.op.equals(">=")) {
+            Label trueLabel = m_stmt.mbuilder.newLabel();
+            Label endLabel = m_stmt.mbuilder.newLabel();
+            if (node.op.equals("<")) {
+                m_stmt.mbuilder.ifCmp(Type.getType(double.class), GeneratorAdapter.LT, trueLabel);
+            } else if (node.op.equals("<=")) {
+                m_stmt.mbuilder.ifCmp(Type.getType(double.class), GeneratorAdapter.LE, trueLabel);
+            } else if (node.op.equals(">")) {
+                m_stmt.mbuilder.ifCmp(Type.getType(double.class), GeneratorAdapter.GT, trueLabel);
+            } else if (node.op.equals(">=")) {
+                m_stmt.mbuilder.ifCmp(Type.getType(double.class), GeneratorAdapter.GE, trueLabel);
+            } else {
+                assert false;
+            }
+            m_stmt.mbuilder.push(false);
+            m_stmt.mbuilder.goTo(endLabel);
+            m_stmt.mbuilder.mark(trueLabel);
+            m_stmt.mbuilder.push(true);
+            m_stmt.mbuilder.mark(endLabel);
+            m_currentType = int.class;
+        } else {
+            assert false;
         }
     }
     @Override
