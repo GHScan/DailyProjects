@@ -2,9 +2,9 @@
 #ifndef AST_H
 #define AST_H
 
-struct ExprNode_LiteralString;
-struct ExprNode_LiteralInt;
-struct ExprNode_LiteralFloat;
+struct ExprNode_StringLiteral;
+struct ExprNode_IntLiteral;
+struct ExprNode_FloatLiteral;
 struct ExprNode_Variable;
 struct ExprNode_Assignment;
 struct ExprNode_BinaryOp;
@@ -13,9 +13,9 @@ struct ExprNode_TypeCast;
 struct ExprNode_Call;
 struct IExprNodeVisitor {
     virtual ~IExprNodeVisitor(){}
-    virtual void visit(ExprNode_LiteralString *node) = 0;
-    virtual void visit(ExprNode_LiteralInt *node) = 0;
-    virtual void visit(ExprNode_LiteralFloat *node) = 0;
+    virtual void visit(ExprNode_StringLiteral *node) = 0;
+    virtual void visit(ExprNode_IntLiteral *node) = 0;
+    virtual void visit(ExprNode_FloatLiteral *node) = 0;
     virtual void visit(ExprNode_Variable *node) = 0;
     virtual void visit(ExprNode_Assignment *node) = 0;
     virtual void visit(ExprNode_BinaryOp *node) = 0;
@@ -30,19 +30,19 @@ struct ExprNode {
 };
 typedef shared_ptr<ExprNode> ExprNodePtr;
 
-struct ExprNode_LiteralString: public ExprNode {
+struct ExprNode_StringLiteral: public ExprNode {
     string str;
-    ExprNode_LiteralString(const string& _str): str(_str){}
+    ExprNode_StringLiteral(const string& _str): str(_str){}
     virtual void acceptVisitor(IExprNodeVisitor *v) { v->visit(this); }
 };
-struct ExprNode_LiteralInt: public ExprNode {
+struct ExprNode_IntLiteral: public ExprNode {
     int number;
-    ExprNode_LiteralInt(int _number): number(_number){}
+    ExprNode_IntLiteral(int _number): number(_number){}
     virtual void acceptVisitor(IExprNodeVisitor *v) { v->visit(this); }
 };
-struct ExprNode_LiteralFloat: public ExprNode {
+struct ExprNode_FloatLiteral: public ExprNode {
     float number;
-    ExprNode_LiteralFloat(float _number): number(_number){}
+    ExprNode_FloatLiteral(float _number): number(_number){}
     virtual void acceptVisitor(IExprNodeVisitor *v) { v->visit(this); }
 };
 struct ExprNode_Variable: public ExprNode {
@@ -77,7 +77,7 @@ struct ExprNode_TypeCast: public ExprNode {
 struct ExprNode_Call: public ExprNode {
     string funcName;
     vector<ExprNodePtr> args;
-    ExprNode_Call(const string &_funcName): funcName(_funcName){}
+    ExprNode_Call(const string &_funcName, const vector<ExprNodePtr> &_args): funcName(_funcName), args(_args){}
     virtual void acceptVisitor(IExprNodeVisitor *v) { v->visit(this); }
 };
 

@@ -1,24 +1,25 @@
 extern int printf(char* fmt, ...);
 extern int clock();
 
+int FALSE;
 int echo(char* str, int b) {
-    printf("echo %s", str);
+    printf("echo %s\n", str);
     return b;
 }
 void testAnd() {
-    printf("========== testAnd 1 ==========");
+    printf("========== testAnd 1 ==========\n");
     echo("1", true) && echo("1", true);
-    printf("========== testAnd 2 ==========");
+    printf("========== testAnd 2 ==========\n");
     echo("0", false) && echo("1", true);
 }
 void testOr() {
-    printf("========== testOr 1 ==========");
+    printf("========== testOr 1 ==========\n");
     echo("0", false) || echo("0", false);
-    printf("========== testOr 1 ==========");
+    printf("========== testOr 1 ==========\n");
     echo("1", true) || echo("0", false);
 }
 void printPrime(int n) {
-    printf("========== printPrime ==========");
+    printf("========== printPrime ==========\n");
     for (int i = 3; i < n; ++i) {
         int flag = true;
         for (int j = 2; j <= i / 2; ++j) {
@@ -27,16 +28,16 @@ void printPrime(int n) {
                 break;
             }
         }
-        if (flag) printf("%d", i) ;
+        if (flag) printf("%d\n", i) ;
     }
-    printf("");
+    printf("\n");
 }
 void factorial(int n) {
     if (n <= 1) return 1;
     return n * factorial(n - 1);
 }
 void printFeb1() {
-    printf("========== printFeb1 ==========");
+    printf("========== printFeb1 ==========\n");
     int i = 1, j = 1;
     while (i < 100) {
         printf("%d\t", j);
@@ -44,7 +45,7 @@ void printFeb1() {
         j = i;
         i = t;
     }
-    printf("");
+    printf("\n");
 }
 void feb2(int n) {
     // it's hard to print function name, so...
@@ -52,38 +53,39 @@ void feb2(int n) {
     return feb2(n - 1) + feb2(n - 2);
 }
 void printFeb2() {
-    printf("========== printFeb2 ==========");
+    printf("========== printFeb2 ==========\n");
     int i = 1;
     while (i <= 10) {
         printf("%d\t", feb2(i)) ;
         i = i + 1;
     }
-    printf("");
+    printf("\n");
 }
 void print9x9() {
-    printf("========== print9x9 ==========");
+    printf("========== print9x9 ==========\n");
     for (int i = 1; i <= 9; ++i) {
         for (int j = 1; j <= i; ++j) {
-            printf("%dx%d=%-2d ", j, i, i * j);
+            printf("%dx%d=%-2d \n", j, i, i * j);
         }
-        printf("");
+        printf("\n");
     }
 }
 void perform() {
-    printf("========== perform ==========");
+    printf("========== perform ==========\n");
     int start = clock();
     for (int i = 0; i < 1000000; ++i);
-    printf("loop 1000000 times: %d", clock() - start);
+    printf("loop 1000000 times: %d\n", clock() - start);
 }
 void main()  {
     // test for comment
     testAnd(); // test for comment too
     testOr();
     printPrime(30);
-    printf("factorial %d,%d", 10, factorial(10));
+    printf("factorial %d,%d\n", 10, factorial(10));
     printFeb1();
     printFeb2();
     print9x9();
     perform();
-    printf("15-3*(2*2+(7-2)) = %d", 15-3*(2*2+(7-2)));
+    printf("15-3*(2*2+(7-2)) = %d\n", 15-3*(2*2+(7-2)));
+    printf("FALSE = %d\n", FALSE);
 }
