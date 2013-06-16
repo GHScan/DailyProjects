@@ -1,6 +1,12 @@
 #ifndef PCH_H
 #define PCH_H
 
+// macros for llvm {
+#define __STDC_LIMIT_MACROS 
+#define __STDC_CONSTANT_MACROS 
+#define __STDC_FORMAT_MACROS 
+// }
+
 #define CHECK_MEMORY_LEAKS
 
 #ifdef _MSC_VER
@@ -61,5 +67,26 @@ private:
 };
 
 string format(const char *fmt, ...);
+
+// headers for llvm {
+#include <llvm/LLVMContext.h>
+#include <llvm/Module.h>
+#include <llvm/DerivedTypes.h>
+#include <llvm/Constants.h>
+#include <llvm/GlobalVariable.h>
+#include <llvm/Function.h>
+#include <llvm/CallingConv.h>
+#include <llvm/BasicBlock.h>
+#include <llvm/Instructions.h>
+#include <llvm/InlineAsm.h>
+#include <llvm/Support/FormattedStream.h>
+#include <llvm/Support/MathExtras.h>
+#include <llvm/Pass.h>
+#include <llvm/PassManager.h>
+#include <llvm/ADT/SmallVector.h>
+#include <llvm/Analysis/Verifier.h>
+#include <llvm/Assembly/PrintModulePass.h>
+#include <llvm/IRBuilder.h>
+// }
 
 #endif

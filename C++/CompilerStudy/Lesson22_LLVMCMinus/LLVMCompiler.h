@@ -8,10 +8,13 @@ typedef shared_ptr<SourceFileProto> SourceFileProtoPtr;
 class LLVMCompiler {
 public:
     LLVMCompiler(const SourceFileProtoPtr &proto);
-    void compile();
+    ~LLVMCompiler();
+    void compile(bool doOptimize);
+    void print();
     void run();
 
 private:
+    class LLVMCompilerImpl *m_impl;
 };
 
 #endif

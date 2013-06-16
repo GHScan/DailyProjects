@@ -74,7 +74,7 @@ scope {
     $extern_function_declare::func.reset(new FunctionProto());
 }
     : 'extern' function_head [$extern_function_declare::func.get()] ';' {
-        proto->externFuncs[$extern_function_declare::func->name] = $extern_function_declare::func;
+        proto->externFuncs.push_back($extern_function_declare::func);
     }
     ;
 
@@ -107,7 +107,7 @@ scope {
      if ($statement.value != NULL)
      static_cast<StmtNode_Block*>($function_define::block.get())->stmts.push_back($statement.value);
      })* '}' {
-        proto->funcs[$function_define::func->name] = $function_define::func;
+        proto->funcs.push_back($function_define::func);
         $function_define::func->body = $function_define::block;
     }
     ;

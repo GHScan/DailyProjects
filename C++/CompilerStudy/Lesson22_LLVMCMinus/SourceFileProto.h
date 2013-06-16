@@ -16,8 +16,8 @@ typedef shared_ptr<FunctionProto> FunctionProtoPtr;
 
 struct SourceFileProto {
     vector<StmtNodePtr> globalVars;
-    map<string, FunctionProtoPtr> funcs;
-    map<string, FunctionProtoPtr> externFuncs;
+    vector<FunctionProtoPtr> funcs;
+    vector<FunctionProtoPtr> externFuncs;
 };
 typedef shared_ptr<SourceFileProto> SourceFileProtoPtr;
 

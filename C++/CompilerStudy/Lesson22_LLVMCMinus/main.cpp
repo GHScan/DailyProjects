@@ -12,6 +12,7 @@ int main() {
     CMinusParser psr(&tstream); 
 
     LLVMCompiler compiler(psr.program());
-    compiler.compile();
+    compiler.compile(false);
+    compiler.print();
     compiler.run();
 }
