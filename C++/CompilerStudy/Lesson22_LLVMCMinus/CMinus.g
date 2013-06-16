@@ -46,6 +46,10 @@ static string unEscape(const string& s) {
 // parser
 
 program 
+    : top_level_declare*
+    ;
+
+top_level_declare
 options{k=3;}
     : extern_function_declare
     | function_define
@@ -79,8 +83,14 @@ statement
     | 'break' ';'
     | 'return' expression? ';'
     | 'if' '(' expression ')' statement (('else')=>'else' statement)?
-    | 'for' '(' expression? ';' expression? ';' expression? ')' statement
+    | 'for' '(' for_first ';' expression? ';' expression? ')' statement
     | 'while' '(' expression ')' statement
+    ;
+
+for_first
+    : type variable_init_comma_list
+    | expression
+    | 
     ;
 
 id_comma_list 
@@ -113,10 +123,10 @@ expression
 assign_expression 
     : ID '=' assign_expression
     | ID COMBINE_ASSIGN_OP assign_expression
-    | logic_expresion
+    | logic_expression
     ;
 
-logic_expresion
+logic_expression
     : relat_expression (LOGIC_OP relat_expression)*
     ;
 
@@ -139,6 +149,8 @@ unary_expression
 primary_expression
     : ID
     | STRING_LITERAL
+    | INT_LITERAL
+    | FLOAT_LITERAL
     | 'true'
     | 'false'
     | call_expression
@@ -148,7 +160,11 @@ primary_expression
     ;
 
 call_expression
-    : ID '(' expression (',' expression)* ')'
+    : ID '(' expression_comma_list? ')'
+    ;
+
+expression_comma_list
+    : expression (',' expression)*
     ;
 
 // lexer
@@ -158,7 +174,8 @@ LOGIC_OP : '&&' | '||';
 
 ID : ID_HEAD_LETTER ID_BODY_LETTER*;
 STRING_LITERAL : '"' (~('"' | '\\') | '\\' .)* '"';
-NUMBER : DIGIT* ('.' DIGIT*) ?;
+INT_LITERAL : DIGIT+;
+FLOAT_LITERAL : DIGIT* '.' DIGIT*;
 
 COMMENT : '/*' (options{greedy=false;}:.)* '*/' {skip();};
 LINE_COMMENT : '//' ~('\r'|'\n')* '\r'?'\n' {skip();};

@@ -19,7 +19,7 @@ void testOr() {
 }
 void printPrime(int n) {
     printf("========== printPrime ==========");
-    for (int i = 2; i < n; ++i) {
+    for (int i = 3; i < n; ++i) {
         int flag = true;
         for (int j = 2; j <= i / 2; ++j) {
             if (i % j == 0) {
@@ -58,7 +58,7 @@ void printFeb2() {
         printf("%d\t", feb2(i)) ;
         i = i + 1;
     }
-    printf("")
+    printf("");
 }
 void print9x9() {
     printf("========== print9x9 ==========");
@@ -77,13 +77,13 @@ void perform() {
 }
 void main()  {
     // test for comment
-    testAnd() // test for comment too
-    testOr()
-    printPrime(30)
-    printf("factorial %d,%d", 10, factorial(10))
-    printFeb1()
-    printFeb2()
-    print9x9()
-    perform()
-    printf("15-3*(2*2+(7-2)) = %d", 15-3*(2*2+(7-2)))
+    testAnd(); // test for comment too
+    testOr();
+    printPrime(30);
+    printf("factorial %d,%d", 10, factorial(10));
+    printFeb1();
+    printFeb2();
+    print9x9();
+    perform();
+    printf("15-3*(2*2+(7-2)) = %d", 15-3*(2*2+(7-2)));
 }
