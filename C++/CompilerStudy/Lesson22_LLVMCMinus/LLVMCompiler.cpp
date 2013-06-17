@@ -22,7 +22,8 @@ public:
         return m_value;
     }
 private: 
-    void castToTargetType();
+    void implicitTypeCast(llvm::Type *type);
+    void explicitTypeCast(llvm::Type *type);
 private:
     virtual void visit(ExprNode_StringLiteral *node);
     virtual void visit(ExprNode_IntLiteral *node);
@@ -87,10 +88,18 @@ private:
 ExprNodeVisitor_CodeEmitor::ExprNodeVisitor_CodeEmitor(StmtNodeVisitor_CodeEmitor *parent, llvm::Type *destType, const ExprNodePtr &expr):
 m_parent(parent), m_destType(destType), m_value(NULL), m_builder(NULL) {
     m_builder = m_parent->getParent()->getBuilder();
+
     expr->acceptVisitor(this);
-    castToTargetType();
+
+    ASSERT(m_value != NULL);
+    if (m_destType == NULL) m_destType = m_value->getType();
+    implicitTypeCast(m_destType);
+    ASSERT(m_value->getType() == m_destType);
 }
-void ExprNodeVisitor_CodeEmitor::castToTargetType() {
+void ExprNodeVisitor_CodeEmitor::implicitTypeCast(llvm::Type *type) {
+    ASSERT(m_value != NULL);
+}
+void ExprNodeVisitor_CodeEmitor::explicitTypeCast(llvm::Type *type) {
     ASSERT(m_value != NULL);
 }
 void ExprNodeVisitor_CodeEmitor::visit(ExprNode_StringLiteral *node) {
@@ -104,21 +113,140 @@ void ExprNodeVisitor_CodeEmitor::visit(ExprNode_FloatLiteral *node) {
     m_value = llvm::ConstantFP::get(llvm::getGlobalContext(), llvm::APFloat(3.000000e+00f));
 }
 void ExprNodeVisitor_CodeEmitor::visit(ExprNode_Variable *node) {
-    m_value = m_parent->getLocal(node->name);
-    if (m_value == NULL) {
+    if ((m_value = m_parent->getLocal(node->name)) == NULL) {
         m_value = m_parent->getParent()->getModule()->getGlobalVariable(node->name);
     }
     ASSERT(m_value != NULL);
 }
 void ExprNodeVisitor_CodeEmitor::visit(ExprNode_Assignment *node) {
+    llvm::Value *dest = m_parent->getLocal(node->left);
+    if (dest == NULL) dest = m_parent->getParent()->getModule()->getGlobalVariable(node->left);
+    ASSERT(dest != NULL);
+
+    m_value = ExprNodeVisitor_CodeEmitor(m_parent, dest->getType()->getPointerElementType(), node->right).getValue();
+    m_builder->CreateStore(m_value, dest);
 }
 void ExprNodeVisitor_CodeEmitor::visit(ExprNode_BinaryOp *node) {
+    if (node->op == "&&" || node->op == "||") {
+        /*
+           lv = eval node->left
+           cond = icmp ne lv 0
+           br cond label_right label_end
+
+label_right:
+           rv = eval node->right
+           br label_end
+
+label_end:
+           v = phi [lv, label_old] [rv label_right]
+         * */
+        llvm::Function* func = m_builder->GetInsertBlock()->getParent();
+        llvm::BasicBlock *label_right = llvm::BasicBlock::Create(llvm::getGlobalContext(), "");
+        llvm::BasicBlock *label_end = llvm::BasicBlock::Create(llvm::getGlobalContext(), "");
+
+
+        llvm::Value *lv = ExprNodeVisitor_CodeEmitor(m_parent, m_parent->getParent()->getTypeByString("int"), node->left).getValue();
+        llvm::BasicBlock* label_old = m_builder->GetInsertBlock();
+        llvm::Value *cond = NULL;
+        if (node->op == "&&") {
+            cond = m_builder->CreateICmpNE(lv, m_builder->getInt32(0));
+        } else {
+            cond = m_builder->CreateICmpEQ(lv, m_builder->getInt32(0));
+        }
+        m_builder->CreateCondBr(cond, label_right, label_end);
+
+        func->getBasicBlockList().push_back(label_right);
+        m_builder->SetInsertPoint(label_right);
+        llvm::Value *rv = ExprNodeVisitor_CodeEmitor(m_parent, m_parent->getParent()->getTypeByString("int"), node->right).getValue();
+        label_right = m_builder->GetInsertBlock();
+        m_builder->CreateBr(label_end);
+
+        func->getBasicBlockList().push_back(label_end);
+        m_builder->SetInsertPoint(label_end);
+
+        llvm::PHINode *phi = m_builder->CreatePHI(m_parent->getParent()->getTypeByString("int"), 2);
+        phi->addIncoming(lv, label_old);
+        phi->addIncoming(rv, label_right);
+        m_value = phi;
+
+        return;
+    } 
+
+    llvm::Value *lv = ExprNodeVisitor_CodeEmitor(m_parent, NULL, node->left).getValue();
+    llvm::Value *rv = ExprNodeVisitor_CodeEmitor(m_parent, lv->getType(), node->right).getValue();
+    ASSERT(lv->getType()->isFloatTy() || lv->getType()->isIntegerTy());
+    if (node->op == "+") {
+        if (lv->getType()->isFloatTy()) m_value = m_builder->CreateFAdd(lv, rv);
+        else m_value = m_builder->CreateAdd(lv, rv);
+    } else if (node->op == "-") {
+        if (lv->getType()->isFloatTy()) m_value = m_builder->CreateFSub(lv, rv);
+        else m_value = m_builder->CreateSub(lv, rv);
+    } else if (node->op == "*") {
+        if (lv->getType()->isFloatTy()) m_value = m_builder->CreateFMul(lv, rv);
+        else m_value = m_builder->CreateMul(lv, rv);
+    } else if (node->op == "/") {
+        if (lv->getType()->isFloatTy()) m_value = m_builder->CreateFDiv(lv, rv);
+        else m_value = m_builder->CreateSDiv(lv, rv);
+    } else if (node->op == "%") {
+        if (lv->getType()->isFloatTy()) m_value = m_builder->CreateFRem(lv, rv);
+        else m_value = m_builder->CreateSRem(lv, rv);
+    } else if (node->op == "<") {
+        if (lv->getType()->isFloatTy()) m_value = m_builder->CreateFCmpOLT(lv, rv);
+        else m_value = m_builder->CreateICmpSLT(lv, rv);
+    } else if (node->op == "<=") {
+        if (lv->getType()->isFloatTy()) m_value = m_builder->CreateFCmpOLE(lv, rv);
+        else m_value = m_builder->CreateICmpSLE(lv, rv);
+    } else if (node->op == ">") {
+        if (lv->getType()->isFloatTy()) m_value = m_builder->CreateFCmpOGT(lv, rv);
+        else m_value = m_builder->CreateICmpSGT(lv, rv);
+    } else if (node->op == ">=") {
+        if (lv->getType()->isFloatTy()) m_value = m_builder->CreateFCmpOGE(lv, rv);
+        else m_value = m_builder->CreateICmpSGE(lv, rv);
+    } else if (node->op == "==") {
+        if (lv->getType()->isFloatTy()) m_value = m_builder->CreateFCmpOEQ(lv, rv);
+        else m_value = m_builder->CreateICmpEQ(lv, rv);
+    } else if (node->op == "!=") {
+        if (lv->getType()->isFloatTy()) m_value = m_builder->CreateFCmpONE(lv, rv);
+        else m_value = m_builder->CreateICmpNE(lv, rv);
+    } else {
+        ASSERT(0);
+    }
 }
 void ExprNodeVisitor_CodeEmitor::visit(ExprNode_UnaryOp *node) {
+    if (node->op == "-") {
+        m_value = ExprNodeVisitor_CodeEmitor(m_parent, NULL, node->expr).getValue();
+        if (m_value->getType()->isFloatTy()) {
+            m_value = m_builder->CreateFNeg(m_value);
+        } else if (m_value->getType()->isIntegerTy()) {
+            m_value = m_builder->CreateNeg(m_value);
+        } else {
+            ASSERT(0);
+        }
+    } else if (node->op == "!") {
+        m_value = ExprNodeVisitor_CodeEmitor(m_parent, m_parent->getParent()->getTypeByString("int"), node->expr).getValue();
+        m_value = m_builder->CreateICmpEQ(m_value, m_builder->getInt32(0));
+    } else {
+        ASSERT(0);
+    }
 }
 void ExprNodeVisitor_CodeEmitor::visit(ExprNode_TypeCast *node) {
+    m_value = ExprNodeVisitor_CodeEmitor(m_parent, NULL, node->expr).getValue();
+    explicitTypeCast(m_parent->getParent()->getTypeByString(node->destType));
 }
 void ExprNodeVisitor_CodeEmitor::visit(ExprNode_Call *node) {
+    llvm::Function* func = m_parent->getParent()->getModule()->getFunction(node->funcName);
+    vector<llvm::Value*> params;
+    int i = 0;
+    for (auto iter = func->arg_begin(); iter != func->arg_end(); ++iter, ++i) {
+        params.push_back(ExprNodeVisitor_CodeEmitor(m_parent, iter->getType(), node->args[i]).getValue());
+    }
+    if (i < (int)node->args.size()) {
+        ASSERT(func->isVarArg());
+        for (; i < (int)node->args.size(); ++i) {
+            params.push_back(ExprNodeVisitor_CodeEmitor(m_parent, NULL, node->args[i]).getValue());
+        }
+    }
+    m_value = m_builder->CreateCall(func, params);
 }
 // ==============================
 StmtNodeVisitor_CodeEmitor::StmtNodeVisitor_CodeEmitor(LLVMCompilerImpl *parent, const FunctionProtoPtr &proto):
