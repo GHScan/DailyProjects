@@ -19,7 +19,8 @@ build_dll=0
 macro_defs=
 include_dirs=$(antlr_includedir) $(llvm_includedir)
 lib_dirs=$(llvm_libdir)
-lib_files=LLVMipo LLVMVectorize LLVMJIT LLVMRuntimeDyld LLVMExecutionEngine LLVMCodeGen LLVMScalarOpts LLVMInstCombine LLVMTransformUtils LLVMipa LLVMAnalysis LLVMTarget LLVMMC LLVMObject LLVMCore LLVMSupport pthread dl m 
+# llvm-config --libs core jit ipo native
+lib_files=LLVMipo LLVMVectorize LLVMX86AsmParser LLVMX86Disassembler LLVMX86CodeGen LLVMSelectionDAG LLVMAsmPrinter LLVMMCParser LLVMX86Desc LLVMX86Info LLVMX86AsmPrinter LLVMX86Utils LLVMJIT LLVMRuntimeDyld LLVMExecutionEngine LLVMCodeGen LLVMScalarOpts LLVMInstCombine LLVMTransformUtils LLVMipa LLVMAnalysis LLVMTarget LLVMMC LLVMObject LLVMCore LLVMSupport pthread dl m 
 
 
 .PHONY: build_actions clean_actions
@@ -27,7 +28,7 @@ lib_files=LLVMipo LLVMVectorize LLVMJIT LLVMRuntimeDyld LLVMExecutionEngine LLVM
 build_actions: CMinus.tokens .clang_complete
 
 clean_actions:
-	rm -f *.tokens *.hpp CMinusLexer.* CMinusParser.*
+	rm -f *.tokens *.hpp CMinusLexer.* CMinusParser.* .clang_complete
 
 CMinus.tokens: CMinus.g
 	java org.antlr.Tool CMinus.g

@@ -10,7 +10,7 @@ public:
     LLVMCompiler(const SourceFileProtoPtr &proto);
     ~LLVMCompiler();
     void compile(bool doOptimize);
-    void print();
+    void print(const string& fileName);
     void run();
 
 private:

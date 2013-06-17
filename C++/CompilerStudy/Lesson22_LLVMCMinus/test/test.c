@@ -32,7 +32,7 @@ void printPrime(int n) {
     }
     printf("\n");
 }
-void factorial(int n) {
+int factorial(int n) {
     if (n <= 1) return 1;
     return n * factorial(n - 1);
 }
@@ -47,7 +47,7 @@ void printFeb1() {
     }
     printf("\n");
 }
-void feb2(int n) {
+int feb2(int n) {
     // it's hard to print function name, so...
     if (n <= 2) { return 1; }
     return feb2(n - 1) + feb2(n - 2);
@@ -65,7 +65,7 @@ void print9x9() {
     printf("========== print9x9 ==========\n");
     for (int i = 1; i <= 9; ++i) {
         for (int j = 1; j <= i; ++j) {
-            printf("%dx%d=%-2d \n", j, i, i * j);
+            printf("%dx%d=%-2d ", j, i, i * j);
         }
         printf("\n");
     }

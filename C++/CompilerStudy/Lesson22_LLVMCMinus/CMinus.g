@@ -218,7 +218,7 @@ type_id returns[pair<string, string> value]
     ;
 
 type 
-    : 'int' | 'void' | 'float' |'char*'
+    : 'int' | 'void' | 'float' | 'char*'
     ;
 
 expression returns[ExprNodePtr value]
@@ -261,17 +261,16 @@ mul_expression returns[ExprNodePtr value]
     ;
 
 unary_expression returns[ExprNodePtr value]
-    : (op=('-' | '!'))? primary_expression  {
-        if ($op == NULL) value = $primary_expression.value;
-        else {
-            value = ExprNodePtr(new ExprNode_UnaryOp($op.text, $primary_expression.value));
-        }
-    }
+    : op=('-' | '!') right=unary_expression  { value = ExprNodePtr(new ExprNode_UnaryOp($op.text, $right.value)); }
+    |  primary_expression { value = $primary_expression.value; }
     ;
 
 primary_expression returns[ExprNodePtr value]
     : ID { value.reset(new ExprNode_Variable($ID.text)); }
-    | STRING_LITERAL { value.reset(new ExprNode_StringLiteral(unEscape($STRING_LITERAL.text))); }
+    | STRING_LITERAL { 
+        string s = $STRING_LITERAL.text;
+        value.reset(new ExprNode_StringLiteral(unEscape(s.substr(1, s.size() - 2)))); 
+    }
     | INT_LITERAL { 
         int i;
         sscanf($INT_LITERAL.text.c_str(), "\%d", &i);
@@ -280,7 +279,7 @@ primary_expression returns[ExprNodePtr value]
     | FLOAT_LITERAL {
         float f;
         sscanf($FLOAT_LITERAL.text.c_str(), "\%f", &f);
-        value.reset(new ExprNode_IntLiteral(f)); 
+        value.reset(new ExprNode_FloatLiteral(f)); 
     }
     | 'true' { value.reset(new ExprNode_IntLiteral(1)); }
     | 'false' {  value.reset(new ExprNode_IntLiteral(0)); }
