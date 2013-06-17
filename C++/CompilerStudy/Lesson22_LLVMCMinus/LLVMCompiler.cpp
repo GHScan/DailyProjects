@@ -131,14 +131,13 @@ void ExprNodeVisitor_CodeEmitor::explicitTypeCast(llvm::Type *type) {
     }
 }
 void ExprNodeVisitor_CodeEmitor::visit(ExprNode_StringLiteral *node) {
-    // TODO:
     m_value = m_builder->CreateGlobalStringPtr(node->str);
 }
 void ExprNodeVisitor_CodeEmitor::visit(ExprNode_IntLiteral *node) {
     m_value = m_builder->getInt32(node->number);
 }
 void ExprNodeVisitor_CodeEmitor::visit(ExprNode_FloatLiteral *node) {
-    m_value = llvm::ConstantFP::get(llvm::getGlobalContext(), llvm::APFloat(3.000000e+00f));
+    m_value = llvm::ConstantFP::get(llvm::getGlobalContext(), llvm::APFloat(node->number));
 }
 void ExprNodeVisitor_CodeEmitor::visit(ExprNode_Variable *node) {
     if ((m_value = m_parent->getLocal(node->name)) == NULL) {
@@ -272,7 +271,9 @@ void ExprNodeVisitor_CodeEmitor::visit(ExprNode_Call *node) {
     if (i < (int)node->args.size()) {
         ASSERT(func->isVarArg());
         for (; i < (int)node->args.size(); ++i) {
-            params.push_back(ExprNodeVisitor_CodeEmitor(m_parent, NULL, node->args[i]).getValue());
+            llvm::Value *v = ExprNodeVisitor_CodeEmitor(m_parent, NULL, node->args[i]).getValue();
+            if (v->getType()->isFloatTy()) v = m_builder->CreateFPExt(v, m_builder->getDoubleTy());
+            params.push_back(v);
         }
     }
     m_value = m_builder->CreateCall(func, params);
