@@ -188,7 +188,7 @@ void LLVMCompilerImpl::emitFunctions() {
             argTypes.push_back(getTypeByString(p.first));
         }
         auto type = llvm::FunctionType::get(getTypeByString(proto->retType), argTypes, proto->isVarArgs);
-        auto func = llvm::dyn_cast<llvm::Function>(m_module->getOrInsertFunction(proto->name, type));
+        auto func = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(proto->name, type));
         int i = 0;
         for (auto iter = func->arg_begin(); iter != func->arg_end(); ++iter, ++i) {
             iter->setName(proto->argsTypeID[i].second);

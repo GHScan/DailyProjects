@@ -1,8 +1,21 @@
+os_name=$(shell uname -o)
+
+ifeq ($(os_name), Darwin)
+antlr_path=/Users/chenzhonglei/Projects/Libraries/Antlr/CppRuntime
+llvm_path=/Users/chenzhonglei/Projects/Libraries/clang+llvm-3.2-x86_64-apple-darwin11
+else ifeq ($(os_name), Linux)
+antlr_path=/home/scan/Libraries/Antlr/CppRuntime
+llvm_path=/home/scan/Libraries/clang+llvm-3.2-x86-linux-ubuntu-12.04
+else
+antlr_path=
+llvm_path=
+endif
+
 use_cpp0x=1
 build_dll=0
 macro_defs=
-include_dirs=/home/scan/Libraries/Antlr/CppRuntime /home/scan/Libraries/clang+llvm-3.2-x86-linux-ubuntu-12.04/include
-lib_dirs=/home/scan/Libraries/clang+llvm-3.2-x86-linux-ubuntu-12.04/lib 
+include_dirs=$(antlr_path) $(llvm_path)/include
+lib_dirs=$(llvm_path)/lib 
 lib_files=LLVMipo LLVMVectorize LLVMJIT LLVMRuntimeDyld LLVMExecutionEngine LLVMCodeGen LLVMScalarOpts LLVMInstCombine LLVMTransformUtils LLVMipa LLVMAnalysis LLVMTarget LLVMMC LLVMObject LLVMCore LLVMSupport pthread dl m 
 
 
