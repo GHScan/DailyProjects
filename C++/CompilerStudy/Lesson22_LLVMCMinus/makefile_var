@@ -21,10 +21,14 @@ lib_files=LLVMipo LLVMVectorize LLVMJIT LLVMRuntimeDyld LLVMExecutionEngine LLVM
 
 .PHONY: build_actions clean_actions
 
-build_actions: CMinus.tokens
+build_actions: CMinus.tokens generate_clang_complete
 
 clean_actions:
 	rm -f *.tokens *.hpp CMinusLexer.* CMinusParser.*
 
 CMinus.tokens: CMinus.g
 	java org.antlr.Tool CMinus.g
+
+generate_clang_complete:
+	echo '-std=c++0x' > .clang_complete
+	echo '-I$(llvm_path)/include' >> .clang_complete
