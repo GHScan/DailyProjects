@@ -1,27 +1,30 @@
-os_name=$(shell uname -o)
+os_name=$(shell uname -s)
 
 ifeq ($(os_name), Darwin)
-antlr_path=/Users/chenzhonglei/Projects/Libraries/Antlr/CppRuntime
-llvm_path=/Users/chenzhonglei/Projects/Libraries/clang+llvm-3.2-x86_64-apple-darwin11
+antlr_includedir=/Users/chenzhonglei/Projects/Libraries/Antlr/CppRuntime
+llvm_includedir=$(shell llvm-config --includedir)
+llvm_libdir=$(shell llvm-config --libdir)
 else ifeq ($(os_name), Linux)
-antlr_path=/home/scan/Libraries/Antlr/CppRuntime
-llvm_path=/home/scan/Libraries/clang+llvm-3.2-x86-linux-ubuntu-12.04
+antlr_includedir=/home/scan/Libraries/Antlr/CppRuntime
+llvm_includedir=$(shell llvm-config --includedir)
+llvm_libdir=$(shell llvm-config --libdir)
 else
-antlr_path=
-llvm_path=
+antlr_includedir=
+llvm_includedir=
+llvm_libdir=
 endif
 
 use_cpp0x=1
 build_dll=0
 macro_defs=
-include_dirs=$(antlr_path) $(llvm_path)/include
-lib_dirs=$(llvm_path)/lib 
+include_dirs=$(antlr_includedir) $(llvm_includedir)
+lib_dirs=$(llvm_libdir)
 lib_files=LLVMipo LLVMVectorize LLVMJIT LLVMRuntimeDyld LLVMExecutionEngine LLVMCodeGen LLVMScalarOpts LLVMInstCombine LLVMTransformUtils LLVMipa LLVMAnalysis LLVMTarget LLVMMC LLVMObject LLVMCore LLVMSupport pthread dl m 
 
 
 .PHONY: build_actions clean_actions
 
-build_actions: CMinus.tokens generate_clang_complete
+build_actions: CMinus.tokens .clang_complete
 
 clean_actions:
 	rm -f *.tokens *.hpp CMinusLexer.* CMinusParser.*
@@ -29,6 +32,6 @@ clean_actions:
 CMinus.tokens: CMinus.g
 	java org.antlr.Tool CMinus.g
 
-generate_clang_complete:
+.clang_complete:
 	echo '-std=c++0x' > .clang_complete
-	echo '-I$(llvm_path)/include' >> .clang_complete
+	echo '-I$(llvm_includedir)' >> .clang_complete
