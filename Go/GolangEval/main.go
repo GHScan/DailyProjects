@@ -33,7 +33,7 @@ func main() {
         },
     }
 
-    fmt.Println("vars -> ", vars)
+    fmt.Printf("vars -> %#v\n", vars)
 
     stdin := bufio.NewReader(os.Stdin)
     for {
@@ -43,10 +43,10 @@ func main() {
 
         v, err := Eval(line, vars)
         if err != nil {
-            fmt.Println("Eval error :" + err.Error())
+            fmt.Printf("Eval error : %#v\n", err.Error())
             continue
         }
 
-        fmt.Println(v)
+        fmt.Printf("%#v\n", v)
     }
 }
