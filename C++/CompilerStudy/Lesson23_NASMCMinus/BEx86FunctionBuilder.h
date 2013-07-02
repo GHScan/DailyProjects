@@ -1,12 +1,25 @@
 
-#ifndef BE_x86_INSTRUCTION_BUILDER_H
-#define BE_x86_INSTRUCTION_BUILDER_H
+#ifndef BE_x86_FUNCTION_BUILDER_H
+#define BE_x86_FUNCTION_BUILDER_H
 
-struct BEx86Register;
+struct BERegister;
 struct BESymbol;
-struct BEx86Instruction;
 struct BEVariable;
 struct BEConstant;
+struct BEx86Instruction;
+
+enum BEx86RegisterType {
+    x86RT_EAX = 1 << 0,
+    x86RT_EBX = 1 << 1,
+    x86RT_ECX = 1 << 2,
+    x86RT_EDX = 1 << 3,
+    x86RT_ESI = 1 << 4,
+    x86RT_EDI = 1 << 5,
+    x86RT_ESP = 1 << 6,
+    x86RT_EBP = 1 << 7,
+
+    x86RT_Count = 8,
+};
 
 enum BEx86InstructionType {
     x86IT_MOV,
@@ -47,6 +60,12 @@ enum BEx86InstructionType {
     x86IT_CALL,
 };
 
+struct BEx86Label {
+    const string labelName;
+    BEx86Instruction *ins;
+    BEx86Label(const string &_labelName, BEx86Instruction* _ins): labelName(_labelName), ins(_ins){}
+};
+
 enum BEx86OperandType {
     X86OT_Null,
     x86OT_Register,
@@ -58,10 +77,10 @@ enum BEx86OperandType {
 struct BEx86Operand {
     BEx86OperandType type;
     union {
-        BEx86Register *reg;
+        BERegister *reg;
         BESymbol *symbol;
-        BEx86Instruction *label;
         BEConstant *constant;
+        BEx86Label *label;
     };
 };
 
@@ -78,6 +97,9 @@ struct BEx86Instruction {
 
 class BEx86InstructionBuilder {
 public:
+    BEx86Label* createLabel(const string &labelName);
+    BEx86Label* createLabel(const string &labelName, BEx86Instruction* ins);
+
     BEx86Instruction* createMOV();
     BEx86Instruction* createLEA();
     BEx86Instruction* createAND();
@@ -109,6 +131,7 @@ public:
     BEx86Instruction* createCALL();
 
 private:
+    BEx86Instruction *m_insFirst, *m_insLast;
 };
 
 #endif

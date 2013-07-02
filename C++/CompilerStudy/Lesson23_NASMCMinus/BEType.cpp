@@ -2,8 +2,8 @@
 #include "pch.h"
 #include "BEType.h"
 
-const BEType* BETypeManager::getType(const string &typeName) const {
-    auto iter = m_types.find(typeName);
+const BEType* BETypeManager::getType(const string &name) const {
+    auto iter = m_types.find(name);
     if (iter == m_types.end()) return NULL;
     return &iter->second;
 }

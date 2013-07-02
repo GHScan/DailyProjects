@@ -4,9 +4,9 @@
 
 struct BEType {
     BEType(): size(0) {}
-    BEType(const string& _typeName, int _size): typeName(_typeName), size(_size){}
+    BEType(const string& _name, int _size): name(_name), size(_size){}
 
-    string typeName;
+    string name;
     int size;
 };
 
@@ -17,7 +17,7 @@ public:
         return &s_ins;
     }
 
-    const BEType* getType(const string &typeName) const;
+    const BEType* getType(const string &name) const;
     BETypeManager();
     ~BETypeManager();
 private:
