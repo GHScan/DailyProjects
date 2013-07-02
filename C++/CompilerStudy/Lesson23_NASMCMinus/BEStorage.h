@@ -17,13 +17,12 @@ struct BEVariable {
         PF_InRegister = 1 << 1,
     };
 
-    string name;
     PlaceFlag placeFlag;
     BERegister *reg;
     BESymbol *symbol;
 
-    BEVariable(const string &_name, BERegister *_reg): name(_name), reg(_reg), symbol(NULL), placeFlag(PF_InRegister){}
-    BEVariable(const string &_name, BESymboll *_symbol): name(_name), reg(NULL), symbol(_symbol), placeFlag(PF_InMemory) {}
+    BEVariable(BERegister *_reg): reg(_reg), symbol(NULL), placeFlag(PF_InRegister){}
+    BEVariable(BESymboll *_symbol): reg(NULL), symbol(_symbol), placeFlag(PF_InMemory) {}
 };
 
 #endif
