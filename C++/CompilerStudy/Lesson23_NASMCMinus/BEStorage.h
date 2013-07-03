@@ -4,25 +4,60 @@
 
 struct BESymbol;
 struct BEVariable;
+struct BEType;
+class BESymbolTable;
 
 struct BERegister {
     BERegister(int _regType): regType(_regType){}
     const int regType;
-    map<BESymbol*, BEVariable*> loadedVars;
+    set<BEVariable*> loadedVars;
+
+    // TODO: implement below, although it is instruction dependent
+    void loadVariable(BEVariable *var);
+    void flushVariables();
+
+private:
+    BERegister(const BERegister&);
+    BERegister& operator = (const BERegister&);
 };
 
 struct BEVariable {
     enum PlaceFlag {
-        PF_InMemory = 1 << 0,
-        PF_InRegister = 1 << 1,
+        PF_InRegister = 1 << 0,
+        PF_InMemory = 1 << 1,
     };
-
     PlaceFlag placeFlag;
     BERegister *reg;
-    BESymbol *symbol;
+    virtual BESymbol* getValidAddress() = 0;
+    virtual BEType* getType() = 0;
 
-    BEVariable(BERegister *_reg): placeFlag(PF_InRegister), reg(_reg), symbol(NULL){}
-    BEVariable(BESymbol *_symbol): placeFlag(PF_InMemory), reg(NULL), symbol(_symbol) {}
+protected:
+    BEVariable(PlaceFlag _placeFlag, BERegister *_reg): placeFlag(_placeFlag), reg(_reg) {}
+    virtual ~BEVariable();
+private:
+    BEVariable(const BEVariable& o);
+    BEVariable& operator = (const BEVariable& o);
 };
 
+struct BEVariableLeftValue: public BEVariable {
+    BESymbol *symbol;
+    BEVariableLeftValue(BESymbol *_symbol): BEVariable(PF_InMemory, NULL), symbol(_symbol){ ASSERT(symbol != NULL); }
+    virtual BESymbol* getValidAddress() { return symbol; }
+    virtual BEType* getType();
+};
+struct BEVariableRightValue: public BEVariable {
+    BEType *type;
+    BESymbolTable *symbolTable;
+    BESymbol *symbol;
+    BEVariableRightValue(BEType *_type, BERegister *_reg, BESymbolTable *_symbolTable): 
+        BEVariable(PF_InRegister, _reg), type(_type), symbolTable(_symbolTable), symbol(NULL) {
+        ASSERT(reg != NULL && symbolTable != NULL && type != NULL);
+    }
+    virtual BESymbol* getValidAddress();
+    virtual BEType* getType() { return type; }
+    ~BEVariableRightValue();
+};
+
+typedef shared_ptr<BEVariable> BEVariablePtr;
+ 
 #endif

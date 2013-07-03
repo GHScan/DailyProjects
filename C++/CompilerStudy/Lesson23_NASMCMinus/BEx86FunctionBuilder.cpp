@@ -45,9 +45,9 @@ BEx86FunctionBuilder::~BEx86FunctionBuilder() {
     delete m_insFirst;
 
     ASSERT(m_topLocalSymbolTable == NULL);
+    for (auto p : m_registers) delete p;
     for (auto p : m_ins2Label) delete p.second;
     delete m_argSymbolTable;
-    for (auto p : m_registers) delete p;
 }
 
 BEx86Instruction* BEx86FunctionBuilder::pushInstruction(BEx86Instruction* ins) {

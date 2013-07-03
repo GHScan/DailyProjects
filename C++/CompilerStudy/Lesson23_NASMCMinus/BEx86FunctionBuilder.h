@@ -118,9 +118,6 @@ public:
     BEx86FunctionBuilder(BEx86FileBuilder *parent);
     ~BEx86FunctionBuilder();
 
-    BEx86Label* createLabel(const string &labelName);
-    BEx86Label* createLabel(const string &labelName, BEx86Instruction* ins);
-
     void beginBlock();
     void endBlock();
     BEVariable* declareLocalVariable(const string &name);
@@ -152,6 +149,9 @@ public:
     BEVariable* createMul(BEVariable *dest, BEVariable *src);
     BEVariable* createDiv(BEVariable *dest, BEVariable *src);
     BEVariable* createMod(BEVariable *dest, BEVariable *src);
+
+    BEx86Label* createLabel(const string &labelName);
+    BEx86Label* createLabel(const string &labelName, BEx86Instruction* ins);
 
     void createCmp(BEVariable *left, BEVariable *right);
     void createJmp(BEx86Label *label);
@@ -189,6 +189,7 @@ private:
     BESymbolTable *m_topLocalSymbolTable;
     BESymbolTable *m_argSymbolTable;
     vector<BERegister*> m_registers;
+    map<BESymbol*, BEVariable*> m_leftValueVars;
 };
 
 #endif
