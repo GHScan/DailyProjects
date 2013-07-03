@@ -21,8 +21,8 @@ struct BEVariable {
     BERegister *reg;
     BESymbol *symbol;
 
-    BEVariable(BERegister *_reg): reg(_reg), symbol(NULL), placeFlag(PF_InRegister){}
-    BEVariable(BESymboll *_symbol): reg(NULL), symbol(_symbol), placeFlag(PF_InMemory) {}
+    BEVariable(BERegister *_reg): placeFlag(PF_InRegister), reg(_reg), symbol(NULL){}
+    BEVariable(BESymbol *_symbol): placeFlag(PF_InMemory), reg(NULL), symbol(_symbol) {}
 };
 
 #endif

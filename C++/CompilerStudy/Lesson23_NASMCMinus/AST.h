@@ -84,7 +84,7 @@ struct ExprNode_Call: public ExprNode {
 struct StmtNode_Block;
 struct StmtNode_Stmts;
 struct StmtNode_Expr;
-struct StmtNode_DefineVarable;
+struct StmtNode_DefineVariable;
 struct StmtNode_Continue;
 struct StmtNode_Break;
 struct StmtNode_Return;
@@ -95,7 +95,7 @@ struct IStmtNodeVisitor {
     virtual void visit(StmtNode_Block *node) = 0;
     virtual void visit(StmtNode_Stmts *node) = 0;
     virtual void visit(StmtNode_Expr *node) = 0;
-    virtual void visit(StmtNode_DefineVarable *node) = 0;
+    virtual void visit(StmtNode_DefineVariable *node) = 0;
     virtual void visit(StmtNode_Continue *node) = 0;
     virtual void visit(StmtNode_Break *node) = 0;
     virtual void visit(StmtNode_Return *node) = 0;
@@ -122,9 +122,9 @@ struct StmtNode_Expr: public StmtNode {
     StmtNode_Expr(const ExprNodePtr &_expr): expr(_expr){}
     virtual void acceptVisitor(IStmtNodeVisitor *v) {v->visit(this);}
 };
-struct StmtNode_DefineVarable: public StmtNode {
+struct StmtNode_DefineVariable: public StmtNode {
     string type, name;
-    StmtNode_DefineVarable(const string &_type, const string &_name): type(_type), name(_name){}
+    StmtNode_DefineVariable(const string &_type, const string &_name): type(_type), name(_name){}
     virtual void acceptVisitor(IStmtNodeVisitor *v) {v->visit(this);}
 };
 struct StmtNode_Continue: public StmtNode {

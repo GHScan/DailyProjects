@@ -7,6 +7,8 @@ struct BESymbol;
 struct BEVariable;
 struct BEConstant;
 struct BEx86Instruction;
+class BEx86FileBuilder;
+class BESymbolTable;
 
 enum BEx86RegisterType {
     x86RT_EAX = 1 << 0,
@@ -18,6 +20,7 @@ enum BEx86RegisterType {
     x86RT_ESP = 1 << 6,
     x86RT_EBP = 1 << 7,
 
+    x86RT_GRCount = 6,
     x86RT_Count = 8,
 };
 
@@ -67,14 +70,14 @@ struct BEx86Label {
 };
 
 enum BEx86OperandType {
-    X86OT_Null,
+    x86OT_Null,
     x86OT_Register,
     x86OT_Memory,
     x86OT_Constant,
-    X86OT_Label,
+    x86OT_Label,
 };
 
-struct BEx86Operand {
+struct BEx86InstructionOperand {
     BEx86OperandType type;
     union {
         BERegister *reg;
@@ -82,11 +85,26 @@ struct BEx86Operand {
         BEConstant *constant;
         BEx86Label *label;
     };
+    BEx86InstructionOperand(): type(x86OT_Null){}
+    BEx86InstructionOperand(BERegister *reg): type(x86OT_Register){this->reg = reg;}
+    BEx86InstructionOperand(BESymbol *symbol): type(x86OT_Memory){this->symbol = symbol;}
+    BEx86InstructionOperand(BEConstant *constant): type(x86OT_Constant){this->constant = constant;}
+    BEx86InstructionOperand(BEx86Label *label): type(x86OT_Label){this->label = label;}
 };
 
 struct BEx86Instruction {
     BEx86InstructionType type;
-    BEx86Operand operands[2];
+    BEx86InstructionOperand operands[2];
+
+    BEx86Instruction(BEx86InstructionType _type): type(_type), next(NULL), prev(NULL){}
+    BEx86Instruction(BEx86InstructionType _type, BEx86InstructionOperand operand0):
+        type(_type), next(NULL), prev(NULL) {
+        operands[0] = operand0;
+    }
+    BEx86Instruction(BEx86InstructionType _type, BEx86InstructionOperand operand0, BEx86InstructionOperand operand1):
+        type(_type), next(NULL), prev(NULL) {
+        operands[0] = operand0; operands[1] = operand1;
+    }
 
     BEx86Instruction *next, *prev;
     void insertAfter(BEx86Instruction *i);
@@ -95,43 +113,82 @@ struct BEx86Instruction {
     BEx86Instruction* removeBefore();
 };
 
-class BEx86InstructionBuilder {
+class BEx86FunctionBuilder {
 public:
+    BEx86FunctionBuilder(BEx86FileBuilder *parent);
+    ~BEx86FunctionBuilder();
+
     BEx86Label* createLabel(const string &labelName);
     BEx86Label* createLabel(const string &labelName, BEx86Instruction* ins);
 
-    BEx86Instruction* createMOV();
-    BEx86Instruction* createLEA();
-    BEx86Instruction* createAND();
-    BEx86Instruction* createOR();
-    BEx86Instruction* createNOT();
-    BEx86Instruction* createINC();
-    BEx86Instruction* createDEC();
-    BEx86Instruction* createIADD();
-    BEx86Instruction* createISUB();
-    BEx86Instruction* createIMUL();
-    BEx86Instruction* createIDIV();
-    BEx86Instruction* createIMOD();
-    BEx86Instruction* createSAL();
-    BEx86Instruction* createSAR();
-    BEx86Instruction* createCMP();
-    BEx86Instruction* createJMP();
-    BEx86Instruction* createJZ();
-    BEx86Instruction* createJNZ();
-    BEx86Instruction* createJE();
-    BEx86Instruction* createJNE();
-    BEx86Instruction* createJG();
-    BEx86Instruction* createJGE();
-    BEx86Instruction* createJL();
-    BEx86Instruction* createJLE();
-    BEx86Instruction* createNOP();
-    BEx86Instruction* createPUSH();
-    BEx86Instruction* createPOP();
-    BEx86Instruction* createRET();
-    BEx86Instruction* createCALL();
+    void beginBlock();
+    void endBlock();
+    BEVariable* declareLocalVariable(const string &name);
+    BEVariable* declareArgVariable(const string& name);
+    BEVariable* getLocalVariable(const string &name);
+    BEVariable* getGlobalVariable(const string &name);
+
+    BESymbolTable* getArgSymbolTable();
+    BESymbolTable* getTopLocalSymbolTable();
+
+    BEx86Instruction* getFirstInstruction();
+    BEx86Instruction* getLastInstruction();
+
+    BERegister* getRegister(int regType);
+
+public:
+    // BERegister* createMOV(BERegister *reg, BERegister *reg);
+    BEVariable* loadConstant(BEConstant *constant);
+    void store(BEVariable *dest, BEVariable *src);
+    // createLEA();
+
+    BEVariable* createAnd(BEVariable *dest, BEVariable *src);
+    BEVariable* createOr(BEVariable *dest, BEVariable *src);
+    BEVariable* createInc(BEVariable *dest);
+    BEVariable* createDec(BEVariable *dest);
+    BEVariable* createNot(BEVariable *dest);
+    BEVariable* createAdd(BEVariable *dest, BEVariable *src);
+    BEVariable* createSub(BEVariable *dest, BEVariable *src);
+    BEVariable* createMul(BEVariable *dest, BEVariable *src);
+    BEVariable* createDiv(BEVariable *dest, BEVariable *src);
+    BEVariable* createMod(BEVariable *dest, BEVariable *src);
+
+    void createCmp(BEVariable *left, BEVariable *right);
+    void createJmp(BEx86Label *label);
+    void createJz(BEx86Label *label);
+    void createJnz(BEx86Label *label);
+    void createJe(BEx86Label *label);
+    void createJne(BEx86Label *label);
+    void createJg(BEx86Label *label);
+    void createJge(BEx86Label *label);
+    void createJl(BEx86Label *label);
+    void createJle(BEx86Label *label);
+
+    BEx86Instruction* createNop();
+
+    //void createPush(BERegister *reg);
+    void createPush(BEVariable *var);
+    //void createPop(BERegister *reg);
+    void beginCall(int n);
+    void endCall(int n);
+
+    void createRet();
 
 private:
+    BEx86FunctionBuilder(const BEx86FunctionBuilder &);
+    BEx86FunctionBuilder& operator = (const BEx86FunctionBuilder &);
+
+private:
+    BEx86Instruction* pushInstruction(BEx86Instruction* ins);
+
+private:
+    BEx86FileBuilder *m_parent;
     BEx86Instruction *m_insFirst, *m_insLast;
+    // instead of map, maybe should use vector here
+    map<BEx86Instruction*, BEx86Label*> m_ins2Label;
+    BESymbolTable *m_topLocalSymbolTable;
+    BESymbolTable *m_argSymbolTable;
+    vector<BERegister*> m_registers;
 };
 
 #endif

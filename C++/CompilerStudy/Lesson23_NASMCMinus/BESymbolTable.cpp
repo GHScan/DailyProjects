@@ -10,6 +10,9 @@ BESymbolTable::BESymbolTable(BESymbolTable *prevTable):
 BESymbolTable::~BESymbolTable() {
 }
 
+BESymbolTable* BESymbolTable::getPrevTable() { 
+    return m_prevTable; 
+}
 BESymbol* BESymbolTable::declare(const string &name, BEType *type) {
     ASSERT(m_symbols.count(name) == 0);
     BESymbol symbol = {this, name, type, m_endOff};

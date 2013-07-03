@@ -17,6 +17,7 @@ public:
     BESymbolTable(BESymbolTable *prevTable);
     ~BESymbolTable();
 
+    BESymbolTable* getPrevTable();
     BESymbol* declare(const string &name, BEType *type);
     void undeclare(const string& name);
     BESymbol* get(const string &name);

@@ -61,7 +61,7 @@ options{k=3;}
 global_variable_define [SourceFileProto *proto]
     : type id_comma_list ';' {
         for (auto name : $id_comma_list.values) {
-            proto->globalVars.push_back(StmtNodePtr(new StmtNode_DefineVarable($type.text, name)));
+            proto->globalVars.push_back(StmtNodePtr(new StmtNode_DefineVariable($type.text, name)));
         }
     }
     ;
@@ -127,7 +127,7 @@ statement returns[StmtNodePtr value]
     | type variable_init_comma_list ';' {
         auto stmts = new StmtNode_Stmts();
         for (auto idExpr : $variable_init_comma_list.values) {
-            stmts->stmts.push_back(StmtNodePtr(new StmtNode_DefineVarable($type.text, idExpr.first)));
+            stmts->stmts.push_back(StmtNodePtr(new StmtNode_DefineVariable($type.text, idExpr.first)));
         }
         for (auto idExpr : $variable_init_comma_list.values) {
             stmts->stmts.push_back(StmtNodePtr(new
@@ -162,7 +162,7 @@ for_first returns[StmtNodePtr value]
     : type variable_init_comma_list {
         auto block = new StmtNode_Block();
         for (auto idExpr : $variable_init_comma_list.values) {
-            block->stmts.push_back(StmtNodePtr(new StmtNode_DefineVarable($type.text, idExpr.first)));
+            block->stmts.push_back(StmtNodePtr(new StmtNode_DefineVariable($type.text, idExpr.first)));
         }
         for (auto idExpr : $variable_init_comma_list.values) {
             block->stmts.push_back(StmtNodePtr(new

@@ -19,7 +19,7 @@ struct BEConstantInt : public BEConstant {
     BEConstantInt(int _num = 0);
 };
 
-class BEContantPool {
+class BEConstantPool {
 public:
     BEConstant* getConstant(int num);
     BEConstant* getConstant(const string &str);
