@@ -1,3 +1,7 @@
 TODO:
-    # Windows support
+    # AST optimize: algebraic identity, constant folding, ershov number
+    # peephole optimize: constant load, dead code(directly jmp), redundant nop/jmp, reduction in strength
+    # Linux/Mac/Windows support
     # memory leaks
+    # masm
+    # gasm
