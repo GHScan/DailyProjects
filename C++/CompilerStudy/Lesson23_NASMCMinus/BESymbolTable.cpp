@@ -13,7 +13,7 @@ BESymbolTable::~BESymbolTable() {
 BESymbolTable* BESymbolTable::getPrevTable() { 
     return m_prevTable; 
 }
-BESymbol* BESymbolTable::declare(const string &name, BEType *type) {
+BESymbol* BESymbolTable::declare(const string &name, const BEType *type) {
     ASSERT(m_symbols.count(name) == 0);
     BESymbol symbol = {this, name, type, m_endOff};
     m_endOff += symbol.type->size;
@@ -37,4 +37,9 @@ int BESymbolTable::getStartOff() const {
 }
 int BESymbolTable::getEndOff() const {
     return m_endOff;
+}
+vector<BESymbol*> BESymbolTable::getSymbols() {
+    vector<BESymbol*> ret;
+    for (auto &p : m_symbols) ret.push_back(&p.second);
+    return ret;
 }

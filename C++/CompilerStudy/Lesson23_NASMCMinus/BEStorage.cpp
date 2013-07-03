@@ -10,17 +10,17 @@ BEVariable::~BEVariable() {
     }
 }
 
-BEType* BEVariableLeftValue::getType() {
+const BEType* BELeftValueVariable::getType() {
     return symbol->type;
 }
 
-BESymbol* BEVariableRightValue::getValidAddress() {
+BESymbol* BERightValueVariable::getValidAddress() {
     if (symbol == NULL) {
         symbol = symbolTable->declare("temp", type);
     }
     return symbol;
 }
-BEVariableRightValue::~BEVariableRightValue() {
+BERightValueVariable::~BERightValueVariable() {
     if (symbol != NULL) {
         symbolTable->undeclare(symbol->name);
     }

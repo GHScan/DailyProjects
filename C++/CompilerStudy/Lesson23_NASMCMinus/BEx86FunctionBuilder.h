@@ -2,6 +2,7 @@
 #ifndef BE_x86_FUNCTION_BUILDER_H
 #define BE_x86_FUNCTION_BUILDER_H
 
+struct BEType;
 struct BERegister;
 struct BESymbol;
 struct BEVariable;
@@ -9,6 +10,8 @@ struct BEConstant;
 struct BEx86Instruction;
 class BEx86FileBuilder;
 class BESymbolTable;
+
+typedef shared_ptr<BEVariable> BEVariablePtr;
 
 enum BEx86RegisterType {
     x86RT_EAX = 1 << 0,
@@ -35,11 +38,11 @@ enum BEx86InstructionType {
     x86IT_INC,
     x86IT_DEC,
 
-    x86IT_IADD,
-    x86IT_ISUB,
-    x86IT_IMUL,
-    x86IT_IDIV,
-    x86IT_IMOD,
+    x86IT_ADD,
+    x86IT_SUB,
+    x86IT_MUL,
+    x86IT_DIV,
+    x86IT_MOD,
 
     x86IT_SAL,
     x86IT_SAR,
@@ -118,12 +121,12 @@ public:
     BEx86FunctionBuilder(BEx86FileBuilder *parent);
     ~BEx86FunctionBuilder();
 
-    void beginBlock();
-    void endBlock();
-    BEVariable* declareLocalVariable(const string &name);
-    BEVariable* declareArgVariable(const string& name);
-    BEVariable* getLocalVariable(const string &name);
-    BEVariable* getGlobalVariable(const string &name);
+    void pushBlock();
+    void popBlock();
+    BEVariablePtr declareLocalVariable(const string &name, BEType *type);
+    BEVariablePtr declareArgVariable(const string& name, BEType *type);
+    BEVariablePtr getLocalVariable(const string &name);
+    BEVariablePtr getGlobalVariable(const string &name);
 
     BESymbolTable* getArgSymbolTable();
     BESymbolTable* getTopLocalSymbolTable();
@@ -131,29 +134,27 @@ public:
     BEx86Instruction* getFirstInstruction();
     BEx86Instruction* getLastInstruction();
 
-    BERegister* getRegister(int regType);
-
 public:
     // BERegister* createMOV(BERegister *reg, BERegister *reg);
-    BEVariable* loadConstant(BEConstant *constant);
-    void store(BEVariable *dest, BEVariable *src);
+    BEVariablePtr loadConstant(BEConstant *constant);
+    void store(BEVariablePtr dest, BEVariablePtr src);
     // createLEA();
 
-    BEVariable* createAnd(BEVariable *dest, BEVariable *src);
-    BEVariable* createOr(BEVariable *dest, BEVariable *src);
-    BEVariable* createInc(BEVariable *dest);
-    BEVariable* createDec(BEVariable *dest);
-    BEVariable* createNot(BEVariable *dest);
-    BEVariable* createAdd(BEVariable *dest, BEVariable *src);
-    BEVariable* createSub(BEVariable *dest, BEVariable *src);
-    BEVariable* createMul(BEVariable *dest, BEVariable *src);
-    BEVariable* createDiv(BEVariable *dest, BEVariable *src);
-    BEVariable* createMod(BEVariable *dest, BEVariable *src);
+    BEVariablePtr createInc(BEVariablePtr &dest);
+    BEVariablePtr createDec(BEVariablePtr &dest);
+    BEVariablePtr createNot(BEVariablePtr &dest);
+    BEVariablePtr createAnd(BEVariablePtr &dest, BEVariablePtr src);
+    BEVariablePtr createOr(BEVariablePtr &dest, BEVariablePtr src);
+    BEVariablePtr createAdd(BEVariablePtr &dest, BEVariablePtr src);
+    BEVariablePtr createSub(BEVariablePtr &dest, BEVariablePtr src);
+    BEVariablePtr createMul(BEVariablePtr &dest, BEVariablePtr src);
+    BEVariablePtr createDiv(BEVariablePtr &dest, BEVariablePtr src);
+    BEVariablePtr createMod(BEVariablePtr &dest, BEVariablePtr src);
 
     BEx86Label* createLabel(const string &labelName);
     BEx86Label* createLabel(const string &labelName, BEx86Instruction* ins);
 
-    void createCmp(BEVariable *left, BEVariable *right);
+    void createCmp(BEVariablePtr &left, BEVariablePtr right);
     void createJmp(BEx86Label *label);
     void createJz(BEx86Label *label);
     void createJnz(BEx86Label *label);
@@ -167,12 +168,13 @@ public:
     BEx86Instruction* createNop();
 
     //void createPush(BERegister *reg);
-    void createPush(BEVariable *var);
+    void createPush(BEVariablePtr var);
     //void createPop(BERegister *reg);
     void beginCall(int n);
     void endCall(int n);
 
     void createRet();
+    void createRet(BEVariablePtr dest);
 
 private:
     BEx86FunctionBuilder(const BEx86FunctionBuilder &);
@@ -181,15 +183,24 @@ private:
 private:
     BEx86Instruction* pushInstruction(BEx86Instruction* ins);
 
+    BERegister* findLeastUseRegister();
+    BERegister* makeRegisterFree(BERegister *reg);
+    BERegister* getFreeRegister();
+    void makesureVariableInRegister(BEVariable *var);
+    void makesureVariableInMemory(BEVariable *var);
+    void makeVariableInMemoryOnly(BEVariable *var);
+    void storeVariableFromRegister(BEVariable *dest, BERegister *src);
+    void loadVariableToRegister(BERegister *reg, BEVariable *var);
+
+    BEVariablePtr createBinaryOp(BEx86InstructionType insType, BEVariablePtr &dest, BEVariablePtr src);
 private:
     BEx86FileBuilder *m_parent;
     BEx86Instruction *m_insFirst, *m_insLast;
+    vector<BERegister*> m_registers;
+    BESymbolTable *m_topLocalSymbolTable, *m_argSymbolTable;
+    map<BESymbol*, BEVariablePtr> m_leftValueVars;
     // instead of map, maybe should use vector here
     map<BEx86Instruction*, BEx86Label*> m_ins2Label;
-    BESymbolTable *m_topLocalSymbolTable;
-    BESymbolTable *m_argSymbolTable;
-    vector<BERegister*> m_registers;
-    map<BESymbol*, BEVariable*> m_leftValueVars;
 };
 
 #endif

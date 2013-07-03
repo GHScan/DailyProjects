@@ -8,7 +8,7 @@ class BESymbolTable;
 struct BESymbol {
     BESymbolTable *parent;
     string name;
-    BEType* type;
+    const BEType* type;
     int off;
 };
 
@@ -18,12 +18,12 @@ public:
     ~BESymbolTable();
 
     BESymbolTable* getPrevTable();
-    BESymbol* declare(const string &name, BEType *type);
+    BESymbol* declare(const string &name, const BEType *type);
     void undeclare(const string& name);
     BESymbol* get(const string &name);
     int getStartOff() const;
     int getEndOff() const;
-
+    vector<BESymbol*> getSymbols();
 private:
     BESymbolTable *m_prevTable;
     int m_startOff, m_endOff;
