@@ -69,7 +69,7 @@ enum BEx86InstructionType {
 struct BEx86Label {
     const string labelName;
     BEx86Instruction *ins;
-    BEx86Label(const string &_labelName, BEx86Instruction* _ins): labelName(_labelName), ins(_ins){}
+    BEx86Label(const string &_labelName): labelName(_labelName), ins(NULL){}
 };
 
 enum BEx86OperandType {
@@ -121,10 +121,12 @@ public:
     BEx86FunctionBuilder(BEx86FileBuilder *parent);
     ~BEx86FunctionBuilder();
 
+    BEx86FileBuilder* getParent() { return m_parent; }
+
     void pushBlock();
     void popBlock();
-    BEVariablePtr declareLocalVariable(const string &name, BEType *type);
-    BEVariablePtr declareArgVariable(const string& name, BEType *type);
+    BEVariablePtr declareLocalVariable(const string &name, const BEType *type);
+    BEVariablePtr declareArgVariable(const string& name, const BEType *type);
     BEVariablePtr getLocalVariable(const string &name);
     BEVariablePtr getGlobalVariable(const string &name);
 
@@ -135,9 +137,11 @@ public:
     BEx86Instruction* getLastInstruction();
 
 public:
+    void beginBuild();
+    
     // BERegister* createMOV(BERegister *reg, BERegister *reg);
     BEVariablePtr loadConstant(BEConstant *constant);
-    void store(BEVariablePtr dest, BEVariablePtr src);
+    BEVariablePtr store(BEVariablePtr dest, BEVariablePtr src);
     // createLEA();
 
     BEVariablePtr createInc(BEVariablePtr &dest);
@@ -151,19 +155,18 @@ public:
     BEVariablePtr createDiv(BEVariablePtr &dest, BEVariablePtr src);
     BEVariablePtr createMod(BEVariablePtr &dest, BEVariablePtr src);
 
-    BEx86Label* createLabel(const string &labelName);
-    BEx86Label* createLabel(const string &labelName, BEx86Instruction* ins);
+    BEVariablePtr createLt(BEVariablePtr &left, BEVariablePtr right);
+    BEVariablePtr createLe(BEVariablePtr &left, BEVariablePtr right);
+    BEVariablePtr createGt(BEVariablePtr &left, BEVariablePtr right);
+    BEVariablePtr createGe(BEVariablePtr &left, BEVariablePtr right);
+    BEVariablePtr createEq(BEVariablePtr &left, BEVariablePtr right);
+    BEVariablePtr createNe(BEVariablePtr &left, BEVariablePtr right);
 
-    void createCmp(BEVariablePtr &left, BEVariablePtr right);
+    BEx86Label* createLabel(const string &labelName);
+    void markLabel(BEx86Label *label, BEx86Instruction *ins);
+
     void createJmp(BEx86Label *label);
-    void createJz(BEx86Label *label);
-    void createJnz(BEx86Label *label);
-    void createJe(BEx86Label *label);
-    void createJne(BEx86Label *label);
-    void createJg(BEx86Label *label);
-    void createJge(BEx86Label *label);
-    void createJl(BEx86Label *label);
-    void createJle(BEx86Label *label);
+    void createCJmp(BEVariablePtr cond, BEx86Label *labelTrue, BEx86Label *labelFalse);
 
     BEx86Instruction* createNop();
 
@@ -176,11 +179,13 @@ public:
     void createRet();
     void createRet(BEVariablePtr dest);
 
+    void endBuild();
 private:
     BEx86FunctionBuilder(const BEx86FunctionBuilder &);
     BEx86FunctionBuilder& operator = (const BEx86FunctionBuilder &);
 
 private:
+    BEx86Instruction* insertFrontInstruction(BEx86Instruction* ins);
     BEx86Instruction* pushInstruction(BEx86Instruction* ins);
 
     BERegister* findLeastUseRegister();
@@ -192,15 +197,17 @@ private:
     void storeVariableFromRegister(BEVariable *dest, BERegister *src);
     void loadVariableToRegister(BERegister *reg, BEVariable *var);
 
-    BEVariablePtr createBinaryOp(BEx86InstructionType insType, BEVariablePtr &dest, BEVariablePtr src);
+    BEVariablePtr createArithmeticOp(BEx86InstructionType insType, BEVariablePtr &dest, BEVariablePtr src);
+    BEVariablePtr createLogicalOp(BEx86InstructionType insType, BEVariablePtr &left, BEVariablePtr right);
 private:
     BEx86FileBuilder *m_parent;
     BEx86Instruction *m_insFirst, *m_insLast;
     vector<BERegister*> m_registers;
     BESymbolTable *m_topLocalSymbolTable, *m_argSymbolTable;
     map<BESymbol*, BEVariablePtr> m_leftValueVars;
-    // instead of map, maybe should use vector here
     map<BEx86Instruction*, BEx86Label*> m_ins2Label;
+    BEx86Label *m_retLabel;
+    int m_maxArgOff, m_maxLocalOff;
 };
 
 #endif

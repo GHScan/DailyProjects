@@ -4,8 +4,8 @@
 #include "BEType.h"
 
 BESymbolTable::BESymbolTable(BESymbolTable *prevTable): 
-    m_prevTable(prevTable), m_startOff(prevTable == NULL ? 0 : prevTable->getEndOff()), m_endOff(0) {
-    m_endOff = m_startOff;
+    m_prevTable(prevTable), m_startOff(prevTable == NULL ? 0 : prevTable->getEndOff()), m_endOff(0), m_maxEndOff(0) {
+    m_maxEndOff = m_endOff = m_startOff;
 }
 BESymbolTable::~BESymbolTable() {
 }
@@ -17,6 +17,7 @@ BESymbol* BESymbolTable::declare(const string &name, const BEType *type) {
     ASSERT(m_symbols.count(name) == 0);
     BESymbol symbol = {this, name, type, m_endOff};
     m_endOff += symbol.type->size;
+    m_maxEndOff = max(m_maxEndOff, m_endOff);
     return &(m_symbols[name] = symbol);
 }
 void BESymbolTable::undeclare(const string& name) {
@@ -37,6 +38,9 @@ int BESymbolTable::getStartOff() const {
 }
 int BESymbolTable::getEndOff() const {
     return m_endOff;
+}
+int BESymbolTable::getMaxEndOff() const {
+    return m_maxEndOff;
 }
 vector<BESymbol*> BESymbolTable::getSymbols() {
     vector<BESymbol*> ret;

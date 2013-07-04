@@ -7,11 +7,15 @@ const BEType* BETypeManager::getType(const string &name) const {
     if (iter == m_types.end()) return NULL;
     return &iter->second;
 }
+const BEType* BETypeManager::getFuncType() const {
+    return getType("func");
+}
 
 BETypeManager::BETypeManager() {
     m_types["int"] = BEType("int", 4);
     m_types["char*"] = BEType("char*", 4);
     m_types["void"] = BEType("void", 1);
+    m_types["func"] = BEType("func", 1);
 }
 BETypeManager::~BETypeManager() {
 }

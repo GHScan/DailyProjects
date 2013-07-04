@@ -11,12 +11,12 @@ BEConstantInt::BEConstantInt(int _num):
     BEConstant(BETypeManager::instance()->getType("int")), num(_num){
 }
 
-BEConstant* BEConstantPool::getConstant(int num) {
+BEConstant* BEConstantPool::get(int num) {
     auto iter = m_constInts.find(num);
     if (iter != m_constInts.end()) return &iter->second;
     return &(m_constInts[num] = BEConstantInt(num));
 }
-BEConstant* BEConstantPool::getConstant(const string &str) {
+BEConstant* BEConstantPool::get(const string &str) {
     auto iter = m_constStrs.find(str);
     if (iter != m_constStrs.end()) return &iter->second;
     return &(m_constStrs[str] = BEConstantString(str));

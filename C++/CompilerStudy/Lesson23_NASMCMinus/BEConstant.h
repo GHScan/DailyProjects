@@ -21,8 +21,8 @@ struct BEConstantInt : public BEConstant {
 
 class BEConstantPool {
 public:
-    BEConstant* getConstant(int num);
-    BEConstant* getConstant(const string &str);
+    BEConstant* get(int num);
+    BEConstant* get(const string &str);
 
 private:
     map<int, BEConstantInt> m_constInts;

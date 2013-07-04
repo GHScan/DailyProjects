@@ -8,10 +8,12 @@ struct BEType;
 class BESymbolTable;
 
 struct BERegister {
-    BERegister(int _regType): regType(_regType){}
+    BERegister(int _regType): regType(_regType), isWritten(false){}
     const int regType;
     set<BEVariable*> loadedVars;
 
+    void linkVariable(BEVariable *var);
+    bool isWritten;
 private:
     BERegister(const BERegister&);
     BERegister& operator = (const BERegister&);

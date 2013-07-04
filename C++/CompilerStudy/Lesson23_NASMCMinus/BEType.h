@@ -18,6 +18,7 @@ public:
     }
 
     const BEType* getType(const string &name) const;
+    const BEType* getFuncType() const;
     BETypeManager();
     ~BETypeManager();
 private:

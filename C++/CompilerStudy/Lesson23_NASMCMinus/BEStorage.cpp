@@ -3,6 +3,13 @@
 #include "BEStorage.h"
 #include "BESymbolTable.h"
 
+void BERegister::linkVariable(BEVariable *var) {
+    ASSERT(var->reg == NULL);
+    var->reg = this;
+    var->placeFlag |= BEVariable::PF_InRegister;
+    loadedVars.insert(var);
+}
+
 BEVariable::~BEVariable() {
     if (placeFlag & PF_InRegister) {
         ASSERT(reg != NULL);
