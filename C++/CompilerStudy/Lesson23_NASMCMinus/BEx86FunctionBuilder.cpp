@@ -11,7 +11,7 @@
 //==============================
 BEx86FunctionBuilder::BEx86FunctionBuilder(BEx86FileBuilder *parent): 
     m_parent(parent), m_topLocalSymbolTable(NULL), m_argSymbolTable(NULL), m_maxArgOff(0), m_maxLocalOff(0), m_retBasicBlock(NULL) {
-    for (int i = 0; i < x86RT_Count; ++i) m_registers.push_back(new BERegister(1 << i));
+    for (int i = 0; i < x86RT_Count; ++i) m_registers.push_back(new BERegister(i));
 }
 
 BEx86FunctionBuilder::~BEx86FunctionBuilder() {
@@ -157,6 +157,7 @@ void BEx86FunctionBuilder::storeVariableFromRegister(BEVariable *dest, BERegiste
     if (dest->placeFlag & BEVariable::PF_InRegister) {
         if (dest->reg == src) return;
         dest->reg->loadedVars.erase(dest);
+        dest->reg = NULL;
     }
     dest->placeFlag = 0;
     src->linkVariable(dest);
@@ -193,8 +194,7 @@ BEVariablePtr BEx86FunctionBuilder::loadConstant(BEConstant *constant) {
 }
 BEVariablePtr BEx86FunctionBuilder::store(BEVariablePtr dest, BEVariablePtr src) {
     if ((dest->placeFlag & BEVariable::PF_InRegister) && (src->placeFlag & BEVariable::PF_InRegister) && dest->reg == src->reg) {
-        ASSERT(0); 
-        return BEVariablePtr();
+        return dest;
     }
     makesureVariableInRegister(src.get());
     storeVariableFromRegister(dest.get(), src->reg);
@@ -310,8 +310,10 @@ void BEx86FunctionBuilder::createPush(BEVariablePtr var) {
 }
 void BEx86FunctionBuilder::beginCall(int n) {
 }
-void BEx86FunctionBuilder::endCall(BESymbol *funcSymbol, int n) {
+BEVariablePtr BEx86FunctionBuilder::endCall(const BEType *type, BESymbol *funcSymbol, int n) {
+    BERegister *reg = makeRegisterFree(m_registers[x86RT_EAX]);
     pushInstruction(BEx86Instruction(x86IT_CALL, funcSymbol));
+    return BEVariablePtr(new BERightValueVariable(type, reg, m_topLocalSymbolTable));
 }
 
 void BEx86FunctionBuilder::createRet() {

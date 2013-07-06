@@ -2,13 +2,10 @@ os_name=$(shell uname -s)
 
 ifeq ($(os_name), Darwin)
 antlr_includedir=/Users/chenzhonglei/Projects/Libraries/Antlr/CppRuntime
-llvm_includedir=$(shell llvm-config --includedir)
 else ifeq ($(os_name), Linux)
 antlr_includedir=/home/scan/Libraries/Antlr/CppRuntime
-llvm_includedir=$(shell llvm-config --includedir)
 else
-antlr_includedir=
-llvm_includedir=
+antlr_includedir=E:\Library\antlr-3.5\runtime\Cpp\include
 endif
 
 use_cpp0x=1

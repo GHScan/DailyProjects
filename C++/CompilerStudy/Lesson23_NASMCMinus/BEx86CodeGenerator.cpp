@@ -253,7 +253,7 @@ void ExprNodeVisitor_CodeGenerator::visit(ExprNode_Call *node) {
         m_builder->createPush(ExprNodeVisitor_CodeGenerator(m_stmt, arg).getVariable());
     }
     BESymbol *funcSymbol = m_builder->getParent()->getGlobalSymbolTable()->get(node->funcName);
-    m_builder->endCall(funcSymbol, (int)node->args.size());
+    m_var = m_builder->endCall(BETypeManager::instance()->getType("int"), funcSymbol, (int)node->args.size());
 }
 
 BEx86FileBuilder* generatex86Code(SourceFileProto *fileProto) {

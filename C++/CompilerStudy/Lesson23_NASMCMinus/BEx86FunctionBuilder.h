@@ -15,14 +15,14 @@ struct BEx86BasicBlock;
 typedef shared_ptr<BEVariable> BEVariablePtr;
 
 enum BEx86RegisterType {
-    x86RT_EAX = 1 << 0,
-    x86RT_EBX = 1 << 1,
-    x86RT_ECX = 1 << 2,
-    x86RT_EDX = 1 << 3,
-    x86RT_ESI = 1 << 4,
-    x86RT_EDI = 1 << 5,
-    x86RT_ESP = 1 << 6,
-    x86RT_EBP = 1 << 7,
+    x86RT_EAX,
+    x86RT_EBX,
+    x86RT_ECX,
+    x86RT_EDX,
+    x86RT_ESI,
+    x86RT_EDI,
+    x86RT_ESP,
+    x86RT_EBP,
 
     x86RT_GRCount = 6,
     x86RT_Count = 8,
@@ -156,7 +156,7 @@ public:
 
     void beginCall(int n);
     void createPush(BEVariablePtr var);
-    void endCall(BESymbol *funcSymbol, int n);
+    BEVariablePtr endCall(const BEType *type, BESymbol *funcSymbol, int n);
 
     void createRet();
     void createRet(BEVariablePtr dest);
