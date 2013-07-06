@@ -3,6 +3,8 @@
 
 #include "CMinusLexer.hpp"
 #include "CMinusParser.hpp"
+#include "BEx86CodeGenerator.h"
+#include "BEx86ASMSerializer.h"
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
@@ -24,5 +26,6 @@ int main(int argc, char *argv[]) {
     CMinusParser::TokenStreamType tstream(ANTLR_SIZE_HINT, lxr.get_tokSource() );
     CMinusParser psr(&tstream); 
 
-    psr.program();
+    ofstream fo("out.asm");
+    serializex86Code_nasm(fo, generatex86Code(psr.program().get()));
 }

@@ -37,11 +37,13 @@ public:
         m_builder(builder) {
 
         m_builder->beginBuild();
+
         for (auto typeID : func->argsTypeID) {
             const BEType *type = BETypeManager::instance()->getType(typeID.first);
             m_builder->declareArgVariable(typeID.second, type);
         }
 
+        m_builder->pushBasicBlock(m_builder->createBasicBlock("label_entry"));
         func->body->acceptVisitor(this);
 
         m_builder->endBuild();
@@ -51,25 +53,87 @@ public:
     }
 private:
     virtual void visit(StmtNode_Block *node) {
+        m_builder->beginScope();
+        for (auto stmt : node->stmts) stmt->acceptVisitor(this);
+        m_builder->endScope();
     }
     virtual void visit(StmtNode_Stmts *node) {
+        for (auto stmt : node->stmts) stmt->acceptVisitor(this);
     }
     virtual void visit(StmtNode_Expr *node) {
+        ExprNodeVisitor_CodeGenerator(this, node->expr);
     }
     virtual void visit(StmtNode_DefineVariable *node) {
+        const BEType *type = BETypeManager::instance()->getType(node->type);
+        m_builder->declareLocalVariable(node->name, type);
     }
     virtual void visit(StmtNode_Continue *node) {
+        m_builder->createJmp(m_continueBlocks.back());
     }
     virtual void visit(StmtNode_Break *node) {
+        m_builder->createJmp(m_breakBlocks.back());
     }
     virtual void visit(StmtNode_Return *node) {
+        if (node->expr != NULL) m_builder->createRet(ExprNodeVisitor_CodeGenerator(this, node->expr).getVariable());
+        else m_builder->createRet();
     }
     virtual void visit(StmtNode_IfThenElse *node) {
+        BEx86BasicBlock *thenBlock = m_builder->createBasicBlock("label_then");
+        BEx86BasicBlock *elseBlock = m_builder->createBasicBlock("label_else");
+        BEx86BasicBlock *endBlock = m_builder->createBasicBlock("label_endif");
+        {
+            BEVariablePtr temp(ExprNodeVisitor_CodeGenerator(this, node->cond).getVariable());
+            m_builder->createCJmp(temp, thenBlock, elseBlock);
+        }
+        m_builder->pushBasicBlock(thenBlock);
+        if (node->thenStmt != NULL) node->thenStmt->acceptVisitor(this);
+        m_builder->createJmp(endBlock);
+        m_builder->pushBasicBlock(elseBlock);
+        if (node->elseStmt != NULL) node->elseStmt->acceptVisitor(this);
+        m_builder->createJmp(endBlock);
+        m_builder->pushBasicBlock(endBlock);
     }
     virtual void visit(StmtNode_For *node) {
+        if (node->first != NULL) node->first->acceptVisitor(this);
+        /*
+label_loop:
+           temp = visit node->second
+           cjmp temp label_body label_break
+label_body:
+           visit node->body
+           jmp label_continue
+label_continue:
+           visit node->third
+           jmp label_loop
+label_break:
+         * */
+        BEx86BasicBlock *loopBlock = m_builder->createBasicBlock("label_loop");
+        BEx86BasicBlock *bodyBlock = m_builder->createBasicBlock("label_loop");
+        BEx86BasicBlock *continueBlock = m_builder->createBasicBlock("label_loop");
+        BEx86BasicBlock *breakBlock = m_builder->createBasicBlock("label_loop");
+        m_continueBlocks.push_back(continueBlock);
+        m_breakBlocks.push_back(breakBlock);
+
+        m_builder->pushBasicBlock(loopBlock);
+        {
+            BEVariablePtr temp(m_builder->loadConstant(m_builder->getParent()->getConstantPool()->get(1)));
+            if (node->second != NULL) temp = ExprNodeVisitor_CodeGenerator(this, node->second).getVariable();
+            m_builder->createCJmp(temp, bodyBlock, breakBlock);
+        }
+        m_builder->pushBasicBlock(bodyBlock);
+        if (node->body != NULL) node->body->acceptVisitor(this);
+        m_builder->createJmp(continueBlock);
+        m_builder->pushBasicBlock(continueBlock);
+        if (node->third != NULL) ExprNodeVisitor_CodeGenerator(this, node->third);
+        m_builder->createJmp(loopBlock);
+        m_builder->pushBasicBlock(breakBlock);
+
+        m_continueBlocks.pop_back();
+        m_breakBlocks.pop_back();
     }
 private:
     BEx86FunctionBuilder *m_builder;
+    vector<BEx86BasicBlock*> m_breakBlocks, m_continueBlocks;
 };
 
 ExprNodeVisitor_CodeGenerator::ExprNodeVisitor_CodeGenerator(StmtNodeVisitor_CodeGenerator *stmt, ExprNodePtr expr):
@@ -101,7 +165,34 @@ void ExprNodeVisitor_CodeGenerator::visit(ExprNode_Assignment *node) {
 }
 void ExprNodeVisitor_CodeGenerator::visit(ExprNode_BinaryOp *node) {
     if (node->op == "&&" || node->op == "||") {
-        // TODO
+        /*
+           temp = visit node->left
+           cond = createTempFrom temp
+           cjmp cond label_logic_true label_logic_false
+label_logic_true:
+           temp = visit node->right
+           store cond temp
+           jmp label_logic_end
+label_logic_false:
+           jmp label_logic_end
+label_logic_end:
+            <- cond
+         * */
+        BEx86BasicBlock *trueBlock = m_builder->createBasicBlock("label_logic_true");
+        BEx86BasicBlock *falseBlock = m_builder->createBasicBlock("label_logic_false");
+        BEx86BasicBlock *endBlock = m_builder->createBasicBlock("label_logic_end");
+        m_var = m_builder->createTempFrom(ExprNodeVisitor_CodeGenerator(m_stmt, node->left).getVariable()); 
+        {
+            BEVariablePtr temp(m_var);
+            if (node->op == "&&") m_builder->createCJmp(temp, trueBlock, falseBlock);
+            else m_builder->createCJmp(temp, falseBlock, trueBlock);
+        }
+        m_builder->pushBasicBlock(trueBlock);
+        m_builder->store(m_var, ExprNodeVisitor_CodeGenerator(m_stmt, node->right).getVariable());
+        m_builder->createJmp(endBlock);
+        m_builder->pushBasicBlock(falseBlock);
+        m_builder->createJmp(endBlock);
+        m_builder->pushBasicBlock(endBlock);
         return;
     }
 

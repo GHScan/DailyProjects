@@ -23,7 +23,7 @@ BEx86FunctionBuilder::~BEx86FunctionBuilder() {
 void BEx86FunctionBuilder::beginBuild() {
     beginScope();
     m_argSymbolTable = m_topLocalSymbolTable;
-    m_retBasicBlock = createBasicBlock("label_ret");
+    m_retBasicBlock = createBasicBlock("label_RET");
 }
 
 void BEx86FunctionBuilder::endBuild() {
@@ -37,7 +37,7 @@ void BEx86FunctionBuilder::endBuild() {
     }
     m_leftValueVars.clear();
     //==============================
-    BEx86BasicBlock *entryBasicBlock = createBasicBlock("label_entry");
+    BEx86BasicBlock *entryBasicBlock = createBasicBlock("label_ENTRY");
     for (int i = 1; i < x86RT_GRCount; ++i) { 
         if (m_registers[i]->isWritten) {
             entryBasicBlock->instructions.push_back(BEx86Instruction(x86IT_PUSH, m_registers[i]));
@@ -181,6 +181,10 @@ void BEx86FunctionBuilder::makeVariableInMemoryOnly(BEVariable *var) {
     }
 }
 //==============================
+BEVariablePtr BEx86FunctionBuilder::createTempFrom(BEVariablePtr src) {
+    makesureVariableInRegister(src.get());
+    return BEVariablePtr(new BERightValueVariable(src->getType(), src->reg, m_topLocalSymbolTable));
+}
 BEVariablePtr BEx86FunctionBuilder::loadConstant(BEConstant *constant) {
     BERegister *reg = getFreeRegister();
     pushInstruction(BEx86Instruction(x86IT_MOV, reg, constant));

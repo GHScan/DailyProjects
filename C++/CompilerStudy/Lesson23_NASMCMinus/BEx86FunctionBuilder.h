@@ -131,6 +131,7 @@ public:
 public:
     void beginBuild();
     
+    BEVariablePtr createTempFrom(BEVariablePtr src);
     BEVariablePtr loadConstant(BEConstant *constant);
     BEVariablePtr store(BEVariablePtr dest, BEVariablePtr src);
 
