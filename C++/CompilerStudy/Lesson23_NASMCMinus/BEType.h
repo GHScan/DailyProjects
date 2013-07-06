@@ -3,11 +3,17 @@
 #define BE_TYPE_H
 
 struct BEType {
-    BEType(): size(0) {}
-    BEType(const string& _name, int _size): name(_name), size(_size){}
-
     string name;
     int size;
+    BEType(const string& _name, int _size): name(_name), size(_size){}
+    virtual ~BEType(){}
+};
+struct BEType_Array: public BEType {
+    const BEType *elemType;
+    int count;
+    BEType_Array(const BEType *_elemType, int _count): 
+        BEType(format("%s[%d]", _elemType->name.c_str(), _count), 4), 
+        elemType(_elemType), count(_count) {}
 };
 
 class BETypeManager {
@@ -17,12 +23,12 @@ public:
         return &s_ins;
     }
 
-    const BEType* getType(const string &name) const;
-    const BEType* getFuncType() const;
+    const BEType* get(const string &name) const;
+    const BEType* getFunc() const;
     BETypeManager();
     ~BETypeManager();
 private:
-    map<string, BEType> m_types;
+    map<string, BEType*> m_types;
 };
 
 #endif

@@ -75,4 +75,7 @@ inline int hashOf(const T* begin, const T* end) {
     return r;
 }
 
+string unEscape(const string &s);
+string escape(const string &s);
+
 #endif

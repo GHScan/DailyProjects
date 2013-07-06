@@ -30,7 +30,6 @@ void BEx86FunctionBuilder::endBuild() {
     m_maxArgOff = m_argSymbolTable->getMaxEndOff();
     endScope();
     ASSERT(m_topLocalSymbolTable == NULL);
-    m_argSymbolTable = NULL;
 
     for (auto p : m_leftValueVars) {
         ASSERT(p.first->parent == m_parent->getGlobalSymbolTable());
@@ -54,7 +53,7 @@ void BEx86FunctionBuilder::endBuild() {
     m_retBasicBlock = NULL;
     pushInstruction(BEx86Instruction(x86IT_MOV, m_registers[x86RT_ESP], m_registers[x86RT_EBP]));
     pushInstruction(BEx86Instruction(x86IT_POP, m_registers[x86RT_EBP]));
-    for (int i = x86RT_GRCount - 1; i >= 0; --i) {
+    for (int i = x86RT_GRCount - 1; i > 0; --i) {
         if (m_registers[i]->isWritten) {
             pushInstruction(BEx86Instruction(x86IT_POP, m_registers[i]));
         }
@@ -267,7 +266,7 @@ BEVariablePtr BEx86FunctionBuilder::createRelativeOp(BEx86InstructionType insTyp
     pushBasicBlock(trueBlock);
     pushInstruction(BEx86Instruction(x86IT_MOV, reg, m_parent->getConstantPool()->get(1)));
     pushBasicBlock(endBlock);
-    return BEVariablePtr(new BERightValueVariable(BETypeManager::instance()->getType("int"), reg, m_topLocalSymbolTable));
+    return BEVariablePtr(new BERightValueVariable(BETypeManager::instance()->get("int"), reg, m_topLocalSymbolTable));
 }
 BEVariablePtr BEx86FunctionBuilder::createLt(BEVariablePtr &left, BEVariablePtr right) {
     return createRelativeOp(x86IT_JL, left, right);
@@ -313,6 +312,7 @@ void BEx86FunctionBuilder::beginCall(int n) {
 BEVariablePtr BEx86FunctionBuilder::endCall(const BEType *type, BESymbol *funcSymbol, int n) {
     BERegister *reg = makeRegisterFree(m_registers[x86RT_EAX]);
     pushInstruction(BEx86Instruction(x86IT_CALL, funcSymbol));
+    pushInstruction(BEx86Instruction(x86IT_ADD, m_registers[x86RT_ESP], m_parent->getConstantPool()->get(n * 4)));
     return BEVariablePtr(new BERightValueVariable(type, reg, m_topLocalSymbolTable));
 }
 

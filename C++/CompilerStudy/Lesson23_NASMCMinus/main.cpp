@@ -3,7 +3,9 @@
 
 #include "CMinusLexer.hpp"
 #include "CMinusParser.hpp"
+#include "BEx86FileBuilder.h"
 #include "BEx86CodeGenerator.h"
+#include "BEx86CodeOptimizer.h"
 #include "BEx86ASMSerializer.h"
 
 int main(int argc, char *argv[]) {
@@ -20,6 +22,7 @@ int main(int argc, char *argv[]) {
         if (argv[i] == string("-v")) isDumpByteCode = true;
         else if (argv[i] == string("-O")) isOptimize = true;
     }
+    (void)isDumpByteCode;
 
 
 #ifdef CHECK_MEMORY_LEAKS
@@ -34,8 +37,9 @@ int main(int argc, char *argv[]) {
         CMinusParser::TokenStreamType tstream(ANTLR_SIZE_HINT, lxr.get_tokSource() );
         CMinusParser psr(&tstream); 
 
-        ofstream fo("out.asm");
+        ofstream fo(format("%s.asm", argv[1]).c_str());
         BEx86FileBuilder *builder = generatex86Code(psr.program().get());
+        if (isOptimize) optimizex86FileBuilder(builder);
         serializex86Code_nasm(fo, builder);
         delete builder;
     } catch(const exception &e) {

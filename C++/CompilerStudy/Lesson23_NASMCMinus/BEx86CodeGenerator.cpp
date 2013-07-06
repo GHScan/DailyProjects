@@ -39,7 +39,7 @@ public:
         m_builder->beginBuild();
 
         for (auto typeID : func->argsTypeID) {
-            const BEType *type = BETypeManager::instance()->getType(typeID.first);
+            const BEType *type = BETypeManager::instance()->get(typeID.first);
             m_builder->declareArgVariable(typeID.second, type);
         }
 
@@ -64,7 +64,7 @@ private:
         ExprNodeVisitor_CodeGenerator(this, node->expr);
     }
     virtual void visit(StmtNode_DefineVariable *node) {
-        const BEType *type = BETypeManager::instance()->getType(node->type);
+        const BEType *type = BETypeManager::instance()->get(node->type);
         m_builder->declareLocalVariable(node->name, type);
     }
     virtual void visit(StmtNode_Continue *node) {
@@ -249,30 +249,30 @@ void ExprNodeVisitor_CodeGenerator::visit(ExprNode_TypeCast *node) {
 }
 void ExprNodeVisitor_CodeGenerator::visit(ExprNode_Call *node) {
     m_builder->beginCall((int)node->args.size());
-    for (auto arg : node->args) {
-        m_builder->createPush(ExprNodeVisitor_CodeGenerator(m_stmt, arg).getVariable());
+    for (int i = (int)node->args.size() - 1; i >= 0; --i) {
+        m_builder->createPush(ExprNodeVisitor_CodeGenerator(m_stmt, node->args[i]).getVariable());
     }
     BESymbol *funcSymbol = m_builder->getParent()->getGlobalSymbolTable()->get(node->funcName);
-    m_var = m_builder->endCall(BETypeManager::instance()->getType("int"), funcSymbol, (int)node->args.size());
+    m_var = m_builder->endCall(BETypeManager::instance()->get("int"), funcSymbol, (int)node->args.size());
 }
 
 BEx86FileBuilder* generatex86Code(SourceFileProto *fileProto) {
     BEx86FileBuilder *fileBuilder = new BEx86FileBuilder();
 
     for (auto func : fileProto->externFuncs) {
-        const BEType *type = BETypeManager::instance()->getFuncType();
+        const BEType *type = BETypeManager::instance()->getFunc();
         fileBuilder->getGlobalSymbolTable()->declare(func->name, type);
         fileBuilder->setAsExternSymbol(func->name);
     }
 
     for (auto _stmt : fileProto->globalVars) {
         auto stmt = static_cast<StmtNode_DefineVariable*>(_stmt.get());
-        const BEType *type = BETypeManager::instance()->getType(stmt->type);
+        const BEType *type = BETypeManager::instance()->get(stmt->type);
         fileBuilder->getGlobalSymbolTable()->declare(stmt->name, type);
     }
 
     for (auto func : fileProto->funcs) {
-        const BEType *type = BETypeManager::instance()->getFuncType();
+        const BEType *type = BETypeManager::instance()->getFunc();
         fileBuilder->getGlobalSymbolTable()->declare(func->name, type);
         BEx86FunctionBuilder *builder = fileBuilder->createFunctionBuilder(func->name);
         StmtNodeVisitor_CodeGenerator(builder, func);

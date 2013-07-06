@@ -6,9 +6,10 @@ struct BEType;
 
 struct BEConstant {
     virtual ~BEConstant(){}
+    string name;
     const BEType *type;
 protected:
-    BEConstant(const BEType *_type): type(_type){}
+    BEConstant(const string &_name, const BEType *_type): name(_name), type(_type){}
 };
 struct BEConstantString : public BEConstant {
     string str;
@@ -23,6 +24,8 @@ class BEConstantPool {
 public:
     BEConstant* get(int num);
     BEConstant* get(const string &str);
+    const map<int, BEConstantInt>& getInts() const { return m_constInts; }
+    const map<string, BEConstantString>& getStrings() const { return m_constStrs; }
 
 private:
     map<int, BEConstantInt> m_constInts;

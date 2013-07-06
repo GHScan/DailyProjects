@@ -2,13 +2,14 @@
 #include "pch.h"
 #include "BEConstant.h"
 #include "BEType.h"
+#include "IDGenerator.h"
 
-BEConstantString::BEConstantString(const string &_str)
-    : BEConstant(BETypeManager::instance()->getType("char*")), str(_str){
+BEConstantString::BEConstantString(const string &_str) : 
+    BEConstant(IDGenerator::instance()->generateName("str"), BETypeManager::instance()->get("char*")), str(_str){
 }
 
 BEConstantInt::BEConstantInt(int _num): 
-    BEConstant(BETypeManager::instance()->getType("int")), num(_num){
+    BEConstant(IDGenerator::instance()->generateName("int"), BETypeManager::instance()->get("int")), num(_num){
 }
 
 BEConstant* BEConstantPool::get(int num) {

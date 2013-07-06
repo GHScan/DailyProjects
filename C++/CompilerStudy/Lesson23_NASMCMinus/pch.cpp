@@ -12,3 +12,29 @@ string format(const char *fmt, ...) {
     return &buf[0];
 }
 
+string unEscape(const string& s) {
+    string r;
+    for (int i = 0; i < (int)s.size(); ++i) {
+        if (s[i] == '\\') {
+            switch (s[i + 1]) {
+            case 'a': r.push_back('\a'); break;
+            case 'n': r.push_back('\n'); break;
+            case 'r': r.push_back('\r'); break;
+            case 't': r.push_back('\t'); break;
+            default: r.push_back(s[i + 1]); break;
+            }
+            ++i;
+        } else {
+            r.push_back(s[i]);
+        }
+    }
+    return r;
+}
+string escape(const string &s) {
+    string r;
+    for (int i = 0; i < (int)s.size(); ++i) {
+        if (isgraph(s[i]) && !isspace(s[i])) r += s[i];
+        else r += format("\\x%02x", s[i]);
+    }
+    return r;
+}
