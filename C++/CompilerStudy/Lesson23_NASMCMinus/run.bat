@@ -6,7 +6,7 @@ set srcfile=%1
 
 main.exe %*
 E:\Library\nasm\nasm.exe -f win32 %srcfile%.asm -o %srcfile%.obj
-cp %srcfile%.asm _%srcfile%.asm
+cp %srcfile%.asm __.asm
 
 echo extern "C" void main(); int cmain(){main(); return 0;} > cmain.cpp
 cl.exe /nologo /W3 /DWIN32 /D_CONSOLE /EHsc /fp:precise /GR /Zc:wchar_t /Zc:forScope /Gd /TP /DNDEBUG /O2 /GL /MD /Zi /c cmain.cpp 
