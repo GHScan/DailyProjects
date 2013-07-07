@@ -13,6 +13,7 @@ struct BERegister: public Noncopyable {
     const int regType;
     set<BEVariable*> loadedVars;
 
+    bool isSharedByVariables() const { return (int)loadedVars.size() > 1; }
     void linkVariable(BEVariable *var);
     void unlinkVariable(BEVariable *var);
     bool isWritten;

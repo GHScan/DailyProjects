@@ -212,14 +212,22 @@ BEVariablePtr BEx86FunctionBuilder::store(BEVariablePtr dest, BEVariablePtr src)
 
 BEVariablePtr BEx86FunctionBuilder::createInc(BEVariablePtr &dest) {
     ASSERT(dynamic_cast<BELeftValueVariable*>(dest.get()));
-    makeVariableInMemoryOnly(dest.get());
-    pushInstruction(BEx86Instruction(x86IT_INC, dest->getValidAddress()));
+    if (dest->isInRegister() && dest->reg->isSharedByVariables()) {
+        makeVariableInMemoryOnly(dest.get());
+    }
+    makesureVariableInRegister(dest.get());
+    pushInstruction(BEx86Instruction(x86IT_INC, dest->reg));
+    dest->setMemoryDirty();
     return dest;
 }
 BEVariablePtr BEx86FunctionBuilder::createDec(BEVariablePtr &dest) {
     ASSERT(dynamic_cast<BELeftValueVariable*>(dest.get()));
-    makeVariableInMemoryOnly(dest.get());
-    pushInstruction(BEx86Instruction(x86IT_DEC, dest->getValidAddress()));
+    if (dest->isInRegister() && dest->reg->isSharedByVariables()) {
+        makeVariableInMemoryOnly(dest.get());
+    }
+    makesureVariableInRegister(dest.get());
+    pushInstruction(BEx86Instruction(x86IT_DEC, dest->reg));
+    dest->setMemoryDirty();
     return dest;
 }
 BEVariablePtr BEx86FunctionBuilder::createNot(BEVariablePtr &dest) {

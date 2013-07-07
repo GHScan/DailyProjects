@@ -162,6 +162,32 @@ void ExprNodeVisitor_CodeGenerator::visit(ExprNode_Assignment *node) {
     m_var = m_builder->getLocalVariable(node->left);
     if (m_var == NULL) m_var = m_builder->getGlobalVariable(node->left);
     ASSERT(m_var != NULL);
+
+    if (auto binOp = dynamic_cast<ExprNode_BinaryOp*>(node->right.get())) {
+        auto left = dynamic_cast<ExprNode_Variable*>(binOp->left.get());
+        auto right = dynamic_cast<ExprNode_IntLiteral*>(binOp->right.get());
+        if (left != NULL && right != NULL && left->name == node->left) {
+            if (right->number == 1) {
+                if (binOp->op == ExprNode_BinaryOp::OT_Add) {
+                    m_var = m_builder->createInc(m_var);
+                    return;
+                } else if(binOp->op == ExprNode_BinaryOp::OT_Sub) {
+                    m_var = m_builder->createDec(m_var);
+                    return;
+                }
+            } 
+            if (right->number == -1) {
+                if (binOp->op == ExprNode_BinaryOp::OT_Add) {
+                    m_var = m_builder->createDec(m_var);
+                    return;
+                } else if(binOp->op == ExprNode_BinaryOp::OT_Sub) {
+                    m_var = m_builder->createInc(m_var);
+                    return;
+                }
+            }
+        }
+    }
+
     m_var = m_builder->store(m_var, ExprNodeVisitor_CodeGenerator(m_stmt, node->right).getVariable());
 }
 void ExprNodeVisitor_CodeGenerator::visit(ExprNode_BinaryOp *node) {

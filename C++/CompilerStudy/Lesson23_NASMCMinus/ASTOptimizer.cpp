@@ -7,12 +7,108 @@
 //==============================
 class ASTOptimizerManager {
 public:
-    ASTOptimizerManager(ASTOptimizeType optTypeFlag): m_optTypeFlag(optTypeFlag) {
+    ASTOptimizerManager(int optTypeFlag): m_optTypeFlag(optTypeFlag) {
     }
     StmtNodePtr optimizeStmt(StmtNodePtr stmt);
     ExprNodePtr optimizeExpr(ExprNodePtr expr);
 private:
-    const ASTOptimizeType m_optTypeFlag;
+    const int m_optTypeFlag;
+};
+//==============================
+class ExprNodeVisitor_AlgebraicIdentityOptimizer: public IExprNodeVisitor {
+public:
+    ExprNodeVisitor_AlgebraicIdentityOptimizer(ASTOptimizerManager *manager, ExprNodePtr expr):
+        m_manager(manager), m_result(expr) {
+        expr->acceptVisitor(this);
+    }
+    ExprNodePtr getResult() {
+        return m_result;
+    }
+private:
+    virtual void visit(ExprNode_StringLiteral *node) {
+    }
+    virtual void visit(ExprNode_IntLiteral *node) {
+    }
+    virtual void visit(ExprNode_FloatLiteral *node) {
+    }
+    virtual void visit(ExprNode_Variable *node) {
+    }
+    virtual void visit(ExprNode_Assignment *node) {
+        if (auto p = dynamic_cast<ExprNode_BinaryOp*>(node->right.get())) {
+            if (p->op == ExprNode_BinaryOp::OT_Add || p->op == ExprNode_BinaryOp::OT_Sub) {
+                if (auto var = dynamic_cast<ExprNode_Variable*>(p->left.get())) {
+                    if (var->name == node->left) {
+                        p->right = ExprNodeVisitor_AlgebraicIdentityOptimizer(m_manager, p->right).getResult();
+                        return;
+                    }
+                } 
+                if (auto var = dynamic_cast<ExprNode_Variable*>(p->right.get())) {
+                    if (var->name == node->left) {
+                        swap(p->left, p->right);
+                        p->right = ExprNodeVisitor_AlgebraicIdentityOptimizer(m_manager, p->right).getResult();
+                        return;
+                    }
+                }
+            }
+        }
+        node->right = ExprNodeVisitor_AlgebraicIdentityOptimizer(m_manager, node->right).getResult();
+    }
+    virtual void visit(ExprNode_BinaryOp *node) {
+        if (node->op == ExprNode_BinaryOp::OT_Add || node->op == ExprNode_BinaryOp::OT_Mul) {
+            vector<ExprNodePtr> unscaned;
+            vector<ExprNodePtr> operands;
+            unscaned.push_back(node->left);
+            unscaned.push_back(node->right);
+            while (!unscaned.empty()) {
+                ExprNodePtr expr = unscaned.back();
+                unscaned.pop_back();
+                if (auto p = dynamic_cast<ExprNode_BinaryOp*>(expr.get())) {
+                    if (p->op == node->op) {
+                        unscaned.push_back(p->left);
+                        unscaned.push_back(p->right);
+                        continue;
+                    }
+                } 
+                operands.push_back(expr);
+            }
+
+            sort(operands.begin(), operands.end(), [](ExprNodePtr a, ExprNodePtr b){
+                bool isAConst = dynamic_cast<ExprNode_IntLiteral*>(a.get()) || dynamic_cast<ExprNode_FloatLiteral*>(a.get());
+                bool isBConst = dynamic_cast<ExprNode_IntLiteral*>(b.get()) || dynamic_cast<ExprNode_FloatLiteral*>(b.get());
+                if (isAConst == isBConst) return a.get() < b.get();
+                return isAConst;
+            });
+            reverse(operands.begin(), operands.end());
+
+            for (auto &expr : operands) expr = ExprNodeVisitor_AlgebraicIdentityOptimizer(m_manager, expr).getResult();
+
+            while (operands.size() > 1) {
+                ExprNodePtr expr(new ExprNode_BinaryOp(node->op, operands.back(), operands[operands.size() - 2]));
+                operands.pop_back();
+                operands.back() = expr;
+            }
+            ASSERT(operands.size() == 1);
+
+            m_result = operands.back();
+        } else {
+            node->left = ExprNodeVisitor_AlgebraicIdentityOptimizer(m_manager, node->left).getResult();
+            node->right = ExprNodeVisitor_AlgebraicIdentityOptimizer(m_manager, node->right).getResult();
+        }
+    }
+    virtual void visit(ExprNode_UnaryOp *node) {
+        node->expr = ExprNodeVisitor_AlgebraicIdentityOptimizer(m_manager, node->expr).getResult();
+    }
+    virtual void visit(ExprNode_TypeCast *node) {
+        node->expr = ExprNodeVisitor_AlgebraicIdentityOptimizer(m_manager, node->expr).getResult();
+    }
+    virtual void visit(ExprNode_Call *node) {
+        for (int i = 0; i < (int)node->args.size(); ++i) {
+            node->args[i] = ExprNodeVisitor_AlgebraicIdentityOptimizer(m_manager, node->args[i]).getResult();
+        }
+    }
+private:
+    ASTOptimizerManager *m_manager;
+    ExprNodePtr m_result;
 };
 //==============================
 class ExprNodeVisitor_ConstantFoldingOptimizer: public IExprNodeVisitor {
@@ -197,30 +293,69 @@ private:
         node->left = ExprNodeVisitor_ReductionInStrengthOptimizer(m_manager, node->left).getResult();
         node->right = ExprNodeVisitor_ReductionInStrengthOptimizer(m_manager, node->right).getResult();
 
-        if (node->op == ExprNode_BinaryOp::OT_Mul) {
-            if (dynamic_cast<ExprNode_IntLiteral*>(node->left.get())) {
+        if (node->op == ExprNode_BinaryOp::OT_Add) {
+            if (dynamic_cast<ExprNode_IntLiteral*>(node->left.get()) || dynamic_cast<ExprNode_FloatLiteral*>(node->left.get())) {
                 swap(node->left, node->right);
                 m_result = ExprNodeVisitor_ReductionInStrengthOptimizer(m_manager, m_result).getResult();
                 return;
             }
-            else if (auto p = dynamic_cast<ExprNode_IntLiteral*>(node->right.get())) {
+
+            if (auto p = dynamic_cast<ExprNode_IntLiteral*>(node->right.get())) {
+                if (p->number == 0) {
+                    m_result = node->left;
+                } 
+            } else if (auto p = dynamic_cast<ExprNode_FloatLiteral*>(node->right.get())) {
+                if (p->number == 0) {
+                    m_result = node->left;
+                } 
+            }
+        } else if (node->op == ExprNode_BinaryOp::OT_Sub) {
+            if (auto p = dynamic_cast<ExprNode_IntLiteral*>(node->right.get())) {
+                if (p->number == 0) {
+                    m_result = node->left;
+                } 
+            } else if (auto p = dynamic_cast<ExprNode_FloatLiteral*>(node->right.get())) {
+                if (p->number == 0) {
+                    m_result = node->left;
+                } 
+            }
+        } else if (node->op == ExprNode_BinaryOp::OT_Mul) {
+            if (dynamic_cast<ExprNode_IntLiteral*>(node->left.get()) || dynamic_cast<ExprNode_FloatLiteral*>(node->left.get())) {
+                swap(node->left, node->right);
+                m_result = ExprNodeVisitor_ReductionInStrengthOptimizer(m_manager, m_result).getResult();
+                return;
+            }
+
+            if (auto p = dynamic_cast<ExprNode_IntLiteral*>(node->right.get())) {
                 if (isPowerOf2(p->number)) {
                     m_result = ExprNodePtr(new ExprNode_BinaryOp(ExprNode_BinaryOp::OT_LShift, node->left, ExprNodePtr(new ExprNode_IntLiteral(log2(p->number)))));
-                }
-            } 
+                } else if (p->number == 1) {
+                    m_result = node->left;
+                } 
+            } else if (auto p = dynamic_cast<ExprNode_FloatLiteral*>(node->right.get())) {
+                if (p->number == 1) {
+                    m_result = node->left;
+                } 
+            }
         } else if (node->op == ExprNode_BinaryOp::OT_Div) {
             if (auto p = dynamic_cast<ExprNode_IntLiteral*>(node->right.get())) {
                 if (isPowerOf2(p->number)) {
                     m_result = ExprNodePtr(new ExprNode_BinaryOp(ExprNode_BinaryOp::OT_RShift, node->left, ExprNodePtr(new ExprNode_IntLiteral(log2(p->number)))));
+                } else if (p->number == 1) {
+                    m_result = node->left;
                 }
             } else if (auto p = dynamic_cast<ExprNode_FloatLiteral*>(node->right.get())) {
-                m_result = ExprNodePtr(new ExprNode_BinaryOp(ExprNode_BinaryOp::OT_Mul, node->left, ExprNodePtr(new ExprNode_FloatLiteral(1 / p->number))));
+                if (p->number == 1) {
+                    m_result = node->left;
+                } else {
+                    m_result = ExprNodePtr(new ExprNode_BinaryOp(ExprNode_BinaryOp::OT_Mul, node->left, ExprNodePtr(new ExprNode_FloatLiteral(1 / p->number))));
+                }
             }
         } else if (node->op == ExprNode_BinaryOp::OT_Mod) {
             if (auto p = dynamic_cast<ExprNode_IntLiteral*>(node->right.get())) {
                 if (isPowerOf2(p->number)) {
                     m_result = ExprNodePtr(new ExprNode_BinaryOp(ExprNode_BinaryOp::OT_BitAnd, node->left, ExprNodePtr(new ExprNode_IntLiteral(p->number - 1))));
-                }
+                } 
             }
         } 
     }
@@ -244,38 +379,6 @@ private:
     }
 private:
     ASTOptimizerManager *m_manager;
-    ExprNodePtr m_result;
-};
-//==============================
-class ExprNodeVisitor_AlgebraicIdentityOptimizer: public IExprNodeVisitor {
-public:
-    ExprNodeVisitor_AlgebraicIdentityOptimizer(ASTOptimizerManager *manager, ExprNodePtr expr):
-        m_result(expr) {
-        expr->acceptVisitor(this);
-    }
-    ExprNodePtr getResult() {
-        return m_result;
-    }
-private:
-    virtual void visit(ExprNode_StringLiteral *node) {
-    }
-    virtual void visit(ExprNode_IntLiteral *node) {
-    }
-    virtual void visit(ExprNode_FloatLiteral *node) {
-    }
-    virtual void visit(ExprNode_Variable *node) {
-    }
-    virtual void visit(ExprNode_Assignment *node) {
-    }
-    virtual void visit(ExprNode_BinaryOp *node) {
-    }
-    virtual void visit(ExprNode_UnaryOp *node) {
-    }
-    virtual void visit(ExprNode_TypeCast *node) {
-    }
-    virtual void visit(ExprNode_Call *node) {
-    }
-private:
     ExprNodePtr m_result;
 };
 //==============================
@@ -364,20 +467,22 @@ StmtNodePtr ASTOptimizerManager::optimizeStmt(StmtNodePtr stmt) {
 }
 ExprNodePtr ASTOptimizerManager::optimizeExpr(ExprNodePtr expr) {
     if (expr == NULL) return expr;
-    for (int i = 0; i < AOT_Count; ++i) {
-        if (((1 << i) & m_optTypeFlag) == 0) continue;
-        switch (1 << i) {
-            case AOT_ConstantFolding: expr = ExprNodeVisitor_ConstantFoldingOptimizer(this, expr).getResult(); break;
-            case AOT_ReductionInStrength: expr = ExprNodeVisitor_ReductionInStrengthOptimizer(this, expr).getResult(); break;
-            case AOT_ErshovNumber: expr = ExprNodeVisitor_ErshovNumberOptimizer(this, expr).getResult(); break;
-            case AOT_AlgebraicIdentity: expr = ExprNodeVisitor_AlgebraicIdentityOptimizer(this, expr).getResult(); break;
-            default: ASSERT(0); break;
+    for (int pass = 0; pass < 2; ++pass) {
+        for (int i = 0; i < AOT_Count; ++i) {
+            if (((1 << i) & m_optTypeFlag) == 0) continue;
+            switch (1 << i) {
+                case AOT_ConstantFolding: expr = ExprNodeVisitor_ConstantFoldingOptimizer(this, expr).getResult(); break;
+                case AOT_ReductionInStrength: expr = ExprNodeVisitor_ReductionInStrengthOptimizer(this, expr).getResult(); break;
+                case AOT_ErshovNumber: expr = ExprNodeVisitor_ErshovNumberOptimizer(this, expr).getResult(); break;
+                case AOT_AlgebraicIdentity: expr = ExprNodeVisitor_AlgebraicIdentityOptimizer(this, expr).getResult(); break;
+                default: ASSERT(0); break;
+            }
         }
     }
     return expr;
 }
 //==============================
-void optimizeAST(SourceFileProto *fileProto, ASTOptimizeType optTypeFlag) {
+void optimizeAST(SourceFileProto *fileProto, int optTypeFlag) {
     ASTOptimizerManager manager(optTypeFlag);
     for (auto func : fileProto->funcs) {
         func->body = manager.optimizeStmt(func->body);
