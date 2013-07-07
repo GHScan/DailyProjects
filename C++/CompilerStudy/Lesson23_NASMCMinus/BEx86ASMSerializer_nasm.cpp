@@ -23,7 +23,7 @@ private:
 
         for (auto symbol : builder->getGlobalSymbolTable()->getSymbols()) {
             if (!builder->isExternSymbol(symbol->name)) continue;
-            so << format("extern %s\n", symbol->name.c_str());
+            so << format("extern %s\n", getPlatformDependentSymbolName(symbol).c_str());
         }
     }
     void serializeDataSection(ostream &so, BEx86FileBuilder *builder) {
@@ -38,7 +38,7 @@ private:
         for (auto symbol : builder->getGlobalSymbolTable()->getSymbols()) {
             if (builder->isExternSymbol(symbol->name)) continue;
             if (builder->getFunctionBuilder(symbol->name) != NULL) continue;
-            so << format("%s : %s %s\n", symbol->name.c_str(), getStoragePrefixByType(symbol->type), getStorageDefaultValueByType(symbol->type));
+            so << format("%s : %s %s\n", getPlatformDependentSymbolName(symbol).c_str(), getStoragePrefixByType(symbol->type), getStorageDefaultValueByType(symbol->type));
         }
     }
     void serializeBssSection(ostream &so, BEx86FileBuilder *builder) {
@@ -51,8 +51,8 @@ private:
             if (builder->isExternSymbol(symbol->name)) continue;
             BEx86FunctionBuilder *funcBuilder = builder->getFunctionBuilder(symbol->name);
             if (funcBuilder == NULL) continue;
-            if (symbol->name == "main") so << "global main\n";
-            so << format("%s : \n", symbol->name.c_str());
+            if (symbol->name == "main") so << format("global %s\n", getPlatformDependentSymbolName(symbol).c_str());
+            so << format("%s : \n", getPlatformDependentSymbolName(symbol).c_str());
             for (auto block : funcBuilder->getBasicBlocks()) {
                 so << format(" %s : \n", block->name.c_str());
                 for (auto &ins : block->instructions) {
@@ -82,11 +82,11 @@ private:
             case x86IT_DEC: return "dec";
             case x86IT_ADD: return "add";
             case x86IT_SUB: return "sub";
-            case x86IT_MUL: return "mul";
-            case x86IT_DIV: return "div";
-            case x86IT_MOD: return "mod";
+            case x86IT_MUL: return "imul";
+            case x86IT_DIV: return "idiv";
             case x86IT_SAL: return "sal";
             case x86IT_SAR: return "sar";
+            case x86IT_XOR: return "xor";
             case x86IT_CMP: return "cmp";
             case x86IT_JMP: return "jmp";
             case x86IT_JZ:  return "jz";
@@ -132,20 +132,20 @@ private:
     }
     string serializeInstructionOperand_Memory(BEx86FunctionBuilder *funcBuilder, const BESymbol* symbol) {
         if (symbol->parent == funcBuilder->getArgSymbolTable()) {
-            int regInUse = 0;
+            int regInUse = 0; // this calculation can be do once only
             for (int i = 1; i < x86RT_GRCount; ++i) {
                 if (funcBuilder->getRegister(i)->isWritten) ++regInUse;
             }
-            return format("[ebp+%d]", (regInUse + 1 + 1 - 1) * 4);
+            return format("%s [ebp+%d]", getAddressAccessPrefixByType(symbol->type), (regInUse + 1 + 1 - 1) * 4);
         } else if (symbol->parent == funcBuilder->getParent()->getGlobalSymbolTable()) { 
             if (dynamic_cast<const BEType_Array*>(symbol->type) || symbol->type == BETypeManager::instance()->getFunc()) {
-                return symbol->name;
+                return getPlatformDependentSymbolName(symbol);
             } else {
-                return format("[%s]", symbol->name.c_str());
+                return format("%s [%s]", getAddressAccessPrefixByType(symbol->type), getPlatformDependentSymbolName(symbol).c_str());
             }
         } else {
             int localOff = symbol->off - funcBuilder->getMaxArgOff();
-            return format("[ebp-%d]", localOff + 4);
+            return format("%s [ebp-%d]", getAddressAccessPrefixByType(symbol->type), localOff + 4);
         }
     }
     string serializeInstructionOperand_Constant(BEx86FunctionBuilder *funcBuilder, const BEConstant* constant) {
@@ -168,6 +168,25 @@ private:
         if (type == BETypeManager::instance()->get("int")) return "0";
         ASSERT(0);
         return "";
+    }
+    const char* getAddressAccessPrefixByType(const BEType *type) {
+        if (auto p = dynamic_cast<const BEType_Array*>(type)) ASSERT(0);
+        switch (type->size) {
+            case 1: return "byte";
+            case 2: return "word";
+            case 4: return "dword";
+            default:
+                ASSERT(0);
+        }
+        return "";
+    }
+
+    string getPlatformDependentSymbolName(const BESymbol *symbol) {
+#ifdef _MSC_VER
+        return "_" + symbol->name;
+#else
+        return symbol->name;
+#endif
     }
 
 private:

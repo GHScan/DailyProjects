@@ -108,12 +108,13 @@ label_continue:
 label_break:
          * */
         BEx86BasicBlock *loopBlock = m_builder->createBasicBlock("label_loop");
-        BEx86BasicBlock *bodyBlock = m_builder->createBasicBlock("label_loop");
-        BEx86BasicBlock *continueBlock = m_builder->createBasicBlock("label_loop");
-        BEx86BasicBlock *breakBlock = m_builder->createBasicBlock("label_loop");
+        BEx86BasicBlock *bodyBlock = m_builder->createBasicBlock("label_body");
+        BEx86BasicBlock *continueBlock = m_builder->createBasicBlock("label_continue");
+        BEx86BasicBlock *breakBlock = m_builder->createBasicBlock("label_break");
         m_continueBlocks.push_back(continueBlock);
         m_breakBlocks.push_back(breakBlock);
 
+        m_builder->createJmp(loopBlock);
         m_builder->pushBasicBlock(loopBlock);
         {
             BEVariablePtr temp(m_builder->loadConstant(m_builder->getParent()->getConstantPool()->get(1)));

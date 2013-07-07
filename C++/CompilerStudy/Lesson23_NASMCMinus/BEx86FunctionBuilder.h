@@ -43,10 +43,10 @@ enum BEx86InstructionType {
     x86IT_SUB,
     x86IT_MUL,
     x86IT_DIV,
-    x86IT_MOD,
 
     x86IT_SAL,
     x86IT_SAR,
+    x86IT_XOR,
 
     x86IT_CMP,
 

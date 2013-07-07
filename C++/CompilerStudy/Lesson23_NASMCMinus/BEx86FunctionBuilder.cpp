@@ -243,10 +243,20 @@ BEVariablePtr BEx86FunctionBuilder::createMul(BEVariablePtr &dest, BEVariablePtr
     return createArithmeticOp(x86IT_MUL, dest, src);
 }
 BEVariablePtr BEx86FunctionBuilder::createDiv(BEVariablePtr &dest, BEVariablePtr src) {
-    return createArithmeticOp(x86IT_DIV, dest, src);
+    loadVariableToRegister(m_registers[x86RT_EAX], dest.get());
+    dest.reset();
+    makeRegisterFree(m_registers[x86RT_EDX]);
+    pushInstruction(BEx86Instruction(x86IT_XOR, m_registers[x86RT_EDX], m_registers[x86RT_EDX]));
+    if (src->placeFlag & BEVariable::PF_InRegister) {
+        pushInstruction(BEx86Instruction(x86IT_DIV, src->reg));
+    } else {
+        pushInstruction(BEx86Instruction(x86IT_DIV, src->getValidAddress()));
+    }
+    return BEVariablePtr(new BERightValueVariable(src->getType(), m_registers[x86RT_EAX], m_topLocalSymbolTable));
 }
 BEVariablePtr BEx86FunctionBuilder::createMod(BEVariablePtr &dest, BEVariablePtr src) {
-    return createArithmeticOp(x86IT_MOD, dest, src);
+    createDiv(dest, src);
+    return BEVariablePtr(new BERightValueVariable(src->getType(), m_registers[x86RT_EDX], m_topLocalSymbolTable));
 }
 
 BEVariablePtr BEx86FunctionBuilder::createRelativeOp(BEx86InstructionType insType, BEVariablePtr &left, BEVariablePtr right) {
@@ -312,7 +322,7 @@ void BEx86FunctionBuilder::beginCall(int n) {
 BEVariablePtr BEx86FunctionBuilder::endCall(const BEType *type, BESymbol *funcSymbol, int n) {
     BERegister *reg = makeRegisterFree(m_registers[x86RT_EAX]);
     pushInstruction(BEx86Instruction(x86IT_CALL, funcSymbol));
-    pushInstruction(BEx86Instruction(x86IT_ADD, m_registers[x86RT_ESP], m_parent->getConstantPool()->get(n * 4)));
+    if (n > 0) pushInstruction(BEx86Instruction(x86IT_ADD, m_registers[x86RT_ESP], m_parent->getConstantPool()->get(n * 4)));
     return BEVariablePtr(new BERightValueVariable(type, reg, m_topLocalSymbolTable));
 }
 

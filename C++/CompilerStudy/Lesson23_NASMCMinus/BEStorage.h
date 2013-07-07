@@ -49,6 +49,7 @@ struct BERightValueVariable: public BEVariable {
     BERightValueVariable(const BEType *_type, BERegister *_reg, BESymbolTable *_symbolTable): 
         BEVariable(PF_InRegister, _reg), type(_type), symbolTable(_symbolTable), symbol(NULL) {
         ASSERT(reg != NULL && symbolTable != NULL && type != NULL);
+        reg->loadedVars.insert(this);
     }
     virtual BESymbol* getValidAddress();
     virtual const BEType* getType() { return type; }
