@@ -46,6 +46,7 @@ enum BEx86InstructionType {
 
     x86IT_SAL,
     x86IT_SAR,
+
     x86IT_XOR,
 
     x86IT_CMP,
@@ -145,6 +146,10 @@ public:
     BEVariablePtr createInc(BEVariablePtr &dest);
     BEVariablePtr createDec(BEVariablePtr &dest);
     BEVariablePtr createNot(BEVariablePtr &dest);
+    BEVariablePtr createSal(BEVariablePtr &dest, BEVariablePtr src);
+    BEVariablePtr createSar(BEVariablePtr &dest, BEVariablePtr src);
+    BEVariablePtr createAnd(BEVariablePtr &dest, BEVariablePtr src);
+    BEVariablePtr createOr(BEVariablePtr &dest, BEVariablePtr src);
     BEVariablePtr createAdd(BEVariablePtr &dest, BEVariablePtr src);
     BEVariablePtr createSub(BEVariablePtr &dest, BEVariablePtr src);
     BEVariablePtr createMul(BEVariablePtr &dest, BEVariablePtr src);

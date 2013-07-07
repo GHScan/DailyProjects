@@ -244,6 +244,18 @@ BEVariablePtr BEx86FunctionBuilder::createArithmeticOp(BEx86InstructionType insT
     }
     return BEVariablePtr(new BERightValueVariable(src->getType(), reg, m_topLocalSymbolTable));
 }
+BEVariablePtr BEx86FunctionBuilder::createSal(BEVariablePtr &dest, BEVariablePtr src) {
+    return createArithmeticOp(x86IT_SAL, dest, src);
+}
+BEVariablePtr BEx86FunctionBuilder::createSar(BEVariablePtr &dest, BEVariablePtr src) {
+    return createArithmeticOp(x86IT_SAR, dest, src);
+}
+BEVariablePtr BEx86FunctionBuilder::createAnd(BEVariablePtr &dest, BEVariablePtr src) {
+    return createArithmeticOp(x86IT_AND, dest, src);
+}
+BEVariablePtr BEx86FunctionBuilder::createOr(BEVariablePtr &dest, BEVariablePtr src) {
+    return createArithmeticOp(x86IT_OR, dest, src);
+}
 BEVariablePtr BEx86FunctionBuilder::createAdd(BEVariablePtr &dest, BEVariablePtr src) {
     return createArithmeticOp(x86IT_ADD, dest, src);
 }

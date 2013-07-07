@@ -259,6 +259,26 @@ label_logic_end:
                 m_var = m_builder->createNe(m_var, ExprNodeVisitor_CodeGenerator(m_stmt, node->right).getVariable());
             }
             break;
+        case ExprNode_BinaryOp::OT_LShift: {
+                m_var = ExprNodeVisitor_CodeGenerator(m_stmt, node->left).getVariable();
+                m_var = m_builder->createSal(m_var, ExprNodeVisitor_CodeGenerator(m_stmt, node->right).getVariable());
+            }
+            break;
+        case ExprNode_BinaryOp::OT_RShift: {
+                m_var = ExprNodeVisitor_CodeGenerator(m_stmt, node->left).getVariable();
+                m_var = m_builder->createSar(m_var, ExprNodeVisitor_CodeGenerator(m_stmt, node->right).getVariable());
+            }
+            break;
+        case ExprNode_BinaryOp::OT_BitAnd: {
+                m_var = ExprNodeVisitor_CodeGenerator(m_stmt, node->left).getVariable();
+                m_var = m_builder->createAnd(m_var, ExprNodeVisitor_CodeGenerator(m_stmt, node->right).getVariable());
+            }
+            break;
+        case ExprNode_BinaryOp::OT_BitOr: {
+                m_var = ExprNodeVisitor_CodeGenerator(m_stmt, node->left).getVariable();
+                m_var = m_builder->createOr(m_var, ExprNodeVisitor_CodeGenerator(m_stmt, node->right).getVariable());
+            }
+            break;
         default: ASSERT(0); break;
     }
 }

@@ -4,6 +4,7 @@
 #include "SourceFileProto.h"
 #include "AST.h"
 
+//==============================
 class ASTOptimizerManager {
 public:
     ASTOptimizerManager(ASTOptimizeType optTypeFlag): m_optTypeFlag(optTypeFlag) {
@@ -13,7 +14,7 @@ public:
 private:
     const ASTOptimizeType m_optTypeFlag;
 };
-
+//==============================
 class ExprNodeVisitor_ConstantFoldingOptimizer: public IExprNodeVisitor {
 public:
     ExprNodeVisitor_ConstantFoldingOptimizer(ASTOptimizerManager *manager, ExprNodePtr expr):
@@ -45,7 +46,7 @@ private:
                     if (auto p = dynamic_cast<ExprNode_IntLiteral*>(node->right.get())) {
                         m_result.reset(new ExprNode_IntLiteral(p->number != 0));
                     } else {
-                        m_result.reset(new ExprNode_BinaryOp("!=", node->right, ExprNodePtr(new ExprNode_IntLiteral(0))));
+                        m_result.reset(new ExprNode_BinaryOp(ExprNode_BinaryOp::OT_NEqual, node->right, ExprNodePtr(new ExprNode_IntLiteral(0))));
                     }
                 }
             }
@@ -57,7 +58,7 @@ private:
                     if (auto p = dynamic_cast<ExprNode_IntLiteral*>(node->right.get())) {
                         m_result.reset(new ExprNode_IntLiteral(p->number != 0));
                     } else {
-                        m_result.reset(new ExprNode_BinaryOp("!=", node->right, ExprNodePtr(new ExprNode_IntLiteral(0))));
+                        m_result.reset(new ExprNode_BinaryOp(ExprNode_BinaryOp::OT_NEqual, node->right, ExprNodePtr(new ExprNode_IntLiteral(0))));
                     }
                 } else {
                     m_result.reset(new ExprNode_IntLiteral(1));
@@ -170,10 +171,11 @@ private:
     ASTOptimizerManager *m_manager;
     ExprNodePtr m_result;
 };
+//==============================
 class ExprNodeVisitor_ReductionInStrengthOptimizer: public IExprNodeVisitor {
 public:
     ExprNodeVisitor_ReductionInStrengthOptimizer(ASTOptimizerManager *manager, ExprNodePtr expr):
-        m_result(expr) {
+        m_manager(manager), m_result(expr) {
         expr->acceptVisitor(this);
     }
     ExprNodePtr getResult() {
@@ -189,18 +191,62 @@ private:
     virtual void visit(ExprNode_Variable *node) {
     }
     virtual void visit(ExprNode_Assignment *node) {
+        node->right = ExprNodeVisitor_ReductionInStrengthOptimizer(m_manager, node->right).getResult();
     }
     virtual void visit(ExprNode_BinaryOp *node) {
+        node->left = ExprNodeVisitor_ReductionInStrengthOptimizer(m_manager, node->left).getResult();
+        node->right = ExprNodeVisitor_ReductionInStrengthOptimizer(m_manager, node->right).getResult();
+
+        if (node->op == ExprNode_BinaryOp::OT_Mul) {
+            if (dynamic_cast<ExprNode_IntLiteral*>(node->left.get())) {
+                swap(node->left, node->right);
+                m_result = ExprNodeVisitor_ReductionInStrengthOptimizer(m_manager, m_result).getResult();
+                return;
+            }
+            else if (auto p = dynamic_cast<ExprNode_IntLiteral*>(node->right.get())) {
+                if (isPowerOf2(p->number)) {
+                    m_result = ExprNodePtr(new ExprNode_BinaryOp(ExprNode_BinaryOp::OT_LShift, node->left, ExprNodePtr(new ExprNode_IntLiteral(log2(p->number)))));
+                }
+            } 
+        } else if (node->op == ExprNode_BinaryOp::OT_Div) {
+            if (auto p = dynamic_cast<ExprNode_IntLiteral*>(node->right.get())) {
+                if (isPowerOf2(p->number)) {
+                    m_result = ExprNodePtr(new ExprNode_BinaryOp(ExprNode_BinaryOp::OT_RShift, node->left, ExprNodePtr(new ExprNode_IntLiteral(log2(p->number)))));
+                }
+            } else if (auto p = dynamic_cast<ExprNode_FloatLiteral*>(node->right.get())) {
+                m_result = ExprNodePtr(new ExprNode_BinaryOp(ExprNode_BinaryOp::OT_Mul, node->left, ExprNodePtr(new ExprNode_FloatLiteral(1 / p->number))));
+            }
+        } else if (node->op == ExprNode_BinaryOp::OT_Mod) {
+            if (auto p = dynamic_cast<ExprNode_IntLiteral*>(node->right.get())) {
+                if (isPowerOf2(p->number)) {
+                    m_result = ExprNodePtr(new ExprNode_BinaryOp(ExprNode_BinaryOp::OT_BitAnd, node->left, ExprNodePtr(new ExprNode_IntLiteral(p->number - 1))));
+                }
+            }
+        } 
     }
     virtual void visit(ExprNode_UnaryOp *node) {
+        node->expr = ExprNodeVisitor_ReductionInStrengthOptimizer(m_manager, node->expr).getResult();
     }
     virtual void visit(ExprNode_TypeCast *node) {
+        node->expr = ExprNodeVisitor_ReductionInStrengthOptimizer(m_manager, node->expr).getResult();
     }
     virtual void visit(ExprNode_Call *node) {
+        for (int i = 0; i < (int)node->args.size(); ++i) {
+            node->args[i] = ExprNodeVisitor_ReductionInStrengthOptimizer(m_manager, node->args[i]).getResult();
+        }
     }
 private:
+    static bool isPowerOf2(int n) {
+        return n > 1 && (((n - 1) & n) == 0);
+    }
+    static int log2(int n) {
+        return ceil(log(n) / log(2));
+    }
+private:
+    ASTOptimizerManager *m_manager;
     ExprNodePtr m_result;
 };
+//==============================
 class ExprNodeVisitor_AlgebraicIdentityOptimizer: public IExprNodeVisitor {
 public:
     ExprNodeVisitor_AlgebraicIdentityOptimizer(ASTOptimizerManager *manager, ExprNodePtr expr):
@@ -232,6 +278,7 @@ private:
 private:
     ExprNodePtr m_result;
 };
+//==============================
 class ExprNodeVisitor_ErshovNumberOptimizer: public IExprNodeVisitor {
 public:
     ExprNodeVisitor_ErshovNumberOptimizer(ASTOptimizerManager *manager, ExprNodePtr expr):
@@ -264,6 +311,7 @@ private:
     ExprNodePtr m_result;
 };
 
+//==============================
 class StmtNodeVisitor_ExprOptimizeDriver: public IStmtNodeVisitor {
 public:
     StmtNodeVisitor_ExprOptimizeDriver(ASTOptimizerManager *manager, StmtNodePtr stmt):
@@ -307,7 +355,7 @@ private:
     ASTOptimizerManager *m_manager;
     StmtNodePtr m_result;
 };
-
+//==============================
 StmtNodePtr ASTOptimizerManager::optimizeStmt(StmtNodePtr stmt) {
     if (stmt == NULL) return stmt;
     StmtNodeVisitor_ExprOptimizeDriver driver(this, stmt);
@@ -328,7 +376,7 @@ ExprNodePtr ASTOptimizerManager::optimizeExpr(ExprNodePtr expr) {
     }
     return expr;
 }
-
+//==============================
 void optimizeAST(SourceFileProto *fileProto, ASTOptimizeType optTypeFlag) {
     ASTOptimizerManager manager(optTypeFlag);
     for (auto func : fileProto->funcs) {

@@ -71,10 +71,16 @@ struct ExprNode_BinaryOp: public ExprNode {
         OT_GreaterEq,
         OT_Equal,
         OT_NEqual,
+        // won't appear in script source
+        OT_LShift,
+        OT_RShift,
+        OT_BitAnd,
+        OT_BitOr,
     };
     OpType op;
     ExprNodePtr left, right;
     ExprNode_BinaryOp(const string &opStr, const ExprNodePtr &_left, const ExprNodePtr &_right): op(string2opType(opStr)), left(_left), right(_right){}
+    ExprNode_BinaryOp(OpType _op, const ExprNodePtr &_left, const ExprNodePtr &_right): op(_op), left(_left), right(_right){}
     virtual void acceptVisitor(IExprNodeVisitor *v) { v->visit(this); }
     static OpType string2opType(const string &opStr) {
         if (opStr == "&&") return OT_And;
@@ -102,6 +108,7 @@ struct ExprNode_UnaryOp: public ExprNode {
     OpType op;
     ExprNodePtr expr;
     ExprNode_UnaryOp(const string &opStr, const ExprNodePtr &_expr): op(string2opType(opStr)), expr(_expr){}
+    ExprNode_UnaryOp(OpType _op, const ExprNodePtr &_expr): op(_op), expr(_expr){}
     virtual void acceptVisitor(IExprNodeVisitor *v) { v->visit(this); }
     static OpType string2opType(const string &opStr) {
         if (opStr == "-") return OT_Minus;
