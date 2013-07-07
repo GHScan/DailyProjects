@@ -78,12 +78,12 @@ inline int hashOf(const T* begin, const T* end) {
 string unEscape(const string &s);
 string escape(const string &s);
 
-class noncopyable {
+class Noncopyable {
 public:
-    noncopyable(){}
+    Noncopyable(){}
 private:
-    noncopyable(const noncopyable&);
-    noncopyable& operator = (const noncopyable&);
+    Noncopyable(const Noncopyable&);
+    Noncopyable& operator = (const Noncopyable&);
 };
 
 #endif

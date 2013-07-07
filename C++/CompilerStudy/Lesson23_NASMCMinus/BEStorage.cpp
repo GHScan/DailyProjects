@@ -2,6 +2,7 @@
 #include "pch.h"
 #include "BEStorage.h"
 #include "BESymbolTable.h"
+#include "BEConstant.h"
 
 void BERegister::linkVariable(BEVariable *var) {
     ASSERT(var->reg == NULL);
@@ -37,4 +38,8 @@ BERightValueVariable::~BERightValueVariable() {
     if (symbol != NULL) {
         symbolTable->undeclare(symbol->name);
     }
+}
+
+const BEType* BEConstantProxyVariable::getType() {
+    return constant->type;
 }

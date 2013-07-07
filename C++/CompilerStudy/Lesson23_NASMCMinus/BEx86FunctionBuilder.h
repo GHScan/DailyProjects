@@ -112,7 +112,7 @@ struct BEx86BasicBlock {
     BEx86BasicBlock(const string &_name): name(_name){}
 };
 
-class BEx86FunctionBuilder: public noncopyable {
+class BEx86FunctionBuilder: public Noncopyable {
 public:
     BEx86FunctionBuilder(BEx86FileBuilder *parent);
     ~BEx86FunctionBuilder();
@@ -173,10 +173,9 @@ public:
 private:
     void pushInstruction(const BEx86Instruction &ins);
 
-    BERegister* findLeastUseRegister();
+    BERegister* findLFURegister(int excludeRegFlags); // find least frequently use register
     BERegister* makeRegisterFree(BERegister *reg);
     void makeAllRegisterFree();
-    BERegister* getFreeRegister();
     void makesureVariableInRegister(BEVariable *var);
     void makesureVariableInMemory(BEVariable *var);
     void makeVariableInMemoryOnly(BEVariable *var);

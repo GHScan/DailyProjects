@@ -6,8 +6,9 @@ struct BESymbol;
 struct BEVariable;
 struct BEType;
 class BESymbolTable;
+struct BEConstant;
 
-struct BERegister {
+struct BERegister: public Noncopyable {
     BERegister(int _regType): regType(_regType), isWritten(false){}
     const int regType;
     set<BEVariable*> loadedVars;
@@ -15,27 +16,25 @@ struct BERegister {
     void linkVariable(BEVariable *var);
     void unlinkVariable(BEVariable *var);
     bool isWritten;
-private:
-    BERegister(const BERegister&);
-    BERegister& operator = (const BERegister&);
 };
 
-struct BEVariable {
+struct BEVariable: public Noncopyable {
     enum PlaceFlag {
         PF_InRegister = 1 << 0,
         PF_InMemory = 1 << 1,
     };
     int placeFlag;
     BERegister *reg;
-    void setMemoryDirty() { placeFlag &= ~PF_InMemory;}
+    bool isInRegister() const { return (placeFlag & PF_InRegister) != 0; }
+    bool isInMemory() const {  return (placeFlag & PF_InMemory) != 0; }
+    virtual void setMemoryValid() { placeFlag |= PF_InMemory; }
+    virtual void setMemoryDirty() { placeFlag &= ~PF_InMemory;}
+    virtual BEConstant* tryGetConstant() { return NULL; }
     virtual BESymbol* getValidAddress() = 0;
     virtual const BEType* getType() = 0;
     virtual ~BEVariable();
 protected:
     BEVariable(PlaceFlag _placeFlag, BERegister *_reg): placeFlag(_placeFlag), reg(_reg) {}
-private:
-    BEVariable(const BEVariable& o);
-    BEVariable& operator = (const BEVariable& o);
 };
 
 struct BELeftValueVariable: public BEVariable {
@@ -56,6 +55,15 @@ struct BERightValueVariable: public BEVariable {
     virtual BESymbol* getValidAddress();
     virtual const BEType* getType() { return type; }
     ~BERightValueVariable();
+};
+struct BEConstantProxyVariable: public BEVariable {
+    BEConstant *constant;
+    BEConstantProxyVariable(BEConstant *_constant): BEVariable(PF_InMemory, NULL), constant(_constant){}
+    virtual void setMemoryValid() { ASSERT(0); }
+    virtual void setMemoryDirty() { ASSERT(0); }
+    virtual BEConstant* tryGetConstant() { return constant; }
+    virtual BESymbol* getValidAddress() { ASSERT(0); return NULL; }
+    virtual const BEType* getType();
 };
 
 typedef shared_ptr<BEVariable> BEVariablePtr;

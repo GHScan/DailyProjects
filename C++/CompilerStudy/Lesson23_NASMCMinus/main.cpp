@@ -34,13 +34,16 @@ int main(int argc, char *argv[]) {
     try {
         CMinusLexer::InputStreamType input((ANTLR_UINT8*)argv[1], ANTLR_ENC_8BIT);
         CMinusLexer lxr(&input); 
-        CMinusParser::TokenStreamType tstream(ANTLR_SIZE_HINT, lxr.get_tokSource() );
+        CMinusParser::TokenStreamType tstream(ANTLR_SIZE_HINT, lxr.get_tokSource());
         CMinusParser psr(&tstream); 
 
-        ofstream fo(format("%s.asm", argv[1]).c_str());
         BEx86FileBuilder *builder = generatex86Code(psr.program().get());
-        if (isOptimize) optimizex86FileBuilder(builder);
+
+        if (isOptimize) optimizex86Code(builder);
+
+        ofstream fo(format("%s.asm", argv[1]).c_str());
         serializex86Code_nasm(fo, builder);
+
         delete builder;
     } catch(const exception &e) {
         printf("Unhandled exception : %s\n", e.what());

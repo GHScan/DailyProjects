@@ -7,7 +7,7 @@ class BEConstantPool;
 class BEx86FunctionBuilder;
 struct BEType;
 
-class BEx86FileBuilder: public noncopyable {
+class BEx86FileBuilder: public Noncopyable {
 public:
     BEx86FileBuilder();
     ~BEx86FileBuilder();

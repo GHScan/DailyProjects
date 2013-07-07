@@ -195,7 +195,7 @@ private:
         return "";
     }
     const char* getAddressAccessPrefixByType(const BEType *type) {
-        if (auto p = dynamic_cast<const BEType_Array*>(type)) return "dword";
+        if (dynamic_cast<const BEType_Array*>(type)) return "dword";
         switch (type->size) {
             case 1: return "byte";
             case 2: return "word";

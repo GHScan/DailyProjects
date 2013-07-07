@@ -8,6 +8,8 @@
 #include "IDGenerator.h"
 #include "BEConstant.h"
 
+#define REG_FLAG(regType)  (1 << regType)
+
 BEx86Operand::BEx86Operand(BESymbol *symbol): type(x86OT_Memory) {
     this->symbol = new BESymbol(*symbol);
 }
@@ -137,24 +139,22 @@ void BEx86FunctionBuilder::pushInstruction(const BEx86Instruction &ins) {
 }
 
 void BEx86FunctionBuilder::makesureVariableInRegister(BEVariable *var) {
-    if ((var->placeFlag & BEVariable::PF_InRegister) == 0) {
-        ASSERT(var->placeFlag & BEVariable::PF_InMemory);
-        BERegister *reg = getFreeRegister();
-        reg->linkVariable(var);
-        reg->isWritten = true;
-        pushInstruction(BEx86Instruction(x86IT_MOV, reg, var->getValidAddress()));
+    if (!var->isInRegister()) {
+        ASSERT(var->isInMemory());
+        loadVariableToRegister(findLFURegister(0), var);
     }
 }
 void BEx86FunctionBuilder::makesureVariableInMemory(BEVariable *var) {
-    if ((var->placeFlag & BEVariable::PF_InMemory) == 0) {
-        ASSERT(var->placeFlag & BEVariable::PF_InRegister);
-        var->placeFlag |= BEVariable::PF_InMemory;
+    if (!var->isInMemory()) {
+        ASSERT(var->isInRegister());
+        var->setMemoryValid();
         pushInstruction(BEx86Instruction(x86IT_MOV, var->getValidAddress(), var->reg));
     }
 }
-BERegister* BEx86FunctionBuilder::findLeastUseRegister() {
+BERegister* BEx86FunctionBuilder::findLFURegister(int excludeRegFlags) {
     BERegister *r = NULL;
     for (int i = 0; i < x86RT_GRCount; ++i) {
+        if (REG_FLAG(i) & excludeRegFlags) continue;
         BERegister *tr = m_registers[i];
         if (r == NULL || tr->loadedVars.size() < r->loadedVars.size()) r = tr;
     }
@@ -170,11 +170,8 @@ BERegister* BEx86FunctionBuilder::makeRegisterFree(BERegister *reg) {
 void BEx86FunctionBuilder::makeAllRegisterFree() {
     for (int i = 0; i < x86RT_GRCount; ++i) makeRegisterFree(m_registers[i]);
 }
-BERegister* BEx86FunctionBuilder::getFreeRegister() {
-    return makeRegisterFree(findLeastUseRegister());
-}
 void BEx86FunctionBuilder::storeVariableFromRegister(BEVariable *dest, BERegister *src) {
-    if (dest->placeFlag & BEVariable::PF_InRegister) {
+    if (dest->isInRegister()) {
         if (dest->reg == src) return;
         dest->reg->unlinkVariable(dest);
     }
@@ -184,30 +181,28 @@ void BEx86FunctionBuilder::storeVariableFromRegister(BEVariable *dest, BERegiste
 void BEx86FunctionBuilder::loadVariableToRegister(BERegister *reg, BEVariable *var) {
     if (var->reg == reg) return;
     makeRegisterFree(reg);
-    if (var->placeFlag & BEVariable::PF_InRegister) {
+    if (var->isInRegister()) {
         pushInstruction(BEx86Instruction(x86IT_MOV, reg, var->reg));
         var->reg->unlinkVariable(var);
     } else {
-        pushInstruction(BEx86Instruction(x86IT_MOV, reg, var->getValidAddress()));
+        if (var->tryGetConstant()) pushInstruction(BEx86Instruction(x86IT_MOV, reg, var->tryGetConstant()));
+        else pushInstruction(BEx86Instruction(x86IT_MOV, reg, var->getValidAddress()));
     }
     reg->linkVariable(var);
     reg->isWritten = true;
 }
 void BEx86FunctionBuilder::makeVariableInMemoryOnly(BEVariable *var) {
     makesureVariableInMemory(var);
-    if (var->placeFlag & BEVariable::PF_InRegister) {
+    if (var->isInRegister()) {
         var->reg->unlinkVariable(var);
     }
 }
 //==============================
 BEVariablePtr BEx86FunctionBuilder::loadConstant(BEConstant *constant) {
-    BERegister *reg = getFreeRegister();
-    pushInstruction(BEx86Instruction(x86IT_MOV, reg, constant));
-    reg->isWritten = true;
-    return BEVariablePtr(new BERightValueVariable(constant->type, reg, m_topLocalSymbolTable));
+    return BEVariablePtr(new BEConstantProxyVariable(constant));
 }
 BEVariablePtr BEx86FunctionBuilder::store(BEVariablePtr dest, BEVariablePtr src) {
-    if ((dest->placeFlag & BEVariable::PF_InRegister) && (src->placeFlag & BEVariable::PF_InRegister) && dest->reg == src->reg) {
+    if (src->isInRegister() && dest->reg == src->reg) {
         return dest;
     }
     makesureVariableInRegister(src.get());
@@ -241,10 +236,11 @@ BEVariablePtr BEx86FunctionBuilder::createArithmeticOp(BEx86InstructionType insT
     BERegister *reg = dest->reg;
     dest.reset();
     makeRegisterFree(reg);
-    if (src->placeFlag & BEVariable::PF_InRegister) {
+    if (src->isInRegister()) {
         pushInstruction(BEx86Instruction(insType, reg, src->reg));
     } else {
-        pushInstruction(BEx86Instruction(insType, reg, src->getValidAddress()));
+        if (src->tryGetConstant()) pushInstruction(BEx86Instruction(insType, reg, src->tryGetConstant()));
+        else pushInstruction(BEx86Instruction(insType, reg, src->getValidAddress()));
     }
     return BEVariablePtr(new BERightValueVariable(src->getType(), reg, m_topLocalSymbolTable));
 }
@@ -258,11 +254,15 @@ BEVariablePtr BEx86FunctionBuilder::createMul(BEVariablePtr &dest, BEVariablePtr
     return createArithmeticOp(x86IT_MUL, dest, src);
 }
 BEVariablePtr BEx86FunctionBuilder::createDiv(BEVariablePtr &dest, BEVariablePtr src) {
+    if (!src->isInRegister() && src->tryGetConstant()) {
+        loadVariableToRegister(findLFURegister(REG_FLAG(x86RT_EAX) | REG_FLAG(x86RT_EDX)), src.get());
+    }
+
     loadVariableToRegister(m_registers[x86RT_EAX], dest.get());
     dest.reset();
     makeRegisterFree(m_registers[x86RT_EDX]);
     pushInstruction(BEx86Instruction(x86IT_XOR, m_registers[x86RT_EDX], m_registers[x86RT_EDX]));
-    if (src->placeFlag & BEVariable::PF_InRegister) {
+    if (src->isInRegister()) {
         pushInstruction(BEx86Instruction(x86IT_DIV, src->reg));
     } else {
         pushInstruction(BEx86Instruction(x86IT_DIV, src->getValidAddress()));
@@ -276,13 +276,15 @@ BEVariablePtr BEx86FunctionBuilder::createMod(BEVariablePtr &dest, BEVariablePtr
 
 BEVariablePtr BEx86FunctionBuilder::createRelativeOp(BEx86InstructionType insType, BEVariablePtr &left, BEVariablePtr right) {
     makesureVariableInRegister(left.get());
-    if (right->placeFlag & BEVariable::PF_InRegister) {
+    if (right->isInRegister()) {
         pushInstruction(BEx86Instruction(x86IT_CMP, left->reg, right->reg));
     } else {
-        pushInstruction(BEx86Instruction(x86IT_CMP, left->reg, right->getValidAddress()));
+        if (right->tryGetConstant()) pushInstruction(BEx86Instruction(x86IT_CMP, left->reg, right->tryGetConstant()));
+        else pushInstruction(BEx86Instruction(x86IT_CMP, left->reg, right->getValidAddress()));
     }
     left.reset();
-    BERegister *reg = getFreeRegister();
+    BERegister *reg = findLFURegister(0);
+    makeRegisterFree(reg);
     BEx86BasicBlock *trueBlock = createBasicBlock("label_compare_true");
     BEx86BasicBlock *endBlock = createBasicBlock("label_compare_end");
     pushInstruction(BEx86Instruction(insType, trueBlock));
@@ -326,10 +328,11 @@ void BEx86FunctionBuilder::createCJmp(BEVariablePtr &cond, BEx86BasicBlock *true
 }
 
 void BEx86FunctionBuilder::createPush(BEVariablePtr var) {
-    if (var->placeFlag & BEVariable::PF_InRegister) {
+    if (var->isInRegister()) {
         pushInstruction(BEx86Instruction(x86IT_PUSH, var->reg));
     } else {
-        pushInstruction(BEx86Instruction(x86IT_PUSH, var->getValidAddress()));
+        if (var->tryGetConstant()) pushInstruction(BEx86Instruction(x86IT_PUSH, var->tryGetConstant()));
+        else pushInstruction(BEx86Instruction(x86IT_PUSH, var->getValidAddress()));
     }
 }
 void BEx86FunctionBuilder::beginCall(int n) {

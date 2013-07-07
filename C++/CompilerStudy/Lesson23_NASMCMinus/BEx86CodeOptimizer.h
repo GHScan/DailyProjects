@@ -4,6 +4,6 @@
 
 class BEx86FileBuilder;
 
-void optimizex86FileBuilder(BEx86FileBuilder *builder);
+void optimizex86Code(BEx86FileBuilder *builder);
 
 #endif
