@@ -57,14 +57,16 @@ private:
                 so << format(" %s : \n", block->name.c_str());
                 for (auto &ins : block->instructions) {
                     string s = serializeInstructionType(ins.type);
+                    string comment = s;
                     for (int i = 0; i < 2; ++i) {
                         if (ins.operands[i].type != x86OT_Null) {
-                            if (i > 0) s += ", ";
-                            else s += " ";
+                            if (i > 0) s += ", ", comment += ", ";
+                            else s += " ", comment += " ";
                             s += serializeInstructionOperand(funcBuilder, ins.operands[i]);
+                            comment += serializeInstructionOperandComment(funcBuilder, ins.operands[i]);
                         }
                     }
-                    so << "\t" << s << "\n";
+                    so << "\t" << s << " ;" << comment << "\n";
                 }
             }
         }
@@ -116,6 +118,16 @@ private:
         }
         return "";
     }
+    string serializeInstructionOperandComment(BEx86FunctionBuilder *funcBuilder, const BEx86Operand &operand) {
+        switch (operand.type) {
+            case x86OT_Register: return serializeInstructionOperand_Register(funcBuilder, operand.reg);
+            case x86OT_Memory: return serializeInstructionOperandComment_Memory(funcBuilder, operand.symbol);
+            case x86OT_Constant: return serializeInstructionOperand_Constant(funcBuilder, operand.constant);
+            case x86OT_BasicBlock: return operand.basicBlock->name;
+            default: ASSERT(0);
+        }
+        return "";
+    }
     string serializeInstructionOperand_Register(BEx86FunctionBuilder *funcBuilder, const BERegister* reg) {
         switch (reg->regType) { 
             case x86RT_EAX: return "eax";
@@ -136,7 +148,7 @@ private:
             for (int i = 1; i < x86RT_GRCount; ++i) {
                 if (funcBuilder->getRegister(i)->isWritten) ++regInUse;
             }
-            return format("%s [ebp+%d]", getAddressAccessPrefixByType(symbol->type), (regInUse + 1 + 1 - 1) * 4);
+            return format("%s [ebp+%d]", getAddressAccessPrefixByType(symbol->type), (regInUse + 1 + 1) * 4 + symbol->off);
         } else if (symbol->parent == funcBuilder->getParent()->getGlobalSymbolTable()) { 
             if (dynamic_cast<const BEType_Array*>(symbol->type) || symbol->type == BETypeManager::instance()->getFunc()) {
                 return getPlatformDependentSymbolName(symbol);
@@ -146,6 +158,19 @@ private:
         } else {
             int localOff = symbol->off - funcBuilder->getMaxArgOff();
             return format("%s [ebp-%d]", getAddressAccessPrefixByType(symbol->type), localOff + 4);
+        }
+    }
+    string serializeInstructionOperandComment_Memory(BEx86FunctionBuilder *funcBuilder, const BESymbol* symbol) {
+        if (symbol->parent == funcBuilder->getArgSymbolTable()) {
+            return format("[%s]", getPlatformDependentSymbolName(symbol).c_str());
+        } else if (symbol->parent == funcBuilder->getParent()->getGlobalSymbolTable()) { 
+            if (dynamic_cast<const BEType_Array*>(symbol->type) || symbol->type == BETypeManager::instance()->getFunc()) {
+                return getPlatformDependentSymbolName(symbol);
+            } else {
+                return format("[%s]", getPlatformDependentSymbolName(symbol).c_str());
+            }
+        } else {
+            return format("[%s]", getPlatformDependentSymbolName(symbol).c_str());
         }
     }
     string serializeInstructionOperand_Constant(BEx86FunctionBuilder *funcBuilder, const BEConstant* constant) {
@@ -170,7 +195,7 @@ private:
         return "";
     }
     const char* getAddressAccessPrefixByType(const BEType *type) {
-        if (auto p = dynamic_cast<const BEType_Array*>(type)) ASSERT(0);
+        if (auto p = dynamic_cast<const BEType_Array*>(type)) return "dword";
         switch (type->size) {
             case 1: return "byte";
             case 2: return "word";

@@ -85,9 +85,12 @@ struct BEx86Operand {
     };
     BEx86Operand(): type(x86OT_Null){}
     BEx86Operand(BERegister *reg): type(x86OT_Register){this->reg = reg;}
-    BEx86Operand(BESymbol *symbol): type(x86OT_Memory){this->symbol = symbol;}
+    BEx86Operand(BESymbol *symbol);
     BEx86Operand(BEConstant *constant): type(x86OT_Constant){this->constant = constant;}
     BEx86Operand(BEx86BasicBlock *basicBlock): type(x86OT_BasicBlock){this->basicBlock = basicBlock;}
+    ~BEx86Operand();
+    BEx86Operand(const BEx86Operand &o);
+    BEx86Operand& operator = (const BEx86Operand &o);
 };
 
 struct BEx86Instruction {
@@ -109,7 +112,7 @@ struct BEx86BasicBlock {
     BEx86BasicBlock(const string &_name): name(_name){}
 };
 
-class BEx86FunctionBuilder {
+class BEx86FunctionBuilder: public noncopyable {
 public:
     BEx86FunctionBuilder(BEx86FileBuilder *parent);
     ~BEx86FunctionBuilder();
@@ -136,7 +139,6 @@ public:
 public:
     void beginBuild();
     
-    BEVariablePtr createTempFrom(BEVariablePtr src);
     BEVariablePtr loadConstant(BEConstant *constant);
     BEVariablePtr store(BEVariablePtr dest, BEVariablePtr src);
 
@@ -167,9 +169,6 @@ public:
     void createRet(BEVariablePtr dest);
 
     void endBuild();
-private:
-    BEx86FunctionBuilder(const BEx86FunctionBuilder &);
-    BEx86FunctionBuilder& operator = (const BEx86FunctionBuilder &);
 
 private:
     void pushInstruction(const BEx86Instruction &ins);
@@ -189,7 +188,6 @@ private:
 private:
     BEx86FileBuilder *m_parent;
     BESymbolTable *m_topLocalSymbolTable, *m_argSymbolTable;
-    vector<BESymbolTable*> m_usedSymbolTables;
     vector<BERegister*> m_registers;
     map<BESymbol*, BEVariablePtr> m_leftValueVars;
     int m_maxArgOff, m_maxLocalOff;

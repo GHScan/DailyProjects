@@ -13,6 +13,7 @@ struct BERegister {
     set<BEVariable*> loadedVars;
 
     void linkVariable(BEVariable *var);
+    void unlinkVariable(BEVariable *var);
     bool isWritten;
 private:
     BERegister(const BERegister&);
@@ -26,6 +27,7 @@ struct BEVariable {
     };
     int placeFlag;
     BERegister *reg;
+    void setMemoryDirty() { placeFlag &= ~PF_InMemory;}
     virtual BESymbol* getValidAddress() = 0;
     virtual const BEType* getType() = 0;
     virtual ~BEVariable();

@@ -7,7 +7,7 @@ class BEConstantPool;
 class BEx86FunctionBuilder;
 struct BEType;
 
-class BEx86FileBuilder {
+class BEx86FileBuilder: public noncopyable {
 public:
     BEx86FileBuilder();
     ~BEx86FileBuilder();
@@ -20,9 +20,6 @@ public:
 
     void setAsExternSymbol(const string &name);
     bool isExternSymbol(const string &name);
-private:
-    BEx86FileBuilder(const BEx86FileBuilder& );
-    BEx86FileBuilder& operator = (const BEx86FileBuilder& );
 
 private:
     BEConstantPool *m_constantPool;

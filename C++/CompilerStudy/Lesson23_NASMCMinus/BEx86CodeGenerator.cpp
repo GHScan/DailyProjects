@@ -168,10 +168,11 @@ void ExprNodeVisitor_CodeGenerator::visit(ExprNode_BinaryOp *node) {
     if (node->op == "&&" || node->op == "||") {
         /*
            temp = visit node->left
-           cond = createTempFrom temp
+           temp = ne temp, 0
            cjmp cond label_logic_true label_logic_false
 label_logic_true:
            temp = visit node->right
+           temp = ne temp, 0
            store cond temp
            jmp label_logic_end
 label_logic_false:
@@ -182,14 +183,19 @@ label_logic_end:
         BEx86BasicBlock *trueBlock = m_builder->createBasicBlock("label_logic_true");
         BEx86BasicBlock *falseBlock = m_builder->createBasicBlock("label_logic_false");
         BEx86BasicBlock *endBlock = m_builder->createBasicBlock("label_logic_end");
-        m_var = m_builder->createTempFrom(ExprNodeVisitor_CodeGenerator(m_stmt, node->left).getVariable()); 
+        m_var = ExprNodeVisitor_CodeGenerator(m_stmt, node->left).getVariable();
+        m_var = m_builder->createNe(m_var, m_builder->loadConstant(m_builder->getParent()->getConstantPool()->get(0)));
         {
             BEVariablePtr temp(m_var);
             if (node->op == "&&") m_builder->createCJmp(temp, trueBlock, falseBlock);
             else m_builder->createCJmp(temp, falseBlock, trueBlock);
         }
         m_builder->pushBasicBlock(trueBlock);
-        m_builder->store(m_var, ExprNodeVisitor_CodeGenerator(m_stmt, node->right).getVariable());
+        {
+            BEVariablePtr temp = ExprNodeVisitor_CodeGenerator(m_stmt, node->right).getVariable();
+            temp = m_builder->createNe(temp, m_builder->loadConstant(m_builder->getParent()->getConstantPool()->get(0)));
+            m_builder->store(m_var, temp);
+        }
         m_builder->createJmp(endBlock);
         m_builder->pushBasicBlock(falseBlock);
         m_builder->createJmp(endBlock);
@@ -240,7 +246,7 @@ void ExprNodeVisitor_CodeGenerator::visit(ExprNode_UnaryOp *node) {
         m_var = m_builder->createSub(m_var, ExprNodeVisitor_CodeGenerator(m_stmt, node->expr).getVariable());
     } else if (node->op == "!") {
         m_var = ExprNodeVisitor_CodeGenerator(m_stmt, node->expr).getVariable();
-        m_var = m_builder->createNot(m_var);
+        m_var = m_builder->createEq(m_var, m_builder->loadConstant(m_builder->getParent()->getConstantPool()->get(0)));
     } else {
         ASSERT(0);
     }

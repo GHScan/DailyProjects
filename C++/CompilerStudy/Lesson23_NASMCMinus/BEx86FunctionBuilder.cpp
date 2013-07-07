@@ -8,6 +8,28 @@
 #include "IDGenerator.h"
 #include "BEConstant.h"
 
+BEx86Operand::BEx86Operand(BESymbol *symbol): type(x86OT_Memory) {
+    this->symbol = new BESymbol(*symbol);
+}
+BEx86Operand::~BEx86Operand() {
+    switch (type) {
+        case x86OT_Memory: delete symbol; break;
+        default: break;
+    }
+}
+BEx86Operand::BEx86Operand(const BEx86Operand &o): type(x86OT_Null) {
+    *this = o;
+}
+BEx86Operand& BEx86Operand::operator = (const BEx86Operand &o) {
+    if (this == &o) return *this;
+    type = o.type;
+    reg = o.reg;
+    switch (type) {
+        case x86OT_Memory: symbol = new BESymbol(*o.symbol); break;
+        default: break;
+    }
+    return *this;
+}
 //==============================
 BEx86FunctionBuilder::BEx86FunctionBuilder(BEx86FileBuilder *parent): 
     m_parent(parent), m_topLocalSymbolTable(NULL), m_argSymbolTable(NULL), m_maxArgOff(0), m_maxLocalOff(0), m_retBasicBlock(NULL) {
@@ -16,7 +38,6 @@ BEx86FunctionBuilder::BEx86FunctionBuilder(BEx86FileBuilder *parent):
 
 BEx86FunctionBuilder::~BEx86FunctionBuilder() {
     for (auto block : m_basicBlocks) delete block;
-    for (auto symbolTable : m_usedSymbolTables) delete symbolTable;
     for (auto p : m_registers) delete p;
 }
 
@@ -65,15 +86,15 @@ void BEx86FunctionBuilder::beginScope() {
     m_topLocalSymbolTable = new BESymbolTable(m_topLocalSymbolTable);
 }
 void BEx86FunctionBuilder::endScope() {
-    m_usedSymbolTables.push_back(m_topLocalSymbolTable);
-
     for (auto symbol : m_topLocalSymbolTable->getSymbols()) {
         m_leftValueVars.erase(symbol);
     }
 
     m_maxLocalOff = max(m_maxLocalOff, m_topLocalSymbolTable->getMaxEndOff());
 
-    m_topLocalSymbolTable = m_topLocalSymbolTable->getPrevTable();
+    BESymbolTable *prevTable = m_topLocalSymbolTable->getPrevTable();
+    delete m_topLocalSymbolTable;
+    m_topLocalSymbolTable = prevTable;
 }
 BEVariablePtr BEx86FunctionBuilder::declareLocalVariable(const string &name, const BEType *type) {
     BESymbol* symbol = m_topLocalSymbolTable->declare(name, type);
@@ -155,10 +176,9 @@ BERegister* BEx86FunctionBuilder::getFreeRegister() {
 void BEx86FunctionBuilder::storeVariableFromRegister(BEVariable *dest, BERegister *src) {
     if (dest->placeFlag & BEVariable::PF_InRegister) {
         if (dest->reg == src) return;
-        dest->reg->loadedVars.erase(dest);
-        dest->reg = NULL;
+        dest->reg->unlinkVariable(dest);
     }
-    dest->placeFlag = 0;
+    dest->setMemoryDirty();
     src->linkVariable(dest);
 }
 void BEx86FunctionBuilder::loadVariableToRegister(BERegister *reg, BEVariable *var) {
@@ -166,6 +186,7 @@ void BEx86FunctionBuilder::loadVariableToRegister(BERegister *reg, BEVariable *v
     makeRegisterFree(reg);
     if (var->placeFlag & BEVariable::PF_InRegister) {
         pushInstruction(BEx86Instruction(x86IT_MOV, reg, var->reg));
+        var->reg->unlinkVariable(var);
     } else {
         pushInstruction(BEx86Instruction(x86IT_MOV, reg, var->getValidAddress()));
     }
@@ -175,16 +196,10 @@ void BEx86FunctionBuilder::loadVariableToRegister(BERegister *reg, BEVariable *v
 void BEx86FunctionBuilder::makeVariableInMemoryOnly(BEVariable *var) {
     makesureVariableInMemory(var);
     if (var->placeFlag & BEVariable::PF_InRegister) {
-        var->reg->loadedVars.erase(var);
-        var->reg = NULL;
-        var->placeFlag &= ~BEVariable::PF_InRegister;
+        var->reg->unlinkVariable(var);
     }
 }
 //==============================
-BEVariablePtr BEx86FunctionBuilder::createTempFrom(BEVariablePtr src) {
-    makesureVariableInRegister(src.get());
-    return BEVariablePtr(new BERightValueVariable(src->getType(), src->reg, m_topLocalSymbolTable));
-}
 BEVariablePtr BEx86FunctionBuilder::loadConstant(BEConstant *constant) {
     BERegister *reg = getFreeRegister();
     pushInstruction(BEx86Instruction(x86IT_MOV, reg, constant));

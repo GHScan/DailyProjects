@@ -9,6 +9,12 @@ void BERegister::linkVariable(BEVariable *var) {
     var->placeFlag |= BEVariable::PF_InRegister;
     loadedVars.insert(var);
 }
+void BERegister::unlinkVariable(BEVariable *var) {
+    ASSERT(this == var->reg);
+    loadedVars.erase(var);
+    var->reg = NULL;
+    var->placeFlag &= ~BEVariable::PF_InRegister;
+}
 
 BEVariable::~BEVariable() {
     if (placeFlag & PF_InRegister) {
