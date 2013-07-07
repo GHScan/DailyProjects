@@ -45,11 +45,12 @@ void perform3() {
     for (int i = 0; i < 30; ++i) feb(i);
     printf("perform3: %d\n", clock() - start);
 }
-void main()  {
+int main()  {
     printPrime(10000);
     perform();
     perform_1_5();
     perform2();
     perform3();
+    return 0;
 }
 

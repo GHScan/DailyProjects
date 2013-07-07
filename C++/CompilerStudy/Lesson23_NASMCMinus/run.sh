@@ -3,13 +3,11 @@
 set -e
 
 srcfile=$1
-asmfile=$srcfile.asm
-objfile=$srcfile.o
-exefile=$srcfile.exe
 
 ./main $*
-nasm -f elf32 $asmfile -o $objfile
-gcc $objfile -o $exefile
-./$exefile
-rm $objfile $exefile
-rm $asmfile
+nasm -f elf32 $srcfile.asm -o $srcfile.o
+gcc $srcfile.o -o $srcfile.exe
+
+./$srcfile.exe
+
+rm $srcfile.*

@@ -76,7 +76,7 @@ void perform() {
     for (int i = 0; i < 1000000; ++i);
     printf("loop 1000000 times: %d\n", clock() - start);
 }
-void main()  {
+int main()  {
     // test for comment
     testAnd(); // test for comment too
     testOr();
@@ -88,4 +88,5 @@ void main()  {
     perform();
     printf("15-3*(2*2+(7-2)) = %d\n", 15-3*(2*2+(7-2)));
     printf("FALSE = %d\n", FALSE);
+    return 0;
 }
