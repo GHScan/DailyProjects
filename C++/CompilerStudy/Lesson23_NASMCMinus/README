@@ -1,6 +1,6 @@
 TODO:
-    # AST optimize: algebraic identity, constant folding, ershov number
-    # peephole optimize: constant load, dead code(directly jmp), redundant nop/jmp, reduction in strength
+    # AST optimize: algebraic identity, ershov number, reduction in strength
+    # peephole optimize: redundant jmp
     # Linux/Mac/Windows support
     # memory leaks
     # masm

@@ -4,7 +4,8 @@
 
 class BEx86FileBuilder;
 struct SourceFileProto;
+typedef shared_ptr<BEx86FileBuilder> BEx86FileBuilderPtr;
 
-BEx86FileBuilder* generatex86Code(SourceFileProto *fileProto);
+BEx86FileBuilderPtr generatex86Code(SourceFileProto *fileProto);
 
 #endif

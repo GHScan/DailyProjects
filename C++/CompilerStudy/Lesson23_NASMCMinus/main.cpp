@@ -3,7 +3,7 @@
 
 #include "CMinusLexer.hpp"
 #include "CMinusParser.hpp"
-#include "BEx86FileBuilder.h"
+#include "ASTOptimizer.h"
 #include "BEx86CodeGenerator.h"
 #include "BEx86CodeOptimizer.h"
 #include "BEx86ASMSerializer.h"
@@ -37,14 +37,15 @@ int main(int argc, char *argv[]) {
         CMinusParser::TokenStreamType tstream(ANTLR_SIZE_HINT, lxr.get_tokSource());
         CMinusParser psr(&tstream); 
 
-        BEx86FileBuilder *builder = generatex86Code(psr.program().get());
+        SourceFileProtoPtr fileProto = psr.program();
+        if (isOptimize) optimizeAST(fileProto.get(), AOT_All);
 
-        if (isOptimize) optimizex86Code(builder);
+        BEx86FileBuilderPtr builder = generatex86Code(fileProto.get());
+        if (isOptimize) optimizex86Code(builder.get(), x86IOT_All);
 
         ofstream fo(format("%s.asm", argv[1]).c_str());
-        serializex86Code_nasm(fo, builder);
+        serializex86Code_nasm(fo, builder.get());
 
-        delete builder;
     } catch(const exception &e) {
         printf("Unhandled exception : %s\n", e.what());
     }

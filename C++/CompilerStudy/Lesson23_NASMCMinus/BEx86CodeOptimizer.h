@@ -4,6 +4,13 @@
 
 class BEx86FileBuilder;
 
-void optimizex86Code(BEx86FileBuilder *builder);
+enum x86InstructionOptimizeType {
+    x86IOT_RedundantJmp = 1 << 0,
+
+    x86IOT_All = 1,
+    x86IOT_Count = 1,
+};
+
+void optimizex86Code(BEx86FileBuilder *builder, x86InstructionOptimizeType optTypeFlag);
 
 #endif

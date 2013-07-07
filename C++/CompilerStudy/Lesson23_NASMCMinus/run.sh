@@ -10,4 +10,5 @@ gcc $srcfile.o -o $srcfile.exe
 
 ./$srcfile.exe
 
+cp $srcfile.asm __.asm
 rm $srcfile.*

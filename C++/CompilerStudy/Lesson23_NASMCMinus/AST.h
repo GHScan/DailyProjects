@@ -57,16 +57,58 @@ struct ExprNode_Assignment: public ExprNode {
     virtual void acceptVisitor(IExprNodeVisitor *v) { v->visit(this); }
 };
 struct ExprNode_BinaryOp: public ExprNode {
-    string op;
+    enum OpType {
+        OT_And,
+        OT_Or,
+        OT_Add,
+        OT_Sub,
+        OT_Mul,
+        OT_Div,
+        OT_Mod,
+        OT_Less,
+        OT_LessEq,
+        OT_Greater,
+        OT_GreaterEq,
+        OT_Equal,
+        OT_NEqual,
+    };
+    OpType op;
     ExprNodePtr left, right;
-    ExprNode_BinaryOp(const string& _op, const ExprNodePtr &_left, const ExprNodePtr &_right): op(_op), left(_left), right(_right){}
+    ExprNode_BinaryOp(const string &opStr, const ExprNodePtr &_left, const ExprNodePtr &_right): op(string2opType(opStr)), left(_left), right(_right){}
     virtual void acceptVisitor(IExprNodeVisitor *v) { v->visit(this); }
+    static OpType string2opType(const string &opStr) {
+        if (opStr == "&&") return OT_And;
+        else if (opStr == "||") return OT_Or;
+        else if (opStr == "+") return OT_Add;
+        else if (opStr == "-") return OT_Sub;
+        else if (opStr == "*") return OT_Mul;
+        else if (opStr == "/") return OT_Div;
+        else if (opStr == "%") return OT_Mod;
+        else if (opStr == "<") return OT_Less;
+        else if (opStr == "<=") return OT_LessEq;
+        else if (opStr == ">") return OT_Greater;
+        else if (opStr == ">=") return OT_GreaterEq;
+        else if (opStr == "==") return OT_Equal;
+        else if (opStr == "!=") return OT_NEqual;
+        else ASSERT(0);
+        return OT_And;
+    }
 };
 struct ExprNode_UnaryOp: public ExprNode {
-    string op;
+    enum OpType {
+        OT_Minus,
+        OT_Not,
+    };
+    OpType op;
     ExprNodePtr expr;
-    ExprNode_UnaryOp(const string &_op, const ExprNodePtr &_expr): op(_op), expr(_expr){}
+    ExprNode_UnaryOp(const string &opStr, const ExprNodePtr &_expr): op(string2opType(opStr)), expr(_expr){}
     virtual void acceptVisitor(IExprNodeVisitor *v) { v->visit(this); }
+    static OpType string2opType(const string &opStr) {
+        if (opStr == "-") return OT_Minus;
+        else if (opStr == "!") return OT_Not;
+        else ASSERT(0);
+        return OT_Minus;
+    }
 };
 struct ExprNode_TypeCast: public ExprNode {
     string destType;

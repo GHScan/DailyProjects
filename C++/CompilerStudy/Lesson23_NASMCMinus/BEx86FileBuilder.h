@@ -28,4 +28,6 @@ private:
     set<string> m_externSymbols;
 };
 
+typedef shared_ptr<BEx86FileBuilder> BEx86FileBuilderPtr;
+
 #endif
