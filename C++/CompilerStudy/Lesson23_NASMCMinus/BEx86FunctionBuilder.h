@@ -136,7 +136,7 @@ public:
 
     BEx86BasicBlock* createBasicBlock(const string &name);
     void pushBasicBlock(BEx86BasicBlock *basicBlock);
-    const vector<BEx86BasicBlock*>& getBasicBlocks() const { return m_basicBlocks; }
+    vector<BEx86BasicBlock*>& getBasicBlocks() { return m_basicBlocks; }
 public:
     void beginBuild();
     
