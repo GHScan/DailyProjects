@@ -4,6 +4,7 @@
 #include "CMinusLexer.hpp"
 #include "CMinusParser.hpp"
 #include "ASTOptimizer.h"
+#include "BEx86FileBuilder.h"
 #include "BEx86CodeGenerator.h"
 #include "BEx86CodeOptimizer.h"
 #include "BEx86ASMSerializer.h"
@@ -40,7 +41,12 @@ int main(int argc, char *argv[]) {
         SourceFileProtoPtr fileProto = psr.program();
         if (isOptimize) optimizeAST(fileProto.get(), AOT_All);
 
-        BEx86FileBuilderPtr builder = generatex86Code(fileProto.get());
+        BEx86FileBuilderPtr builder(new BEx86FileBuilder());
+#ifdef __APPLE__
+        builder->getBuildConfig()->stackAlignment = 16;
+#endif
+        generatex86Code(builder.get(), fileProto.get());
+
         if (isOptimize) optimizex86Code(builder.get(), x86IOT_All);
 
         ofstream fo(format("%s.asm", argv[1]).c_str());

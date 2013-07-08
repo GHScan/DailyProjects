@@ -209,6 +209,8 @@ private:
     string getPlatformDependentSymbolName(const BESymbol *symbol) {
 #ifdef _MSC_VER
         return "_" + symbol->name;
+#elif __APPLE__
+        return "_" + symbol->name;
 #else
         return symbol->name;
 #endif

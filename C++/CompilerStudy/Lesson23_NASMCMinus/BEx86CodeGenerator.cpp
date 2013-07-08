@@ -335,8 +335,7 @@ void ExprNodeVisitor_CodeGenerator::visit(ExprNode_Call *node) {
     m_var = m_builder->endCall(BETypeManager::instance()->get("int"), funcSymbol, (int)node->args.size());
 }
 
-BEx86FileBuilderPtr generatex86Code(SourceFileProto *fileProto) {
-    BEx86FileBuilderPtr fileBuilder(new BEx86FileBuilder());
+void generatex86Code(BEx86FileBuilder *fileBuilder, SourceFileProto *fileProto) {
 
     for (auto func : fileProto->externFuncs) {
         const BEType *type = BETypeManager::instance()->getFunc();
@@ -356,6 +355,4 @@ BEx86FileBuilderPtr generatex86Code(SourceFileProto *fileProto) {
         BEx86FunctionBuilder *builder = fileBuilder->createFunctionBuilder(func->name);
         StmtNodeVisitor_CodeGenerator(builder, func);
     }
-
-    return fileBuilder;
 }

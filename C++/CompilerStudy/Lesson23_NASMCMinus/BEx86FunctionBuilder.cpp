@@ -60,15 +60,18 @@ void BEx86FunctionBuilder::endBuild() {
     m_leftValueVars.clear();
     //==============================
     BEx86BasicBlock *entryBasicBlock = createBasicBlock("label_ENTRY");
+    int pushedRegCount = 1;
     for (int i = 1; i < x86RT_GRCount; ++i) { 
         if (m_registers[i]->isWritten) {
             entryBasicBlock->instructions.push_back(BEx86Instruction(x86IT_PUSH, m_registers[i]));
+            ++pushedRegCount;
         }
     }
     entryBasicBlock->instructions.push_back(BEx86Instruction(x86IT_PUSH, m_registers[x86RT_EBP]));
     entryBasicBlock->instructions.push_back(BEx86Instruction(x86IT_MOV, m_registers[x86RT_EBP], m_registers[x86RT_ESP]));
-    if (m_maxLocalOff > m_maxArgOff) {
-        entryBasicBlock->instructions.push_back(BEx86Instruction(x86IT_SUB, m_registers[x86RT_ESP], m_parent->getConstantPool()->get(m_maxLocalOff - m_maxArgOff)));
+    int stackFix = getStackAlignmentFix((pushedRegCount + 1) * 4 + m_maxLocalOff - m_maxArgOff);
+    if (m_maxLocalOff - m_maxArgOff + stackFix > 0) {
+        entryBasicBlock->instructions.push_back(BEx86Instruction(x86IT_SUB, m_registers[x86RT_ESP], m_parent->getConstantPool()->get(m_maxLocalOff - m_maxArgOff + stackFix)));
     }
     m_basicBlocks.insert(m_basicBlocks.begin(), entryBasicBlock);
 
@@ -136,6 +139,10 @@ void BEx86FunctionBuilder::pushBasicBlock(BEx86BasicBlock *basicBlock) {
 
 void BEx86FunctionBuilder::pushInstruction(const BEx86Instruction &ins) {
     m_basicBlocks.back()->instructions.push_back(ins);
+}
+int BEx86FunctionBuilder::getStackAlignmentFix(int n) {
+    int stackAlignment = m_parent->getBuildConfig()->stackAlignment;
+    return n % stackAlignment > 0 ? (stackAlignment - n % stackAlignment) : 0;
 }
 
 void BEx86FunctionBuilder::makesureVariableInRegister(BEVariable *var) {
@@ -356,11 +363,18 @@ void BEx86FunctionBuilder::createPush(BEVariablePtr var) {
     }
 }
 void BEx86FunctionBuilder::beginCall(int n) {
+    int stackFix = getStackAlignmentFix(n * 4);
+    if (stackFix > 0) {
+        pushInstruction(BEx86Instruction(x86IT_SUB, m_registers[x86RT_ESP], m_parent->getConstantPool()->get(stackFix)));
+    }
 }
 BEVariablePtr BEx86FunctionBuilder::endCall(const BEType *type, BESymbol *funcSymbol, int n) {
     BERegister *reg = makeRegisterFree(m_registers[x86RT_EAX]);
     pushInstruction(BEx86Instruction(x86IT_CALL, funcSymbol));
-    if (n > 0) pushInstruction(BEx86Instruction(x86IT_ADD, m_registers[x86RT_ESP], m_parent->getConstantPool()->get(n * 4)));
+    int stackFix = getStackAlignmentFix(n * 4);
+    if (n * 4 + stackFix > 0) {
+        pushInstruction(BEx86Instruction(x86IT_ADD, m_registers[x86RT_ESP], m_parent->getConstantPool()->get(n * 4 + stackFix)));
+    }
     return BEVariablePtr(new BERightValueVariable(type, reg, m_topLocalSymbolTable));
 }
 

@@ -177,6 +177,7 @@ public:
 
 private:
     void pushInstruction(const BEx86Instruction &ins);
+    int getStackAlignmentFix(int n);
 
     BERegister* findLFURegister(int excludeRegFlags); // find least frequently use register
     BERegister* makeRegisterFree(BERegister *reg);

@@ -1,7 +1,5 @@
 TODO:
-    # AST optimize: algebraic identity, ershov number, reduction in strength
+    # AST optimize: ershov number
     # peephole optimize: redundant jmp
-    # Linux/Mac/Windows support
     # memory leaks
-    # masm
-    # gasm
+    # JIT
