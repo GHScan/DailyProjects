@@ -80,7 +80,8 @@ DestT force_cast(SrcT src) {
     union {
         SrcT src; DestT dest;
     } temp = {src};
-    static_assert(sizeof(DestT) == sizeof(SrcT), "require the same size");
+    // static_assert(sizeof(DestT) == sizeof(SrcT), "require the same size");
+    ASSERT(sizeof(DestT) == sizeof(SrcT));
     return temp.dest;
 }
 

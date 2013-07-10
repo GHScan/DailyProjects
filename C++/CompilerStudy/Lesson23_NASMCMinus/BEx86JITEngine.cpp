@@ -61,7 +61,7 @@ static void* os_getFuncAddress(const char *funcName) {
 }
 #endif
 //==============================
-#ifdef __linux__ 
+#if defined(__linux__) || defined(__APPLE__)
 #include <dlfcn.h>
 #include <unistd.h>
 #include <sys/mman.h>
@@ -94,8 +94,8 @@ public:
     char* getCurrentPtr() { return m_base + m_off; }
     int getCurrentOff() const { return m_off; }
     int getSize() const { return m_size; }
-    void pushInt8(char c) { /*printf("0x%0x,", (unsigned char)c);*/ m_base[m_off] = c; m_off += 1; }
-    void pushInt32(int i) { (int&)m_base[m_off] = i; /*for(int j=0; j < 4; ++j)printf("0x%0x,", ((unsigned char*)&i)[j]);; */m_off += 4; }
+    void pushInt8(char c) { m_base[m_off] = c; m_off += 1; }
+    void pushInt32(int i) { (int&)m_base[m_off] = i; m_off += 4; }
     void setListener(function<void(int)> listener) { m_listener = listener; }
     void notifyListener(int event) { if (m_listener != NULL) m_listener(event); }
 private:
