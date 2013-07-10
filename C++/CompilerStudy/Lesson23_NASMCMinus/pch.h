@@ -75,6 +75,15 @@ inline int hashOf(const T* begin, const T* end) {
     return r;
 }
 
+template<typename DestT, typename SrcT>
+DestT force_cast(SrcT src) {
+    union {
+        SrcT src; DestT dest;
+    } temp = {src};
+    static_assert(sizeof(DestT) == sizeof(SrcT), "require the same size");
+    return temp.dest;
+}
+
 string unEscape(const string &s);
 string escape(const string &s);
 

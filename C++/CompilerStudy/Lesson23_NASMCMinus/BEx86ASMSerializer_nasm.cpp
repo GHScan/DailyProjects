@@ -91,8 +91,6 @@ private:
             case x86IT_XOR: return "xor";
             case x86IT_CMP: return "cmp";
             case x86IT_JMP: return "jmp";
-            case x86IT_JZ:  return "jz";
-            case x86IT_JNZ: return "jnz";
             case x86IT_JE:  return "je";
             case x86IT_JNE: return "jne";
             case x86IT_JG:  return "jg";

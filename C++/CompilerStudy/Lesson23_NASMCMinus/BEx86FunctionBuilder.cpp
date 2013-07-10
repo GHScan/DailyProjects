@@ -350,7 +350,7 @@ void BEx86FunctionBuilder::createCJmp(BEVariablePtr &cond, BEx86BasicBlock *true
     pushInstruction(BEx86Instruction(x86IT_CMP, cond->reg, m_parent->getConstantPool()->get(0)));
     cond.reset();
     makeAllRegisterFree();
-    pushInstruction(BEx86Instruction(x86IT_JZ, falseBlock));
+    pushInstruction(BEx86Instruction(x86IT_JE, falseBlock));
     pushInstruction(BEx86Instruction(x86IT_JMP, trueBlock));
 }
 

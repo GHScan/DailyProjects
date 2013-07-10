@@ -20,8 +20,6 @@ private:
             for (auto &ins : block->instructions) {
                 switch (ins.type) {
                     case x86IT_JMP: ins.operands[0].basicBlock = getRedirectedBasicBlock(ins.operands[0].basicBlock); break;
-                    case x86IT_JZ: ins.operands[0].basicBlock = getRedirectedBasicBlock(ins.operands[0].basicBlock); break;
-                    case x86IT_JNZ: ins.operands[0].basicBlock = getRedirectedBasicBlock(ins.operands[0].basicBlock); break;
                     case x86IT_JE: ins.operands[0].basicBlock = getRedirectedBasicBlock(ins.operands[0].basicBlock); break;
                     case x86IT_JNE: ins.operands[0].basicBlock = getRedirectedBasicBlock(ins.operands[0].basicBlock); break;
                     case x86IT_JG: ins.operands[0].basicBlock = getRedirectedBasicBlock(ins.operands[0].basicBlock); break;
@@ -109,8 +107,6 @@ private:
                     maskActiveInstructionForBasicBlock(ins->operands[0].basicBlock, reachedBasicBlocks, activeIns);
                     goto label_endFor;
                     break;
-                case x86IT_JZ:
-                case x86IT_JNZ:
                 case x86IT_JE:
                 case x86IT_JNE:
                 case x86IT_JG:

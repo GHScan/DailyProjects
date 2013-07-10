@@ -1,5 +1,3 @@
 TODO:
     # AST optimize: ershov number
-    # peephole optimize: redundant jmp
-    # memory leaks
-    # JIT
+    # remove redundant jit code

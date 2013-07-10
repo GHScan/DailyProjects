@@ -170,9 +170,9 @@ private:
         bool isIntResult = dynamic_cast<ExprNode_IntLiteral*>(node->left.get()) && dynamic_cast<ExprNode_IntLiteral*>(node->right.get());
         int leftI, rightI, resultI;
         float leftF, rightF, resultF;
-        if (auto p = dynamic_cast<ExprNode_IntLiteral*>(node->left.get())) leftI = p->number, leftF = p->number;
+        if (auto p = dynamic_cast<ExprNode_IntLiteral*>(node->left.get())) leftI = p->number, leftF = (float)p->number;
         else leftF = dynamic_cast<ExprNode_FloatLiteral*>(node->left.get())->number;
-        if (auto p = dynamic_cast<ExprNode_IntLiteral*>(node->right.get())) rightI = p->number, rightF = p->number;
+        if (auto p = dynamic_cast<ExprNode_IntLiteral*>(node->right.get())) rightI = p->number, rightF = (float)p->number;
         else rightF = dynamic_cast<ExprNode_FloatLiteral*>(node->right.get())->number;
 
         switch (node->op) {
@@ -375,7 +375,7 @@ private:
         return n > 1 && (((n - 1) & n) == 0);
     }
     static int log2(int n) {
-        return ceil(log(n) / log(2));
+        return (int)ceil(log(n) / log(2));
     }
 private:
     ASTOptimizerManager *m_manager;

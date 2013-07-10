@@ -52,8 +52,6 @@ enum BEx86InstructionType {
     x86IT_CMP,
 
     x86IT_JMP,
-    x86IT_JZ,
-    x86IT_JNZ,
     x86IT_JE,
     x86IT_JNE,
     x86IT_JG,
