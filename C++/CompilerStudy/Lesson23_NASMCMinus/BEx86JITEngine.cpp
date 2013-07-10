@@ -61,6 +61,31 @@ static void* os_getFuncAddress(const char *funcName) {
 }
 #endif
 //==============================
+#ifdef __linux__ 
+#include <dlfcn.h>
+#include <unistd.h>
+#include <sys/mman.h>
+
+static void* os_mallocExec(int size) {
+    void *p = NULL;
+    ::posix_memalign(&p, ::getpagesize(), size);
+    ASSERT(p != NULL);
+    int erro = ::mprotect(p, size, PROT_READ | PROT_WRITE | PROT_EXEC);
+    ASSERT(erro == 0);
+    return p;
+}
+static void  os_freeExec(void *p) {
+    ASSERT(p != NULL);
+    ::free(p);
+}
+static void* os_getFuncAddress(const char *funcName) {
+    void *m = ::dlopen(NULL, RTLD_NOW);
+    void *r = ::dlsym(m, funcName);
+    ::dlclose(m);
+    return r;
+}
+#endif
+//==============================
 class ExecMemoryStream : public Noncopyable {
 public:
     ExecMemoryStream(int size): m_size(size), m_off(0) { m_base = (char*)os_mallocExec(size); }
@@ -179,10 +204,7 @@ static void encodeMemoryWithModRM(ExecMemoryStream *out, const char *regOpStr, i
 //==============================
 static const int EVENT_JMP_TARGET = 0;
 //==============================
-template<int>
-static void encode(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from);
-template<>
-static void encode<x86IT_MOV>(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
+static void encodeInstruction_MOV(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
     if (from.type == ia32_AT_Register && to.type == ia32_AT_Register) {
         BitOutStream(out).push("1000 1001 11").push(reg2BitString(from.reg)).push(reg2BitString(to.reg));
     } else if (from.type == ia32_AT_Addr && to.type == ia32_AT_Register && to.reg == x86RT_EAX) {
@@ -206,12 +228,10 @@ static void encode<x86IT_MOV>(ExecMemoryStream *out, ia32_InstructionOperand to,
         out->pushInt32(from.displacement);
     }
 }
-template<>
-static void encode<x86IT_LEA>(ExecMemoryStream *out, ia32_InstructionOperand a, ia32_InstructionOperand b) {
+static void encodeInstruction_LEA(ExecMemoryStream *out, ia32_InstructionOperand a, ia32_InstructionOperand b) {
     ASSERT(0);
 }
-template<>
-static void encode<x86IT_AND>(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
+static void encodeInstruction_AND(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
     if (from.type == ia32_AT_Register && to.type == ia32_AT_Register) {
         BitOutStream(out).push("0010 0001 11").push(reg2BitString(from.reg)).push(reg2BitString(to.reg));
     } else if (isMemoryAddressType(from.type) && to.type == ia32_AT_Register) {
@@ -234,16 +254,13 @@ static void encode<x86IT_AND>(ExecMemoryStream *out, ia32_InstructionOperand to,
         ASSERT(0);
     }
 }
-template<>
-static void encode<x86IT_OR>(ExecMemoryStream *out, ia32_InstructionOperand a, ia32_InstructionOperand b) {
+static void encodeInstruction_OR(ExecMemoryStream *out, ia32_InstructionOperand a, ia32_InstructionOperand b) {
     ASSERT(0);
 }
-template<>
-static void encode<x86IT_NOT>(ExecMemoryStream *out, ia32_InstructionOperand a, ia32_InstructionOperand b) {
+static void encodeInstruction_NOT(ExecMemoryStream *out, ia32_InstructionOperand a, ia32_InstructionOperand b) {
     ASSERT(0);
 }
-template<>
-static void encode<x86IT_INC>(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
+static void encodeInstruction_INC(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
     if (to.type == ia32_AT_Register) {
         BitOutStream(out).push("0100 0").push(reg2BitString(to.reg));
     } else if (isMemoryAddressType(to.type)) {
@@ -253,8 +270,7 @@ static void encode<x86IT_INC>(ExecMemoryStream *out, ia32_InstructionOperand to,
         ASSERT(0);
     }
 }
-template<>
-static void encode<x86IT_DEC>(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
+static void encodeInstruction_DEC(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
     if (to.type == ia32_AT_Register) {
         BitOutStream(out).push("0100 1").push(reg2BitString(to.reg));
     } else if (isMemoryAddressType(to.type)) {
@@ -264,8 +280,7 @@ static void encode<x86IT_DEC>(ExecMemoryStream *out, ia32_InstructionOperand to,
         ASSERT(0);
     }
 }
-template<>
-static void encode<x86IT_ADD>(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
+static void encodeInstruction_ADD(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
     if (from.type == ia32_AT_Register && to.type == ia32_AT_Register) {
         BitOutStream(out).push("0000 0001 11").push(reg2BitString(from.reg)).push(reg2BitString(to.reg));
     } else if (isMemoryAddressType(from.type) && to.type == ia32_AT_Register) {
@@ -288,8 +303,7 @@ static void encode<x86IT_ADD>(ExecMemoryStream *out, ia32_InstructionOperand to,
         ASSERT(0);
     }
 }
-template<>
-static void encode<x86IT_SUB>(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
+static void encodeInstruction_SUB(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
     if (from.type == ia32_AT_Register && to.type == ia32_AT_Register) {
         BitOutStream(out).push("0010 1001 11").push(reg2BitString(from.reg)).push(reg2BitString(to.reg));
     } else if (isMemoryAddressType(from.type) && to.type == ia32_AT_Register) {
@@ -312,8 +326,7 @@ static void encode<x86IT_SUB>(ExecMemoryStream *out, ia32_InstructionOperand to,
         ASSERT(0);
     }
 }
-template<>
-static void encode<x86IT_MUL>(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
+static void encodeInstruction_MUL(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
     if (from.type == ia32_AT_Register && to.type == ia32_AT_Register && from.reg == x86RT_EAX) {
         BitOutStream(out).push("1111 0111 1110 1").push(reg2BitString(to.reg));
     } else if (from.type == ia32_AT_Register && isMemoryAddressType(to.type) && from.reg == x86RT_EAX) {
@@ -334,8 +347,7 @@ static void encode<x86IT_MUL>(ExecMemoryStream *out, ia32_InstructionOperand to,
         ASSERT(0);
     }
 }
-template<>
-static void encode<x86IT_DIV>(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
+static void encodeInstruction_DIV(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
     if (to.type == ia32_AT_Register) {
         BitOutStream(out).push("1111 0111 1111 0").push(reg2BitString(to.reg));
     } else if (isMemoryAddressType(to.type)) {
@@ -345,8 +357,7 @@ static void encode<x86IT_DIV>(ExecMemoryStream *out, ia32_InstructionOperand to,
         ASSERT(0);
     }
 }
-template<>
-static void encode<x86IT_SAL>(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
+static void encodeInstruction_SAL(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
     if (to.type == ia32_AT_Register && from.type == ia32_AT_Immediate32) {
         if (from.displacement == 1) {
             BitOutStream(out).push("1101 0001 1110 0").push(reg2BitString(to.reg));
@@ -369,8 +380,7 @@ static void encode<x86IT_SAL>(ExecMemoryStream *out, ia32_InstructionOperand to,
         ASSERT(0);
     }
 }
-template<>
-static void encode<x86IT_SAR>(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
+static void encodeInstruction_SAR(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
     if (to.type == ia32_AT_Register && from.type == ia32_AT_Immediate32) {
         if (from.displacement == 1) {
             BitOutStream(out).push("1101 0001 1111 1").push(reg2BitString(to.reg));
@@ -393,8 +403,7 @@ static void encode<x86IT_SAR>(ExecMemoryStream *out, ia32_InstructionOperand to,
         ASSERT(0);
     }
 }
-template<>
-static void encode<x86IT_XOR>(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
+static void encodeInstruction_XOR(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
     if (from.type == ia32_AT_Register && to.type == ia32_AT_Register) {
         BitOutStream(out).push("0011 0001 11").push(reg2BitString(from.reg)).push(reg2BitString(to.reg));
     } else if (isMemoryAddressType(from.type) && to.type == ia32_AT_Register) {
@@ -417,8 +426,7 @@ static void encode<x86IT_XOR>(ExecMemoryStream *out, ia32_InstructionOperand to,
         ASSERT(0);
     }
 }
-template<>
-static void encode<x86IT_CMP>(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
+static void encodeInstruction_CMP(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
     if (from.type == ia32_AT_Register && to.type == ia32_AT_Register) {
         BitOutStream(out).push("0011 1001 11").push(reg2BitString(from.reg)).push(reg2BitString(to.reg));
     } else if (isMemoryAddressType(from.type) && to.type == ia32_AT_Register) {
@@ -441,12 +449,10 @@ static void encode<x86IT_CMP>(ExecMemoryStream *out, ia32_InstructionOperand to,
         ASSERT(0);
     }
 }
-template<>
-static void encode<x86IT_NOP>(ExecMemoryStream *out, ia32_InstructionOperand a, ia32_InstructionOperand b) {
+static void encodeInstruction_NOP(ExecMemoryStream *out, ia32_InstructionOperand a, ia32_InstructionOperand b) {
     ASSERT(0);
 }
-template<>
-static void encode<x86IT_PUSH>(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
+static void encodeInstruction_PUSH(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
     if (to.type == ia32_AT_Register) {
         BitOutStream(out).push("0101 0").push(reg2BitString(to.reg));
     } else if (isMemoryAddressType(to.type)) {
@@ -459,8 +465,7 @@ static void encode<x86IT_PUSH>(ExecMemoryStream *out, ia32_InstructionOperand to
         ASSERT(0);
     }
 }
-template<>
-static void encode<x86IT_POP>(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
+static void encodeInstruction_POP(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
     if (to.type == ia32_AT_Register) {
         BitOutStream(out).push("0101 1").push(reg2BitString(to.reg));
     } else if (isMemoryAddressType(to.type)) {
@@ -470,12 +475,10 @@ static void encode<x86IT_POP>(ExecMemoryStream *out, ia32_InstructionOperand to,
         ASSERT(0);
     }
 }
-template<>
-static void encode<x86IT_RET>(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
+static void encodeInstruction_RET(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
     BitOutStream(out).push("1100 0011");
 }
-template<>
-static void encode<x86IT_CALL>(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
+static void encodeInstruction_CALL(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
     if (isMemoryAddressType(to.type)) {
         BitOutStream(out).push("1111 1111");
         encodeMemoryWithModRM(out, "010", to);
@@ -484,14 +487,13 @@ static void encode<x86IT_CALL>(ExecMemoryStream *out, ia32_InstructionOperand to
     }
 }
 
-template<>
-static void encode<x86IT_JMP>(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
+static void encodeInstruction_JMP(ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
     ASSERT(to.type == ia32_AT_Immediate32);
     BitOutStream(out).push("1110 1001");
     out->pushInt32(to.displacement);
     out->notifyListener(EVENT_JMP_TARGET);
 }
-static void encode_condJmp(BEx86InstructionType insType, ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
+static void encodeInstruction_CondJMP(BEx86InstructionType insType, ExecMemoryStream *out, ia32_InstructionOperand to, ia32_InstructionOperand from) {
     ASSERT(to.type == ia32_AT_Immediate32);
     BitOutStream(out).push("0000 1111 1000").push(condTest2BitString(insType));
     out->pushInt32(to.displacement);
@@ -639,26 +641,26 @@ void BEx86JITEngineImpl::buildTextSection(BEx86FileBuilder *fileBuilder) {
                     toIA32InstructionOperand(funcBuilder, ins.operands[0]), 
                     toIA32InstructionOperand(funcBuilder, ins.operands[1])};
                 switch (ins.type) {
-                    case x86IT_MOV: encode<x86IT_MOV>(m_textSection, operands[0], operands[1]); break;
-                    case x86IT_LEA: encode<x86IT_LEA>(m_textSection, operands[0], operands[1]); break;
-                    case x86IT_AND: encode<x86IT_AND>(m_textSection, operands[0], operands[1]); break;
-                    case x86IT_OR:  encode<x86IT_OR>(m_textSection, operands[0], operands[1]); break;
-                    case x86IT_NOT:  encode<x86IT_NOT>(m_textSection, operands[0], operands[1]); break;
-                    case x86IT_INC:  encode<x86IT_INC>(m_textSection, operands[0], operands[1]); break;
-                    case x86IT_DEC:  encode<x86IT_DEC>(m_textSection, operands[0], operands[1]); break;
-                    case x86IT_ADD:  encode<x86IT_ADD>(m_textSection, operands[0], operands[1]); break;
-                    case x86IT_SUB:  encode<x86IT_SUB>(m_textSection, operands[0], operands[1]); break;
-                    case x86IT_MUL:  encode<x86IT_MUL>(m_textSection, operands[0], operands[1]); break;
-                    case x86IT_DIV:  encode<x86IT_DIV>(m_textSection, operands[0], operands[1]); break;
-                    case x86IT_SAL:  encode<x86IT_SAL>(m_textSection, operands[0], operands[1]); break;
-                    case x86IT_SAR:  encode<x86IT_SAR>(m_textSection, operands[0], operands[1]); break;
-                    case x86IT_XOR:  encode<x86IT_XOR>(m_textSection, operands[0], operands[1]); break;
-                    case x86IT_CMP:  encode<x86IT_CMP>(m_textSection, operands[0], operands[1]); break;
-                    case x86IT_NOP:  encode<x86IT_NOP>(m_textSection, operands[0], operands[1]); break;
-                    case x86IT_PUSH:  encode<x86IT_PUSH>(m_textSection, operands[0], operands[1]); break;
-                    case x86IT_POP:  encode<x86IT_POP>(m_textSection, operands[0], operands[1]); break;
-                    case x86IT_RET:  encode<x86IT_RET>(m_textSection, operands[0], operands[1]); break;
-                    case x86IT_CALL:  encode<x86IT_CALL>(m_textSection, operands[0], operands[1]); break;
+                    case x86IT_MOV: encodeInstruction_MOV(m_textSection, operands[0], operands[1]); break;
+                    case x86IT_LEA: encodeInstruction_LEA(m_textSection, operands[0], operands[1]); break;
+                    case x86IT_AND: encodeInstruction_AND(m_textSection, operands[0], operands[1]); break;
+                    case x86IT_OR:  encodeInstruction_OR(m_textSection, operands[0], operands[1]); break;
+                    case x86IT_NOT:  encodeInstruction_NOT(m_textSection, operands[0], operands[1]); break;
+                    case x86IT_INC:  encodeInstruction_INC(m_textSection, operands[0], operands[1]); break;
+                    case x86IT_DEC:  encodeInstruction_DEC(m_textSection, operands[0], operands[1]); break;
+                    case x86IT_ADD:  encodeInstruction_ADD(m_textSection, operands[0], operands[1]); break;
+                    case x86IT_SUB:  encodeInstruction_SUB(m_textSection, operands[0], operands[1]); break;
+                    case x86IT_MUL:  encodeInstruction_MUL(m_textSection, operands[0], operands[1]); break;
+                    case x86IT_DIV:  encodeInstruction_DIV(m_textSection, operands[0], operands[1]); break;
+                    case x86IT_SAL:  encodeInstruction_SAL(m_textSection, operands[0], operands[1]); break;
+                    case x86IT_SAR:  encodeInstruction_SAR(m_textSection, operands[0], operands[1]); break;
+                    case x86IT_XOR:  encodeInstruction_XOR(m_textSection, operands[0], operands[1]); break;
+                    case x86IT_CMP:  encodeInstruction_CMP(m_textSection, operands[0], operands[1]); break;
+                    case x86IT_NOP:  encodeInstruction_NOP(m_textSection, operands[0], operands[1]); break;
+                    case x86IT_PUSH:  encodeInstruction_PUSH(m_textSection, operands[0], operands[1]); break;
+                    case x86IT_POP:  encodeInstruction_POP(m_textSection, operands[0], operands[1]); break;
+                    case x86IT_RET:  encodeInstruction_RET(m_textSection, operands[0], operands[1]); break;
+                    case x86IT_CALL:  encodeInstruction_CALL(m_textSection, operands[0], operands[1]); break;
                     
                     case x86IT_JMP: 
                     case x86IT_JE: 
@@ -674,8 +676,8 @@ void BEx86JITEngineImpl::buildTextSection(BEx86FileBuilder *fileBuilder) {
                         });
                         operands[0].type = ia32_AT_Immediate32;
                         operands[0].displacement = 0;
-                        if (ins.type == x86IT_JMP) encode<x86IT_JMP>(m_textSection, operands[0], operands[1]);
-                        else encode_condJmp(ins.type, m_textSection, operands[0], operands[1]);
+                        if (ins.type == x86IT_JMP) encodeInstruction_JMP(m_textSection, operands[0], operands[1]);
+                        else encodeInstruction_CondJMP(ins.type, m_textSection, operands[0], operands[1]);
                      }
                     break;
 
