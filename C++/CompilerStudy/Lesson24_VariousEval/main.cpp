@@ -2,6 +2,8 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <stdarg.h>
+#include <time.h>
 
 #include <vector>
 #include <string>
@@ -130,22 +132,27 @@ private:
     Scanner *m_scaner;
 };
 //============================== tree-walking interpreter
-int evalByWalkAST(ASTNode *node) {
+int _evalByWalkAST(ASTNode *node) {
     if (ASTNode_Int* p = dynamic_cast<ASTNode_Int*>(node)) {
         return p->num;
     } else if (ASTNode_BinaryOp *p = dynamic_cast<ASTNode_BinaryOp*>(node)) {
         switch (p->op) {
-            case '+': return evalByWalkAST(p->left) + evalByWalkAST(p->right);
-            case '-': return evalByWalkAST(p->left) - evalByWalkAST(p->right);
-            case '*': return evalByWalkAST(p->left) * evalByWalkAST(p->right);
-            case '/': return evalByWalkAST(p->left) / evalByWalkAST(p->right);
-            case '%': return evalByWalkAST(p->left) % evalByWalkAST(p->right);
-            default: assert(0);
+            case '+': return _evalByWalkAST(p->left) + _evalByWalkAST(p->right);
+            case '-': return _evalByWalkAST(p->left) - _evalByWalkAST(p->right);
+            case '*': return _evalByWalkAST(p->left) * _evalByWalkAST(p->right);
+            case '/': return _evalByWalkAST(p->left) / _evalByWalkAST(p->right);
+            case '%': return _evalByWalkAST(p->left) % _evalByWalkAST(p->right);
+            default: assert(0); return 0;
         }
     } else {
         assert(0);
         return 0;
     }
+}
+int evalByWalkAST(ASTNode *n, int loop) {
+    int sum = 0;
+    for (int i = 0; i < loop; ++i) sum += _evalByWalkAST(n);
+    return sum;
 }
 //============================== bytecode virtual machine
 struct VM {
@@ -154,70 +161,194 @@ struct VM {
     int pc;
     VM(): pc(0){}
 };
-void vm_add(VM *vm) {
+void vmOp_add(VM *vm) {
     vm->evalStack[(int)vm->evalStack.size() - 2] += vm->evalStack[(int)vm->evalStack.size() - 1];
     vm->evalStack.pop_back();
 }
-void vm_sub(VM *vm) {
+void vmOp_sub(VM *vm) {
     vm->evalStack[(int)vm->evalStack.size() - 2] -= vm->evalStack[(int)vm->evalStack.size() - 1];
     vm->evalStack.pop_back();
 }
-void vm_mul(VM *vm) {
+void vmOp_mul(VM *vm) {
     vm->evalStack[(int)vm->evalStack.size() - 2] *= vm->evalStack[(int)vm->evalStack.size() - 1];
     vm->evalStack.pop_back();
 }
-void vm_div(VM *vm) {
+void vmOp_div(VM *vm) {
     vm->evalStack[(int)vm->evalStack.size() - 2] /= vm->evalStack[(int)vm->evalStack.size() - 1];
     vm->evalStack.pop_back();
 }
-void vm_mod(VM *vm) {
+void vmOp_mod(VM *vm) {
     vm->evalStack[(int)vm->evalStack.size() - 2] %= vm->evalStack[(int)vm->evalStack.size() - 1];
     vm->evalStack.pop_back();
 }
-void vm_push(VM *vm) {
+void vmOp_push(VM *vm) {
     vm->evalStack.push_back((int&)vm->codes[vm->pc]);
     vm->pc += sizeof(int);
 }
 template<typename T>
-void vm_emit(VM *vm, T param) {
+void vmEmit(VM *vm, T param) {
     int off = (int)vm->codes.size();
     vm->codes.resize(vm->codes.size() + sizeof(T));
     (T&)vm->codes[off] = param;
 }
-void emitByteCodeByWalkAST(VM *vm, ASTNode *node) {
+void emitVMCodeByWalkAST(VM *vm, ASTNode *node) {
     if (ASTNode_Int *p = dynamic_cast<ASTNode_Int*>(node)) {
-        vm_emit(vm, &vm_push);
-        vm_emit(vm, p->num);
+        vmEmit(vm, &vmOp_push);
+        vmEmit(vm, p->num);
     } else if (ASTNode_BinaryOp *p = dynamic_cast<ASTNode_BinaryOp*>(node)) {
-        emitByteCodeByWalkAST(vm, p->left);
-        emitByteCodeByWalkAST(vm, p->right);
+        emitVMCodeByWalkAST(vm, p->left);
+        emitVMCodeByWalkAST(vm, p->right);
         switch (p->op) {
-            case '+': vm_emit(vm, &vm_add); break;
-            case '-': vm_emit(vm, &vm_sub); break;
-            case '*': vm_emit(vm, &vm_mul); break;
-            case '/': vm_emit(vm, &vm_div); break;
-            case '%': vm_emit(vm, &vm_mod); break;
+            case '+': vmEmit(vm, &vmOp_add); break;
+            case '-': vmEmit(vm, &vmOp_sub); break;
+            case '*': vmEmit(vm, &vmOp_mul); break;
+            case '/': vmEmit(vm, &vmOp_div); break;
+            case '%': vmEmit(vm, &vmOp_mod); break;
             default: assert(0);
         }
     } else {
         assert(0);
     }
 }
-int evalByRuningVM(ASTNode *node) {
+int evalByRuningVM(ASTNode *node, int loop) {
     VM vm;
-    emitByteCodeByWalkAST(&vm, node);
-    while (vm.pc < (int)vm.codes.size()) {
-        void(*op)(VM*) = (void(*&)(VM*))vm.codes[vm.pc];
-        vm.pc += sizeof(&vm_push);
-        op(&vm);
-    }
-    return vm.evalStack[0];
-}
+    emitVMCodeByWalkAST(&vm, node);
 
+    int sum = 0;
+    for (int i = 0; i < loop; ++i) {
+        vm.pc = 0;
+        while (vm.pc < (int)vm.codes.size()) {
+            void(*op)(VM*) = (void(*&)(VM*))vm.codes[vm.pc];
+            vm.pc += sizeof(&vmOp_push);
+            op(&vm);
+        }
+        sum += vm.evalStack[0];
+        vm.evalStack.pop_back();
+    }
+    return sum;
+}
+//============================== JIT
+#ifdef _MSC_VER
+#pragma warning(disable : 4312)
+#pragma warning(disable : 4311)
+#include <Windows.h>
+#pragma warning(default : 4311)
+#pragma warning(default : 4312)
+void* mallocExec(int size) {
+    void *p = ::VirtualAlloc(NULL, size, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+    assert(p != NULL);
+    return p;
+}
+void freeExec(void *p) {
+    assert(p != NULL);
+	::VirtualFree(p, 0, MEM_RELEASE);
+}
+#endif
+#if defined(__linux__) || defined(__APPLE__)
+#include <unistd.h>
+#include <sys/mman.h>
+static void* mallocExec(int size) {
+    void *p = NULL;
+    ::posix_memalign(&p, ::getpagesize(), size);
+    ASSERT(p != NULL);
+    int erro = ::mprotect(p, size, PROT_READ | PROT_WRITE | PROT_EXEC);
+    ASSERT(erro == 0);
+    return p;
+}
+static void freeExec(void *p) {
+    ASSERT(p != NULL);
+    ::free(p);
+}
+#endif
+class JITEngine {
+public:
+    JITEngine(): m_off(0) { m_codes = (char*)mallocExec(4096); }
+    ~JITEngine() { freeExec(m_codes); }
+    void emit(int n, ...) {
+        va_list arg;
+        va_start(arg, n);
+        for (int i = 0; i < n; ++i) m_codes[m_off++] = va_arg(arg, char);
+        va_end(arg);
+    }
+    int run() { return ((int(*)())m_codes)();}
+private:
+    char *m_codes;
+    int m_off;
+};
+void x86Emit_begin(JITEngine *engine) {
+    engine->emit(1, 0x53); // push ebx
+    engine->emit(1, 0x52); // push edx
+}
+void x86Emit_push(JITEngine *engine, int i) {
+    char *pi = (char*)&i;
+    engine->emit(5, 0x68, pi[0], pi[1], pi[2], pi[3]); // push i
+}
+void x86Emit_op(JITEngine *engine, char c) {
+    engine->emit(4, 0x8b, 0x44, 0x24, 0x04); // mov eax, dword [esp+4]
+    engine->emit(3, 0x8b, 0x1c, 0x24); // mov ebx, dword [esp]
+    switch (c) { // op eax, ebx
+        case '+': engine->emit(2, 0x03, 0xc3); break; 
+        case '-': engine->emit(2, 0x2b, 0xc3); break;
+        case '*': engine->emit(3, 0x0f, 0xaf, 0xc3);break;
+        case '/': case '%': 
+            engine->emit(2, 0x33, 0xd2); // xor edx, edx
+            engine->emit(2, 0xf7, 0xfb);
+            if (c == '%') engine->emit(2, 0x8b, 0xc2); // mov eax, edx
+            break;
+        default: assert(0); break;
+    }
+    engine->emit(4, 0x89, 0x44, 0x24, 0x04); // mov dword [esp+4], eax
+    engine->emit(3, 0x83, 0xc4, 0x04); // add esp, 4
+}
+void x86Emit_end(JITEngine *engine) {
+    engine->emit(3, 0x8b, 0x04, 0x24); // mov eax, dword [esp]
+    engine->emit(3, 0x83, 0xc4, 0x04); // add esp, 4
+    engine->emit(1, 0x5a); // pop edx
+    engine->emit(1, 0x5b); // pop ebx
+    engine->emit(1, 0xc3); // ret
+}
+void emitx86InsByWalkAST(JITEngine *engine, ASTNode *node) {
+    if (ASTNode_Int* p = dynamic_cast<ASTNode_Int*>(node)) {
+        x86Emit_push(engine, p->num);
+    } else if (ASTNode_BinaryOp* p = dynamic_cast<ASTNode_BinaryOp*>(node)) {
+        emitx86InsByWalkAST(engine, p->left);
+        emitx86InsByWalkAST(engine, p->right);
+        x86Emit_op(engine, p->op);
+    } else {
+        assert(0);
+    }
+}
+int evalByRuningJIT(ASTNode *n, int loop) {
+    JITEngine engine;
+    x86Emit_begin(&engine);
+    emitx86InsByWalkAST(&engine, n);
+    x86Emit_end(&engine);
+
+    int sum = 0;
+    for (int i = 0; i < loop; ++i) sum += engine.run();
+    return sum;
+}
 //============================== main
+#define TIMINE(codes) { clock_t start = clock(); codes; printf("%f sec\n", float(clock() - start) / CLOCKS_PER_SEC);}
+
 int main() {
-    Scanner scanner("3+5-2*(5-3)");
+    Scanner scanner("1+2-3*4+(5-6)-(7+8)%9");
     ASTNode *n = Parser(&scanner).parse();
-    cout << evalByRuningVM(n) << endl;
+
+    const int LOOP = 100000;
+    int result = 0, result2 = 0;
+    {
+        printf("tree-walking interpreter (loop=%d)\n", LOOP);
+        TIMINE(result = evalByWalkAST(n, LOOP));
+    }
+    {
+        printf("stack-based virtual machine (loop=%d)\n", LOOP);
+        TIMINE(result2 = evalByRuningVM(n, LOOP); assert(result == result2); );
+    }
+    {
+        printf("jit compiler (loop=%d)\n", LOOP);
+        TIMINE(result2 = evalByRuningJIT(n, LOOP); assert(result == result2));
+    }
+
     n->destroy();
 }
