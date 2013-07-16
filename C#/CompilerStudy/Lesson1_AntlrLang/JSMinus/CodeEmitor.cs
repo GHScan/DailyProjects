@@ -164,6 +164,10 @@ public class ExprNodeVisitor_CodeEmitor : IExprNodeVisitor {
                 m_stmt.ILGenerator.Emit(OpCodes.Rem);
                 m_currentType = typeof(double);
                 break;
+            case "^":
+                m_stmt.ILGenerator.Emit(OpCodes.Call, typeof(System.Math).GetMethod("Pow", new Type[] { typeof(double), typeof(double) }));
+                m_currentType = typeof(double);
+                break;
             case "<":
                 m_stmt.ILGenerator.Emit(OpCodes.Clt);
                 m_currentType = typeof(int);
