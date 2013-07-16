@@ -121,6 +121,7 @@ struct ExprNode_BinaryOp:
         else if (opStr == "*") return OT_Mul;
         else if (opStr == "/") return OT_Div;
         else if (opStr == "%") return OT_Mod;
+        else if (opStr == "^") return OT_Pow;
         else ASSERT(0);
         return OT_And;
     }

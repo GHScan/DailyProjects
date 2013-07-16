@@ -222,7 +222,7 @@ addExpr returns[ExprNode value]
 mulExpr returns[ExprNode value]
     : a=unaryExpr {
         value = $a.value;
-    } (op=('*' | '/' | '%') b=unaryExpr {
+    } (op=('*' | '/' | '%' | '^') b=unaryExpr {
             value = new ExprNode_BinaryOp(value.line, $op.text, value, $b.value);
             })*
     ; 

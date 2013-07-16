@@ -168,6 +168,9 @@ class ExprNodeVisitor_CodeEmitor implements IExprNodeVisitor {
         } else if (node.op.equals("%")) {
             m_stmt.mbuilder.math(GeneratorAdapter.REM, Type.getType(double.class));
             m_currentType = double.class;
+        } else if (node.op.equals("^")) {
+            m_stmt.mbuilder.invokeStatic(Type.getType(Math.class), Method.getMethod("double pow(double, double)"));
+            m_currentType = double.class;
         } else if (node.op.equals("<") || node.op.equals("<=") || node.op.equals(">") || node.op.equals(">=")) {
             Label trueLabel = m_stmt.mbuilder.newLabel();
             Label endLabel = m_stmt.mbuilder.newLabel();
