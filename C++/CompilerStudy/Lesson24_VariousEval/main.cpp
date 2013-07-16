@@ -1,6 +1,5 @@
 #include "pch.h" 
 
-#include <assert.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <time.h>
@@ -9,6 +8,8 @@
 #include <string>
 #include <iostream>
 using namespace std;
+
+#define ASSERT(b) do{ if(!(b)) throw "assert failed! " #b; } while(0)
 //============================== lexical analysiser
 enum TokenType{
     TT_End,
@@ -85,14 +86,14 @@ private:
     }
     ASTNode* _infix(ASTNode *left) {
         Token t = m_scaner->next();
-        assert(t.type == TT_Operator);
+        ASSERT(t.type == TT_Operator);
         switch (t.begin[0]) {
             case '+': return new ASTNode_BinaryOp('+', left, _expr(getOperatorRBP(t)));
             case '-': return new ASTNode_BinaryOp('-', left, _expr(getOperatorRBP(t)));
             case '*': return new ASTNode_BinaryOp('*', left, _expr(getOperatorRBP(t)));
             case '/': return new ASTNode_BinaryOp('/', left, _expr(getOperatorRBP(t)));
             case '%': return new ASTNode_BinaryOp('%', left, _expr(getOperatorRBP(t)));
-            default: assert(0); return NULL;
+            default: ASSERT(0); return NULL;
         }
     } 
     ASTNode* _atom() {
@@ -101,7 +102,7 @@ private:
         if (t.type == TT_Int) {
             r = new ASTNode_Int(atoi(string(t.begin, t.end).c_str()));
         } else {
-            assert(t.type == TT_Operator && t.begin[0] == '(');
+            ASSERT(t.type == TT_Operator && t.begin[0] == '(');
             r = _expr(0);
             consumeOperatorToken(')');
         }
@@ -109,7 +110,7 @@ private:
     }
 private:
     int getOperatorLBP(const Token &t) {
-        assert(t.type == TT_Operator);
+        ASSERT(t.type == TT_Operator);
         switch (t.begin[0]) {
             case '+': return 1;
             case '-': return 1;
@@ -117,7 +118,7 @@ private:
             case '/': return 2;
             case '%': return 2;
             case ')': return 0;
-            default: assert(0); return 0;
+            default: ASSERT(0); return 0;
         }
     }
     int getOperatorRBP(const Token &t) {
@@ -126,7 +127,7 @@ private:
 private:
     void consumeOperatorToken(char c) {
         Token t = m_scaner->next();
-        assert(t.type == TT_Operator && t.begin[0] == c);
+        ASSERT(t.type == TT_Operator && t.begin[0] == c);
     }
 private:
     Scanner *m_scaner;
@@ -142,10 +143,10 @@ int _evalByWalkAST(ASTNode *node) {
             case '*': return _evalByWalkAST(p->left) * _evalByWalkAST(p->right);
             case '/': return _evalByWalkAST(p->left) / _evalByWalkAST(p->right);
             case '%': return _evalByWalkAST(p->left) % _evalByWalkAST(p->right);
-            default: assert(0); return 0;
+            default: ASSERT(0); return 0;
         }
     } else {
-        assert(0);
+        ASSERT(0);
         return 0;
     }
 }
@@ -204,10 +205,10 @@ void emitVMCodeByWalkAST(VM *vm, ASTNode *node) {
             case '*': vmEmit(vm, &vmOp_mul); break;
             case '/': vmEmit(vm, &vmOp_div); break;
             case '%': vmEmit(vm, &vmOp_mod); break;
-            default: assert(0);
+            default: ASSERT(0);
         }
     } else {
-        assert(0);
+        ASSERT(0);
     }
 }
 int evalByRuningVM(ASTNode *node, int loop) {
@@ -236,11 +237,11 @@ int evalByRuningVM(ASTNode *node, int loop) {
 #pragma warning(default : 4312)
 void* mallocExec(int size) {
     void *p = ::VirtualAlloc(NULL, size, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
-    assert(p != NULL);
+    ASSERT(p != NULL);
     return p;
 }
 void freeExec(void *p) {
-    assert(p != NULL);
+    ASSERT(p != NULL);
 	::VirtualFree(p, 0, MEM_RELEASE);
 }
 #endif
@@ -249,9 +250,9 @@ void freeExec(void *p) {
 #include <sys/mman.h>
 static void* mallocExec(int size) {
     void *p = NULL;
-    ::posix_memalign(&p, ::getpagesize(), size);
-    ASSERT(p != NULL);
-    int erro = ::mprotect(p, size, PROT_READ | PROT_WRITE | PROT_EXEC);
+    int erro = ::posix_memalign(&p, ::getpagesize(), size);
+    ASSERT(p != NULL && erro == 0);
+    erro = ::mprotect(p, size, PROT_READ | PROT_WRITE | PROT_EXEC);
     ASSERT(erro == 0);
     return p;
 }
@@ -267,7 +268,7 @@ public:
     void emit(int n, ...) {
         va_list arg;
         va_start(arg, n);
-        for (int i = 0; i < n; ++i) m_codes[m_off++] = va_arg(arg, char);
+        for (int i = 0; i < n; ++i) m_codes[m_off++] = (char)va_arg(arg, int);
         va_end(arg);
     }
     int run() { return ((int(*)())m_codes)();}
@@ -295,7 +296,7 @@ void x86Emit_op(JITEngine *engine, char c) {
             engine->emit(2, 0xf7, 0xfb);
             if (c == '%') engine->emit(2, 0x8b, 0xc2); // mov eax, edx
             break;
-        default: assert(0); break;
+        default: ASSERT(0); break;
     }
     engine->emit(4, 0x89, 0x44, 0x24, 0x04); // mov dword [esp+4], eax
     engine->emit(3, 0x83, 0xc4, 0x04); // add esp, 4
@@ -315,7 +316,7 @@ void emitx86InsByWalkAST(JITEngine *engine, ASTNode *node) {
         emitx86InsByWalkAST(engine, p->right);
         x86Emit_op(engine, p->op);
     } else {
-        assert(0);
+        ASSERT(0);
     }
 }
 int evalByRuningJIT(ASTNode *n, int loop) {
@@ -332,23 +333,27 @@ int evalByRuningJIT(ASTNode *n, int loop) {
 #define TIMINE(codes) { clock_t start = clock(); codes; printf("%f sec\n", float(clock() - start) / CLOCKS_PER_SEC);}
 
 int main() {
-    Scanner scanner("1+2-3*4+(5-6)-(7+8)%9");
-    ASTNode *n = Parser(&scanner).parse();
+    try {
+        Scanner scanner("1+2-3*4+(5-6)-(7+8)%9");
+        ASTNode *n = Parser(&scanner).parse();
 
-    const int LOOP = 100000;
-    int result = 0, result2 = 0;
-    {
-        printf("tree-walking interpreter (loop=%d)\n", LOOP);
-        TIMINE(result = evalByWalkAST(n, LOOP));
-    }
-    {
-        printf("stack-based virtual machine (loop=%d)\n", LOOP);
-        TIMINE(result2 = evalByRuningVM(n, LOOP); assert(result == result2); );
-    }
-    {
-        printf("jit compiler (loop=%d)\n", LOOP);
-        TIMINE(result2 = evalByRuningJIT(n, LOOP); assert(result == result2));
-    }
+        const int LOOP = 2000000;
+        int result = 0, result2 = 0;
+        {
+            printf("tree-walking interpreter (loop=%d)\n", LOOP);
+            TIMINE(result = evalByWalkAST(n, LOOP));
+        }
+        {
+            printf("stack-based virtual machine (loop=%d)\n", LOOP);
+            TIMINE(result2 = evalByRuningVM(n, LOOP); ASSERT(result == result2); );
+        }
+        {
+            printf("jit compiler (loop=%d)\n", LOOP);
+            TIMINE(result2 = evalByRuningJIT(n, LOOP); ASSERT(result == result2));
+        }
 
-    n->destroy();
+        n->destroy();
+    } catch(const char *e) {
+        printf("unhandled exception: %s\n", e);
+    }
 }
