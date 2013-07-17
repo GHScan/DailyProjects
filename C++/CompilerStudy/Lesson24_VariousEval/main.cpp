@@ -53,22 +53,16 @@ private:
 //============================== syntax analysiser
 struct ASTNode{
     virtual ~ASTNode(){}
-    virtual void destroy(){}
 };
 struct ASTNode_Int: public ASTNode {
     int num;
     explicit ASTNode_Int(int _num): num(_num){}
-    virtual void destroy(){ delete this; }
 };
 struct ASTNode_BinaryOp: public ASTNode {
     char op;
     ASTNode *left, *right;
     ASTNode_BinaryOp(char _op, ASTNode *_left, ASTNode *_right): op(_op), left(_left), right(_right){}
-    virtual void destroy(){ 
-        if (left != NULL) left->destroy();
-        if (right != NULL) right->destroy();
-        delete this;
-    }
+    ~ASTNode_BinaryOp() { delete left; delete right;}
 };
 class Parser {
 public:
@@ -157,54 +151,71 @@ int evalByWalkAST(ASTNode *n, int loop) {
 }
 //============================== bytecode virtual machine
 struct VM {
-    vector<int> evalStack;
     vector<char> codes;
-    int pc;
-    VM(): pc(0){}
+    vector<int> evalStack;
+    VM() {}
+    template<typename T>
+    void emit(T param) {
+        int off = (int)codes.size();
+        codes.resize(codes.size() + sizeof(T));
+        (T&)codes[off] = param;
+    }
 };
-void vmOp_add(VM *vm) {
-    vm->evalStack[(int)vm->evalStack.size() - 2] += vm->evalStack[(int)vm->evalStack.size() - 1];
-    vm->evalStack.pop_back();
-}
-void vmOp_sub(VM *vm) {
-    vm->evalStack[(int)vm->evalStack.size() - 2] -= vm->evalStack[(int)vm->evalStack.size() - 1];
-    vm->evalStack.pop_back();
-}
-void vmOp_mul(VM *vm) {
-    vm->evalStack[(int)vm->evalStack.size() - 2] *= vm->evalStack[(int)vm->evalStack.size() - 1];
-    vm->evalStack.pop_back();
-}
-void vmOp_div(VM *vm) {
-    vm->evalStack[(int)vm->evalStack.size() - 2] /= vm->evalStack[(int)vm->evalStack.size() - 1];
-    vm->evalStack.pop_back();
-}
-void vmOp_mod(VM *vm) {
-    vm->evalStack[(int)vm->evalStack.size() - 2] %= vm->evalStack[(int)vm->evalStack.size() - 1];
-    vm->evalStack.pop_back();
-}
-void vmOp_push(VM *vm) {
-    vm->evalStack.push_back((int&)vm->codes[vm->pc]);
-    vm->pc += sizeof(int);
-}
-template<typename T>
-void vmEmit(VM *vm, T param) {
-    int off = (int)vm->codes.size();
-    vm->codes.resize(vm->codes.size() + sizeof(T));
-    (T&)vm->codes[off] = param;
+enum VMCode {
+    VMC_Push, VMC_Add, VMC_Sub, VMC_Mul, VMC_Div, VMC_Mod, 
+};
+int vmRun(VM *vm) {
+    vector<int> &evalStack = vm->evalStack;
+    int pc = 0;
+    int endpc = (int)vm->codes.size();
+    while (pc < endpc) {
+        VMCode c = (VMCode&)vm->codes[pc];
+        pc += sizeof(VMCode);
+        switch (c) {
+            case VMC_Push: 
+                evalStack.push_back((int&)vm->codes[pc]);
+                pc += sizeof(int);
+                break;
+            case VMC_Add: 
+                evalStack[evalStack.size() - 2] += evalStack.back();
+                evalStack.pop_back();
+                break;
+            case VMC_Sub: 
+                evalStack[evalStack.size() - 2] -= evalStack.back();
+                evalStack.pop_back();
+                break;
+            case VMC_Mul: 
+                evalStack[evalStack.size() - 2] *= evalStack.back();
+                evalStack.pop_back();
+                break;
+            case VMC_Div: 
+                evalStack[evalStack.size() - 2] /= evalStack.back();
+                evalStack.pop_back();
+                break;
+            case VMC_Mod: 
+                evalStack[evalStack.size() - 2] %= evalStack.back();
+                evalStack.pop_back();
+                break;
+            default: ASSERT(0); 
+        }
+    }
+    int r = evalStack.back();
+    evalStack.clear();
+    return r;
 }
 void emitVMCodeByWalkAST(VM *vm, ASTNode *node) {
     if (ASTNode_Int *p = dynamic_cast<ASTNode_Int*>(node)) {
-        vmEmit(vm, &vmOp_push);
-        vmEmit(vm, p->num);
+        vm->emit(VMC_Push);
+        vm->emit(p->num);
     } else if (ASTNode_BinaryOp *p = dynamic_cast<ASTNode_BinaryOp*>(node)) {
         emitVMCodeByWalkAST(vm, p->left);
         emitVMCodeByWalkAST(vm, p->right);
         switch (p->op) {
-            case '+': vmEmit(vm, &vmOp_add); break;
-            case '-': vmEmit(vm, &vmOp_sub); break;
-            case '*': vmEmit(vm, &vmOp_mul); break;
-            case '/': vmEmit(vm, &vmOp_div); break;
-            case '%': vmEmit(vm, &vmOp_mod); break;
+            case '+': vm->emit(VMC_Add); break;
+            case '-': vm->emit(VMC_Sub); break;
+            case '*': vm->emit(VMC_Mul); break;
+            case '/': vm->emit(VMC_Div); break;
+            case '%': vm->emit(VMC_Mod); break;
             default: ASSERT(0);
         }
     } else {
@@ -216,16 +227,7 @@ int evalByRuningVM(ASTNode *node, int loop) {
     emitVMCodeByWalkAST(&vm, node);
 
     int sum = 0;
-    for (int i = 0; i < loop; ++i) {
-        vm.pc = 0;
-        while (vm.pc < (int)vm.codes.size()) {
-            void(*op)(VM*) = (void(*&)(VM*))vm.codes[vm.pc];
-            vm.pc += sizeof(&vmOp_push);
-            op(&vm);
-        }
-        sum += vm.evalStack[0];
-        vm.evalStack.pop_back();
-    }
+    for (int i = 0; i < loop; ++i) sum += vmRun(&vm);
     return sum;
 }
 //============================== JIT
@@ -263,18 +265,18 @@ static void freeExec(void *p) {
 #endif
 class JITEngine {
 public:
-    JITEngine(): m_off(0) { m_codes = (char*)mallocExec(4096); }
+    JITEngine(): m_size(0) { m_codes = (char*)mallocExec(4096); }
     ~JITEngine() { freeExec(m_codes); }
     void emit(int n, ...) {
         va_list arg;
         va_start(arg, n);
-        for (int i = 0; i < n; ++i) m_codes[m_off++] = (char)va_arg(arg, int);
+        for (int i = 0; i < n; ++i) m_codes[m_size++] = (char)va_arg(arg, int);
         va_end(arg);
     }
     int run() { return ((int(*)())m_codes)();}
 private:
     char *m_codes;
-    int m_off;
+    int m_size;
 };
 void x86Emit_begin(JITEngine *engine) {
     engine->emit(1, 0x53); // push ebx
@@ -352,7 +354,7 @@ int main() {
             TIMINE(result2 = evalByRuningJIT(n, LOOP); ASSERT(result == result2));
         }
 
-        n->destroy();
+        delete n;
     } catch(const char *e) {
         printf("unhandled exception: %s\n", e);
     }
