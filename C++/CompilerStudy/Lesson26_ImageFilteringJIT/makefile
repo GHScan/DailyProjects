@@ -6,7 +6,7 @@ include makefile_var
 build_type = debug
 
 CXX = g++
-CXXFLAGS += -MMD  -m32
+CXXFLAGS += -MMD 
 CXXFLAGS += -Wall
 CXXFLAGS += $(foreach i,$(macro_defs),-D $(i))
 CXXFLAGS += $(foreach i,$(include_dirs),-I '$(i)')
