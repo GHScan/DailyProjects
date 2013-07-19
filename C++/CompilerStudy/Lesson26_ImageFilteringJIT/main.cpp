@@ -31,11 +31,6 @@ string format(const char *fmt, ...) {
     return &buf[0];
 }
 
-class JITCompiler {
-public:
-private:
-};
-
 void applyFilterMatrix(
         BYTE *destBuf, const BYTE *srcBuf, int scanW, int imageW, int imageH,
         int *matrix, int matrixW, int matrixH) {
