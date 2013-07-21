@@ -400,7 +400,7 @@ private:
         label->addRef(ref);
     }
 private:
-    int localIdx2EbpOff(int idx) { return idx < 0 ? 4 - idx * 4 : -(1 + idx) * 4; }
+    int localIdx2EbpOff(int idx) { return idx < 0 ? 8 - idx * 4 : -(1 + idx) * 4; }
 private:
     x86JITEngine *m_parent;
     char *m_codeBuf;
@@ -662,7 +662,8 @@ private:
     void popScope() { m_nestedLocals.pop_back(); }
     int declareArg(const string &name, const string &type) {
         ASSERT(m_args.count(name) == 0);
-        return m_args[name] = -((int)m_args.size() + 1);
+        int idx = -((int)m_args.size() + 1);
+        return m_args[name] = idx;
     }
     int declareLocal(const string &name, const string &type) {
         ASSERT(m_nestedLocals.back().count(name) == 0);
