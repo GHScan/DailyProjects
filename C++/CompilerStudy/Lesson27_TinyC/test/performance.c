@@ -1,6 +1,3 @@
-extern int clock();
-extern int printf(char* fmt, ...);
-
 void printPrime(int n) {
     int start = clock();
     for (int i = 2; i < n; ++i) {
@@ -23,7 +20,7 @@ void perform() {
 void perform_1_5() {
     int start = clock();
     int i = 0;
-    while (i < 1000000) i += 1;
+    while (i < 1000000) ++i;
     printf("perform 1.5: %d\n", clock() - start);
 }
 void perform2() {

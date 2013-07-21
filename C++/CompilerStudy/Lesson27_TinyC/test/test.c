@@ -1,8 +1,4 @@
-extern int printf(char* fmt, ...);
-extern int clock();
-
-int FALSE;
-int echo(char* str, int b) {
+int echo(string str, int b) {
     printf("echo %s\n", str);
     return b;
 }
@@ -87,6 +83,5 @@ int main()  {
     print9x9();
     perform();
     printf("15-3*(2*2+(7-2)) = %d\n", 15-3*(2*2+(7-2)));
-    printf("FALSE = %d\n", FALSE);
     return 0;
 }

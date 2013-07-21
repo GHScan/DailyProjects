@@ -17,7 +17,7 @@ type_name
 
 type 
     : TT_TYPE_INT
-    | TT_TYPE_CHARPTR
+    | TT_TYPE_STRING
     | TT_TYPE_VOID
     ;
 
@@ -67,6 +67,8 @@ expr_nud
     : TT_INT
     | TT_STRING
     | TT_ID
+    | TT_TRUE
+    | TT_FALSE
     | expr_call
     | TT_LP expr TT_RP
     | TT_OP_NOT expr
