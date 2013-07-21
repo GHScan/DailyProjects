@@ -87,15 +87,16 @@ public:
 private:
     void makesureN(int n) {
         while ((int)m_LAList.size() < n) {
-            for (;;) {
-                for (; isspace(*m_src); ++m_src);
-                if (m_src[0] == '/' && m_src[1] == '/') {
-                    while (*++m_src != '\n');
-                } else break;
-            }
+            for (; isspace(*m_src); ++m_src);
 
             if (m_src[0] == 0) {
                 m_LAList.push_back(Token());
+            } else if (m_src[0] == '/' && m_src[1] == '/') {
+                while (*++m_src != '\n');
+            } else if (m_src[0] == '/' && m_src[1] == '*') {
+                ++m_src;
+                do { ++m_src; } while(m_src[0] != '*' || m_src[1] != '/');
+                m_src += 2;
             } else if (isdigit(m_src[0])) {
                 const char *begin = m_src;
                 while (isdigit(*++m_src));
@@ -199,11 +200,13 @@ static char* os_findSymbol(const char *funcName) {
 }
 #endif
 //============================== code generator
+#define MAX_TEXT_SECTION_SIZE (4096 * 8)
+#define MAX_LOCAL_COUNT 64
 class x86FunctionBuilder;
 class x86JITEngine {
 public:
-    x86JITEngine(): m_usedTextSectionSize(0), m_totalTextSectionSize(4096 * 8) {
-        m_textSection = os_mallocExecutable(m_totalTextSectionSize);
+    x86JITEngine(): m_textSectionSize(0) {
+        m_textSection = os_mallocExecutable(MAX_TEXT_SECTION_SIZE);
     }
     ~x86JITEngine() { os_freeExecutable(m_textSection); }
     char* getFunction(const string &name) { return *_getFunctionEntry(name); }
@@ -216,7 +219,7 @@ public:
     void endBuild();
 private:
     char *m_textSection;
-    int m_usedTextSectionSize, m_totalTextSectionSize;
+    int m_textSectionSize;
     map<string, char*> m_funcEntries;
     set<string> m_literalStrs;
 };
@@ -245,7 +248,6 @@ private:
     char *m_address;
     vector<char*> m_refs;
 };
-#define MAX_LOCAL_COUNT 64
 class x86FunctionBuilder {
 public:
     x86FunctionBuilder(x86JITEngine *parent, char *codeBuf): m_parent(parent), m_codeBuf(codeBuf), m_codeSize(0){}
@@ -410,15 +412,15 @@ private:
 };
 void x86JITEngine::beginBuild() { }
 x86FunctionBuilder* x86JITEngine::beginBuildFunction() {
-    x86FunctionBuilder *r = new x86FunctionBuilder(this, m_textSection + m_usedTextSectionSize);
+    x86FunctionBuilder *r = new x86FunctionBuilder(this, m_textSection + m_textSectionSize);
     r->beginBuild();
     return r;
 }
 void x86JITEngine::endBuildFunction(x86FunctionBuilder *builder) {
     builder->endBuild();
-    *_getFunctionEntry(builder->getFuncName()) = m_textSection + m_usedTextSectionSize;
-    m_usedTextSectionSize += builder->getCodeSize();
-    ASSERT(m_usedTextSectionSize <= m_totalTextSectionSize);
+    *_getFunctionEntry(builder->getFuncName()) = m_textSection + m_textSectionSize;
+    m_textSectionSize += builder->getCodeSize();
+    ASSERT(m_textSectionSize <= MAX_TEXT_SECTION_SIZE);
     delete builder;
 }
 void x86JITEngine::endBuild() {
