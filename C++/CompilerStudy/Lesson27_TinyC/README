@@ -1,0 +1,7 @@
+Features:
+    One-pass compiler
+    Hashtable based lexical analysis
+    Top-down operator precedence parsing, LL(k)
+    JIT on x86
+    No more than 1000 lines of code
+    Support Windows/Linux/MacOSX
