@@ -42,7 +42,7 @@ clean: clean_actions
 update_pch: $(pch_file).gch
 
 main: $(objs)
-	$(CXX)  -o $@ $(objs) $(CXXFLAGS)
+	$(CXX)  -o $@ $(objs) $(CXXFLAGS) -ldl
 
 $(pch_file).gch: $(pch_file)
 	$(CXX) $(filter-out -MMD,$(CXXFLAGS)) $<
