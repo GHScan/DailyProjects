@@ -3,5 +3,6 @@ Features:
     Hashtable based lexical analysis
     Top-down operator precedence parsing, LL(k)
     JIT on x86
+    Interactive console
+    Windows/Linux/MacOSX support
     No more than 1000 lines of code
-    Support Windows/Linux/MacOSX

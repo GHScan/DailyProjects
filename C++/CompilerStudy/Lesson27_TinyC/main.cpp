@@ -765,7 +765,10 @@ int main(int argc, char *argv[]) {
     }
 
     int lineNum = 0;
-    for (string line; getline(cin, line); ++lineNum) {
+    for (string line; ; ++lineNum) {
+        printf(">>> ");
+        if (!getline(cin, line)) break;
+
         try {
             Scanner scanner(line.c_str());
             bool isFuncDefine = false;
