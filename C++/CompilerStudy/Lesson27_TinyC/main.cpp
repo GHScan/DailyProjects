@@ -31,6 +31,29 @@ static string unescape(const string &s) {
     }
     return r;
 }
+static string format(const char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    static vector<char> buf(256);
+    while ((int)buf.size() == vsnprintf(&buf[0], buf.size(), fmt, args)) {
+        buf.resize(buf.size() * 3 / 2);
+    }
+    va_end(args);
+    return &buf[0];
+}
+static string readFile(const string &fileName) {
+    string r;
+    FILE *f = fopen(fileName.c_str(), "rb");
+    if (f == NULL) return r;
+    fseek(f, 0, SEEK_END);
+    int size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    r.resize(size + 1, 0);
+    int bytes = (int)fread(&r[0], size, 1, f);
+    ASSERT(bytes == 1);
+    fclose(f);
+    return r;
+}
 //============================== lexical analysis
 enum TokenID {
     TID_LP, TID_RP, TID_LBRACE, TID_RBRACE, TID_LBRACKET, TID_RBRACKET, TID_COMMA, TID_SEMICELON,
@@ -716,39 +739,57 @@ private:
     Scanner *m_scanner;
 };
 //============================== 
-static string readFile(const string &fileName) {
-    string r;
-    FILE *f = fopen(fileName.c_str(), "rb");
-    if (f == NULL) return r;
-    fseek(f, 0, SEEK_END);
-    int size = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    r.resize(size + 1, 0);
-    int bytes = (int)fread(&r[0], size, 1, f);
-    ASSERT(bytes == 1);
-    fclose(f);
-    return r;
-}
-static int runFile(const string &fileName) {
-    x86JITEngine engine;
-    engine.beginBuild();
-    string source = readFile(fileName);
-    Scanner scanner(source.c_str());
-    FileParser(&engine, &scanner).parse();
-    engine.endBuild();
-    int(*f)() = (int(*)())engine.getFunction("main");
-    return f();
-}
-int main(int argc, char *argv[]) {
-    if (argc < 2) {
-        fprintf(stderr, "Usage : %s filename\n", argv[0]);
-        return 1;
-    }
-
+static x86JITEngine* g_jitEngine;
+static int loadFile(const char *fileName) {
     try {
-        return runFile(argv[1]);
+        g_jitEngine->beginBuild();
+        string source = readFile(fileName);
+        Scanner scanner(source.c_str());
+        FileParser(g_jitEngine, &scanner).parse();
+        g_jitEngine->endBuild();
+        return 0;
     } catch(const exception &e) {
         puts(e.what());
         return 1;
-    } 
+    }
+}
+int main(int argc, char *argv[]) {
+    x86JITEngine _engine;
+
+    g_jitEngine = &_engine;
+    *g_jitEngine->_getFunctionEntry("loadFile") = (char*)loadFile;
+
+    if (argc >= 2) {
+        int erro = loadFile(argv[1]);
+        return erro ? erro : ((int(*)())g_jitEngine->getFunction("main"))();
+    }
+
+    int lineNum = 0;
+    for (string line; getline(cin, line); ++lineNum) {
+        try {
+            Scanner scanner(line.c_str());
+            bool isFuncDefine = false;
+            switch (scanner.LA(1).tid) {
+                case TID_TYPE_INT: case TID_TYPE_STRING: case TID_TYPE_VOID: 
+                    if (scanner.LA(2).tid == TID_ID && scanner.LA(3).tid == TID_LP) isFuncDefine = true;
+                    break;
+                default: break;
+            }
+            if (!isFuncDefine) {
+                line = format("int temp_%d(){ return %s; }", lineNum, line.c_str());
+                scanner = Scanner(line.c_str());
+            }
+
+            g_jitEngine->beginBuild();
+            FileParser(g_jitEngine, &scanner).parse();
+            g_jitEngine->endBuild();
+
+            if (!isFuncDefine) {
+                printf("%d\n", ((int(*)())g_jitEngine->getFunction(format("temp_%d", lineNum)))());
+            }
+
+        } catch(const exception &e) {
+            puts(e.what());
+        } 
+    }
 }
