@@ -45,62 +45,62 @@ function list_traverse(list, f)
     f(list(_list_head))
     list_traverse(list(_list_tail), f)
 end
--- bsp
-function _bsp_value(v, left, right) return v end
-function _bsp_left(v, left, right) return left end
-function _bsp_right(v, left, right) return right end
-function bsp_node(v, left, right)
+-- bst
+function _bst_value(v, left, right) return v end
+function _bst_left(v, left, right) return left end
+function _bst_right(v, left, right) return right end
+function bst_node(v, left, right)
     return function(getter)
         return getter(v, left, right)
     end
 end
-function bsp_insert(bsp, v)
-    if not bsp then return bsp_node(v) end
-    local nv = bsp(_bsp_value)
-    if v == nv then return bsp 
-    elseif v < nv then return bsp_node(nv, bsp_insert(bsp(_bsp_left), v), bsp(_bsp_right))
-    else return bsp_node(nv, bsp(_bsp_left), bsp_insert(bsp(_bsp_right), v)) end
+function bst_insert(bst, v)
+    if not bst then return bst_node(v) end
+    local nv = bst(_bst_value)
+    if v == nv then return bst 
+    elseif v < nv then return bst_node(nv, bst_insert(bst(_bst_left), v), bst(_bst_right))
+    else return bst_node(nv, bst(_bst_left), bst_insert(bst(_bst_right), v)) end
 end
-function bsp_contain(bsp, v)
-    if not bsp then return false end
-    local nv = bsp(_bsp_value)
+function bst_contain(bst, v)
+    if not bst then return false end
+    local nv = bst(_bst_value)
     if v == nv then return true
-    elseif v < nv then return bsp_contain(bsp(_bsp_left), v)
-    else return bsp_contain(bsp(_bsp_right), v) end
+    elseif v < nv then return bst_contain(bst(_bst_left), v)
+    else return bst_contain(bst(_bst_right), v) end
 end
-function bsp_min(bsp)
-    if not bsp(_bsp_left) then return bsp(_bsp_value) end
-    return bsp_min(bsp(_bsp_left))
+function bst_min(bst)
+    if not bst(_bst_left) then return bst(_bst_value) end
+    return bst_min(bst(_bst_left))
 end
-function bsp_remove(bsp, v)
-    if not bsp then return end
-    local nv = bsp(_bsp_value)
-    if v < nv then return bsp_node(nv, bsp_remove(bsp(_bsp_left), v), bsp(_bsp_right))
-    elseif v > nv then return bsp_node(nv, bsp(_bsp_left), bsp_remove(bsp(_bsp_right), v)) end
+function bst_remove(bst, v)
+    if not bst then return end
+    local nv = bst(_bst_value)
+    if v < nv then return bst_node(nv, bst_remove(bst(_bst_left), v), bst(_bst_right))
+    elseif v > nv then return bst_node(nv, bst(_bst_left), bst_remove(bst(_bst_right), v)) end
 
     local nv
-    if bsp(_bsp_right) then nv = bsp_min(bsp(_bsp_right)) end
-    if not nv then return bsp(_bsp_left)
-    else return bsp_node(nv, bsp(_bsp_left), bsp_remove(bsp(_bsp_right), nv)) end
+    if bst(_bst_right) then nv = bst_min(bst(_bst_right)) end
+    if not nv then return bst(_bst_left)
+    else return bst_node(nv, bst(_bst_left), bst_remove(bst(_bst_right), nv)) end
 end
-function bsp_inorder_traverse(bsp, f)
-    if not bsp then return end
-    bsp_inorder_traverse(bsp(_bsp_left), f)
-    f(bsp(_bsp_value))
-    bsp_inorder_traverse(bsp(_bsp_right), f)
+function bst_inorder_traverse(bst, f)
+    if not bst then return end
+    bst_inorder_traverse(bst(_bst_left), f)
+    f(bst(_bst_value))
+    bst_inorder_traverse(bst(_bst_right), f)
 end
 
 -- main
-local bsp
-table.foreach({3, 2, 5, 1, 4}, function(_, v) bsp = bsp_insert(bsp, v) end)
+local bst
+table.foreach({3, 2, 5, 1, 4}, function(_, v) bst = bst_insert(bst, v) end)
 
---table.foreach({3, 2, 5, 1, 4}, function(_, v) bsp = bsp_remove(bsp, v) end)
-bsp_inorder_traverse(bsp, print)
-table.foreach({-1, 3, 5, 7}, function(_, v) print(bsp_contain(bsp, v)) end)
+--table.foreach({3, 2, 5, 1, 4}, function(_, v) bst = bst_remove(bst, v) end)
+bst_inorder_traverse(bst, print)
+table.foreach({-1, 3, 5, 7}, function(_, v) print(bst_contain(bst, v)) end)
 
 
 local stack
-bsp_inorder_traverse(bsp, function(v)
+bst_inorder_traverse(bst, function(v)
     stack = stack_push(stack, v)
 end)
 stack_traverse(stack, print)
