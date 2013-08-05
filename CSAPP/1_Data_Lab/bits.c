@@ -173,8 +173,28 @@ int logicalShift(int x, int n) {
  *   Rating: 4
  */
 int bitCount(int x) {
-    // TODO
-    return 2;
+    int mask1 = 0x11;
+    mask1 |= mask1 << 8;
+    mask1 |= mask1 << 16;
+    int mask2 = 0xf | (0xf << 16);
+
+    int r = 0;
+    r += x & mask1;
+    r += (x >> 1) & mask1;
+    r += (x >> 2) & mask1;
+    r += (x >> 3) & mask1;
+
+    int r2 = 0;
+    r2 += r & mask2;
+    r2 += (r >> 4) & mask2;
+    r2 += (r >> 8) & mask2;
+    r2 += (r >> 12) & mask2;
+
+    int r3 = 0;
+    r3 += r2 & 0xff;
+    r3 += (r2 >> 16) & 0xff;
+
+    return r3;
 }
 /* 
  * bang - Compute !x without using !
@@ -184,12 +204,7 @@ int bitCount(int x) {
  *   Rating: 4 
  */
 int bang(int x) {
-    x |= x >> 16;
-    x |= x >> 8;
-    x |= x >> 4;
-    x |= x >> 2;
-    x |= x >> 1;
-    return ~x & 1;
+    return ~((x | (~x + 1)) >> 31) & 1;
 }
 /* 
  * tmin - return minimum two's complement integer 
@@ -272,8 +287,31 @@ int isLessOrEqual(int x, int y) {
  *   Rating: 4
  */
 int ilog2(int x) {
-    // TODO
-    return 2;
+    x |= x >> 1;
+    x |= x >> 2;
+    x |= x >> 4;
+    x |= x >> 8;
+    x |= x >> 16;
+    x = ((x + 1) >> 1) & ~(1 << 31);
+
+    int r = 0;
+    int mask = (1 << 16) - 1;
+    r += (!!((x >> 16) & mask)) << 4;
+    x = (x | (x >> 16)) & mask;
+
+    r += (!!((x >> 8) & 0xff)) << 3;
+    x = (x | (x >> 8)) & 0xff;
+
+    r += (!!((x >> 4) & 0xf)) << 2;
+    x = (x | (x >> 4)) & 0xf;
+
+    r += (!!((x >> 2) & 0x3)) << 1;
+    x = (x | (x >> 2)) & 0x3;
+
+    r += (!!((x >> 1) & 0x1)) << 0;
+    x = (x | (x >> 1)) & 0x1;
+
+    return r;
 }
 /* 
  * float_neg - Return bit-level equivalent of expression -f for
