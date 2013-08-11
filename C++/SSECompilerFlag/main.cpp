@@ -76,26 +76,97 @@ void transform2(Vector *outputs, int n, const Vector *inputs, const Matrix* _mat
 }
 #endif
 
+
+void transform3(Vector *outputs, int n, const Vector *inputs, const Matrix* _mat) {
+	Matrix mat(*_mat);
+	mat.transpose();
+
+	__asm {
+		movaps xmm4, mat.v
+		movaps xmm5, mat.v + 16
+		movaps xmm6, mat.v + 32
+		movaps xmm7, mat.v + 48
+	}
+
+	for (int i = 0; i < n; ++i) {
+		float *_out = outputs[i].v;
+		const float *_in = inputs[i].v;
+
+        __asm {
+            push eax
+            mov eax, _in
+            movss xmm0, [eax]
+            shufps xmm0, xmm0, 0
+            movss xmm1, [eax+4]
+            shufps xmm1, xmm1, 0
+            movss xmm2, [eax+8]
+            shufps xmm2, xmm2, 0
+            movss xmm3, [eax+12]
+            shufps xmm3, xmm3, 0
+            mulps xmm0, xmm4
+            mulps xmm1, xmm5
+            mulps xmm2, xmm6
+            mulps xmm3, xmm7
+            addps xmm0, xmm1
+            addps xmm0, xmm2
+            addps xmm0, xmm3
+            movaps _out, xmm0
+            pop eax
+        }
+	}
+}
+
+void initInputs(Vector *inputs, int n) {
+    for (int i = 0; i < n; ++i) {
+        inputs[i].v[0] = float(1 + i);
+        inputs[i].v[1] = float(2 + i);
+        inputs[i].v[2] = float(4 + i);
+    }
+}
+float getSumOfOutputs(Vector *outputs, int n) {
+    float ret = 0;
+    for (int i = 0; i < n; ++i) {
+        ret += outputs[i].v[0] + outputs[i].v[1] + outputs[i].v[2];
+    }
+    return ret;
+}
+
 int main() {
     const int LOOP = 1 << 13;
     const int N = 1 << 14;
     Vector *inputs = (Vector*)align_malloc(N * sizeof(Vector), 16);
     Vector *outputs = (Vector*)align_malloc(N * sizeof(Vector), 16);
-    Matrix mat = {1, 1.1, 1.2, 1.3, 2, 2.1, 2.2, 2.3, 3.1, 3.2, 0, 0, 4.1};
+    Matrix mat = {1.0f, 1.1f, 1.2f, 1.3f, 2.f, 2.1f, 2.2f, 2.3f, 3.1f, 3.2f, 0, 0, 4.1f};
+    float ret, ret2;
 
     puts("C++");
+    initInputs(inputs, N);
     TIMING(
         for (int i = 0; i < LOOP; ++i) {
             transform(outputs, N, inputs, &mat);
         }
     );
+    ret = getSumOfOutputs(outputs, N);
 
 #ifdef __SSE__
     puts("xmminstrin:");
+    initInputs(inputs, N);
     TIMING(
         for (int i = 0; i < LOOP; ++i) {
             transform2(outputs, N, inputs, &mat);
         }
     );
+    ret2 = getSumOfOutputs(outputs, N);
+    if (ret != ret2) puts("failed !!!");
 #endif
+
+    puts("sse instrin:");
+    initInputs(inputs, N);
+    TIMING(
+        for (int i = 0; i < LOOP; ++i) {
+            transform3(outputs, N, inputs, &mat);
+        }
+    );
+    ret2 = getSumOfOutputs(outputs, N);
+    if (ret != ret2) puts("failed !!!");
 }
