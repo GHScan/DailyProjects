@@ -65,7 +65,7 @@ void transform2(Vector *outputs, int n, const Vector *inputs, const Matrix* _mat
 		const Vector *in = inputs + i;
 
 		for (int i = 0; i < 4; ++i) {
-			t[i] = _mm_set_ss(in->v[i]);
+			t[i] = _mm_set_ps1(in->v[i]);
 			t[i] = _mm_mul_ps(t[i], m[i]);
 		}
 		t[0] = _mm_add_ps(t[0], t[1]);
