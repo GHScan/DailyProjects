@@ -15,7 +15,8 @@
 #define ALIGN(n)  __attribute__((aligned(n)))
 static void* align_malloc(int size, int align) {
     void* p;
-    posix_memalign(&p, align, size);
+    int err = posix_memalign(&p, align, size);
+    if (err != 0) return NULL;
     return p;
 }
 #else
