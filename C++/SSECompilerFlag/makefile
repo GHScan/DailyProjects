@@ -20,7 +20,7 @@ endif
 ifeq ($(build_type),debug)
 CXXFLAGS += -g
 else
-CXXFLAGS += -O3 -DNDEBUG -msse3
+CXXFLAGS += -O3 -DNDEBUG -msse3 -g
 endif
 
 srcs = $(wildcard *.cpp)

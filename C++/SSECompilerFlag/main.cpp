@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <math.h>
 
 #ifndef __GNUC__
 #define __SSE__ 1
@@ -76,7 +77,7 @@ void transform2(Vector *outputs, int n, const Vector *inputs, const Matrix* _mat
 }
 #endif
 
-
+#ifndef __GNUC__
 void transform3(Vector *outputs, int n, const Vector *inputs, const Matrix* _mat) {
 	Matrix mat(*_mat);
 	mat.transpose();
@@ -115,6 +116,48 @@ void transform3(Vector *outputs, int n, const Vector *inputs, const Matrix* _mat
         }
 	}
 }
+#else
+void transform3(Vector *outputs, int n, const Vector *inputs, const Matrix* _mat) {
+	Matrix mat(*_mat);
+	mat.transpose();
+
+	asm (
+		"movaps 0(%0), %%xmm4;"
+		"movaps 16(%0), %%xmm5;"
+		"movaps 32(%0), %%xmm6;"
+		"movaps 48(%0), %%xmm7;"
+        : 
+        : "r"(mat.v)
+	);
+
+	for (int i = 0; i < n; ++i) {
+		float *_out = outputs[i].v;
+		const float *_in = inputs[i].v;
+
+        asm (
+            "movss 0(%0), %%xmm0;"
+            "shufps $0, %%xmm0, %%xmm0;"
+            "movss 4(%0), %%xmm1;"
+            "shufps $0, %%xmm1, %%xmm1;"
+            "movss 8(%0), %%xmm2;"
+            "shufps $0, %%xmm2, %%xmm2;"
+            "movss 12(%0), %%xmm3;"
+            "shufps $0, %%xmm3, %%xmm3;"
+            "mulps %%xmm4, %%xmm0;"
+            "mulps %%xmm5, %%xmm1;"
+            "mulps %%xmm6, %%xmm2;"
+            "mulps %%xmm7, %%xmm3;"
+            "addps %%xmm1, %%xmm0;"
+            "addps %%xmm3, %%xmm2;"
+            "addps %%xmm2, %%xmm0;"
+            "movaps %%xmm0, (%1);"
+            :
+            :"r"(_in), "r"(_out)
+            :"%eax"           
+         );
+	}
+}
+#endif
 
 void initInputs(Vector *inputs, int n) {
     for (int i = 0; i < n; ++i) {
@@ -157,7 +200,7 @@ int main() {
         }
     );
     ret2 = getSumOfOutputs(outputs, N);
-    if (ret != ret2) puts("failed !!!");
+    if (ret != ret2) printf("failed !!! %f,%f\n", ret, ret2);
 #endif
 
     puts("sse instrin:");
@@ -168,5 +211,5 @@ int main() {
         }
     );
     ret2 = getSumOfOutputs(outputs, N);
-    if (ret != ret2) puts("failed !!!");
+    if (ret != ret2) printf("failed !!! %f,%f\n", ret, ret2);
 }
