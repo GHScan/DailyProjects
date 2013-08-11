@@ -15,6 +15,8 @@ static void* align_malloc(int size, int align) {
     return p;
 }
 #else
+#define ALIGN(n)  __declspec(align(n))
+#define align_malloc _aligned_malloc
 #endif
 
 struct ALIGN(MEM_ALIGNMENT) Matrix {
