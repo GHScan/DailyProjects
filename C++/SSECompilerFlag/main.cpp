@@ -153,7 +153,6 @@ void transform3(Vector *outputs, int n, const Vector *inputs, const Matrix* _mat
             "movaps %%xmm0, (%1);"
             :
             :"r"(_in), "r"(_out)
-            :"%eax"           
          );
 	}
 }
