@@ -201,7 +201,8 @@ int main() {
     const int LOOP = 1 << 12;
     const int N = 1 << 20;
 
-    char *dest = (char*)malloc(N), *src = (char*)malloc(N);
+    char *dest = (char*)malloc(N); 
+    char *src = (char*)malloc(N);
     int ret, ret2;
 
     ret = benchmark("cpp", copy_cpp1, LOOP, dest, src, N);
@@ -222,4 +223,7 @@ int main() {
 
     ret2 = benchmark("memcpy", copy_memcpy, LOOP, dest, src, N);
     if (ret != ret2) printf("failed: %d, %d\n", ret, ret2);
+
+    free(dest);
+    free(src);
 }
