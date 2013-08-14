@@ -122,17 +122,42 @@ void phase_5(const char *input) {
     if (string_not_equal(buf, "giants")) explode_bomb();
 }
 
+struct Node {int v[2]; Node *next;};
+Node* node1;
 void phase_6(const char *input) {
-    int a[6]; int b[6];
-    char padding[70];
-    // movl   $0x804b26c,-0x34(%ebp)
-    read_six_numbers(input, a);
+    int steps[6]; 
+    Node *nodes[6]; 
+    Node *head = node1;
+    // steps should be node idx which make the node value is in descent order
+    // 0xfd 0x2d5 0x12e 0x3e5 0xd4 0x1b0
+    // so, assert steps == 4 2 6 3 1 5
+    read_six_numbers(input, steps);
     for (int i = 0; i <= 5; ++i) {
-        if (a[i] - 1 > 5) explode_bomb();
+        if (steps[i] > 6) explode_bomb();
         for (int j = i + 1; j <= 5; ++j) {
-            if (a[i] == a[j]) explode_bomb();
+            if (steps[i] == steps[j]) explode_bomb();
         }
     }
-    // 652 ~ 674:
-                             
+
+    for (int i = 0; i <= 5; ++i) {
+        Node *t = head;
+        for (int j = 1; j < steps[i]; ++j) {
+            t = t->next;
+        }
+        nodes[i] = t;
+    }
+
+    Node *cur = nodes[0];
+    head = cur;
+    for (int i = 1; i <= 5; ++i) {
+        cur->next = nodes[i];
+        cur = nodes[i];
+    }
+    cur->next = NULL;
+
+    cur = head;
+    for (int i = 0; i <= 4; ++i) {
+        if (cur->v[0] < cur->next->v[0]) explode_bomb();
+        cur = cur->next;
+    }
 }
