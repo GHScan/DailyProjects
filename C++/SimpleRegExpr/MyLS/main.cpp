@@ -12,12 +12,12 @@
 using namespace std;
 
 bool match(const char *pat, const char *str) {
-    if (pat[0] == 0 && str[0] == 0) return true;
+    if (pat[0] == 0) return str[0] == 0;
     if (pat[0] == '*') {
-        for (; str[0]; ++str) {
+        do {
             if (match(pat + 1, str)) return true;
-        }
-        return match(pat + 1, str);
+        } while(*str++);
+        return false;
     }
     return pat[0] == str[0] && match(pat + 1, str + 1);
 }
@@ -33,7 +33,29 @@ void listfile(const char *dir, const char *pat) {
     closedir(h);
 }
 
+void benchmark() {
+    const char *testCase[][3] = {
+        {"abb*jk*s", "abbfdsjkajs", "",},
+        {"*", "fsjk23fjk89d", "",},
+        {"fs*dd", "fsjk23fjk89d", NULL,},
+        {"*23dfjk*", "bbjkaalfdjk", NULL,},
+        {"*23dfjk*", "fjks23dfjk923", "",},
+    };
+
+    const int LOOP = 2 * 1000 * 1000;
+
+    clock_t start = clock();
+    for (int i = 0; i < LOOP; ++i) {
+        for (int i = 0; i < sizeof(testCase) / sizeof(testCase[0]); ++i) {
+            if (match(testCase[i][0], testCase[i][1]) != (testCase[i][2] != NULL)) puts("error");
+        }
+    }
+    printf("benchmark : %f sec\n", float(clock() - start) / CLOCKS_PER_SEC);
+}
+
 int main() {
+    // benchmark();
+
     for (string line; ;) {
         printf(">>> ");
         getline(cin, line);
