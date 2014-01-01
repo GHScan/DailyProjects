@@ -1,0 +1,54 @@
+stmt : ';'
+    | assign_stmt
+    | call_stmt
+    | if_stmt
+    | while_stmt
+    | break_stmt
+    | block
+    ;
+
+assgin_stmt 
+    : ID '=' expr ';'
+    ;
+
+call_stmt
+    : CALL ID '(' expr* ')' ';'
+    ;
+
+if_stmt
+    : IF '(' expr ')' stmt (ELSE stmt)?
+    ;
+
+while_stmt
+    : WHILE '(' expr ')' stmt
+    ;
+
+break_stmt
+    : BREAK ';'
+    ;
+
+block
+    : '{' stmt* '}'
+    ;
+
+expr 
+    : relat_expr
+    ;
+
+relat_expr 
+    :  add_expr ((EQ | NE | GE | LE) add_expr)*
+    ;
+
+add_expr
+    : mul_expr (('+'|'-') mul_expr)*
+    ;
+
+mul_expr 
+    : primary_expr (('*'|'/'|'%') primary_expr)*
+    ;
+
+primary_expr 
+    : '(' expr ')'
+    | ID
+    | NUMBER
+    ;

@@ -1,0 +1,20 @@
+num = 2;
+while (num < 50) {
+    t = 2;
+    while (t <= num / 2) {
+        if (num % t == 0) break;
+        t = t + 1;
+    }
+    if (t > num / 2) 
+        call print(num);
+
+    num = num + 1;
+}
+
+/*
+i = 0;
+while (i < 1000000) {
+    i = i + 1;
+}
+call print(i);
+*/
