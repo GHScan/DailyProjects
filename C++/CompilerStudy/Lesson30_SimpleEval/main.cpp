@@ -10,9 +10,9 @@ static bool parse_number(const char *&str, double &r) {
     for (; isspace(str[0]); ) ++str;
     double sig = 1;
     for (; str[0] == '-'; ++str) sig = -sig;
-    char *endstr;
+    char *endstr = NULL;
     r = strtod(str, &endstr);
-    if (endstr == NULL) return false;
+    if (endstr == str) return false;
     str = endstr;
     r *= sig;
     return true;
@@ -49,8 +49,8 @@ static bool eval(const char *str, double &r) {
 
 int main() {
     char buf[128];
+    double v;
     while (fgets(buf, sizeof buf, stdin)) {
-        double v;
         if (eval(buf, v)) printf("%g\n", v);
         else puts("invalid expr");
     }
