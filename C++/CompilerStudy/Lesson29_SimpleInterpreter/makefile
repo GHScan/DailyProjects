@@ -5,9 +5,9 @@ include makefile_var
 
 build_type = debug
 
-CXX = g++
-CXXFLAGS += -MMD
-CXXFLAGS += -Wall
+CXX = g++ 
+CXXFLAGS += -MMD 
+CXXFLAGS += -Wall 
 CXXFLAGS += $(foreach i,$(macro_defs),-D $(i))
 CXXFLAGS += $(foreach i,$(include_dirs),-I '$(i)')
 CXXFLAGS += $(foreach i,$(lib_dirs),-L '$(i)')
@@ -21,11 +21,8 @@ endif
 ifeq ($(build_type),debug)
 CXXFLAGS += -g
 else
-CXXFLAGS += -O3 -DNDEBUG
-endif
-ifeq ($(do_profiling),1) 
-CXXFLAGS += -pg
-endif
+CXXFLAGS += -O3 -DNDEBUG -g 
+endif 
 
 srcs = $(wildcard *.cpp)
 objs = $(srcs:.cpp=.o)
@@ -42,11 +39,11 @@ rel_build:
 rel_rebuild: clean
 	$(MAKE) rel_build
 clean: clean_actions
-	rm -f main $(objs) $(all_deps) $(pch_file).gch gmon.out
+	rm -f main $(objs) $(all_deps) $(pch_file).gch
 update_pch: $(pch_file).gch
 
 main: $(objs)
-	$(CXX) -o $@ $(objs) $(CXXFLAGS) 
+	$(CXX)  -o $@ $(objs) $(CXXFLAGS)
 
 $(pch_file).gch: $(pch_file)
 	$(CXX) $(filter-out -MMD,$(CXXFLAGS)) $<

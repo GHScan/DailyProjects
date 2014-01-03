@@ -1,4 +1,3 @@
-do_profiling=0
 use_cpp0x=1
 build_dll=0
 macro_defs=
