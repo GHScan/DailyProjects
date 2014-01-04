@@ -10,3 +10,4 @@ Features:
     + type feedback
     + inline cache(callsite analysis)
     + switch-threading/token-threading(computed goto)
+    + lcoal index for global variable
