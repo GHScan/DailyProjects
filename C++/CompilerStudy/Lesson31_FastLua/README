@@ -1,13 +1,18 @@
-Fast lua
+# Fast lua
 ------------------------------
-Features:
-    + variable-length byte code
+# Features:
     + stack-based vm
-    + stack caching
+    + variable-length byte code
     + mark-sweep gc
     + array / dictionary
+# TODO list:
+    + local index for global variable
+    + switch-threading/token-threading(computed goto)
+    + dll import
+# TODO list 2:
+    + stack caching
     + hiden class
     + type feedback
     + inline cache(callsite analysis)
-    + switch-threading/token-threading(computed goto)
-    + lcoal index for global variable
+    + type specification
+    + trace-based JIT
