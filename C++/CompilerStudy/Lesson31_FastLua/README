@@ -1,0 +1,12 @@
+Fast lua
+------------------------------
+Features:
+    + variable-length byte code
+    + stack-based vm
+    + stack caching
+    + mark-sweep gc
+    + array / dictionary
+    + hiden class
+    + type feedback
+    + inline cache(callsite analysis)
+    + switch-threading/token-threading(computed goto)
