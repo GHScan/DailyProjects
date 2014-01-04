@@ -3,16 +3,16 @@
 # Features:
     + stack-based vm
     + variable-length byte code
-    + mark-sweep gc
-    + array / dictionary
+    + mark-and-sweep gc
+    + object(like lua table)
 # TODO list:
     + local index for global variable
     + switch-threading/token-threading(computed goto)
+    + stack caching(cache top n? see jamVM)
     + dll import
 # TODO list 2:
-    + stack caching
     + hiden class
+    + inline caching
+    + ast->jit(like v8's full-compiler, use inline-caching to deal with type specific code)
     + type feedback
-    + inline cache(callsite analysis)
     + type specification
-    + trace-based JIT
