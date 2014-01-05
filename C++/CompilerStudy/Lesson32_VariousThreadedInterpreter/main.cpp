@@ -15,6 +15,16 @@ using namespace std;
 
 #define BENCHMARK(ops) { clock_t start = clock(); ops; printf("%s: %f\n", #ops, float(clock() - start) / CLOCKS_PER_SEC); }
 
+#ifdef _MSC_VER
+#define FORCE_INLINE  __forceinline
+#elif __GNUC__
+//#define FORCE_INLINE  __attribute__((always_inline))
+#define FORCE_INLINE  inline
+#else
+#define FORCE_INLINE inline
+#endif
+
+// ------------------------------ code emission
 enum OpCode {
     OC_Add, OC_Sub, OC_Mul, OC_Div,
     OC_EQ, OC_NE,
@@ -88,47 +98,48 @@ static void fixupJmpTarget(vector<char>& codes) {
     }
 }
 
-static void _op_add(vector<int> &stack, vector<int> &locals, const char *&ip) {
+// ------------------------------ call-threading interpreter
+FORCE_INLINE static void _op_add(vector<int> &stack, vector<int> &locals, const char *&ip) {
     stack[stack.size() - 2] += stack[stack.size() - 1]; stack.pop_back();
     ip += CodeSize;
 }
-static void _op_sub(vector<int> &stack, vector<int> &locals, const char *&ip) {
+FORCE_INLINE static void _op_sub(vector<int> &stack, vector<int> &locals, const char *&ip) {
     stack[stack.size() - 2] -= stack[stack.size() - 1]; stack.pop_back();
     ip += CodeSize;
 }
-static void _op_mul(vector<int> &stack, vector<int> &locals, const char *&ip) {
+FORCE_INLINE static void _op_mul(vector<int> &stack, vector<int> &locals, const char *&ip) {
     stack[stack.size() - 2] *= stack[stack.size() - 1]; stack.pop_back();
     ip += CodeSize;
 }
-static void _op_div(vector<int> &stack, vector<int> &locals, const char *&ip) {
+FORCE_INLINE static void _op_div(vector<int> &stack, vector<int> &locals, const char *&ip) {
     stack[stack.size() - 2] /= stack[stack.size() - 1]; stack.pop_back();
     ip += CodeSize;
 }
-static void _op_eq(vector<int> &stack, vector<int> &locals, const char *&ip) {
+FORCE_INLINE static void _op_eq(vector<int> &stack, vector<int> &locals, const char *&ip) {
     stack[stack.size() - 2] = stack[stack.size() - 2] == stack[stack.size() - 1]; stack.pop_back();
     ip += CodeSize;
 }
-static void _op_ne(vector<int> &stack, vector<int> &locals, const char *&ip) {
+FORCE_INLINE static void _op_ne(vector<int> &stack, vector<int> &locals, const char *&ip) {
     stack[stack.size() - 2] = stack[stack.size() - 2] != stack[stack.size() - 1]; stack.pop_back();
     ip += CodeSize;
 }
-static void _op_pushLocal(vector<int> &stack, vector<int> &locals, const char *&ip) {
+FORCE_INLINE static void _op_pushLocal(vector<int> &stack, vector<int> &locals, const char *&ip) {
     stack.push_back(locals[*(LocalIdxType*)(ip + CodeSize)]);
     ip += CodeSize + LocalIdxSize;
 }
-static void _op_popLocal(vector<int> &stack, vector<int> &locals, const char *&ip) {
+FORCE_INLINE static void _op_popLocal(vector<int> &stack, vector<int> &locals, const char *&ip) {
     locals[*(LocalIdxType*)(ip + CodeSize)] = stack.back();
     stack.pop_back();
     ip += CodeSize + LocalIdxSize;
 }
-static void _op_pushInt(vector<int> &stack, vector<int> &locals, const char *&ip) {
+FORCE_INLINE static void _op_pushInt(vector<int> &stack, vector<int> &locals, const char *&ip) {
     stack.push_back(*(int*)(ip + CodeSize));
     ip += CodeSize + sizeof(int);
 }
-static void _op_jmp(vector<int> &stack, vector<int> &locals, const char *&ip) {
+FORCE_INLINE static void _op_jmp(vector<int> &stack, vector<int> &locals, const char *&ip) {
     ip += *(int*)(ip + CodeSize);
 }
-static void _op_trueJmp(vector<int> &stack, vector<int> &locals, const char *&ip) {
+FORCE_INLINE static void _op_trueJmp(vector<int> &stack, vector<int> &locals, const char *&ip) {
     int v = stack.back();
     stack.pop_back();
     if (v) {
@@ -137,10 +148,10 @@ static void _op_trueJmp(vector<int> &stack, vector<int> &locals, const char *&ip
         ip += CodeSize + sizeof(int);
     }
 }
-static void _op_nop(vector<int> &stack, vector<int> &locals, const char *&ip) {
+FORCE_INLINE static void _op_nop(vector<int> &stack, vector<int> &locals, const char *&ip) {
     ip += CodeSize;
 }
-static int call_threading_interpreter(const vector<char> &codes) {
+FORCE_INLINE static int call_threading_interpreter(const vector<char> &codes) {
     assert(!codes.empty());
     const char *ip = &codes[0];
     vector<int> stack;
@@ -152,6 +163,7 @@ static int call_threading_interpreter(const vector<char> &codes) {
     return locals[0];
 }
 
+// ------------------------------ switch-threading interpreter with stl
 static int switch_threading_stl_interpreter(const vector<char> &codes) {
     assert(!codes.empty());
     const char *ip = &codes[0];
@@ -159,115 +171,73 @@ static int switch_threading_stl_interpreter(const vector<char> &codes) {
     vector<int> locals(32, 1);
     for (;;) {
         switch ((CodeType&)*ip) {
-            case OC_Add: 
-                stack[stack.size() - 2] += stack[stack.size() - 1]; stack.pop_back();
-                ip += CodeSize;
-                 break;
-            case OC_Sub: 
-                stack[stack.size() - 2] -= stack[stack.size() - 1]; stack.pop_back();
-                ip += CodeSize;
-                 break;
-            case OC_Mul: 
-                stack[stack.size() - 2] *= stack[stack.size() - 1]; stack.pop_back();
-                ip += CodeSize;
-                 break;
-            case OC_Div: 
-                stack[stack.size() - 2] /= stack[stack.size() - 1]; stack.pop_back();
-                ip += CodeSize;
-                 break;
-            case OC_EQ: 
-                stack[stack.size() - 2] = stack[stack.size() - 2] == stack[stack.size() - 1]; stack.pop_back();
-                ip += CodeSize;
-                 break;
-            case OC_NE: 
-                stack[stack.size() - 2] = stack[stack.size() - 2] != stack[stack.size() - 1]; stack.pop_back();
-                ip += CodeSize;
-                 break;
-            case OC_PushLocal: 
-                 stack.push_back(locals[*(LocalIdxType*)(ip + CodeSize)]);
-                ip += CodeSize + LocalIdxSize;
-                 break;
-            case OC_PopLocal: 
-                 locals[*(LocalIdxType*)(ip + CodeSize)] = stack.back();
-                 stack.pop_back();
-                ip += CodeSize + LocalIdxSize;
-                 break;
-            case OC_PushInt:
-                 stack.push_back(*(int*)(ip + CodeSize));
-                 ip += CodeSize + sizeof(int);
-                 break;
-            case OC_Jmp:
-                 ip += *(int*)(ip + CodeSize);
-                 break;
-            case OC_TrueJmp: {
-                     int v = stack.back();
-                     stack.pop_back();
-                     if (v) {
-                         ip += *(int*)(ip + CodeSize);
-                     } else {
-                         ip += CodeSize + sizeof(int);
-                     }
-                 }
-                 break;
-            case OC_EOF:
-                 return locals[0];
-            case OC_NOP:
-            default:
-                 ip += CodeSize;
-                 break;
+            case OC_Add: _op_add(stack, locals, ip); break;
+            case OC_Sub: _op_sub(stack, locals, ip); break;
+            case OC_Mul: _op_mul(stack, locals, ip); break;
+            case OC_Div: _op_div(stack, locals, ip); break;
+            case OC_EQ: _op_eq(stack, locals, ip); break;
+            case OC_NE: _op_ne(stack, locals, ip); break;
+            case OC_PushLocal: _op_pushLocal(stack, locals, ip); break;
+            case OC_PopLocal: _op_popLocal(stack, locals, ip); break;
+            case OC_PushInt: _op_pushInt(stack, locals, ip); break;
+            case OC_Jmp: _op_jmp(stack, locals, ip); break;
+            case OC_TrueJmp: _op_trueJmp(stack, locals, ip); break;
+            case OC_NOP: default: _op_nop(stack, locals, ip); break;
+            case OC_EOF: return locals[0];
         }
     }
     return locals[0];
 }
+//------------------------------ switch-threading interpreter
 static int switch_threading_interpreter(const vector<char> &codes) {
     assert(!codes.empty());
     const char *ip = &codes[0];
-    int stack[32];
-    int stack_top = 0;
+    int stackSpace[32];
+    int *stack = stackSpace;
     int locals[32] = {1};
     for (;;) {
         switch ((CodeType&)*ip) {
             case OC_Add: 
-                stack[stack_top - 2] += stack[stack_top - 1]; --stack_top;
+                stack[-2] += stack[-1]; --stack;
                 ip += CodeSize;
                  break;
             case OC_Sub: 
-                stack[stack_top - 2] -= stack[stack_top - 1]; --stack_top;
+                stack[-2] -= stack[-1]; --stack;
                 ip += CodeSize;
                  break;
             case OC_Mul: 
-                stack[stack_top - 2] *= stack[stack_top - 1]; --stack_top;
+                stack[-2] *= stack[-1]; --stack;
                 ip += CodeSize;
                  break;
             case OC_Div: 
-                stack[stack_top - 2] /= stack[stack_top - 1]; --stack_top;
+                stack[-2] /= stack[-1]; --stack;
                 ip += CodeSize;
                  break;
             case OC_EQ: 
-                stack[stack_top - 2] = stack[stack_top - 2] == stack[stack_top - 1]; --stack_top;
+                stack[-2] = stack[-2] == stack[-1]; --stack;
                 ip += CodeSize;
                  break;
             case OC_NE: 
-                stack[stack_top - 2] = stack[stack_top - 2] != stack[stack_top - 1]; --stack_top;
+                stack[-2] = stack[-2] != stack[-1]; --stack;
                 ip += CodeSize;
                  break;
             case OC_PushLocal: 
-                 stack[stack_top++] = locals[*(LocalIdxType*)(ip + CodeSize)];
+                 *stack++ = locals[*(LocalIdxType*)(ip + CodeSize)];
                 ip += CodeSize + LocalIdxSize;
                  break;
             case OC_PopLocal: 
-                 locals[*(LocalIdxType*)(ip + CodeSize)] = stack[--stack_top];
+                 locals[*(LocalIdxType*)(ip + CodeSize)] = *--stack;
                 ip += CodeSize + LocalIdxSize;
                  break;
             case OC_PushInt:
-                 stack[stack_top++] = *(int*)(ip + CodeSize);
+                 *stack++ = *(int*)(ip + CodeSize);
                  ip += CodeSize + sizeof(int);
                  break;
             case OC_Jmp:
                  ip += *(int*)(ip + CodeSize);
                  break;
             case OC_TrueJmp: {
-                     int v = stack[--stack_top];
+                     int v = *--stack;
                      if (v) {
                          ip += *(int*)(ip + CodeSize);
                      } else {
@@ -285,6 +255,8 @@ static int switch_threading_interpreter(const vector<char> &codes) {
     }
     return locals[0];
 }
+
+// ------------------------------ replicate-switch-threading interpreter
 static int replicate_switch_threading_interpreter(const vector<char>& codes) {
 #define NEXT() switch ((CodeType&)*ip) {\
     case OC_Add: goto label_Add;\
@@ -305,52 +277,52 @@ static int replicate_switch_threading_interpreter(const vector<char>& codes) {
 
     assert(!codes.empty());
     const char *ip = &codes[0];
-    int stack[32];
-    int stack_top = 0;
+    int stackSpace[32];
+    int *stack = stackSpace;
     int locals[32] = {1};
 
     NEXT();
     label_Add: 
-        stack[stack_top - 2] += stack[stack_top - 1]; --stack_top;
+        stack[-2] += stack[-1]; --stack;
         ip += CodeSize;
          NEXT();
     label_Sub: 
-        stack[stack_top - 2] -= stack[stack_top - 1]; --stack_top;
+        stack[-2] -= stack[-1]; --stack;
         ip += CodeSize;
          NEXT();
     label_Mul: 
-        stack[stack_top - 2] *= stack[stack_top - 1]; --stack_top;
+        stack[-2] *= stack[-1]; --stack;
         ip += CodeSize;
          NEXT();
     label_Div: 
-        stack[stack_top - 2] /= stack[stack_top - 1]; --stack_top;
+        stack[-2] /= stack[-1]; --stack;
         ip += CodeSize;
          NEXT();
     label_EQ: 
-        stack[stack_top - 2] = stack[stack_top - 2] == stack[stack_top - 1]; --stack_top;
+        stack[-2] = stack[-2] == stack[-1]; --stack;
         ip += CodeSize;
          NEXT();
     label_NE: 
-        stack[stack_top - 2] = stack[stack_top - 2] != stack[stack_top - 1]; --stack_top;
+        stack[-2] = stack[-2] != stack[-1]; --stack;
         ip += CodeSize;
          NEXT();
     label_PushLocal: 
-         stack[stack_top++] = locals[*(LocalIdxType*)(ip + CodeSize)];
+         *stack++ = locals[*(LocalIdxType*)(ip + CodeSize)];
         ip += CodeSize + LocalIdxSize;
          NEXT();
     label_PopLocal: 
-         locals[*(LocalIdxType*)(ip + CodeSize)] = stack[--stack_top];
+         locals[*(LocalIdxType*)(ip + CodeSize)] = *--stack;
         ip += CodeSize + LocalIdxSize;
          NEXT();
     label_PushInt:
-         stack[stack_top++] = *(int*)(ip + CodeSize);
+         *stack++ = *(int*)(ip + CodeSize);
          ip += CodeSize + sizeof(int);
          NEXT();
     label_Jmp:
          ip += *(int*)(ip + CodeSize);
          NEXT();
     label_TrueJmp: {
-             int v = stack[--stack_top];
+             int v = *--stack;
              if (v) {
                  ip += *(int*)(ip + CodeSize);
              } else {
@@ -365,6 +337,8 @@ static int replicate_switch_threading_interpreter(const vector<char>& codes) {
              NEXT();
 #undef NEXT
 }
+
+// ------------------------------ token-threading interpreter
 static int token_threading_interpreter(const vector<char> &codes) {
 #ifndef __GNUC__
     return 0;
@@ -374,54 +348,54 @@ static int token_threading_interpreter(const vector<char> &codes) {
 
     assert(!codes.empty());
     const char *ip = &codes[0];
-    int stack[32];
-    int stack_top = 0;
+    int stackSpace[32];
+    int *stack = stackSpace;
     int locals[32] = {1};
 
     void* labels[] = { &&label_Add, &&label_Sub, &&label_Mul, &&label_Div, &&label_EQ, &&label_NE, &&label_PushLocal, &&label_PopLocal, &&label_PushInt, &&label_Jmp, &&label_TrueJmp, &&label_EOF, &&label_NOP, };
 
     NEXT();
     label_Add: 
-        stack[stack_top - 2] += stack[stack_top - 1]; --stack_top;
+        stack[-2] += stack[-1]; --stack;
         ip += CodeSize;
          NEXT();
     label_Sub: 
-        stack[stack_top - 2] -= stack[stack_top - 1]; --stack_top;
+        stack[-2] -= stack[-1]; --stack;
         ip += CodeSize;
          NEXT();
     label_Mul: 
-        stack[stack_top - 2] *= stack[stack_top - 1]; --stack_top;
+        stack[-2] *= stack[-1]; --stack;
         ip += CodeSize;
          NEXT();
     label_Div: 
-        stack[stack_top - 2] /= stack[stack_top - 1]; --stack_top;
+        stack[-2] /= stack[-1]; --stack;
         ip += CodeSize;
          NEXT();
     label_EQ: 
-        stack[stack_top - 2] = stack[stack_top - 2] == stack[stack_top - 1]; --stack_top;
+        stack[-2] = stack[-2] == stack[-1]; --stack;
         ip += CodeSize;
          NEXT();
     label_NE: 
-        stack[stack_top - 2] = stack[stack_top - 2] != stack[stack_top - 1]; --stack_top;
+        stack[-2] = stack[-2] != stack[-1]; --stack;
         ip += CodeSize;
          NEXT();
     label_PushLocal: 
-         stack[stack_top++] = locals[*(LocalIdxType*)(ip + CodeSize)];
+         *stack++ = locals[*(LocalIdxType*)(ip + CodeSize)];
         ip += CodeSize + LocalIdxSize;
          NEXT();
     label_PopLocal: 
-         locals[*(LocalIdxType*)(ip + CodeSize)] = stack[--stack_top];
+         locals[*(LocalIdxType*)(ip + CodeSize)] = *--stack;
         ip += CodeSize + LocalIdxSize;
          NEXT();
     label_PushInt:
-         stack[stack_top++] = *(int*)(ip + CodeSize);
+         *stack++ = *(int*)(ip + CodeSize);
          ip += CodeSize + sizeof(int);
          NEXT();
     label_Jmp:
          ip += *(int*)(ip + CodeSize);
          NEXT();
     label_TrueJmp: {
-             int v = stack[--stack_top];
+             int v = *--stack;
              if (v) {
                  ip += *(int*)(ip + CodeSize);
              } else {
@@ -438,6 +412,7 @@ static int token_threading_interpreter(const vector<char> &codes) {
 
 #endif
 }
+//------------------------------ direct-threading interpreter
 static int direct_threading_interpreter(const vector<char> &_codes) {
 
 #if defined(__GNUC__) && !defined(__x86_64__) && (CodeSize == 4)
@@ -465,52 +440,52 @@ static int direct_threading_interpreter(const vector<char> &_codes) {
 
     assert(!codes.empty());
     const char *ip = &codes[0];
-    int stack[32];
-    int stack_top = 0;
+    int stackSpace[32];
+    int *stack = stackSpace;
     int locals[32] = {1};
 
     NEXT();
     label_Add: 
-        stack[stack_top - 2] += stack[stack_top - 1]; --stack_top;
+        stack[-2] += stack[-1]; --stack;
         ip += CodeSize;
          NEXT();
     label_Sub: 
-        stack[stack_top - 2] -= stack[stack_top - 1]; --stack_top;
+        stack[-2] -= stack[-1]; --stack;
         ip += CodeSize;
          NEXT();
     label_Mul: 
-        stack[stack_top - 2] *= stack[stack_top - 1]; --stack_top;
+        stack[-2] *= stack[-1]; --stack;
         ip += CodeSize;
          NEXT();
     label_Div: 
-        stack[stack_top - 2] /= stack[stack_top - 1]; --stack_top;
+        stack[-2] /= stack[-1]; --stack;
         ip += CodeSize;
          NEXT();
     label_EQ: 
-        stack[stack_top - 2] = stack[stack_top - 2] == stack[stack_top - 1]; --stack_top;
+        stack[-2] = stack[-2] == stack[-1]; --stack;
         ip += CodeSize;
          NEXT();
     label_NE: 
-        stack[stack_top - 2] = stack[stack_top - 2] != stack[stack_top - 1]; --stack_top;
+        stack[-2] = stack[-2] != stack[-1]; --stack;
         ip += CodeSize;
          NEXT();
     label_PushLocal: 
-         stack[stack_top++] = locals[*(LocalIdxType*)(ip + CodeSize)];
+         *stack++ = locals[*(LocalIdxType*)(ip + CodeSize)];
         ip += CodeSize + LocalIdxSize;
          NEXT();
     label_PopLocal: 
-         locals[*(LocalIdxType*)(ip + CodeSize)] = stack[--stack_top];
+         locals[*(LocalIdxType*)(ip + CodeSize)] = *--stack;
         ip += CodeSize + LocalIdxSize;
          NEXT();
     label_PushInt:
-         stack[stack_top++] = *(int*)(ip + CodeSize);
+         *stack++ = *(int*)(ip + CodeSize);
          ip += CodeSize + sizeof(int);
          NEXT();
     label_Jmp:
          ip += *(int*)(ip + CodeSize);
          NEXT();
     label_TrueJmp: {
-             int v = stack[--stack_top];
+             int v = *--stack;
              if (v) {
                  ip += *(int*)(ip + CodeSize);
              } else {
@@ -530,12 +505,13 @@ static int direct_threading_interpreter(const vector<char> &_codes) {
 #endif
 }
 
+//------------------------------ jit interpreter
 static int jit_interpreter(const vector<char> &codes) {
     int MEM_SIZE = 4 * 1024;
     char *p = (char*)mmap(NULL, MEM_SIZE, PROT_EXEC | PROT_WRITE | PROT_READ, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
     if (p == MAP_FAILED) puts(strerror(errno)), exit(1);
 
-#define EMIT_NATIVE(...)  { char codes[] = {__VA_ARGS__}; memcpy(bytes, codes, sizeof(codes)); bytes += sizeof(codes);}
+#define EMIT_NATIVE(...)  { unsigned char codes[] = {__VA_ARGS__}; memcpy(bytes, codes, sizeof(codes)); bytes += sizeof(codes);}
 #define EMIT_NATIVE_INT(i) { int v = i; memcpy(bytes, &v, sizeof(v)); bytes += sizeof(v); }
 
     char *bytes = p;
