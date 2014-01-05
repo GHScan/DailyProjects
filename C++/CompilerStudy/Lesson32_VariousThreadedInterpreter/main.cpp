@@ -11,9 +11,37 @@
 #include <sys/mman.h>
 #endif
 
+#ifdef _MSC_VER
+#pragma warning(disable : 4312)
+#pragma warning(disable : 4311)
+#include <Windows.h>
+#pragma warning(disable : 4312)
+#pragma warning(disable : 4311)
+#endif
+
 using namespace std;
 
 #define BENCHMARK(ops) { clock_t start = clock(); ops; printf("%s: %f\n", #ops, float(clock() - start) / CLOCKS_PER_SEC); }
+
+#ifdef __GNUC__
+static void* allocExceMem(int memSize) {
+    char *p = (char*)mmap(NULL, memSize, PROT_EXEC | PROT_WRITE | PROT_READ, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    if (p == MAP_FAILED) puts(strerror(errno)), exit(1);
+    return p;
+}
+static void freeExecMem(void *p, int memSize) {
+    munmap(p, mmeSize);
+}
+#endif
+
+#ifdef _MSC_VER
+static void* allocExceMem(int memSize) {
+    return VirtualAlloc(NULL, memSize, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+}
+static void freeExecMem(void *p, int memSize) {
+	VirtualFree(p, 0, MEM_RELEASE);
+}
+#endif
 
 #ifdef _MSC_VER
 #define FORCE_INLINE  __forceinline
@@ -76,7 +104,7 @@ static void fixupJmpTarget(vector<char>& codes) {
                 i += CodeSize;
         }
     }
-    codeOffs.push_back(codes.size());
+    codeOffs.push_back((int)codes.size());
 
     for (int i = 0; i < (int)codes.size();) {
         switch ((CodeType&)codes[i]) {
@@ -508,8 +536,7 @@ static int direct_threading_interpreter(const vector<char> &_codes) {
 //------------------------------ jit interpreter
 static int jit_interpreter(const vector<char> &codes) {
     int MEM_SIZE = 4 * 1024;
-    char *p = (char*)mmap(NULL, MEM_SIZE, PROT_EXEC | PROT_WRITE | PROT_READ, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-    if (p == MAP_FAILED) puts(strerror(errno)), exit(1);
+    char *p = (char*)allocExceMem(MEM_SIZE);
 
 #define EMIT_NATIVE(...)  { unsigned char codes[] = {__VA_ARGS__}; memcpy(bytes, codes, sizeof(codes)); bytes += sizeof(codes);}
 #define EMIT_NATIVE_INT(i) { int v = i; memcpy(bytes, &v, sizeof(v)); bytes += sizeof(v); }
@@ -527,7 +554,7 @@ static int jit_interpreter(const vector<char> &codes) {
 
     const char *ip = &codes[0];
     for (;;) {
-        bcOff2NativeOff[ip - &codes[0]] = bytes - p;
+        bcOff2NativeOff[int(ip - &codes[0])] = int(bytes - p);
         switch ((CodeType&)*ip) {
             case OC_Add: 
                 EMIT_NATIVE(0x8b, 0x04, 0x24); // mov (%esp), %eax
@@ -592,7 +619,7 @@ static int jit_interpreter(const vector<char> &codes) {
             case OC_Jmp:
                  EMIT_NATIVE(0xe9);
                  jmpTargets.push_back((int*)bytes);
-                 EMIT_NATIVE_INT(ip + *(int*)(ip + CodeSize) - &codes[0]);
+                 EMIT_NATIVE_INT(int(ip + *(int*)(ip + CodeSize) - &codes[0]));
                  ip += CodeSize + sizeof(int);
                  break;
             case OC_TrueJmp: {
@@ -601,7 +628,7 @@ static int jit_interpreter(const vector<char> &codes) {
                      EMIT_NATIVE(0x85, 0xc0);// test   %eax,%eax
                      EMIT_NATIVE(0x0f, 0x85);// je
                      jmpTargets.push_back((int*)bytes);
-                     EMIT_NATIVE_INT(ip + *(int*)(ip + CodeSize) - &codes[0]);
+                     EMIT_NATIVE_INT(int(ip + *(int*)(ip + CodeSize) - &codes[0]));
                      ip += CodeSize + sizeof(int);
                  }
                  break;
@@ -616,7 +643,7 @@ static int jit_interpreter(const vector<char> &codes) {
 label_end_loop:
 
     for (int i = 0; i < (int)jmpTargets.size(); ++i) {
-        *jmpTargets[i] = p + bcOff2NativeOff[*jmpTargets[i]] - ((char*)jmpTargets[i] + 4);
+        *jmpTargets[i] = int(p + bcOff2NativeOff[*jmpTargets[i]] - ((char*)jmpTargets[i] + 4));
     }
 
     EMIT_NATIVE(0x8b, 0x45, 0xfc); // mov -4(%ebp), %eax
@@ -629,7 +656,7 @@ label_end_loop:
 
     int r = ((int(*)())p)();
 
-    munmap(p, MEM_SIZE);
+    freeExecMem(p, MEM_SIZE);
 
 #undef EMIT_NATIVE_INT
 #undef EMIT_NATIVE
