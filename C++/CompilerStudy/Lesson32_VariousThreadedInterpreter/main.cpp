@@ -16,8 +16,8 @@
 #pragma warning(disable : 4312)
 #pragma warning(disable : 4311)
 #include <Windows.h>
-#pragma warning(disable : 4312)
-#pragma warning(disable : 4311)
+#pragma warning(default : 4312)
+#pragma warning(default : 4311)
 #endif
 
 using namespace std;
@@ -53,6 +53,7 @@ static void freeExecMem(void *p, int memSize) {
 #define FORCE_INLINE inline
 #endif
 
+//==============================
 // ------------------------------ code emission
 enum OpCode {
     OC_Add, OC_Sub, OC_Mul, OC_Div,
@@ -61,7 +62,7 @@ enum OpCode {
     OC_PushInt,
     OC_Jmp, OC_TrueJmp,
     OC_EOF,
-    OC_NOP,
+    OC_Nop,
     OC_RepeatUtil, // rest, iter, step, target
 };
 
@@ -79,20 +80,21 @@ typedef CodeTypeSelector<CodeSize>::type CodeType;
 typedef CodeType LocalIdxType;
 static const int LocalIdxSize = CodeSize;
 
-static void emit(vector<char> &codes, OpCode code) {
+template<typename TOpCode>
+static void emit(vector<char> &codes, TOpCode code) {
     int pos = (int)codes.size();
     codes.resize(pos + CodeSize);
     memcpy(&codes[pos], &code, CodeSize);
 }
-template<typename VType>
-static void emit(vector<char> &codes, OpCode code, VType value) {
+template<typename TOpCode, typename TValue>
+static void emit(vector<char> &codes, TOpCode code, TValue value) {
     int pos = (int)codes.size();
     codes.resize(pos + CodeSize + sizeof(value));
     memcpy(&codes[pos], &code, CodeSize);
     memcpy(&codes[pos + CodeSize], &value, sizeof(value));
 }
-template<typename VType>
-static void emitValue(vector<char> &codes, VType value) {
+template<typename TValue>
+static void emitValue(vector<char> &codes, TValue value) {
     int pos = (int)codes.size();
     codes.resize(pos + sizeof(value));
     memcpy(&codes[pos], &value, sizeof(value));
@@ -236,7 +238,7 @@ static int switch_threading_stl_interpreter(const vector<char> &codes) {
             case OC_PushInt: _op_pushInt(stack, locals, ip); break;
             case OC_Jmp: _op_jmp(stack, locals, ip); break;
             case OC_TrueJmp: _op_trueJmp(stack, locals, ip); break;
-            case OC_NOP: default: _op_nop(stack, locals, ip); break;
+            case OC_Nop: default: _op_nop(stack, locals, ip); break;
             case OC_RepeatUtil: _op_repeatUtil(stack, locals, ip); break;
             case OC_EOF: return locals[0];
         }
@@ -302,7 +304,7 @@ static int switch_threading_interpreter(const vector<char> &codes) {
                  break;
             case OC_EOF:
                  return locals[0];
-            case OC_NOP:
+            case OC_Nop:
             default:
                  ip += CodeSize;
                  break;
@@ -337,9 +339,9 @@ static int replicate_switch_threading_interpreter(const vector<char>& codes) {
     case OC_Jmp: goto label_Jmp;\
     case OC_TrueJmp: goto label_TrueJmp;\
     case OC_EOF: goto label_EOF;\
-    case OC_NOP: goto label_NOP;\
+    case OC_Nop: goto label_Nop;\
     case OC_RepeatUtil: goto label_RepeatUtil;\
-    default: goto label_NOP;\
+    default: goto label_Nop;\
 }
 
     assert(!codes.empty());
@@ -399,7 +401,7 @@ static int replicate_switch_threading_interpreter(const vector<char>& codes) {
          NEXT();
     label_EOF:
          return locals[0];
-    label_NOP:
+    label_Nop:
          ip += CodeSize;
              NEXT();
     label_RepeatUtil: {
@@ -430,7 +432,7 @@ static int token_threading_interpreter(const vector<char> &codes) {
     int *stackTop = stack;
     int locals[32] = {1};
 
-    void* labels[] = { &&label_Add, &&label_Sub, &&label_Mul, &&label_Div, &&label_EQ, &&label_NE, &&label_PushLocal, &&label_PopLocal, &&label_PushInt, &&label_Jmp, &&label_TrueJmp, &&label_EOF, &&label_NOP, &&label_RepeatUtil};
+    void* labels[] = { &&label_Add, &&label_Sub, &&label_Mul, &&label_Div, &&label_EQ, &&label_NE, &&label_PushLocal, &&label_PopLocal, &&label_PushInt, &&label_Jmp, &&label_TrueJmp, &&label_EOF, &&label_Nop, &&label_RepeatUtil};
 
     NEXT();
     label_Add: 
@@ -483,7 +485,7 @@ static int token_threading_interpreter(const vector<char> &codes) {
          NEXT();
     label_EOF:
          return locals[0];
-    label_NOP:
+    label_Nop:
          ip += CodeSize;
              NEXT();
     label_RepeatUtil: {
@@ -508,7 +510,7 @@ static int direct_threading_interpreter(const vector<char> &_codes) {
 
 #define NEXT() goto **(void**)ip
 
-    void* labels[] = { &&label_Add, &&label_Sub, &&label_Mul, &&label_Div, &&label_EQ, &&label_NE, &&label_PushLocal, &&label_PopLocal, &&label_PushInt, &&label_Jmp, &&label_TrueJmp, &&label_EOF, &&label_NOP, &&label_RepeatUtil};
+    void* labels[] = { &&label_Add, &&label_Sub, &&label_Mul, &&label_Div, &&label_EQ, &&label_NE, &&label_PushLocal, &&label_PopLocal, &&label_PushInt, &&label_Jmp, &&label_TrueJmp, &&label_EOF, &&label_Nop, &&label_RepeatUtil};
     vector<char> codes(_codes);
     for (int i = 0; i < (int)codes.size(); ) {
         CodeType code = (CodeType&)codes[i];
@@ -588,7 +590,7 @@ static int direct_threading_interpreter(const vector<char> &_codes) {
          NEXT();
     label_EOF:
          return locals[0];
-    label_NOP:
+    label_Nop:
          ip += CodeSize;
              NEXT();
     label_RepeatUtil: {
@@ -709,7 +711,7 @@ static int jit_interpreter(const vector<char> &codes) {
                  break;
             case OC_EOF:
                  goto label_end_loop;
-            case OC_NOP:
+            case OC_Nop:
             default:
                  ip += CodeSize;
                  break;
@@ -738,8 +740,185 @@ label_end_loop:
 
     return r;
 }
+//==============================
+enum RB_OpCode {
+    RBOC_LoadK,
+    RBOC_Mov,
+    RBOC_Add, RBOC_Sub, RBOC_Mul, RBOC_Div,
+    RBOC_EQ, RBOC_NE,
+    RBOC_Jmp, RBOC_TrueJmp,
+    RBOC_RepeatUtil,
+    RBOC_Nop,
+    RBOC_EOF,
+};
 
-// TODO: register-based vm
+static void rb_fixupJmpTarget(vector<char>& codes) {
+    vector<int> codeOffs;
+    for (int i = 0; i < (int)codes.size();) {
+        codeOffs.push_back(i);
+        switch ((CodeType&)codes[i]) {
+            case RBOC_LoadK: i += CodeSize + LocalIdxSize + sizeof(int); break;
+            case RBOC_Mov: i += CodeSize + LocalIdxSize * 2; break;
+            case RBOC_Add: case RBOC_Sub: case RBOC_Mul: case RBOC_Div: case RBOC_EQ: case RBOC_NE: 
+                   i += CodeSize + LocalIdxSize * 3; break;
+            case RBOC_Jmp: i += CodeSize + sizeof(int); break;
+            case RBOC_TrueJmp: i += CodeSize + LocalIdxSize + sizeof(int); break;
+            case RBOC_RepeatUtil: i += CodeSize + LocalIdxSize * 3 + sizeof(int); break;
+            default: i += CodeSize; break;
+        }
+    }
+    codeOffs.push_back((int)codes.size());
+
+    for (int i = 0; i < (int)codes.size();) {
+        switch ((CodeType&)codes[i]) {
+            case RBOC_LoadK: i += CodeSize + LocalIdxSize + sizeof(int); break;
+            case RBOC_Mov: i += CodeSize + LocalIdxSize * 2; break;
+            case RBOC_Add: case RBOC_Sub: case RBOC_Mul: case RBOC_Div: case RBOC_EQ: case RBOC_NE: 
+                   i += CodeSize + LocalIdxSize * 3; break;
+            case RBOC_Jmp:  {
+                        int *p = (int*)(&codes[i] + CodeSize);
+                        *p = codeOffs[*p] - i;
+                    }
+                   i += CodeSize + sizeof(int); break;
+            case RBOC_TrueJmp: {
+                        int *p = (int*)(&codes[i] + CodeSize + LocalIdxSize);
+                        *p = codeOffs[*p] - i;
+                    }
+                   i += CodeSize + LocalIdxSize + sizeof(int); break;
+            case RBOC_RepeatUtil: {
+                        int *p = (int*)(&codes[i] + CodeSize + LocalIdxSize * 3);
+                        *p = codeOffs[*p] - i;
+                   }
+                   i += CodeSize + LocalIdxSize * 3 + sizeof(int); break;
+            default: i += CodeSize; break;
+        }
+    }
+}
+// ------------------------------ call-threading interpreter
+FORCE_INLINE static void rb_op_loadk(vector<int> &locals, const char *&ip) {
+    locals[*(LocalIdxType*)(ip + CodeSize)] = *(int*)(ip + CodeSize + LocalIdxSize);
+    ip += CodeSize + LocalIdxSize + sizeof(int);
+}
+FORCE_INLINE static void rb_op_mov(vector<int> &locals, const char *&ip) {
+    LocalIdxType *vars = (LocalIdxType*)(ip + CodeSize);
+    locals[vars[0]] = locals[vars[1]];
+    ip += CodeSize + LocalIdxSize * 2; 
+}
+FORCE_INLINE static void rb_op_add(vector<int> &locals, const char *&ip) {
+    LocalIdxType *vars = (LocalIdxType*)(ip + CodeSize);
+    locals[vars[0]] = locals[vars[1]] + locals[vars[2]];
+    ip += CodeSize + LocalIdxSize * 3; 
+}
+FORCE_INLINE static void rb_op_sub(vector<int> &locals, const char *&ip) {
+    LocalIdxType *vars = (LocalIdxType*)(ip + CodeSize);
+    locals[vars[0]] = locals[vars[1]] - locals[vars[2]];
+    ip += CodeSize + LocalIdxSize * 3; 
+}
+FORCE_INLINE static void rb_op_mul(vector<int> &locals, const char *&ip) {
+    LocalIdxType *vars = (LocalIdxType*)(ip + CodeSize);
+    locals[vars[0]] = locals[vars[1]] * locals[vars[2]];
+    ip += CodeSize + LocalIdxSize * 3; 
+}
+FORCE_INLINE static void rb_op_div(vector<int> &locals, const char *&ip) {
+    LocalIdxType *vars = (LocalIdxType*)(ip + CodeSize);
+    locals[vars[0]] = locals[vars[1]] / locals[vars[2]];
+    ip += CodeSize + LocalIdxSize * 3; 
+}
+FORCE_INLINE static void rb_op_eq(vector<int> &locals, const char *&ip) {
+    LocalIdxType *vars = (LocalIdxType*)(ip + CodeSize);
+    locals[vars[0]] = locals[vars[1]] == locals[vars[2]];
+    ip += CodeSize + LocalIdxSize * 3; 
+}
+FORCE_INLINE static void rb_op_ne(vector<int> &locals, const char *&ip) {
+    LocalIdxType *vars = (LocalIdxType*)(ip + CodeSize);
+    locals[vars[0]] = locals[vars[1]] != locals[vars[2]];
+    ip += CodeSize + LocalIdxSize * 3; 
+}
+FORCE_INLINE static void rb_op_jmp(vector<int> &locals, const char *&ip) {
+    ip += *(int*)(ip + CodeSize);
+}
+FORCE_INLINE static void rb_op_trueJmp(vector<int> &locals, const char *&ip) {
+    LocalIdxType *vars = (LocalIdxType*)(ip + CodeSize);
+    if (locals[vars[0]]) {
+        ip += *(int*)(ip + CodeSize + LocalIdxSize);
+    } else {
+        ip += CodeSize + LocalIdxSize + sizeof(int);
+    }
+}
+FORCE_INLINE static void rb_op_nop(vector<int> &locals, const char *&ip) {
+    ip += CodeSize;
+}
+FORCE_INLINE static void rb_op_repeatUtil(vector<int> &locals, const char *&ip) {
+    LocalIdxType *vars = (LocalIdxType*)(ip + CodeSize);
+    if (locals[vars[0]] > 0) {
+        --locals[vars[0]];
+        locals[vars[1]] += locals[vars[2]];
+        ip += CodeSize + LocalIdxSize * 3 + sizeof(int);
+    } else {
+        ip += *(int*)(ip + CodeSize + LocalIdxSize * 3);
+    }
+}
+FORCE_INLINE static int rb_call_threading_interpreter(const vector<char> &codes) {
+    assert(!codes.empty());
+    const char *ip = &codes[0];
+    vector<int> locals(32, 1);
+    void(*funcs[])(vector<int>&, const char*&) = { rb_op_loadk, rb_op_mov, rb_op_add, rb_op_sub, rb_op_mul, rb_op_div, rb_op_eq, rb_op_ne, rb_op_jmp, rb_op_trueJmp, rb_op_repeatUtil, rb_op_nop, NULL};
+    while ((CodeType&)*ip != OC_EOF) {
+        funcs[(CodeType&)*ip](locals, ip);
+    }
+    return locals[0];
+}
+// ------------------------------ switch-threading interpreter with stl
+static int rb_switch_threading_stl_interpreter(const vector<char> &codes) {
+    assert(!codes.empty());
+    const char *ip = &codes[0];
+    vector<int> locals(32, 1);
+    for (;;) {
+        switch ((CodeType&)*ip) {
+            case RBOC_LoadK: rb_op_loadk(locals, ip); break;
+            case RBOC_Mov: rb_op_mov(locals, ip); break;
+            case RBOC_Add: rb_op_add(locals, ip); break;
+            case RBOC_Sub: rb_op_sub(locals, ip); break;
+            case RBOC_Mul: rb_op_mul(locals, ip); break;
+            case RBOC_Div: rb_op_div(locals, ip); break;
+            case RBOC_EQ: rb_op_eq(locals, ip); break;
+            case RBOC_NE: rb_op_ne(locals, ip); break;
+            case RBOC_Jmp: rb_op_jmp(locals, ip); break;
+            case RBOC_TrueJmp: rb_op_trueJmp(locals, ip); break;
+            case RBOC_RepeatUtil: rb_op_repeatUtil(locals, ip); break;
+            case RBOC_EOF: return locals[0];
+            case RBOC_Nop: 
+            default: rb_op_nop(locals, ip); break;
+        }
+    }
+    return locals[0];
+}
+// ------------------------------ switch-threading interpreter 
+static int rb_switch_threading_interpreter(const vector<char> &codes) {
+    // TODO
+    return 0;
+}
+// ------------------------------ replicate_switch-threading interpreter 
+static int rb_replicate_switch_threading_interpreter(const vector<char> &codes) {
+    // TODO
+    return 0;
+}
+// ------------------------------ token-threading interpreter 
+static int rb_token_threading_interpreter(const vector<char> &codes) {
+    // TODO
+    return 0;
+}
+// ------------------------------ direct-threading interpreter 
+static int rb_direct_threading_interpreter(const vector<char> &codes) {
+    // TODO
+    return 0;
+}
+// ------------------------------ jit interpreter 
+static int rb_jit_interpreter(const vector<char> &codes) {
+    // TODO
+    return 0;
+}
+//==============================
 
 int main(int argc, char *argv[]) {
     int LOOP = 1000;
@@ -752,6 +931,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    //============================== stack-based vm
     /*
         pushInt 0
         popLocal 10
@@ -846,7 +1026,6 @@ label_end1:
     BENCHMARK(int v = direct_threading_interpreter(codes); (void)v; assert(v == expectedValue || !v););
     BENCHMARK(int v = jit_interpreter(codes); (void)v; assert(v == expectedValue || !v););
 
-    // TODO: trick for
     /*
        pushInt 0
        popLocal 6
@@ -934,4 +1113,8 @@ label_end1:
     BENCHMARK(int v = replicate_switch_threading_interpreter(codes); (void)v; assert(v == expectedValue || !v););
     BENCHMARK(int v = token_threading_interpreter(codes); (void)v; assert(v == expectedValue || !v););
     BENCHMARK(int v = direct_threading_interpreter(codes); (void)v; assert(v == expectedValue || !v););
+    // TODO: jit_interpreter
+
+
+    //============================== register-based vm
 }
