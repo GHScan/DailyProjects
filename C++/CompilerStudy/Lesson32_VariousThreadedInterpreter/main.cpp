@@ -191,11 +191,6 @@ FORCE_INLINE static int call_threading_interpreter(const vector<char> &codes) {
     }
     return locals[0];
 }
-//------------------------------ subroutine-threading interpreter
-static int subroutine_threading_interpreter(const vector<char> &codes) {
-    // TODO
-    return 0;
-}
 // ------------------------------ switch-threading interpreter with stl
 static int switch_threading_stl_interpreter(const vector<char> &codes) {
     assert(!codes.empty());
@@ -225,52 +220,52 @@ static int switch_threading_stl_interpreter(const vector<char> &codes) {
 static int switch_threading_interpreter(const vector<char> &codes) {
     assert(!codes.empty());
     const char *ip = &codes[0];
-    int stackSpace[32];
-    int *stack = stackSpace;
+    int stack[32];
+    int *stackTop = stack;
     int locals[32] = {1};
     for (;;) {
         switch ((CodeType&)*ip) {
             case OC_Add: 
-                stack[-2] += stack[-1]; --stack;
+                stackTop[-2] += stackTop[-1]; --stackTop;
                 ip += CodeSize;
                  break;
             case OC_Sub: 
-                stack[-2] -= stack[-1]; --stack;
+                stackTop[-2] -= stackTop[-1]; --stackTop;
                 ip += CodeSize;
                  break;
             case OC_Mul: 
-                stack[-2] *= stack[-1]; --stack;
+                stackTop[-2] *= stackTop[-1]; --stackTop;
                 ip += CodeSize;
                  break;
             case OC_Div: 
-                stack[-2] /= stack[-1]; --stack;
+                stackTop[-2] /= stackTop[-1]; --stackTop;
                 ip += CodeSize;
                  break;
             case OC_EQ: 
-                stack[-2] = stack[-2] == stack[-1]; --stack;
+                stackTop[-2] = stackTop[-2] == stackTop[-1]; --stackTop;
                 ip += CodeSize;
                  break;
             case OC_NE: 
-                stack[-2] = stack[-2] != stack[-1]; --stack;
+                stackTop[-2] = stackTop[-2] != stackTop[-1]; --stackTop;
                 ip += CodeSize;
                  break;
             case OC_PushLocal: 
-                 *stack++ = locals[*(LocalIdxType*)(ip + CodeSize)];
+                 *stackTop++ = locals[*(LocalIdxType*)(ip + CodeSize)];
                 ip += CodeSize + LocalIdxSize;
                  break;
             case OC_PopLocal: 
-                 locals[*(LocalIdxType*)(ip + CodeSize)] = *--stack;
+                 locals[*(LocalIdxType*)(ip + CodeSize)] = *--stackTop;
                 ip += CodeSize + LocalIdxSize;
                  break;
             case OC_PushInt:
-                 *stack++ = *(int*)(ip + CodeSize);
+                 *stackTop++ = *(int*)(ip + CodeSize);
                  ip += CodeSize + sizeof(int);
                  break;
             case OC_Jmp:
                  ip += *(int*)(ip + CodeSize);
                  break;
             case OC_TrueJmp: {
-                     int v = *--stack;
+                     int v = *--stackTop;
                      if (v) {
                          ip += *(int*)(ip + CodeSize);
                      } else {
@@ -310,52 +305,52 @@ static int replicate_switch_threading_interpreter(const vector<char>& codes) {
 
     assert(!codes.empty());
     const char *ip = &codes[0];
-    int stackSpace[32];
-    int *stack = stackSpace;
+    int stack[32];
+    int *stackTop = stack;
     int locals[32] = {1};
 
     NEXT();
     label_Add: 
-        stack[-2] += stack[-1]; --stack;
+        stackTop[-2] += stackTop[-1]; --stackTop;
         ip += CodeSize;
          NEXT();
     label_Sub: 
-        stack[-2] -= stack[-1]; --stack;
+        stackTop[-2] -= stackTop[-1]; --stackTop;
         ip += CodeSize;
          NEXT();
     label_Mul: 
-        stack[-2] *= stack[-1]; --stack;
+        stackTop[-2] *= stackTop[-1]; --stackTop;
         ip += CodeSize;
          NEXT();
     label_Div: 
-        stack[-2] /= stack[-1]; --stack;
+        stackTop[-2] /= stackTop[-1]; --stackTop;
         ip += CodeSize;
          NEXT();
     label_EQ: 
-        stack[-2] = stack[-2] == stack[-1]; --stack;
+        stackTop[-2] = stackTop[-2] == stackTop[-1]; --stackTop;
         ip += CodeSize;
          NEXT();
     label_NE: 
-        stack[-2] = stack[-2] != stack[-1]; --stack;
+        stackTop[-2] = stackTop[-2] != stackTop[-1]; --stackTop;
         ip += CodeSize;
          NEXT();
     label_PushLocal: 
-         *stack++ = locals[*(LocalIdxType*)(ip + CodeSize)];
+         *stackTop++ = locals[*(LocalIdxType*)(ip + CodeSize)];
         ip += CodeSize + LocalIdxSize;
          NEXT();
     label_PopLocal: 
-         locals[*(LocalIdxType*)(ip + CodeSize)] = *--stack;
+         locals[*(LocalIdxType*)(ip + CodeSize)] = *--stackTop;
         ip += CodeSize + LocalIdxSize;
          NEXT();
     label_PushInt:
-         *stack++ = *(int*)(ip + CodeSize);
+         *stackTop++ = *(int*)(ip + CodeSize);
          ip += CodeSize + sizeof(int);
          NEXT();
     label_Jmp:
          ip += *(int*)(ip + CodeSize);
          NEXT();
     label_TrueJmp: {
-             int v = *--stack;
+             int v = *--stackTop;
              if (v) {
                  ip += *(int*)(ip + CodeSize);
              } else {
@@ -381,54 +376,54 @@ static int token_threading_interpreter(const vector<char> &codes) {
 
     assert(!codes.empty());
     const char *ip = &codes[0];
-    int stackSpace[32];
-    int *stack = stackSpace;
+    int stack[32];
+    int *stackTop = stack;
     int locals[32] = {1};
 
     void* labels[] = { &&label_Add, &&label_Sub, &&label_Mul, &&label_Div, &&label_EQ, &&label_NE, &&label_PushLocal, &&label_PopLocal, &&label_PushInt, &&label_Jmp, &&label_TrueJmp, &&label_EOF, &&label_NOP, };
 
     NEXT();
     label_Add: 
-        stack[-2] += stack[-1]; --stack;
+        stackTop[-2] += stackTop[-1]; --stackTop;
         ip += CodeSize;
          NEXT();
     label_Sub: 
-        stack[-2] -= stack[-1]; --stack;
+        stackTop[-2] -= stackTop[-1]; --stackTop;
         ip += CodeSize;
          NEXT();
     label_Mul: 
-        stack[-2] *= stack[-1]; --stack;
+        stackTop[-2] *= stackTop[-1]; --stackTop;
         ip += CodeSize;
          NEXT();
     label_Div: 
-        stack[-2] /= stack[-1]; --stack;
+        stackTop[-2] /= stackTop[-1]; --stackTop;
         ip += CodeSize;
          NEXT();
     label_EQ: 
-        stack[-2] = stack[-2] == stack[-1]; --stack;
+        stackTop[-2] = stackTop[-2] == stackTop[-1]; --stackTop;
         ip += CodeSize;
          NEXT();
     label_NE: 
-        stack[-2] = stack[-2] != stack[-1]; --stack;
+        stackTop[-2] = stackTop[-2] != stackTop[-1]; --stackTop;
         ip += CodeSize;
          NEXT();
     label_PushLocal: 
-         *stack++ = locals[*(LocalIdxType*)(ip + CodeSize)];
+         *stackTop++ = locals[*(LocalIdxType*)(ip + CodeSize)];
         ip += CodeSize + LocalIdxSize;
          NEXT();
     label_PopLocal: 
-         locals[*(LocalIdxType*)(ip + CodeSize)] = *--stack;
+         locals[*(LocalIdxType*)(ip + CodeSize)] = *--stackTop;
         ip += CodeSize + LocalIdxSize;
          NEXT();
     label_PushInt:
-         *stack++ = *(int*)(ip + CodeSize);
+         *stackTop++ = *(int*)(ip + CodeSize);
          ip += CodeSize + sizeof(int);
          NEXT();
     label_Jmp:
          ip += *(int*)(ip + CodeSize);
          NEXT();
     label_TrueJmp: {
-             int v = *--stack;
+             int v = *--stackTop;
              if (v) {
                  ip += *(int*)(ip + CodeSize);
              } else {
@@ -473,52 +468,52 @@ static int direct_threading_interpreter(const vector<char> &_codes) {
 
     assert(!codes.empty());
     const char *ip = &codes[0];
-    int stackSpace[32];
-    int *stack = stackSpace;
+    int stack[32];
+    int *stackTop = stack;
     int locals[32] = {1};
 
     NEXT();
     label_Add: 
-        stack[-2] += stack[-1]; --stack;
+        stackTop[-2] += stackTop[-1]; --stackTop;
         ip += CodeSize;
          NEXT();
     label_Sub: 
-        stack[-2] -= stack[-1]; --stack;
+        stackTop[-2] -= stackTop[-1]; --stackTop;
         ip += CodeSize;
          NEXT();
     label_Mul: 
-        stack[-2] *= stack[-1]; --stack;
+        stackTop[-2] *= stackTop[-1]; --stackTop;
         ip += CodeSize;
          NEXT();
     label_Div: 
-        stack[-2] /= stack[-1]; --stack;
+        stackTop[-2] /= stackTop[-1]; --stackTop;
         ip += CodeSize;
          NEXT();
     label_EQ: 
-        stack[-2] = stack[-2] == stack[-1]; --stack;
+        stackTop[-2] = stackTop[-2] == stackTop[-1]; --stackTop;
         ip += CodeSize;
          NEXT();
     label_NE: 
-        stack[-2] = stack[-2] != stack[-1]; --stack;
+        stackTop[-2] = stackTop[-2] != stackTop[-1]; --stackTop;
         ip += CodeSize;
          NEXT();
     label_PushLocal: 
-         *stack++ = locals[*(LocalIdxType*)(ip + CodeSize)];
+         *stackTop++ = locals[*(LocalIdxType*)(ip + CodeSize)];
         ip += CodeSize + LocalIdxSize;
          NEXT();
     label_PopLocal: 
-         locals[*(LocalIdxType*)(ip + CodeSize)] = *--stack;
+         locals[*(LocalIdxType*)(ip + CodeSize)] = *--stackTop;
         ip += CodeSize + LocalIdxSize;
          NEXT();
     label_PushInt:
-         *stack++ = *(int*)(ip + CodeSize);
+         *stackTop++ = *(int*)(ip + CodeSize);
          ip += CodeSize + sizeof(int);
          NEXT();
     label_Jmp:
          ip += *(int*)(ip + CodeSize);
          NEXT();
     label_TrueJmp: {
-             int v = *--stack;
+             int v = *--stackTop;
              if (v) {
                  ip += *(int*)(ip + CodeSize);
              } else {
