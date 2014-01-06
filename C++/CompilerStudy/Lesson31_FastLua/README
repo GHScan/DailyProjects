@@ -2,13 +2,14 @@
 ------------------------------
 # Features:
     + parser combinator
-    + stack-based vm
+    + register-based vm
     + variable-length byte code
     + mark-and-sweep gc
     + object(like lua table)
+    + trick for
 # TODO list:
     + local index for global variable
-    + switch-threading/token-threading(computed goto)
+    + repl-switch-threading/token-threading/direct-threading(computed goto)
     + stack caching(cache top n? see jamVM)
     + dll import
     + COM
