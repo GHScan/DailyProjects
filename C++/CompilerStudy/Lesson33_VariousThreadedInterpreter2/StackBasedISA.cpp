@@ -8,7 +8,7 @@ void SB_InstructionList::fromStream(istream &si) {
     string insName;
     while (si >> insName) {
         InstructionMeta *meta = InstructionMetaManager<SB_Code>::instance()->get(insName);
-        int off = m_bytes.size();
+        int off = (int)m_bytes.size();
         m_bytes.resize(off + meta->size);
         meta->fromStream(si, &m_bytes[off]);
     }
