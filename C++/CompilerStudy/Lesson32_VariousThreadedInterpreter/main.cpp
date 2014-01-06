@@ -3,6 +3,7 @@
 #include <time.h>
 #include <string.h>
 #include <assert.h>
+#include <errno.h>
 
 #include <vector>
 #include <map>
@@ -25,12 +26,12 @@ using namespace std;
 
 #ifdef __GNUC__
 static void* allocExceMem(int memSize) {
-    char *p = (char*)mmap(NULL, memSize, PROT_EXEC | PROT_WRITE | PROT_READ, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    char *p = (char*)mmap(NULL, memSize, PROT_EXEC | PROT_WRITE | PROT_READ, MAP_ANON | MAP_PRIVATE, -1, 0);
     if (p == MAP_FAILED) puts(strerror(errno)), exit(1);
     return p;
 }
 static void freeExecMem(void *p, int memSize) {
-    munmap(p, mmeSize);
+    munmap(p, memSize);
 }
 #endif
 
