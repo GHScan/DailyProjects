@@ -1,0 +1,39 @@
+pushint 0
+poplocal 0
+pushint 0
+poplocal 1
+
+pushlocal 1
+pushint 1000
+eq
+tjmp 32
+
+pushint 0
+poplocal 2
+pushlocal 2
+pushlocal 1
+pushint 1
+add
+eq
+tjmp 27
+
+pushlocal 1
+pushlocal 2
+mul
+pushlocal 0
+add
+poplocal 0
+
+pushlocal 2
+pushint 1
+add
+poplocal 2
+jmp 10
+
+pushlocal 1
+pushint 1
+add 
+poplocal 1
+jmp 4
+
+pushlocal 0
