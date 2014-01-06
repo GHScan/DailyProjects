@@ -28,6 +28,7 @@ enum SB_Code {
     SBC_COUNT,
 };
 
+#pragma pack(push, 1)
 template<SB_Code>
 struct SB_Instruction;
 template<>
@@ -95,6 +96,7 @@ template<>
 struct SB_Instruction<SBC_EOF> {
     CodeType code;
 };
+#pragma pack(pop)
 
 class SB_InstructionList {
 public:
