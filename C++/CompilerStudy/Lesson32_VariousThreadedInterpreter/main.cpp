@@ -191,7 +191,11 @@ FORCE_INLINE static int call_threading_interpreter(const vector<char> &codes) {
     }
     return locals[0];
 }
-
+//------------------------------ subroutine-threading interpreter
+static int subroutine_threading_interpreter(const vector<char> &codes) {
+    // TODO
+    return 0;
+}
 // ------------------------------ switch-threading interpreter with stl
 static int switch_threading_stl_interpreter(const vector<char> &codes) {
     assert(!codes.empty());
@@ -533,7 +537,6 @@ static int direct_threading_interpreter(const vector<char> &_codes) {
     return 0;
 #endif
 }
-
 //------------------------------ jit interpreter
 static int jit_interpreter(const vector<char> &codes) {
     int MEM_SIZE = 4 * 1024;
@@ -665,6 +668,8 @@ label_end_loop:
     return r;
 }
 
+// TODO: register-based vm
+
 int main(int argc, char *argv[]) {
     int LOOP = 1000;
     if (argc > 1) LOOP = atoi(argv[1]);
@@ -768,4 +773,6 @@ label_end1:
     BENCHMARK(int v = token_threading_interpreter(codes); assert(v == expectedValue || !v););
     BENCHMARK(int v = direct_threading_interpreter(codes); assert(v == expectedValue || !v););
     BENCHMARK(int v = jit_interpreter(codes); assert(v == expectedValue || !v););
+
+    // TODO: trick for
 }
