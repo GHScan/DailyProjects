@@ -333,3 +333,21 @@ SB_Interpreter* SB_Interpreter::getInstance(const string &name) {
         return NULL;
     }
 }
+
+void SB_setupISA() {
+    InstructionMetaManager<SB_Code>::instance()->add(new InstructionMeta(SBC_Add, "add"));
+    InstructionMetaManager<SB_Code>::instance()->add(new InstructionMeta(SBC_Sub, "sub"));
+    InstructionMetaManager<SB_Code>::instance()->add(new InstructionMeta(SBC_Mul, "mul"));
+    InstructionMetaManager<SB_Code>::instance()->add(new InstructionMeta(SBC_Div, "div"));
+    InstructionMetaManager<SB_Code>::instance()->add(new InstructionMeta(SBC_EQ, "eq"));
+    InstructionMetaManager<SB_Code>::instance()->add(new InstructionMeta(SBC_NE, "ne"));
+    InstructionMetaManager<SB_Code>::instance()->add(new InstructionMeta1<LocalIdxType>(SBC_PushLocal, "pushlocal"));
+    InstructionMetaManager<SB_Code>::instance()->add(new InstructionMeta1<LocalIdxType>(SBC_PopLocal, "poplocal"));
+    InstructionMetaManager<SB_Code>::instance()->add(new InstructionMeta1<int>(SBC_PushInt, "pushint"));
+    InstructionMetaManager<SB_Code>::instance()->add(new InstructionMeta1<JmpOffType>(SBC_Jmp, "jmp"));
+    InstructionMetaManager<SB_Code>::instance()->add(new InstructionMeta1<JmpOffType>(SBC_TJmp, "tjmp"));
+    InstructionMetaManager<SB_Code>::instance()->add(new InstructionMeta4<LocalIdxType, LocalIdxType, LocalIdxType, JmpOffType>(SBC_Repeat, "repeat"));
+    InstructionMetaManager<SB_Code>::instance()->add(new InstructionMeta(SBC_Nop, "nop"));
+    InstructionMetaManager<SB_Code>::instance()->add(new InstructionMeta(SBC_EOF, "eof"));
+}
+

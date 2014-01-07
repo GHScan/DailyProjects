@@ -2,16 +2,11 @@
 #ifndef STACKBASED_INTERPRETER_H
 #define STACKBASED_INTERPRETER_H
 
-class SB_InstructionList;
+#include "Interpreter.h"
 
-class SB_Interpreter {
+class InterpreterFactory_SB: public InterpreterFactory {
 public:
-    static SB_Interpreter* getInstance(const string &name);
-    virtual ~SB_Interpreter(){}
-
-    virtual int interpret(SB_InstructionList *insList) = 0;
-    virtual bool isValid() = 0;
-private:
+    virtual Interpreter* createInterpreter(const string &name);
 };
 
 #endif
