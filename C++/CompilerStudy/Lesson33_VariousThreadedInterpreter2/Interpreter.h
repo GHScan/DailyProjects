@@ -1,36 +1,27 @@
 #ifndef INTERPRETER_H
 #define INTERPRETER_H
-
+//==============================
 #define CodeSize 4
 #define LocalIdxSize 4
 #define JmpOffSize 4
 #define EvalStackSize 32
 #define LocalStackSize 64
 
-template<int size>
-struct FixedSizeType {
-    typedef char Type;
-};
-template<>
-struct FixedSizeType<2> {
-    typedef short Type;
-};
-template<>
-struct FixedSizeType<4> {
-    typedef int Type;
-};
-template<>
-struct FixedSizeType<8> {
-    typedef long long Type;
-};
+template<int size, bool isSigned> struct FixedSizeType;
+template<> struct FixedSizeType<1, true> { typedef char Type; };
+template<> struct FixedSizeType<1, false> { typedef unsigned char Type; };
+template<> struct FixedSizeType<2, true> { typedef short Type; };
+template<> struct FixedSizeType<2, false> { typedef unsigned short Type; };
+template<> struct FixedSizeType<4, true> { typedef int Type; };
+template<> struct FixedSizeType<4, false> { typedef unsigned int Type; };
+template<> struct FixedSizeType<8, true> { typedef long long Type; };
+template<> struct FixedSizeType<8, false> { typedef unsigned long long Type; };
 
-// signed
-typedef FixedSizeType<CodeSize>::Type CodeType;
-typedef FixedSizeType<LocalIdxSize>::Type LocalIdxType;
-typedef FixedSizeType<JmpOffSize>::Type JmpOffType;
+typedef FixedSizeType<CodeSize, false>::Type CodeType;
+typedef FixedSizeType<LocalIdxSize, false>::Type LocalIdxType;
+typedef FixedSizeType<JmpOffSize, true>::Type JmpOffType;
 
-typedef char Byte;
-
+//==============================
 class InstructionMeta {
 public:
     CodeType code;
@@ -146,22 +137,22 @@ private:
     map<string, InstructionMeta*> m_metaMap;
     vector<InstructionMeta*> m_metaArray;
 };
+//==============================
 
 class InterpreterFactory;
 class InstructionList {
 public:
     InstructionList(InterpreterFactory *factory): m_factory(factory){}
+    virtual ~InstructionList() {}
+
     void fromStream(istream &si);
     void toStream(ostream &so) const;
 
-    void append(CodeType c) {
-        appendValue(c);
-    }
+    virtual void translateJmpIdx2Off() = 0;
+    virtual void appendEOF() = 0;
 
-    void translateJmpIdx2Off();
-
-    vector<Byte>& getBytes() { return m_bytes; }
-private:
+    vector<char>& getBytes() { return m_bytes; }
+protected:
     template<typename T>
     void appendValue(const T& v) {
         int off = (int)m_bytes.size();
@@ -169,11 +160,12 @@ private:
         memcpy(&m_bytes[off], &v, sizeof(v));
     }
 
-private:
+protected:
     InterpreterFactory *m_factory;
-    vector<Byte> m_bytes;
+    vector<char> m_bytes;
 };
 
+//==============================
 class Interpreter {
 public:
     Interpreter(InterpreterFactory *factory): m_factory(factory){}
@@ -186,21 +178,25 @@ protected:
 private:
 };
 
+//==============================
 class InterpreterFactory {
 public:
-    virtual ~InterpreterFactory(){}
-
     static InterpreterFactory* getFactory(const string &name);
 
-    InstructionMetaManager* getInstructionMetaManager() { return &m_insMetaManager; }
+    virtual ~InterpreterFactory(){}
 
-    InstructionList* createInstructionList() { return new InstructionList(this); }
+    InstructionMetaManager* getInstructionMetaManager() { return &m_insMetaMgr; }
+
+    virtual InstructionList* createInstructionList() = 0;
     void destroyInstructionList(InstructionList* p) { delete p; }
 
-    virtual Interpreter* createInterpreter(const string &name);
+    virtual Interpreter* createInterpreter(const string &name) = 0;
     void destroyInterpreter(Interpreter* p) { delete p; }
-private:
-    InstructionMetaManager m_insMetaManager;
+
+    int getInstructionSize(CodeType code) { return m_insMetaMgr.get(code)->size; }
+    const char* getInstructionName(CodeType code) { return m_insMetaMgr.get(code)->name.c_str(); }
+protected:
+    InstructionMetaManager m_insMetaMgr;
 };
 
 #endif // INTERPRETER_H

@@ -2,17 +2,13 @@
 #ifndef REGISTER_BASED_INTERPRETER_H
 #define REGISTER_BASED_INTERPRETER_H
 
+#include "Interpreter.h"
 
-class RB_InstructionList;
-
-class RB_Interpreter {
+class RB_InterpreterFactory: public InterpreterFactory {
 public:
-    static RB_Interpreter* getInstance(const string &name);
-    virtual ~RB_Interpreter(){}
-
-    virtual int interpret(RB_InstructionList *insList) = 0;
-    virtual bool isValid() = 0;
-private:
+    RB_InterpreterFactory();
+    virtual Interpreter* createInterpreter(const string &name);
+    virtual InstructionList* createInstructionList();
 };
 
 #endif

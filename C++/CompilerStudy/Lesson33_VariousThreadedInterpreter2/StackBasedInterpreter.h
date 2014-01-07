@@ -4,9 +4,11 @@
 
 #include "Interpreter.h"
 
-class InterpreterFactory_SB: public InterpreterFactory {
+class SB_InterpreterFactory: public InterpreterFactory {
 public:
+    SB_InterpreterFactory();
     virtual Interpreter* createInterpreter(const string &name);
+    virtual InstructionList* createInstructionList();
 };
 
 #endif

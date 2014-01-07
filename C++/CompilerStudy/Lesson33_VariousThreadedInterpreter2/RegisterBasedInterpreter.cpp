@@ -1,9 +1,102 @@
 
 #include "pch.h"
 #include "Utils.h"
-#include "RegisterBasedISA.h"
 #include "RegisterBasedInterpreter.h"
+//==============================
+enum RB_Code {
+    RBC_Add, 
+    RBC_Sub, 
+    RBC_Mul, 
+    RBC_Div,
 
+    RBC_EQ, 
+    RBC_NE,
+
+    RBC_LoadInt,
+    RBC_Mov,
+
+    RBC_Jmp, 
+    RBC_TJmp,
+
+    RBC_Repeat, 
+
+    RBC_Nop,
+    RBC_EOF,
+
+    RBC_COUNT,
+};
+
+#pragma pack(push, 1)
+template<RB_Code>
+struct RB_Instruction;
+template<>
+struct RB_Instruction<RBC_Add> {
+    CodeType code;
+    LocalIdxType dest, src1, src2;
+};
+template<>
+struct RB_Instruction<RBC_Sub> {
+    CodeType code;
+    LocalIdxType dest, src1, src2;
+};
+template<>
+struct RB_Instruction<RBC_Mul> {
+    CodeType code;
+    LocalIdxType dest, src1, src2;
+};
+template<>
+struct RB_Instruction<RBC_Div> {
+    CodeType code;
+    LocalIdxType dest, src1, src2;
+};
+template<>
+struct RB_Instruction<RBC_EQ> {
+    CodeType code;
+    LocalIdxType dest, src1, src2;
+};
+template<>
+struct RB_Instruction<RBC_NE> {
+    CodeType code;
+    LocalIdxType dest, src1, src2;
+};
+template<>
+struct RB_Instruction<RBC_LoadInt> {
+    CodeType code;
+    LocalIdxType dest;
+    int i;
+};
+template<>
+struct RB_Instruction<RBC_Mov> {
+    CodeType code;
+    LocalIdxType dest, src;
+};
+template<>
+struct RB_Instruction<RBC_Jmp> {
+    CodeType code;
+    JmpOffType jmpOff;
+};
+template<>
+struct RB_Instruction<RBC_TJmp> {
+    CodeType code;
+    LocalIdxType cond;
+    JmpOffType jmpOff;
+};
+template<>
+struct RB_Instruction<RBC_Repeat> {
+    CodeType code;
+    LocalIdxType loopCounter, iter, step;
+    JmpOffType jmpOff;
+};
+template<>
+struct RB_Instruction<RBC_Nop> {
+    CodeType code;
+};
+template<>
+struct RB_Instruction<RBC_EOF> {
+    CodeType code;
+};
+#pragma pack(pop)
+//==============================
 FORCE_INLINE static void handle_Add(int locals[LocalStackSize], char *&ip) {
     RB_Instruction<RBC_Add>* p = (RB_Instruction<RBC_Add>*)ip;
     locals[p->dest] = locals[p->src1] + locals[p->src2];
@@ -68,10 +161,11 @@ FORCE_INLINE static void handle_Repeat(int locals[LocalStackSize], char *&ip) {
 FORCE_INLINE static void handle_Nop(int locals[LocalStackSize], char *&ip) {
     ip += sizeof(RB_Instruction<RBC_Nop>);
 }
-
-class RB_Interpreter_CallThreading: public RB_Interpreter {
+//==============================
+class RB_Interpreter_CallThreading: public Interpreter {
 public:
-    virtual int interpret(RB_InstructionList *insList) {
+    RB_Interpreter_CallThreading(InterpreterFactory *factory): Interpreter(factory){}
+    virtual int interpret(InstructionList *insList) {
         static void(*handlers[])(int *, char*&) = {
             &handle_Add, 
             &handle_Sub, 
@@ -86,7 +180,7 @@ public:
             &handle_Repeat, 
             &handle_Nop,
         };
-        Byte* ip = &insList->getBytes()[0];
+        char* ip = &insList->getBytes()[0];
         int locals[LocalStackSize] = {1};
         while ((CodeType&)*ip != RBC_EOF) {
             handlers[(CodeType&)*ip](locals, ip);
@@ -97,10 +191,11 @@ public:
 private:
 };
 
-class RB_Interpreter_SwitchThreading: public RB_Interpreter {
+class RB_Interpreter_SwitchThreading: public Interpreter {
 public:
-    virtual int interpret(RB_InstructionList *insList) {
-        Byte* ip = &insList->getBytes()[0];
+    RB_Interpreter_SwitchThreading(InterpreterFactory *factory): Interpreter(factory){}
+    virtual int interpret(InstructionList *insList) {
+        char* ip = &insList->getBytes()[0];
         int locals[LocalStackSize] = {1};
         for (;;) {
             switch ((CodeType&)*ip) {
@@ -125,10 +220,11 @@ public:
 private:
 };
 
-class RB_Interpreter_ReplicateSwitchThreading: public RB_Interpreter {
+class RB_Interpreter_ReplicateSwitchThreading: public Interpreter {
 public:
-    virtual int interpret(RB_InstructionList *insList) {
-        Byte* ip = &insList->getBytes()[0];
+    RB_Interpreter_ReplicateSwitchThreading(InterpreterFactory *factory): Interpreter(factory){}
+    virtual int interpret(InstructionList *insList) {
+        char* ip = &insList->getBytes()[0];
         int locals[LocalStackSize] = {1};
 
 #define NEXT() switch ((CodeType&)*ip) {\
@@ -170,11 +266,12 @@ label_EOF: return locals[0];
 private:
 };
 
-class RB_Interpreter_TokenThreading: public RB_Interpreter {
+class RB_Interpreter_TokenThreading: public Interpreter {
 public:
-    virtual int interpret(RB_InstructionList *insList) {
+    RB_Interpreter_TokenThreading(InterpreterFactory *factory): Interpreter(factory){}
+    virtual int interpret(InstructionList *insList) {
 #ifdef __GNUC__
-        Byte* ip = &insList->getBytes()[0];
+        char* ip = &insList->getBytes()[0];
         int locals[LocalStackSize] = {1};
         void* label_table[] = {
             &&label_Add,
@@ -226,9 +323,10 @@ label_EOF: return locals[0];
 private:
 };
 
-class RB_Interpreter_DirectThreading: public RB_Interpreter {
+class RB_Interpreter_DirectThreading: public Interpreter {
 public:
-    virtual int interpret(RB_InstructionList *insList) {
+    RB_Interpreter_DirectThreading(InterpreterFactory *factory): Interpreter(factory){}
+    virtual int interpret(InstructionList *insList) {
 #if defined(__GNUC__) && ((!defined(__x86_64__) && (CodeSize >= 4)) || (defined(__x86_64__) && (CodeSize >= 8) ))
         void* label_table[] = {
             &&label_Add,
@@ -246,14 +344,14 @@ public:
             &&label_EOF,
         };
 
-        vector<Byte> bytes(insList->getBytes());
+        vector<char> bytes(insList->getBytes());
         for (int off = 0; off < (int)bytes.size(); ) {
             CodeType code = (CodeType&)bytes[off];
             (void*&)bytes[off] = label_table[code];
-            off += RB_getInsuctionSize(code);
+            off += m_factory->getInstructionSize(code);
         }
 
-        Byte* ip = &bytes[0];
+        char* ip = &bytes[0];
         int locals[LocalStackSize] = {1};
 
 #define NEXT() goto **(void**)ip
@@ -290,30 +388,80 @@ label_EOF: return locals[0];
 private:
 };
 
-class RB_Interpreter_JIT: public RB_Interpreter {
+class RB_Interpreter_JIT: public Interpreter {
 public:
-    virtual int interpret(RB_InstructionList *insList) {
+    RB_Interpreter_JIT(InterpreterFactory *factory): Interpreter(factory){}
+    virtual int interpret(InstructionList *insList) {
         return 0;
     }
     virtual bool isValid() { return false; }
 private:
 };
+//==============================
+class RB_InstructionList: public InstructionList {
+public:
+    RB_InstructionList(InterpreterFactory* factory): InstructionList(factory){}
+    virtual void translateJmpIdx2Off() {
+        vector<int> insOffs;
+        for (int off = 0; off < (int)m_bytes.size(); ) {
+            insOffs.push_back(off);
+            off += m_factory->getInstructionSize((CodeType&)m_bytes[off]);
+        }
+        insOffs.push_back((int)m_bytes.size());
 
-RB_Interpreter* RB_Interpreter::getInstance(const string &name) {
+        for (int off = 0; off < (int)m_bytes.size(); ) {
+            CodeType code = (CodeType&)m_bytes[off];
+            JmpOffType *jmpOff = NULL;
+            switch (code) {
+                case RBC_Jmp: jmpOff = &((RB_Instruction<RBC_Jmp>&)m_bytes[off]).jmpOff; break;
+                case RBC_TJmp: jmpOff = &((RB_Instruction<RBC_TJmp>&)m_bytes[off]).jmpOff; break;
+                case RBC_Repeat: jmpOff = &((RB_Instruction<RBC_Repeat>&)m_bytes[off]).jmpOff; break;
+                default: break;
+            }
+            if (jmpOff != NULL) *jmpOff = insOffs[*jmpOff] - off;
+            off += m_factory->getInstructionSize(code);
+        }
+    }
+    virtual void appendEOF() {
+        appendValue(RBC_EOF);
+    }
+};
+
+//==============================
+RB_InterpreterFactory::RB_InterpreterFactory() {
+    InstructionMetaManager *mgr = &m_insMetaMgr;
+    mgr->add(new InstructionMeta3<LocalIdxType, LocalIdxType, LocalIdxType>(RBC_Add, "add"));
+    mgr->add(new InstructionMeta3<LocalIdxType, LocalIdxType, LocalIdxType>(RBC_Sub, "sub"));
+    mgr->add(new InstructionMeta3<LocalIdxType, LocalIdxType, LocalIdxType>(RBC_Mul, "mul"));
+    mgr->add(new InstructionMeta3<LocalIdxType, LocalIdxType, LocalIdxType>(RBC_Div, "div"));
+    mgr->add(new InstructionMeta3<LocalIdxType, LocalIdxType, LocalIdxType>(RBC_EQ, "eq"));
+    mgr->add(new InstructionMeta3<LocalIdxType, LocalIdxType, LocalIdxType>(RBC_NE, "ne"));
+    mgr->add(new InstructionMeta2<LocalIdxType, int>(RBC_LoadInt, "loadint"));
+    mgr->add(new InstructionMeta2<LocalIdxType, LocalIdxType>(RBC_Mov, "mov"));
+    mgr->add(new InstructionMeta1<JmpOffType>(RBC_Jmp, "jmp"));
+    mgr->add(new InstructionMeta2<LocalIdxType, JmpOffType>(RBC_TJmp, "tjmp"));
+    mgr->add(new InstructionMeta4<LocalIdxType, LocalIdxType, LocalIdxType, JmpOffType>(RBC_Repeat, "repeat"));
+    mgr->add(new InstructionMeta(RBC_Nop, "nop"));
+    mgr->add(new InstructionMeta(RBC_EOF, "eof"));
+}
+Interpreter* RB_InterpreterFactory::createInterpreter(const string &name) {
     if (name == "call") {
-        return new RB_Interpreter_CallThreading();
+        return new RB_Interpreter_CallThreading(this);
     } else if (name == "switch") {
-        return new RB_Interpreter_SwitchThreading();
+        return new RB_Interpreter_SwitchThreading(this);
     } else if (name == "repl_switch") {
-        return new RB_Interpreter_ReplicateSwitchThreading();
+        return new RB_Interpreter_ReplicateSwitchThreading(this);
     } else if (name == "token") {
-        return new RB_Interpreter_TokenThreading();
+        return new RB_Interpreter_TokenThreading(this);
     } else if (name == "direct") {
-        return new RB_Interpreter_DirectThreading();
+        return new RB_Interpreter_DirectThreading(this);
     } else if (name == "jit") {
-        return new RB_Interpreter_JIT();
+        return new RB_Interpreter_JIT(this);
     } else {
         assert(0);
         return NULL;
     }
+}
+InstructionList* RB_InterpreterFactory::createInstructionList() {
+    return new RB_InstructionList(this);
 }
