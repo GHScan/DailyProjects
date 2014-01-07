@@ -13,7 +13,7 @@ int main(int argc, char *argv[]) {
             ifstream fi(argv[i]);
             if (!fi) continue;
             fi >> insList;
-            insList.convertJmpOff();
+            insList.translateJmpIdx2Off();
         }
         printf("=============== %s ===============\n", argv[i]);
 
@@ -30,6 +30,7 @@ int main(int argc, char *argv[]) {
             } else {
                 printf("%s : invalid\n", ints[i]);
             }
+            delete p;
         }
     }
 

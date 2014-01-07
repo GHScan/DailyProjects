@@ -73,12 +73,12 @@ struct SB_Instruction<SBC_PushInt> {
 template<>
 struct SB_Instruction<SBC_Jmp> {
     CodeType code;
-    JmpOffType off;
+    JmpOffType jmpOff;
 };
 template<>
 struct SB_Instruction<SBC_TJmp> {
     CodeType code;
-    JmpOffType off;
+    JmpOffType jmpOff;
 };
 template<>
 struct SB_Instruction<SBC_Repeat> {
@@ -86,7 +86,7 @@ struct SB_Instruction<SBC_Repeat> {
     LocalIdxType loopCounter;
     LocalIdxType iter;
     LocalIdxType step;
-    JmpOffType off;
+    JmpOffType jmpOff;
 };
 template<>
 struct SB_Instruction<SBC_Nop> {
@@ -107,7 +107,7 @@ public:
         appendValue(c);
     }
 
-    void convertJmpOff();
+    void translateJmpIdx2Off();
 
     vector<Byte>& getBytes() { return m_bytes; }
 private:

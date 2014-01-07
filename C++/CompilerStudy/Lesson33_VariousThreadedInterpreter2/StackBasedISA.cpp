@@ -26,7 +26,7 @@ void SB_InstructionList::toStream(ostream &so) const {
     }
 }
 
-void SB_InstructionList::convertJmpOff() {
+void SB_InstructionList::translateJmpIdx2Off() {
     vector<int> insOffs;
     for (int off = 0; off < (int)m_bytes.size(); ) {
         insOffs.push_back(off);
@@ -36,20 +36,14 @@ void SB_InstructionList::convertJmpOff() {
 
     for (int off = 0; off < (int)m_bytes.size(); ) {
         CodeType code = (CodeType&)m_bytes[off];
-        JmpOffType *poff = NULL;
+        JmpOffType *jmpOff = NULL;
         switch (code) {
-            case SBC_Jmp: 
-                poff = &((SB_Instruction<SBC_Jmp>&)m_bytes[off]).off;
-                break;
-            case SBC_TJmp:
-                poff = &((SB_Instruction<SBC_TJmp>&)m_bytes[off]).off;
-                break;
-            case SBC_Repeat:
-                poff = &((SB_Instruction<SBC_Repeat>&)m_bytes[off]).off;
-                break;
+            case SBC_Jmp: jmpOff = &((SB_Instruction<SBC_Jmp>&)m_bytes[off]).jmpOff; break;
+            case SBC_TJmp: jmpOff = &((SB_Instruction<SBC_TJmp>&)m_bytes[off]).jmpOff; break;
+            case SBC_Repeat: jmpOff = &((SB_Instruction<SBC_Repeat>&)m_bytes[off]).jmpOff; break;
             default: break;
         }
-        if (poff != NULL) *poff = insOffs[*poff] - off;
+        if (jmpOff != NULL) *jmpOff = insOffs[*jmpOff] - off;
         off += SB_getInsuctionSize(code);
     }
 }

@@ -47,10 +47,10 @@ FORCE_INLINE static void handle_PushInt(int *&stackTop, int locals[LocalStackSiz
     ip += sizeof(SB_Instruction<SBC_PushInt>);
 }
 FORCE_INLINE static void handle_Jmp(int *&stackTop, int locals[LocalStackSize], char *&ip) {
-    ip += ((SB_Instruction<SBC_Jmp>*)ip)->off;
+    ip += ((SB_Instruction<SBC_Jmp>*)ip)->jmpOff;
 }
 FORCE_INLINE static void handle_TJmp(int *&stackTop, int locals[LocalStackSize], char *&ip) {
-    if (*--stackTop) ip += ((SB_Instruction<SBC_TJmp>*)ip)->off;
+    if (*--stackTop) ip += ((SB_Instruction<SBC_TJmp>*)ip)->jmpOff;
     else ip += sizeof(SB_Instruction<SBC_PushInt>);
 }
 FORCE_INLINE static void handle_Repeat(int *&stackTop, int locals[LocalStackSize], char *&ip) {
@@ -60,7 +60,7 @@ FORCE_INLINE static void handle_Repeat(int *&stackTop, int locals[LocalStackSize
         locals[p->iter] += locals[p->step];
         ip += sizeof(*p);
     } else {
-        ip += p->off;
+        ip += p->jmpOff;
     }
 }
 FORCE_INLINE static void handle_Nop(int *&stackTop, int locals[LocalStackSize], char *&ip) {
