@@ -1,0 +1,24 @@
+loadint 0 0
+loadint 1 0
+
+loadint 5 1000
+eq 5 5 1
+tjmp 5 18
+
+loadint 2 0
+
+loadint 5 1
+add 5 5 1
+eq 5 5 2
+tjmp 5 15
+
+mul 5 1 2
+add 0 5 0
+
+loadint 5 1
+add 2 2 5
+jmp 6
+
+loadint 5 1
+add 1 1 5
+jmp 2

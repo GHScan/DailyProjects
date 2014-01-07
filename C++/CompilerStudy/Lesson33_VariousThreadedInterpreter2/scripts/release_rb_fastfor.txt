@@ -1,0 +1,18 @@
+loadint 0 0
+
+loadint 4 10000
+loadint 1 -1
+loadint 3 1
+repeat 4 1 3 13
+
+loadint 5 1
+add 5 5 1
+loadint 2 -1
+repeat 5 2 3 12
+
+mul 6 1 2
+add 0 0 6
+
+jmp 8
+
+jmp 4

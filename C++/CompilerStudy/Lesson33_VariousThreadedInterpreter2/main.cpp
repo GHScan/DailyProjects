@@ -3,8 +3,41 @@
 #include "Utils.h"
 #include "StackBasedISA.h"
 #include "StackBasedInterpreter.h"
+#include "RegisterBasedISA.h"
+#include "RegisterBasedInterpreter.h"
 
 int main(int argc, char *argv[]) {
+    RB_setupISA();
+
+    for (int i = 1; i < argc; ++i) {
+        RB_InstructionList insList;
+        {
+            ifstream fi(argv[i]);
+            if (!fi) continue;
+            fi >> insList;
+            insList.translateJmpIdx2Off();
+        }
+        printf("=============== %s ===============\n", argv[i]);
+
+        const char *ints[] = {
+            "call", "switch", "repl_switch", "token", "direct", "jit",
+        };
+        for (int i = 0; i < COUNT_OF_A(ints); ++i) {
+            RB_Interpreter *p = RB_Interpreter::getInstance(ints[i]);
+            if (p->isValid()) { 
+                clock_t start = clock();
+                int res = p->interpret(&insList);
+                float time = float(clock() - start) / CLOCKS_PER_SEC;
+                printf("%s : res=%d, time=%g\n", ints[i], res, time);
+            } else {
+                printf("%s : invalid\n", ints[i]);
+            }
+            delete p;
+        }
+    }
+
+    return 0;
+
     SB_setupISA();
 
     for (int i = 1; i < argc; ++i) {

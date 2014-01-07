@@ -83,9 +83,7 @@ struct SB_Instruction<SBC_TJmp> {
 template<>
 struct SB_Instruction<SBC_Repeat> {
     CodeType code;
-    LocalIdxType loopCounter;
-    LocalIdxType iter;
-    LocalIdxType step;
+    LocalIdxType loopCounter, iter, step;
     JmpOffType jmpOff;
 };
 template<>
