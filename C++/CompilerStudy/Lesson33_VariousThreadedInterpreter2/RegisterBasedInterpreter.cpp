@@ -27,121 +27,106 @@ enum RB_Code {
 };
 
 #pragma pack(push, 1)
-template<RB_Code>
-struct RB_Instruction;
-template<>
-struct RB_Instruction<RBC_Add> {
+struct RB_Instruction_Add {
     CodeType code;
     LocalIdxType dest, src1, src2;
 };
-template<>
-struct RB_Instruction<RBC_Sub> {
+struct RB_Instruction_Sub {
     CodeType code;
     LocalIdxType dest, src1, src2;
 };
-template<>
-struct RB_Instruction<RBC_Mul> {
+struct RB_Instruction_Mul {
     CodeType code;
     LocalIdxType dest, src1, src2;
 };
-template<>
-struct RB_Instruction<RBC_Div> {
+struct RB_Instruction_Div {
     CodeType code;
     LocalIdxType dest, src1, src2;
 };
-template<>
-struct RB_Instruction<RBC_EQ> {
+struct RB_Instruction_EQ {
     CodeType code;
     LocalIdxType dest, src1, src2;
 };
-template<>
-struct RB_Instruction<RBC_NE> {
+struct RB_Instruction_NE {
     CodeType code;
     LocalIdxType dest, src1, src2;
 };
-template<>
-struct RB_Instruction<RBC_LoadInt> {
+struct RB_Instruction_LoadInt {
     CodeType code;
     LocalIdxType dest;
     int i;
 };
-template<>
-struct RB_Instruction<RBC_Mov> {
+struct RB_Instruction_Mov {
     CodeType code;
     LocalIdxType dest, src;
 };
-template<>
-struct RB_Instruction<RBC_Jmp> {
+struct RB_Instruction_Jmp {
     CodeType code;
     JmpOffType jmpOff;
 };
-template<>
-struct RB_Instruction<RBC_TJmp> {
+struct RB_Instruction_TJmp {
     CodeType code;
     LocalIdxType cond;
     JmpOffType jmpOff;
 };
-template<>
-struct RB_Instruction<RBC_Repeat> {
+struct RB_Instruction_Repeat {
     CodeType code;
     LocalIdxType loopCounter, iter, step;
     JmpOffType jmpOff;
 };
-template<>
-struct RB_Instruction<RBC_Nop> {
+struct RB_Instruction_Nop {
     CodeType code;
 };
-template<>
-struct RB_Instruction<RBC_EOF> {
+struct RB_Instruction_EOF {
     CodeType code;
 };
 #pragma pack(pop)
 //==============================
 FORCE_INLINE static void handle_Add(int locals[LocalStackSize], char *&ip) {
-    RB_Instruction<RBC_Add>* p = (RB_Instruction<RBC_Add>*)ip;
+    RB_Instruction_Add* p = (RB_Instruction_Add*)ip;
     locals[p->dest] = locals[p->src1] + locals[p->src2];
     ip += sizeof(*p);
 }
 FORCE_INLINE static void handle_Sub(int locals[LocalStackSize], char *&ip) {
-    RB_Instruction<RBC_Sub>* p = (RB_Instruction<RBC_Sub>*)ip;
+    RB_Instruction_Sub* p = (RB_Instruction_Sub*)ip;
     locals[p->dest] = locals[p->src1] - locals[p->src2];
     ip += sizeof(*p);
 }
 FORCE_INLINE static void handle_Mul(int locals[LocalStackSize], char *&ip) {
-    RB_Instruction<RBC_Mul>* p = (RB_Instruction<RBC_Mul>*)ip;
+    RB_Instruction_Mul* p = (RB_Instruction_Mul*)ip;
     locals[p->dest] = locals[p->src1] * locals[p->src2];
     ip += sizeof(*p);
 }
 FORCE_INLINE static void handle_Div(int locals[LocalStackSize], char *&ip) {
-    RB_Instruction<RBC_Div>* p = (RB_Instruction<RBC_Div>*)ip;
+    RB_Instruction_Div* p = (RB_Instruction_Div*)ip;
     locals[p->dest] = locals[p->src1] / locals[p->src2];
     ip += sizeof(*p);
 }
 FORCE_INLINE static void handle_EQ(int locals[LocalStackSize], char *&ip) {
-    RB_Instruction<RBC_EQ>* p = (RB_Instruction<RBC_EQ>*)ip;
+    RB_Instruction_EQ* p = (RB_Instruction_EQ*)ip;
     locals[p->dest] = locals[p->src1] == locals[p->src2];
     ip += sizeof(*p);
 }
 FORCE_INLINE static void handle_NE(int locals[LocalStackSize], char *&ip) {
-    RB_Instruction<RBC_NE>* p = (RB_Instruction<RBC_NE>*)ip;
+    RB_Instruction_NE* p = (RB_Instruction_NE*)ip;
     locals[p->dest] = locals[p->src1] != locals[p->src2];
     ip += sizeof(*p);
 }
 FORCE_INLINE static void handle_LoadInt(int locals[LocalStackSize], char *&ip) {
-    RB_Instruction<RBC_LoadInt>* p = (RB_Instruction<RBC_LoadInt>*)ip;
+    RB_Instruction_LoadInt* p = (RB_Instruction_LoadInt*)ip;
     locals[p->dest] = p->i;
     ip += sizeof(*p);
 }
 FORCE_INLINE static void handle_Mov(int locals[LocalStackSize], char *&ip) {
-    RB_Instruction<RBC_Mov>* p = (RB_Instruction<RBC_Mov>*)ip;
+    RB_Instruction_Mov* p = (RB_Instruction_Mov*)ip;
     locals[p->dest] = locals[p->src];
     ip += sizeof(*p);
 }
 FORCE_INLINE static void handle_Jmp(int locals[LocalStackSize], char *&ip) {
-    ip += ((RB_Instruction<RBC_Jmp>*)ip)->jmpOff;
+    ip += ((RB_Instruction_Jmp*)ip)->jmpOff;
 }
 FORCE_INLINE static void handle_TJmp(int locals[LocalStackSize], char *&ip) {
-    RB_Instruction<RBC_TJmp>* p = (RB_Instruction<RBC_TJmp>*)ip;
+    RB_Instruction_TJmp* p = (RB_Instruction_TJmp*)ip;
     if (locals[p->cond]) {
         ip += p->jmpOff;
     } else {
@@ -149,7 +134,7 @@ FORCE_INLINE static void handle_TJmp(int locals[LocalStackSize], char *&ip) {
     }
 }
 FORCE_INLINE static void handle_Repeat(int locals[LocalStackSize], char *&ip) {
-    RB_Instruction<RBC_Repeat>* p = (RB_Instruction<RBC_Repeat>*)ip;
+    RB_Instruction_Repeat* p = (RB_Instruction_Repeat*)ip;
     if (locals[p->loopCounter] > 0) {
         --locals[p->loopCounter];
         locals[p->iter] += locals[p->step];
@@ -159,7 +144,7 @@ FORCE_INLINE static void handle_Repeat(int locals[LocalStackSize], char *&ip) {
     }
 }
 FORCE_INLINE static void handle_Nop(int locals[LocalStackSize], char *&ip) {
-    ip += sizeof(RB_Instruction<RBC_Nop>);
+    ip += sizeof(RB_Instruction_Nop);
 }
 //==============================
 class RB_Interpreter_CallThreading: public Interpreter {
@@ -413,9 +398,9 @@ public:
             CodeType code = (CodeType&)m_bytes[off];
             JmpOffType *jmpOff = NULL;
             switch (code) {
-                case RBC_Jmp: jmpOff = &((RB_Instruction<RBC_Jmp>&)m_bytes[off]).jmpOff; break;
-                case RBC_TJmp: jmpOff = &((RB_Instruction<RBC_TJmp>&)m_bytes[off]).jmpOff; break;
-                case RBC_Repeat: jmpOff = &((RB_Instruction<RBC_Repeat>&)m_bytes[off]).jmpOff; break;
+                case RBC_Jmp: jmpOff = &((RB_Instruction_Jmp&)m_bytes[off]).jmpOff; break;
+                case RBC_TJmp: jmpOff = &((RB_Instruction_TJmp&)m_bytes[off]).jmpOff; break;
+                case RBC_Repeat: jmpOff = &((RB_Instruction_Repeat&)m_bytes[off]).jmpOff; break;
                 default: break;
             }
             if (jmpOff != NULL) *jmpOff = insOffs[*jmpOff] - off;

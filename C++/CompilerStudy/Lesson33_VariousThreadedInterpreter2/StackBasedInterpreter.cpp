@@ -28,69 +28,53 @@ enum SB_Code {
 };
 
 #pragma pack(push, 1)
-template<SB_Code>
-struct SB_Instruction;
-template<>
-struct SB_Instruction<SBC_Add> {
+struct SB_Instruction_Add {
     CodeType code;
 };
-template<>
-struct SB_Instruction<SBC_Sub> {
+struct SB_Instruction_Sub {
     CodeType code;
 };
-template<>
-struct SB_Instruction<SBC_Mul> {
+struct SB_Instruction_Mul {
     CodeType code;
 };
-template<>
-struct SB_Instruction<SBC_Div> {
+struct SB_Instruction_Div {
     CodeType code;
 };
-template<>
-struct SB_Instruction<SBC_EQ> {
+struct SB_Instruction_EQ {
     CodeType code;
 };
-template<>
-struct SB_Instruction<SBC_NE> {
+struct SB_Instruction_NE {
     CodeType code;
 };
-template<>
-struct SB_Instruction<SBC_PushLocal> {
+struct SB_Instruction_PushLocal {
     CodeType code;
     LocalIdxType local;
 };
-template<>
-struct SB_Instruction<SBC_PopLocal> {
+struct SB_Instruction_PopLocal {
     CodeType code;
     LocalIdxType local;
 };
-template<>
-struct SB_Instruction<SBC_PushInt> {
+struct SB_Instruction_PushInt {
     CodeType code;
     int i;
 };
-template<>
-struct SB_Instruction<SBC_Jmp> {
+struct SB_Instruction_Jmp {
     CodeType code;
     JmpOffType jmpOff;
 };
-template<>
-struct SB_Instruction<SBC_TJmp> {
+struct SB_Instruction_TJmp {
     CodeType code;
     JmpOffType jmpOff;
 };
-template<>
-struct SB_Instruction<SBC_Repeat> {
+struct SB_Instruction_Repeat {
     CodeType code;
     LocalIdxType loopCounter, iter, step;
     JmpOffType jmpOff;
 };
-template<>
-struct SB_Instruction<SBC_Nop> {
+struct SB_Instruction_Nop {
     CodeType code;
 };
-template<>
-struct SB_Instruction<SBC_EOF> {
+struct SB_Instruction_EOF {
     CodeType code;
 };
 #pragma pack(pop)
@@ -100,54 +84,54 @@ struct SB_Instruction<SBC_EOF> {
 FORCE_INLINE static void handle_Add(int *&stackTop, int locals[LocalStackSize], char *&ip) {
     stackTop[-2] += stackTop[-1];
     --stackTop;
-    ip += sizeof(SB_Instruction<SBC_Add>);
+    ip += sizeof(SB_Instruction_Add);
 }
 FORCE_INLINE static void handle_Sub(int *&stackTop, int locals[LocalStackSize], char *&ip) {
     stackTop[-2] -= stackTop[-1];
     --stackTop;
-    ip += sizeof(SB_Instruction<SBC_Sub>);
+    ip += sizeof(SB_Instruction_Sub);
 }
 FORCE_INLINE static void handle_Mul(int *&stackTop, int locals[LocalStackSize], char *&ip) {
     stackTop[-2] *= stackTop[-1];
     --stackTop;
-    ip += sizeof(SB_Instruction<SBC_Mul>);
+    ip += sizeof(SB_Instruction_Mul);
 }
 FORCE_INLINE static void handle_Div(int *&stackTop, int locals[LocalStackSize], char *&ip) {
     stackTop[-2] /= stackTop[-1];
     --stackTop;
-    ip += sizeof(SB_Instruction<SBC_Div>);
+    ip += sizeof(SB_Instruction_Div);
 }
 FORCE_INLINE static void handle_EQ(int *&stackTop, int locals[LocalStackSize], char *&ip) {
     stackTop[-2] = stackTop[-2] == stackTop[-1];
     --stackTop;
-    ip += sizeof(SB_Instruction<SBC_EQ>);
+    ip += sizeof(SB_Instruction_EQ);
 }
 FORCE_INLINE static void handle_NE(int *&stackTop, int locals[LocalStackSize], char *&ip) {
     stackTop[-2] = stackTop[-2] != stackTop[-1];
     --stackTop;
-    ip += sizeof(SB_Instruction<SBC_NE>);
+    ip += sizeof(SB_Instruction_NE);
 }
 FORCE_INLINE static void handle_PushLocal(int *&stackTop, int locals[LocalStackSize], char *&ip) {
-    *stackTop++ = locals[((SB_Instruction<SBC_PushLocal>*)ip)->local];
-    ip += sizeof(SB_Instruction<SBC_PushLocal>);
+    *stackTop++ = locals[((SB_Instruction_PushLocal*)ip)->local];
+    ip += sizeof(SB_Instruction_PushLocal);
 }
 FORCE_INLINE static void handle_PopLocal(int *&stackTop, int locals[LocalStackSize], char *&ip) {
-    locals[((SB_Instruction<SBC_PopLocal>*)ip)->local] = *--stackTop;
-    ip += sizeof(SB_Instruction<SBC_PopLocal>);
+    locals[((SB_Instruction_PopLocal*)ip)->local] = *--stackTop;
+    ip += sizeof(SB_Instruction_PopLocal);
 }
 FORCE_INLINE static void handle_PushInt(int *&stackTop, int locals[LocalStackSize], char *&ip) {
-    *stackTop++ = ((SB_Instruction<SBC_PushInt>*)ip)->i;
-    ip += sizeof(SB_Instruction<SBC_PushInt>);
+    *stackTop++ = ((SB_Instruction_PushInt*)ip)->i;
+    ip += sizeof(SB_Instruction_PushInt);
 }
 FORCE_INLINE static void handle_Jmp(int *&stackTop, int locals[LocalStackSize], char *&ip) {
-    ip += ((SB_Instruction<SBC_Jmp>*)ip)->jmpOff;
+    ip += ((SB_Instruction_Jmp*)ip)->jmpOff;
 }
 FORCE_INLINE static void handle_TJmp(int *&stackTop, int locals[LocalStackSize], char *&ip) {
-    if (*--stackTop) ip += ((SB_Instruction<SBC_TJmp>*)ip)->jmpOff;
-    else ip += sizeof(SB_Instruction<SBC_PushInt>);
+    if (*--stackTop) ip += ((SB_Instruction_TJmp*)ip)->jmpOff;
+    else ip += sizeof(SB_Instruction_PushInt);
 }
 FORCE_INLINE static void handle_Repeat(int *&stackTop, int locals[LocalStackSize], char *&ip) {
-    SB_Instruction<SBC_Repeat>* p = (SB_Instruction<SBC_Repeat>*)ip;
+    SB_Instruction_Repeat* p = (SB_Instruction_Repeat*)ip;
     if (locals[p->loopCounter] > 0) {
         --locals[p->loopCounter];
         locals[p->iter] += locals[p->step];
@@ -157,7 +141,7 @@ FORCE_INLINE static void handle_Repeat(int *&stackTop, int locals[LocalStackSize
     }
 }
 FORCE_INLINE static void handle_Nop(int *&stackTop, int locals[LocalStackSize], char *&ip) {
-    ip += sizeof(SB_Instruction<SBC_Nop>);
+    ip += sizeof(SB_Instruction_Nop);
 }
 
 class SB_Interpreter_CallThreading: public Interpreter {
@@ -429,9 +413,9 @@ public:
             CodeType code = (CodeType&)m_bytes[off];
             JmpOffType *jmpOff = NULL;
             switch (code) {
-                case SBC_Jmp: jmpOff = &((SB_Instruction<SBC_Jmp>&)m_bytes[off]).jmpOff; break;
-                case SBC_TJmp: jmpOff = &((SB_Instruction<SBC_TJmp>&)m_bytes[off]).jmpOff; break;
-                case SBC_Repeat: jmpOff = &((SB_Instruction<SBC_Repeat>&)m_bytes[off]).jmpOff; break;
+                case SBC_Jmp: jmpOff = &((SB_Instruction_Jmp&)m_bytes[off]).jmpOff; break;
+                case SBC_TJmp: jmpOff = &((SB_Instruction_TJmp&)m_bytes[off]).jmpOff; break;
+                case SBC_Repeat: jmpOff = &((SB_Instruction_Repeat&)m_bytes[off]).jmpOff; break;
                 default: break;
             }
             if (jmpOff != NULL) *jmpOff = insOffs[*jmpOff] - off;
