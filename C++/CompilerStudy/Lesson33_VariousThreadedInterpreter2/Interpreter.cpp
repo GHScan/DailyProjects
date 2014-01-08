@@ -37,5 +37,6 @@ InterpreterFactory* InterpreterFactory::getFactory(const string &name) {
         return &s_ins;
     } else {
         assert(0);
+        return NULL;
     }
 }
