@@ -419,6 +419,7 @@ private:
             case TID_OP_GREATEREQ: emit(2, 0x0f, 0x8d); break;
             case TID_OP_EQUAL: emit(2, 0x0f, 0x84); break;
             case TID_OP_NEQUAL: emit(2, 0x0f, 0x85); break;
+            default: ASSERT(0); break;
         }
         char *ref = m_codeBuf + m_codeSize;
         emitValue(NULL);
