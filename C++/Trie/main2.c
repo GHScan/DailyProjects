@@ -1,10 +1,10 @@
-#include "pch.h" 
 
 #include <string.h>
 #include <time.h>
 #include <assert.h>
 
 #include <string>
+#include <vector>
 #include <set>
 #include <fstream>
 #include <iostream>
@@ -22,18 +22,27 @@ public:
     int getSCount() const { return m_sCount; }
 private:
     struct Node {
-        Node *childs[62];
+        vector<pair<unsigned char, Node*> > childs;
         set<string> strs;
-        Node() { memset(childs, 0, sizeof(childs)); }
-        Node*& getchild(int c) {
-            if (isdigit(c)) return childs[c - '0'];
-            else if (islower(c)) return childs[c - 'a' + 10];
-            else return childs[c - 'A' + 36];
+        Node() { childs.reserve(4); }
+        Node* getOrCreateChild(unsigned char c) {
+            if (Node *p = getChild(c)) return p;
+            childs.push_back(make_pair(c, new Node()));
+            return childs.back().second;
+        }
+        Node* getChild(unsigned char c) {
+            for (int i = 0; i < (int)childs.size(); ++i) {
+                if (childs[i].first == c) return childs[i].second;
+            }
+            return NULL;
+        }
+        void destroy() {
+            for (int i = 0; i < (int)childs.size(); ++i) childs[i].second->destroy();
+            delete this;
         }
     };
 private:
     void _insert(Node *node, const char *s, int d, int pos, const string& str);
-    void _delete(Node *node);
 private:
     Node *m_root;
     int m_nCount;
@@ -51,7 +60,7 @@ set<string>& Trie::get(const string& str) const {
 
     Node *n = m_root;
     for (int i = 0; i < (int)str.size(); ++i) {
-        n = n->getchild(str[i]);
+        n = n->getChild(str[i]);
         if (n == NULL) return EMPTY_SET;
     }
     return n->strs;
@@ -59,7 +68,7 @@ set<string>& Trie::get(const string& str) const {
 Trie::Trie(): m_root(new Node), m_nCount(1), m_sCount(0) {
 }
 Trie::~Trie() {
-    _delete(m_root);
+    m_root->destroy();
 }
 void Trie::_insert(Node* node, const char *s, int d, int pos, const string& str) {
     if (d > 0) {
@@ -67,18 +76,8 @@ void Trie::_insert(Node* node, const char *s, int d, int pos, const string& str)
         node->strs.insert(str);
     }
     if (s[0] != 0) {
-        Node *&n = node->getchild(s[0]);
-        if (n == NULL) {
-            n = new Node();
-            ++m_nCount;
-        }
-        _insert(n, s + 1, d + 1, pos, str);
+        _insert(node->getOrCreateChild(s[0]), s + 1, d + 1, pos, str);
     }
-}
-void Trie::_delete(Node *node) {
-    if (node == NULL) return;
-    for (int i = 0; i < int(sizeof(node->childs) / sizeof(node->childs[0])); ++i) _delete(node->childs[i]);
-    delete node;
 }
 
 int main() {
