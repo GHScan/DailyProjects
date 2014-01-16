@@ -1,0 +1,7 @@
+query performance:
+
+    750wps - cpp
+    100wps - lua
+    480wps - luajit
+    60wps - python
+    180wps - pypy
