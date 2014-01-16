@@ -22,9 +22,14 @@ public:
     int getSCount() const { return m_sCount; }
 private:
     struct Node {
-        Node *childs[128];
+        Node *childs[62];
         set<string> strs;
         Node() { memset(childs, 0, sizeof(childs)); }
+        Node*& getchild(int c) {
+            if (isnumber(c)) return childs[c - '0'];
+            else if (islower(c)) return childs[c - 'a' + 10];
+            else return childs[c - 'A' + 36];
+        }
     };
 private:
     void _insert(Node *node, const char *s, int d, int pos, const string& str);
@@ -46,7 +51,7 @@ set<string>& Trie::get(const string& str) const {
 
     Node *n = m_root;
     for (int i = 0; i < (int)str.size(); ++i) {
-        n = n->childs[(unsigned char)str[i]];
+        n = n->getchild(str[i]);
         if (n == NULL) return EMPTY_SET;
     }
     return n->strs;
@@ -62,18 +67,17 @@ void Trie::_insert(Node* node, const char *s, int d, int pos, const string& str)
         node->strs.insert(str);
     }
     if (s[0] != 0) {
-        Node *n = node->childs[(unsigned char)s[0]];
+        Node *&n = node->getchild(s[0]);
         if (n == NULL) {
             n = new Node();
             ++m_nCount;
         }
-        node->childs[(unsigned char)s[0]] = n;
         _insert(n, s + 1, d + 1, pos, str);
     }
 }
 void Trie::_delete(Node *node) {
     if (node == NULL) return;
-    for (int i = 0; i < 128; ++i) _delete(node->childs[i]);
+    for (int i = 0; i < int(sizeof(node->childs) / sizeof(node->childs[0])); ++i) _delete(node->childs[i]);
     delete node;
 }
 
