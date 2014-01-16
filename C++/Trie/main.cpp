@@ -5,7 +5,8 @@
 #include <assert.h>
 
 #include <string>
-#include <set>
+#include <vector>
+#include <unordered_set>
 #include <fstream>
 #include <iostream>
 #include <algorithm>
@@ -14,72 +15,65 @@ using namespace std;
 
 class Trie {
 public:
-    void insert(const string &str);
-    set<string>& get(const string& str) const;
-    Trie();
-    ~Trie();
-    int getNCount() const { return m_nCount; }
+    void insert(const string &str) {
+        ++m_sCount;
+        for (int i = 0; i < (int)str.size(); ++i) {
+            _insert(_getStrPtr(str), str.c_str() + i, (int)str.size() - i);
+        }
+    }
+    unordered_set<const char*>* get(const char* s) const {
+        Node *n = m_root;
+        for (; n && *s; n = n->getChild(*s), ++s);
+        return n ? &n->strs : NULL;
+    }
+    Trie(): m_root(new Node(0)), m_sCount(0){}
+    ~Trie() { m_root->destroy();}
+    int getNCount() const { return m_root->getNodeCount(); }
     int getSCount() const { return m_sCount; }
 private:
     struct Node {
-        Node *childs[62];
-        set<string> strs;
-        Node() { memset(childs, 0, sizeof(childs)); }
-        Node*& getchild(int c) {
-            if (isdigit(c)) return childs[c - '0'];
-            else if (islower(c)) return childs[c - 'a' + 10];
-            else return childs[c - 'A' + 36];
+        vector<Node*> childs;
+        unordered_set<const char*> strs;
+        int value;
+        Node(int v): value(v) {}
+        Node* getOrCreateChild(unsigned char c) {
+            Node *p = getChild(c);
+            if (p) return p;
+            childs.push_back(p = new Node(c));
+            return p;
+        }
+        Node* getChild(unsigned char c) {
+            for (int i = 0; i < (int)childs.size(); ++i) {
+                if (childs[i]->value == c) return childs[i];
+            }
+            return NULL;
+        }
+        void destroy() {
+            for (int i = 0; i < (int)childs.size(); ++i) childs[i]->destroy();
+            delete this;
+        }
+        int getNodeCount() {
+            int sum = 1;
+            for (int i = 0; i < (int)childs.size(); ++i) sum += childs[i]->getNodeCount();
+            return sum;
         }
     };
 private:
-    void _insert(Node *node, const char *s, int d, int pos, const string& str);
-    void _delete(Node *node);
+    void _insert(const char* src, const char *s, int len) {
+        Node *n = m_root;
+        for (int i = 0; i <= len; ++i) {
+            if (i > 0) n->strs.insert(src);
+            if (i < len) n = n->getOrCreateChild(s[i]);
+        }
+    }
+    const char* _getStrPtr(const string& src) {
+        return m_strPool.insert(src).first->c_str();
+    }
 private:
     Node *m_root;
-    int m_nCount;
     int m_sCount;
+    unordered_set<string> m_strPool;
 };
-
-void Trie::insert(const string &str) {
-    ++m_sCount;
-    for (int i = 0; i < (int)str.size(); ++i) {
-        _insert(m_root, str.c_str() + i, 0, i, str);
-    }
-}
-set<string>& Trie::get(const string& str) const {
-    static set<string> EMPTY_SET;
-
-    Node *n = m_root;
-    for (int i = 0; i < (int)str.size(); ++i) {
-        n = n->getchild(str[i]);
-        if (n == NULL) return EMPTY_SET;
-    }
-    return n->strs;
-}
-Trie::Trie(): m_root(new Node), m_nCount(1), m_sCount(0) {
-}
-Trie::~Trie() {
-    _delete(m_root);
-}
-void Trie::_insert(Node* node, const char *s, int d, int pos, const string& str) {
-    if (d > 0) {
-        // str, pos, pos + d
-        node->strs.insert(str);
-    }
-    if (s[0] != 0) {
-        Node *&n = node->getchild(s[0]);
-        if (n == NULL) {
-            n = new Node();
-            ++m_nCount;
-        }
-        _insert(n, s + 1, d + 1, pos, str);
-    }
-}
-void Trie::_delete(Node *node) {
-    if (node == NULL) return;
-    for (int i = 0; i < int(sizeof(node->childs) / sizeof(node->childs[0])); ++i) _delete(node->childs[i]);
-    delete node;
-}
 
 int main() {
     Trie t;
@@ -100,8 +94,10 @@ int main() {
     }
 
     for (string line; getline(cin, line); ) {
-        set<string> &res = t.get(line);
-        copy(res.begin(), res.end(), ostream_iterator<string>(cout, ","));
+        unordered_set<const char*> *res = t.get(line.c_str());
+        if (res != NULL) {
+            copy(res->begin(), res->end(), ostream_iterator<string>(cout, ","));
+        }
         puts("");
     }
 
