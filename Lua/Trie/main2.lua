@@ -1,39 +1,39 @@
 #! /usr/bin/env lua
 
 local trie = {}
-local RES_KEY = {}
-local function _insert(tree, s, d, pos, src)
-    if d > 0 then
-        local res = tree[RES_KEY] or {}
-        tree[RES_KEY] = res
-        res[src] = true
-        --res[#res + 1] = {pos, pos + d - 1, src}
-    end
-    if #s > 0 then
-        local c = string.sub(s, 1, 1)
+local string_sub = string.sub
+local function _insert(tree, src, start)
+    for i = start, #src + 1 do
+        if i > start then
+            local res = tree.res or {}
+            tree.res = res
+            res[src] = true
+        end
+        if i > #src then break end
+        local c = string_sub(src, i, i)
         local bran = tree[c] or {}
         tree[c] = bran
-        _insert(bran, string.sub(s, 2), d + 1, pos, src)
+        tree = bran
     end
 end
-function insert(s)
+local function insert(s)
     for i = 1, #s do
-        _insert(trie, string.sub(s, i), 0, i, s)
+        _insert(trie, s, i, 0)
     end
 end
-function get(s)
+local function get(s)
     local tree = trie
     for i = 1, #s do
-        tree = tree[string.sub(s, i, i)]
+        tree = tree[string_sub(s, i, i)]
         if not tree then return end
     end
-    return tree[RES_KEY]
+    return tree.res
 end
-function clear()
+local function clear()
     trie = {}
 end
 
-function printRes(res)
+local function printRes(res)
     if not res then return end
     local t = {}
     for k, _ in pairs(res) do t[#t + 1] = k end
