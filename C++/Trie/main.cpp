@@ -16,7 +16,6 @@ using namespace std;
 class Trie {
 public:
     void insert(const string &str) {
-        ++m_sCount;
         for (int i = 0; i < (int)str.size(); ++i) {
             _insert(_getStrPtr(str), str.c_str() + i, (int)str.size() - i);
         }
@@ -26,10 +25,9 @@ public:
         for (; n && *s; n = n->getChild(*s), ++s);
         return n ? &n->strs : NULL;
     }
-    Trie(): m_root(new Node(0)), m_sCount(0){}
+    Trie(): m_root(new Node(0)){}
     ~Trie() { m_root->destroy();}
-    int getNCount() const { return m_root->getNodeCount(); }
-    int getSCount() const { return m_sCount; }
+    int getNodeCount() const { return m_root->getNodeCount(); }
 private:
     struct Node {
         vector<Node*> childs;
@@ -71,7 +69,6 @@ private:
     }
 private:
     Node *m_root;
-    int m_sCount;
     unordered_set<string> m_strPool;
 };
 
@@ -83,14 +80,16 @@ int main() {
     {
         clock_t start = clock();
         ifstream fi("1.txt");
+        int n = 0;
         for (string w; fi >> w; ) {
             int i = 0;
             for (; i < (int)w.size() && !isalnum(w[i]); ++i);
             int j = i;
             for (; j < (int)w.size() && isalnum(w[j]); ++j);
+            ++n;
             t.insert(w.substr(i, j - i));
         }
-        printf("read %d words, cose %fs, %d nodes\n", t.getSCount(), float(clock() - start) / CLOCKS_PER_SEC, t.getNCount());
+        printf("read %d words, cose %fs, %d nodes\n", n, float(clock() - start) / CLOCKS_PER_SEC, t.getNodeCount());
     }
 
     for (string line; getline(cin, line); ) {
