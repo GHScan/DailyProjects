@@ -9,7 +9,7 @@ class Trie(object):
     def _insert(self, node, s, start):
         for i in range(start, len(s) + 1):
             if i > start:
-                node.setdefault('_res', set()).add(s)
+                node.setdefault(0, set()).add(s)
             if i < len(s):
                 node = node.setdefault(s[i:i+1], dict())
     def get(self, s):
@@ -17,7 +17,7 @@ class Trie(object):
         for i in range(len(s)):
             n = n.get(s[i:i+1], None)
             if not n: return None
-        return n.get('_res', None)
+        return n.get(0, None)
     def clear(self):
         self.m_root = dict()
 
