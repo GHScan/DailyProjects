@@ -122,7 +122,7 @@ public:
     Timer(float *p):m_p(p), m_begin(clock()) {}
     ~Timer()
     {
-        *m_p += (clock() - m_begin) / 1000.f;
+        *m_p += float(clock() - m_begin) / CLOCKS_PER_SEC;
     }
 private:
     float *m_p;

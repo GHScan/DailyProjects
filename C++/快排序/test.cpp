@@ -4,6 +4,8 @@
 
 #include <algorithm>
 #include <vector>
+#include <iostream>
+using namespace std;
 
 void insertion_sort(int *begin, int *end)
 {
@@ -60,7 +62,7 @@ public:
     }
     ~Timer() 
     {
-        cout << m_name << ":" << (clock() - m_start) / 1000.0 << endl;
+        cout << m_name << ":" << float(clock() - m_start) / CLOCKS_PER_SEC  << endl;
     }
 private:
     const char *m_name;
