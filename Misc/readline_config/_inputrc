@@ -1,0 +1,3 @@
+set editing-mode vi
+set keymap vi
+set convert-meta on
