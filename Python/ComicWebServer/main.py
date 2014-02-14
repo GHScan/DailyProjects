@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # vim:fileencoding=utf-8
 
-import os, sys
+import os, sys, re
 import urllib2, mimetypes, datetime, base64
 import web
 
@@ -14,8 +14,17 @@ urls = (
 def _toUTF8(s):
     return s.decode(sys.getfilesystemencoding()).encode('utf-8')
 
+def _smartSorted(l):
+    def mycmp(la, lb, conv = re.compile(r'\d+|\D*')):
+        la, lb = conv.findall(la), conv.findall(lb)
+        for a, b in zip(la, lb):
+            c = cmp(int(a), int(b)) if (a.isdigit() and b.isdigit()) else cmp(a, b)
+            if c: return c
+        return 0
+    return sorted(l, mycmp)
+
 class Index(object):
-    bookpaths = sorted(os.path.join(os.getcwd(), fname) for fname in os.listdir(os.getcwd()))
+    bookpaths = _smartSorted(os.path.join(os.getcwd(), fname) for fname in os.listdir(os.getcwd()))
 
     def GET(self):
         books = [{'name':_toUTF8(os.path.split(path)[1]), 'url':'/book/%s' % i} for i, path in enumerate(self.bookpaths)]
@@ -49,7 +58,7 @@ class Book(object):
         if idx + 1 < len(Index.bookpaths): 
             bookInfo['nextUrl'] = '/book/%s' % (idx + 1)
 
-        images = ['/file/' + web.net.urlquote(base64.encodestring(os.path.join(path, fname))) for fname in sorted(os.listdir(path))]
+        images = ['/file/' + web.net.urlquote(base64.encodestring(os.path.join(path, fname))) for fname in _smartSorted(os.listdir(path))]
 
         template = '''$def with (bookInfo, images)
         <html>
