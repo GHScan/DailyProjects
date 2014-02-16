@@ -2,13 +2,13 @@
 # vim:fileencoding=utf-8
 
 import os, sys, re
-import urllib2, mimetypes, datetime, base64
+import urllib2, mimetypes, datetime, hashlib
 import web
 
 urls = (
         r'/', 'Index',
         r'/book/(\d+)', 'Book',
-        r'/file/(.+?)\n?', 'File',
+        r'/file/(\d+)', 'File',
         )
 
 def _toUTF8(s):
@@ -58,7 +58,7 @@ class Book(object):
         if idx + 1 < len(Index.bookpaths): 
             bookInfo['nextUrl'] = '/book/%s' % (idx + 1)
 
-        images = ['/file/' + web.net.urlquote(base64.encodestring(os.path.join(path, fname))) for fname in _smartSorted(os.listdir(path))]
+        images = [File.getFileUrl(os.path.join(path, fname)) for fname in _smartSorted(os.listdir(path))]
 
         template = '''$def with (bookInfo, images)
         <html>
@@ -84,10 +84,24 @@ class Book(object):
         return web.template.Template(template)(bookInfo, images)
 
 class File(object):
-    def GET(self, path):
-        path = base64.decodestring(urllib2.unquote(path))
+    path2Url = {}
+    pathlist = []
+    @staticmethod
+    def getFileUrl(path):
+        if path in File.path2Url: return File.path2Url[path]
+        File.path2Url[path] = '/file/%d' % len(File.pathlist)
+        File.pathlist.append(path)
+        return File.path2Url[path]
+
+    def md5(self, s):
+        m = hashlib.md5()
+        m.update(s)
+        return m.hexdigest()
+
+    def GET(self, idx):
+        path = File.pathlist[int(idx)]
         datet = datetime.datetime.fromtimestamp(os.path.getmtime(path))
-        web.http.modified(date=datet)
+        web.http.modified(etag=self.md5('%s %s' % (datet, path)))
         web.header('content-type', mimetypes.guess_type(path))
         return file(path, 'rb').read()
 
