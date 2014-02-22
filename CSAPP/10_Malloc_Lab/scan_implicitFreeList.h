@@ -14,7 +14,7 @@ typedef struct {
 } Tag;
 
 #define ASSERT assert
-//#define ASSERT(b) do { if(!(b)) printf("assert failed:(%d) %s", __LINE__, #b); } while(0)
+//#define ASSERT(b) do { if(!(b)) { printf("assert failed:(%d) %s", __LINE__, #b); *(int*)0 = 0;} } while(0)
 
 #define MAX(a, b) ((a)>=(b) ? (a):(b))
 #define MIN(a, b) ((a)<=(b) ? (a):(b))
