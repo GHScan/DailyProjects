@@ -18,6 +18,7 @@
 #include "mm.h"
 #include "memlib.h"
 
+#include "scan_tcmalloc.h"
 #include "scan_explicitFreeList.h"
 #include "scan_implicitFreeList.h"
 /*********************************************************
