@@ -7,8 +7,8 @@
 #include "mm.h"
 #include "memlib.h"
 
-//#define ASSERT assert
-#define ASSERT(b) do { if(!(b)) { printf("assert failed:(%d) %s", __LINE__, #b); *(int*)0 = 0;} } while(0)
+#define ASSERT assert
+//#define ASSERT(b) do { if(!(b)) { printf("assert failed:(%d) %s", __LINE__, #b); *(int*)0 = 0;} } while(0)
 
 #define max(a, b) ((a)>=(b) ? (a):(b))
 #define min(a, b) ((a)<=(b) ? (a):(b))
@@ -46,15 +46,13 @@
 
 #define ptr2PageIdx(ptr) (((char*)ptr - g_pageBase) / PAGE_SIZE)
 #define getMaxPageCount()  ptr2PageIdx(mem_sbrk(0))
-#define pageIdx2PDE(pageIdx) (g_PDBase + ((pageIdx >> PTE_COUNT_BITW) & PDE_INDEX_MASK))
+#define pageIdx2PDE(pageIdx) (g_PDBase + (((pageIdx) >> PTE_COUNT_BITW) & PDE_INDEX_MASK))
 #define pageIdx2Ptr(pageIdx) (g_pageBase + pageIdx * PAGE_SIZE)
-#define pageIdx2BlockMeta(pageIdx) ((PageEntry_BlockMeta*)*pageIdx2PDE(pageIdx) + (pageIdx & PTE_INDEX_MASK))
-#define pageIdx2MPageMeta(pageIdx) ((PageEntry_MPageMeta*)*pageIdx2PDE(pageIdx) + (pageIdx & PTE_INDEX_MASK))
+#define pageIdx2BlockMeta(pageIdx) ((PageEntry_BlockMeta*)*pageIdx2PDE(pageIdx) + ((pageIdx) & PTE_INDEX_MASK))
+#define pageIdx2MPageMeta(pageIdx) ((PageEntry_MPageMeta*)*pageIdx2PDE(pageIdx) + ((pageIdx) & PTE_INDEX_MASK))
 
-#define prevMPageMeta(meta) (meta - (meta - 1)->pageCount)
-#define nextMPageMeta(meta) (meta + meta->pageCount)
-#define setMPageMetaFooter(meta) { *((meta) + (meta)->pageCount - 1) = *(meta); }
-#define setMPageMeta(meta, _allocated, _pageCount) {meta->type = PAGE_ENTRY_TYPE_MPAGE; meta->allocated = _allocated; meta->pageCount = _pageCount; setMPageMetaFooter(meta); }
+#define setMPageMetaFooter(meta, pageIdx) { *pageIdx2MPageMeta((pageIdx) + meta->pageCount - 1) = *(meta); }
+#define setMPageMeta(meta, pageIdx, _allocated, _pageCount) {meta->type = PAGE_ENTRY_TYPE_MPAGE; meta->allocated = _allocated; meta->pageCount = _pageCount; setMPageMetaFooter(meta, pageIdx); }
 #define pageCount2mpageClassIdx(pageCount) (pageCount < MPAGE_CLASS_COUNT ? pageCount - 1 : MPAGE_CLASS_COUNT - 1)
 
 typedef struct {
@@ -95,7 +93,8 @@ static void dumpPageEntryMeta() {
             ++pageIdx;
         }
         else if (mpageMeta->type == PAGE_ENTRY_TYPE_MPAGE) {
-            printf("(mp,#%d,%d)", mpageMeta->pageCount, mpageMeta->allocated);
+            if (mpageMeta->allocated) printf("[mp,#%d]", mpageMeta->pageCount);
+            else printf("(mp,#%d)", mpageMeta->pageCount);
             pageIdx += mpageMeta->pageCount;
         } else {
             PageEntry_BlockMeta *blockMeta = (PageEntry_BlockMeta*)mpageMeta;
@@ -116,13 +115,11 @@ static void checkAllocator() {
     mpage_checkFreeLists();
 }
 //////////////////////////////
-static void buildPDE(int n) {
-    char **pde = g_PDBase;
-    while (*pde != NULL) ++pde;
-    ASSERT(pde - g_PDBase + n <= PD_SIZE);
+static void ensurePDEExist(int pageIdx) {
+    char **pde = pageIdx2PDE(pageIdx);
+    ASSERT(pde - g_PDBase < PD_SIZE);
 
-    int i = 0;
-    for (; i < n; ++i, ++pde) {
+    if (*pde == NULL) {
         *pde = (char*)mem_sbrk(PAGE_SIZE);
         if (*pde == (void*)-1) ASSERT(0);
 
@@ -131,8 +128,10 @@ static void buildPDE(int n) {
         meta->type = PAGE_ENTRY_TYPE_PAGETABLE;
     }
 }
-static int newPage() {
-    char *ptr = mem_sbrk(PAGE_SIZE);
+static int newPage(int pageCount) {
+    ensurePDEExist(getMaxPageCount() + pageCount);
+
+    char *ptr = mem_sbrk(pageCount * PAGE_SIZE);
     if (ptr == (void*)-1) ASSERT(0);
     return ptr2PageIdx(ptr);
 }
@@ -173,7 +172,7 @@ static void block_dumpFreeLists() {
     puts("}");
 }
 static void block_newPage(int blockClassIdx) {
-    int pageIdx = newPage();
+    int pageIdx = newPage(1);
 
     PageEntry_BlockMeta *meta = pageIdx2BlockMeta(pageIdx);
     meta->type = PAGE_ENTRY_TYPE_BLOCK;
@@ -228,19 +227,20 @@ static void mpage_checkFreeLists() {
         MPage *mpage = g_mpageFreeLists[mpageClassIdx];
         for (; mpage != NULL; mpage = mpage->next) {
             int pageIdx = ptr2PageIdx(mpage);
+
             PageEntry_MPageMeta *meta = pageIdx2MPageMeta(pageIdx);
             ASSERT(meta->type == PAGE_ENTRY_TYPE_MPAGE);
             ASSERT(pageCount2mpageClassIdx(meta->pageCount) == mpageClassIdx);
             ASSERT(meta->allocated == 0);
 
-            PageEntry_MPageMeta *footer = meta + meta->pageCount - 1;
+            PageEntry_MPageMeta *footer = pageIdx2MPageMeta(pageIdx + meta->pageCount - 1);
             ASSERT(meta->type == footer->type);
             ASSERT(meta->pageCount == footer->pageCount);
             ASSERT(meta->allocated == footer->allocated);
         }
     }
 }
-static void mpage_unlinkMPage(PageEntry_MPageMeta *meta, char *ptr) {
+static void mpage_unlinkMPage(PageEntry_MPageMeta *meta, char *ptr, int pageIdx) {
     int mpageClassIdx = pageCount2mpageClassIdx(meta->pageCount);
     MPage **freeList = g_mpageFreeLists + mpageClassIdx;
     MPage *mpage = (MPage*)ptr;
@@ -249,7 +249,7 @@ static void mpage_unlinkMPage(PageEntry_MPageMeta *meta, char *ptr) {
     if (mpage->prev != NULL) mpage->prev->next = mpage->next;
     if (*freeList == mpage) *freeList = mpage->next;
 }
-static void mpage_linkMPageToFreeList(PageEntry_MPageMeta *meta, char *ptr) {
+static void mpage_linkMPageToFreeList(PageEntry_MPageMeta *meta, char *ptr, int pageIdx) {
     int mpageClassIdx = pageCount2mpageClassIdx(meta->pageCount);
     MPage **freeList = g_mpageFreeLists + mpageClassIdx;
     MPage *mpage = (MPage*)ptr;
@@ -259,64 +259,65 @@ static void mpage_linkMPageToFreeList(PageEntry_MPageMeta *meta, char *ptr) {
     mpage->prev = NULL;
     *freeList = mpage;
 }
-static void mpage_mergeMPage(PageEntry_MPageMeta *meta, char *ptr) {
+static void mpage_mergeMPage(PageEntry_MPageMeta *meta, char *ptr, int pageIdx) {
     ASSERT(meta->allocated == 0);
 
-    int pageIdx = ptr2PageIdx(ptr);
     int maxPageCount = getMaxPageCount();
 
     PageEntry_MPageMeta *nextMeta = NULL;
     if (pageIdx + meta->pageCount < maxPageCount) {
-        nextMeta = nextMPageMeta(meta);
+        nextMeta = pageIdx2MPageMeta(pageIdx + meta->pageCount);
         if (nextMeta->type != PAGE_ENTRY_TYPE_MPAGE || nextMeta->allocated) nextMeta = NULL;
     }
 
     PageEntry_MPageMeta *prevMeta = NULL;
-    if (pageIdx > 0 && (meta - 1)->type == PAGE_ENTRY_TYPE_MPAGE) {
-        prevMeta = prevMPageMeta(meta);
-        if (prevMeta->allocated) prevMeta = NULL;
+    if (pageIdx > 0) {
+        prevMeta = pageIdx2MPageMeta(pageIdx - 1);
+        if (prevMeta->type != PAGE_ENTRY_TYPE_MPAGE || prevMeta->allocated) prevMeta = NULL;
+        if (prevMeta != NULL) prevMeta = pageIdx2MPageMeta(pageIdx - prevMeta->pageCount);
     }
 
     if (prevMeta == NULL && nextMeta == NULL) return;
 
-    mpage_unlinkMPage(meta, ptr);
+    mpage_unlinkMPage(meta, ptr, pageIdx);
 
-    PageEntry_MPageMeta *mergeMeta = meta;
     int mergePageCount = meta->pageCount;
+    PageEntry_MPageMeta *mergeMeta = meta;
     char *mergePtr = ptr;
+    int mergePageIdx = pageIdx;
 
     if (nextMeta != NULL) {
         mergePageCount += nextMeta->pageCount;
-        mpage_unlinkMPage(nextMeta, ptr + meta->pageCount * PAGE_SIZE);
+        mpage_unlinkMPage(nextMeta, ptr + meta->pageCount * PAGE_SIZE, pageIdx + meta->pageCount);
     }
     if (prevMeta != NULL) {
         mergePageCount += prevMeta->pageCount;
         mergeMeta = prevMeta;
         mergePtr = ptr - prevMeta->pageCount * PAGE_SIZE;
-        mpage_unlinkMPage(prevMeta, mergePtr);
+        mergePageIdx = pageIdx - prevMeta->pageCount;
+        mpage_unlinkMPage(mergeMeta, mergePtr, mergePageIdx);
     }
 
-    setMPageMeta(mergeMeta, 0, mergePageCount);
-    mpage_linkMPageToFreeList(mergeMeta, mergePtr);
+    setMPageMeta(mergeMeta, mergePageIdx, 0, mergePageCount);
+    mpage_linkMPageToFreeList(mergeMeta, mergePtr, mergePageIdx);
 }
-static void mpage_splitMPage(PageEntry_MPageMeta *meta, char *ptr, int pageCount) {
+static void mpage_splitMPage(PageEntry_MPageMeta *meta, char *ptr, int pageIdx, int pageCount) {
     ASSERT(meta->pageCount > pageCount && meta->allocated == 1);
 
-    PageEntry_MPageMeta *newMeta = meta + pageCount;
-    setMPageMeta(newMeta, 0, meta->pageCount - pageCount);
-    mpage_linkMPageToFreeList(newMeta, ptr + pageCount * PAGE_SIZE);
+    int newPageIdx = pageIdx + pageCount;
+    PageEntry_MPageMeta *newMeta = pageIdx2MPageMeta(newPageIdx);
+    setMPageMeta(newMeta, newPageIdx, 0, meta->pageCount - pageCount);
+    mpage_linkMPageToFreeList(newMeta, ptr + pageCount * PAGE_SIZE, newPageIdx);
 
-    setMPageMeta(meta, meta->allocated, pageCount);
+    setMPageMeta(meta, pageIdx, meta->allocated, pageCount);
 }
 static void mpage_newMPage(int pageCount) {
-    int pageIdx = newPage();
-    int i = 1;
-    for (; i < pageCount; ++i) newPage();
+    int pageIdx = newPage(pageCount);
     char *ptr = pageIdx2Ptr(pageIdx);
 
     PageEntry_MPageMeta *meta = pageIdx2MPageMeta(pageIdx);
-    setMPageMeta(meta, 0, pageCount);
-    mpage_linkMPageToFreeList(meta, ptr);
+    setMPageMeta(meta, pageIdx, 0, pageCount);
+    mpage_linkMPageToFreeList(meta, ptr, pageIdx);
 }
 static void* mpage_malloc(int pageCount) {
     MPage *mpage = NULL;
@@ -343,40 +344,39 @@ static void* mpage_malloc(int pageCount) {
     int pageIdx = ptr2PageIdx(mpage);
     PageEntry_MPageMeta *meta = pageIdx2MPageMeta(pageIdx);
 
-    setMPageMeta(meta, 1, meta->pageCount);
-    mpage_unlinkMPage(meta, (char*)mpage);
+    setMPageMeta(meta, pageIdx, 1, meta->pageCount);
+    mpage_unlinkMPage(meta, (char*)mpage, pageIdx);
 
     if (meta->pageCount > pageCount) {
-        mpage_splitMPage(meta, (char*)mpage, pageCount);
+        mpage_splitMPage(meta, (char*)mpage, pageIdx, pageCount);
     }
     ASSERT(meta->pageCount == pageCount);
 
     return mpage;
 }
-static void mpage_free(PageEntry_MPageMeta *meta, char *ptr) {
+static void mpage_free(PageEntry_MPageMeta *meta, char *ptr, int pageIdx) {
     ASSERT(meta->type == PAGE_ENTRY_TYPE_MPAGE);
-    setMPageMeta(meta, 0, meta->pageCount);
-    mpage_linkMPageToFreeList(meta, ptr);
-    mpage_mergeMPage(meta, ptr);
+    setMPageMeta(meta, pageIdx, 0, meta->pageCount);
+    mpage_linkMPageToFreeList(meta, ptr, pageIdx);
+    mpage_mergeMPage(meta, ptr, pageIdx);
 }
-static void* mpage_realloc(PageEntry_MPageMeta *meta, char *ptr, int pageCount) {
+static void* mpage_realloc(PageEntry_MPageMeta *meta, char *ptr, int pageIdx, int pageCount) {
     if (pageCount > meta->pageCount) {
-        int pageIdx = ptr2PageIdx(ptr);
         int maxPageCount = getMaxPageCount();
 
         PageEntry_MPageMeta *nextMeta = NULL;
         if (pageIdx + meta->pageCount < maxPageCount) {
-            nextMeta = nextMPageMeta(meta);
+            nextMeta = pageIdx2MPageMeta(pageIdx + meta->pageCount);
             if (nextMeta->type != PAGE_ENTRY_TYPE_MPAGE || nextMeta->allocated) nextMeta = NULL;
         }
 
         if (nextMeta != NULL && meta->pageCount + nextMeta->pageCount >= pageCount) {
-            mpage_unlinkMPage(nextMeta, ptr + meta->pageCount * PAGE_SIZE);
-            setMPageMeta(meta, 1, meta->pageCount + nextMeta->pageCount);
+            mpage_unlinkMPage(nextMeta, ptr + meta->pageCount * PAGE_SIZE, pageIdx + meta->pageCount);
+            setMPageMeta(meta, pageIdx, 1, meta->pageCount + nextMeta->pageCount);
         }
     }
     if (meta->pageCount > pageCount) {
-        mpage_splitMPage(meta, ptr, pageCount);
+        mpage_splitMPage(meta, ptr, pageIdx, pageCount);
         return ptr;
     } else if (meta->pageCount == pageCount) {
         return ptr;
@@ -410,8 +410,6 @@ int mm_init(void) {
 
     ASSERT(ptr <= g_pageBase);
 
-    buildPDE(PD_SIZE);
-
     (void)dumpAllocator;
     (void)checkAllocator;
 
@@ -436,7 +434,7 @@ void mm_free(void *ptr) {
     if (meta->type == PAGE_ENTRY_TYPE_BLOCK) {
         block_free(meta, ptr);
     } else {
-        mpage_free((PageEntry_MPageMeta*)meta, ptr);
+        mpage_free((PageEntry_MPageMeta*)meta, ptr, pageIdx);
     }
 }
 
@@ -456,7 +454,7 @@ void *mm_realloc(void *ptr, size_t size) {
         if (oldSize >= boundedSize) newPtr = ptr;
     } else {
         oldSize = ((PageEntry_MPageMeta*)meta)->pageCount * PAGE_SIZE;
-        newPtr = mpage_realloc((PageEntry_MPageMeta*)meta, ptr, size2PageCount(boundedSize));
+        newPtr = mpage_realloc((PageEntry_MPageMeta*)meta, ptr, pageIdx, size2PageCount(boundedSize));
     }
 
     if (newPtr == NULL) {
