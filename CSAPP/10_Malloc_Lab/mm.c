@@ -19,8 +19,9 @@
 #include "memlib.h"
 
 #include "scan_tcmalloc.h"
-#include "scan_explicitFreeList.h"
 #include "scan_implicitFreeList.h"
+#define EXPLICIT_FREE_LIST_FIT_TYPE 3
+#include "scan_explicitFreeList.h"
 /*********************************************************
  * NOTE TO STUDENTS: Before you do anything else, please
  * provide your team information in the following struct.

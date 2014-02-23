@@ -190,8 +190,17 @@ void *mm_malloc(size_t size) {
     Header *h = g_freeList->next;
     for (; h->next != NULL; h = h->next) {
         if (h->dwSize >= dwSize) {
-            if (fit == NULL || h->dwSize < fit->dwSize) fit = h;
+            if (fit == NULL) fit = h;
+#if EXPLICIT_FREE_LIST_FIT_TYPE == 0
+            break;
+#elif EXPLICIT_FREE_LIST_FIT_TYPE == 1
+            if (h < fit) fit = h;
+#elif EXPLICIT_FREE_LIST_FIT_TYPE == 2
+            if (h->dwSize < fit->dwSize) fit = h;
             if (fit->dwSize == dwSize) break;
+#else
+            if (h->dwSize < fit->dwSize || (h->dwSize == fit->dwSize && h < fit)) fit = h;
+#endif
         }
     }
     h = fit;
