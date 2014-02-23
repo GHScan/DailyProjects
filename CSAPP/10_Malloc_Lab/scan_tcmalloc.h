@@ -7,25 +7,32 @@
 #include "mm.h"
 #include "memlib.h"
 
-#define ASSERT assert
-//#define ASSERT(b) do { if(!(b)) { printf("assert failed:(%d) %s", __LINE__, #b); *(int*)0 = 0;} } while(0)
+//#define ASSERT assert
+#define ASSERT(b) do { if(!(b)) { printf("assert failed:(%d) %s", __LINE__, #b); *(int*)0 = 0;} } while(0)
 
 #define max(a, b) ((a)>=(b) ? (a):(b))
 #define min(a, b) ((a)<=(b) ? (a):(b))
 
 #define DWSIZE 8
-#define PAGE_SIZE  (4 * 1024)
-#define PTE_COUNT_PER_PAGE 1024
+#define PAGE_SIZE_BITW 12
 
-#define PD_SIZE 32
+#define PAGE_SIZE  (1 << PAGE_SIZE_BITW)
+#define PTE_COUNT_BITW (PAGE_SIZE_BITW - 2)
+#define PTE_COUNT_PER_PAGE (1 << PTE_COUNT_BITW)
+#define PTE_INDEX_MASK ((1 << PTE_COUNT_BITW) - 1)
+#define PDE_INDEX_MASK ((1 << (32 - PAGE_SIZE_BITW - PTE_COUNT_BITW)) - 1)
+
+#define size2PageCount(size) ((size + PAGE_SIZE - 1) / PAGE_SIZE)
+
+#define PD_SIZE ((size2PageCount(MAX_HEAP) + PTE_COUNT_PER_PAGE - 1) / PTE_COUNT_PER_PAGE)
 
 #define PAGE_ENTRY_TYPE_BLOCK 2
 #define PAGE_ENTRY_TYPE_MPAGE 1
 #define PAGE_ENTRY_TYPE_PAGETABLE 0
 
-#define BLOCK_CLASS_FENCE_0 (DWSIZE * 128)
-#define BLOCK_CLASS_FENCE_1 (DWSIZE * 192)
-#define BLOCK_CLASS_FENCE_2 (DWSIZE * 256)
+#define BLOCK_CLASS_FENCE_0 (PAGE_SIZE * 2 / 8)
+#define BLOCK_CLASS_FENCE_1 (PAGE_SIZE * 3 / 8)
+#define BLOCK_CLASS_FENCE_2 (PAGE_SIZE * 4 / 8)
 #define BLOCK_CLASS_SPACE_0 DWSIZE
 #define BLOCK_CLASS_SPACE_1 (DWSIZE * 2)
 #define BLOCK_CLASS_SPACE_2 (DWSIZE * 4)
@@ -39,10 +46,10 @@
 
 #define ptr2PageIdx(ptr) (((char*)ptr - g_pageBase) / PAGE_SIZE)
 #define getMaxPageCount()  ptr2PageIdx(mem_sbrk(0))
-#define pageIdx2PDE(pageIdx) (g_PDBase + ((pageIdx >> 10) & 0x3ff))
+#define pageIdx2PDE(pageIdx) (g_PDBase + ((pageIdx >> PTE_COUNT_BITW) & PDE_INDEX_MASK))
 #define pageIdx2Ptr(pageIdx) (g_pageBase + pageIdx * PAGE_SIZE)
-#define pageIdx2BlockMeta(pageIdx) ((PageEntry_BlockMeta*)*pageIdx2PDE(pageIdx) + (pageIdx & 0x3ff))
-#define pageIdx2MPageMeta(pageIdx) ((PageEntry_MPageMeta*)*pageIdx2PDE(pageIdx) + (pageIdx & 0x3ff))
+#define pageIdx2BlockMeta(pageIdx) ((PageEntry_BlockMeta*)*pageIdx2PDE(pageIdx) + (pageIdx & PTE_INDEX_MASK))
+#define pageIdx2MPageMeta(pageIdx) ((PageEntry_MPageMeta*)*pageIdx2PDE(pageIdx) + (pageIdx & PTE_INDEX_MASK))
 
 #define prevMPageMeta(meta) (meta - (meta - 1)->pageCount)
 #define nextMPageMeta(meta) (meta + meta->pageCount)
@@ -50,17 +57,15 @@
 #define setMPageMeta(meta, _allocated, _pageCount) {meta->type = PAGE_ENTRY_TYPE_MPAGE; meta->allocated = _allocated; meta->pageCount = _pageCount; setMPageMetaFooter(meta); }
 #define pageCount2mpageClassIdx(pageCount) (pageCount < MPAGE_CLASS_COUNT ? pageCount - 1 : MPAGE_CLASS_COUNT - 1)
 
-#define size2PageCount(size) ((size + PAGE_SIZE - 1) / PAGE_SIZE)
-
 typedef struct {
     unsigned int type : 2;
-    unsigned int blockClassIdx : 8;
+    unsigned int blockClassIdx : 30;
 } PageEntry_BlockMeta;
 
 typedef struct {
     unsigned int type : 2;
     unsigned int allocated : 1;
-    unsigned int pageCount : 14;
+    unsigned int pageCount : 29;
 } PageEntry_MPageMeta;
 
 typedef struct _Block{
@@ -316,9 +321,18 @@ static void mpage_newMPage(int pageCount) {
 static void* mpage_malloc(int pageCount) {
     MPage *mpage = NULL;
     int mpageClassIdx = pageCount2mpageClassIdx(pageCount);
-    for (; mpageClassIdx < MPAGE_CLASS_COUNT; ++mpageClassIdx) {
+    for (; mpageClassIdx < MPAGE_CLASS_COUNT - 1; ++mpageClassIdx) {
         if ((mpage = g_mpageFreeLists[mpageClassIdx]) != NULL) break;
     }
+    if (mpage == NULL) {
+        mpage = g_mpageFreeLists[MPAGE_CLASS_COUNT - 1];
+        for (; mpage != NULL; mpage = mpage->next) {
+            int pageIdx = ptr2PageIdx(mpage);
+            PageEntry_MPageMeta *meta = pageIdx2MPageMeta(pageIdx);
+            if (meta->pageCount >= pageCount) break;
+        }
+    }
+
     if (mpage == NULL) {
         mpage_newMPage(pageCount);
         mpageClassIdx = pageCount2mpageClassIdx(pageCount);
@@ -372,26 +386,31 @@ static void* mpage_realloc(PageEntry_MPageMeta *meta, char *ptr, int pageCount) 
 }
 //////////////////////////////
 int mm_init(void) {
-    char *ptr = mem_sbrk(PAGE_SIZE);
+    int PD_SPACE = sizeof(*g_PDBase) * (PD_SIZE + 1);
+    int BLOCK_FREELISTS_SPACE = sizeof(*g_blockFreeLists) * BLOCK_CLASS_COUNT_012;
+    int MPAGE_FREELISTS_SPACE = sizeof(*g_mpageFreeLists) * MPAGE_CLASS_COUNT;
+    int TOTAL_SPACE = size2PageCount(PD_SPACE + BLOCK_FREELISTS_SPACE + MPAGE_FREELISTS_SPACE) * PAGE_SIZE;
+
+    char *ptr = mem_sbrk(TOTAL_SPACE);
     if (ptr == (void*)-1) return -1;
 
     g_pageBase = mem_sbrk(0);
 
     g_PDBase = (char**)ptr;
-    memset(g_PDBase, 0, sizeof(*g_PDBase) * PD_SIZE);
-    ptr += sizeof(*g_PDBase) * PD_SIZE;
+    memset(g_PDBase, 0, PD_SPACE);
+    ptr += PD_SPACE;
 
     g_blockFreeLists = (Block**)ptr;
-    memset(g_blockFreeLists, 0, sizeof(*g_blockFreeLists) * BLOCK_CLASS_COUNT_012);
-    ptr += sizeof(*g_blockFreeLists) * BLOCK_CLASS_COUNT_012;
+    memset(g_blockFreeLists, 0, BLOCK_FREELISTS_SPACE);
+    ptr += BLOCK_FREELISTS_SPACE;
 
     g_mpageFreeLists = (MPage**)ptr;
-    memset(g_mpageFreeLists, 0, sizeof(*g_mpageFreeLists) * MPAGE_CLASS_COUNT);
-    ptr += sizeof(*g_mpageFreeLists) * MPAGE_CLASS_COUNT;
+    memset(g_mpageFreeLists, 0, MPAGE_FREELISTS_SPACE);
+    ptr += MPAGE_FREELISTS_SPACE;
 
     ASSERT(ptr <= g_pageBase);
 
-    buildPDE(MAX_HEAP / (PAGE_SIZE * PTE_COUNT_PER_PAGE));
+    buildPDE(PD_SIZE);
 
     (void)dumpAllocator;
     (void)checkAllocator;
