@@ -51,7 +51,7 @@ static void init_sampler()
 {
     if (values)
 	free(values);
-    values = calloc(kbest, sizeof(double));
+    values = (double*)calloc(kbest, sizeof(double));
 #if KEEP_SAMPLES
     if (samples)
 	free(samples);
@@ -108,7 +108,7 @@ static void clear()
     int *cptr, *cend;
     int incr = cache_block/sizeof(int);
     if (!cache_buf) {
-	cache_buf = malloc(cache_bytes);
+	cache_buf = (int*)malloc(cache_bytes);
 	if (!cache_buf) {
 	    fprintf(stderr, "Fatal error.  Malloc returned null when trying to clear cache\n");
 	    exit(1);

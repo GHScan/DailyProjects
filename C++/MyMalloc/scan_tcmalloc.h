@@ -42,7 +42,7 @@
 
 #define MPAGE_CLASS_COUNT 256
 
-#define boundupToDwSize(bytes) ((bytes + DWSIZE - 1) / DWSIZE * DWSIZE)
+#define roundupToDwSize(bytes) ((bytes + DWSIZE - 1) / DWSIZE * DWSIZE)
 
 #define ptr2PageIdx(ptr) (((char*)ptr - g_pageBase) / PAGE_SIZE)
 #define getMaxPageCount()  ptr2PageIdx(mem_sbrk(0))
@@ -131,7 +131,7 @@ static void ensurePDEExist(int pageIdx) {
 static int newPage(int pageCount) {
     ensurePDEExist(getMaxPageCount() + pageCount);
 
-    char *ptr = mem_sbrk(pageCount * PAGE_SIZE);
+    char *ptr = (char*)mem_sbrk(pageCount * PAGE_SIZE);
     if (ptr == (void*)-1) ASSERT(0);
     return ptr2PageIdx(ptr);
 }
@@ -391,10 +391,10 @@ int mm_init(void) {
     int MPAGE_FREELISTS_SPACE = sizeof(*g_mpageFreeLists) * MPAGE_CLASS_COUNT;
     int TOTAL_SPACE = size2PageCount(PD_SPACE + BLOCK_FREELISTS_SPACE + MPAGE_FREELISTS_SPACE) * PAGE_SIZE;
 
-    char *ptr = mem_sbrk(TOTAL_SPACE);
+    char *ptr = (char*)mem_sbrk(TOTAL_SPACE);
     if (ptr == (void*)-1) return -1;
 
-    g_pageBase = mem_sbrk(0);
+    g_pageBase = (char*)mem_sbrk(0);
 
     g_PDBase = (char**)ptr;
     memset(g_PDBase, 0, PD_SPACE);
@@ -417,7 +417,7 @@ int mm_init(void) {
 }
 
 void *mm_malloc(size_t size) {
-    int boundedSize = boundupToDwSize(size);
+    int boundedSize = roundupToDwSize(size);
     void *ptr;
     if (boundedSize <= BLOCK_CLASS_FENCE_2) {
         ptr = block_malloc(block_size2BlockClassIdx(boundedSize));
@@ -432,17 +432,17 @@ void mm_free(void *ptr) {
     int pageIdx = ptr2PageIdx(ptr);
     PageEntry_BlockMeta *meta = pageIdx2BlockMeta(pageIdx);
     if (meta->type == PAGE_ENTRY_TYPE_BLOCK) {
-        block_free(meta, ptr);
+        block_free(meta, (char*)ptr);
     } else {
-        mpage_free((PageEntry_MPageMeta*)meta, ptr, pageIdx);
+        mpage_free((PageEntry_MPageMeta*)meta, (char*)ptr, pageIdx);
     }
 }
 
 void *mm_realloc(void *ptr, size_t size) {
     if (ptr == NULL) return mm_malloc(size);
-    if (size == 0) return mm_free(ptr), NULL;
+    if (size == 0) return mm_free(ptr), (void*)NULL;
 
-    int boundedSize = boundupToDwSize(size);
+    int boundedSize = roundupToDwSize(size);
 
     void *newPtr = NULL;
     int oldSize;
@@ -454,7 +454,7 @@ void *mm_realloc(void *ptr, size_t size) {
         if (oldSize >= boundedSize) newPtr = ptr;
     } else {
         oldSize = ((PageEntry_MPageMeta*)meta)->pageCount * PAGE_SIZE;
-        newPtr = mpage_realloc((PageEntry_MPageMeta*)meta, ptr, pageIdx, size2PageCount(boundedSize));
+        newPtr = mpage_realloc((PageEntry_MPageMeta*)meta, (char*)ptr, pageIdx, size2PageCount(boundedSize));
     }
 
     if (newPtr == NULL) {
