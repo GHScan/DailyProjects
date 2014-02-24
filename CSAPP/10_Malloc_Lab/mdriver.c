@@ -97,7 +97,7 @@ char msg[MAXLINE];      /* for whenever we need to compose an error message */
 static char tracedir[MAXLINE] = TRACEDIR;
 
 /* The filenames of the default tracefiles */
-static char *default_tracefiles[] = {  
+static const char *default_tracefiles[] = {  
     DEFAULT_TRACEFILES, NULL
 };
 
@@ -113,7 +113,7 @@ static void remove_range(range_t **ranges, char *lo);
 static void clear_ranges(range_t **ranges);
 
 /* These functions read, allocate, and free storage for traces */
-static trace_t *read_trace(char *tracedir, char *filename);
+static trace_t *read_trace(const char *tracedir, const char *filename);
 static void free_trace(trace_t *trace);
 
 /* Routines for evaluating the correctness and speed of libc malloc */
@@ -129,9 +129,9 @@ static void eval_mm_speed(void *ptr);
 /* Various helper routines */
 static void printresults(int n, stats_t *stats);
 static void usage(void);
-static void unix_error(char *msg);
-static void malloc_error(int tracenum, int opnum, char *msg);
-static void app_error(char *msg);
+static void unix_error(const char *msg);
+static void malloc_error(int tracenum, int opnum, const char *msg);
+static void app_error(const char *msg);
 
 /**************
  * Main routine
@@ -140,7 +140,7 @@ int main(int argc, char **argv)
 {
     int i;
     char c;
-    char **tracefiles = NULL;  /* null-terminated array of trace file names */
+    const char **tracefiles = NULL;  /* null-terminated array of trace file names */
     int num_tracefiles = 0;    /* the number of traces in that array */
     trace_t *trace = NULL;     /* stores a single trace file in memory */
     range_t *ranges = NULL;    /* keeps track of block extents for one trace */
@@ -166,7 +166,7 @@ int main(int argc, char **argv)
 	    break;
         case 'f': /* Use one specific trace file only (relative to curr dir) */
             num_tracefiles = 1;
-            if ((tracefiles = (char**)realloc(tracefiles, 2*sizeof(char *))) == NULL)
+            if ((tracefiles = (const char**)realloc(tracefiles, 2*sizeof(char *))) == NULL)
 		unix_error("ERROR: realloc failed in main");
 	    strcpy(tracedir, "./"); 
             tracefiles[0] = strdup(optarg);
@@ -447,6 +447,7 @@ static void remove_range(range_t **ranges, char *lo)
         }
         prevpp = &(p->next);
     }
+    (void)size;
 }
 
 /*
@@ -472,7 +473,7 @@ static void clear_ranges(range_t **ranges)
 /*
  * read_trace - read a trace file and store it in memory
  */
-static trace_t *read_trace(char *tracedir, char *filename)
+static trace_t *read_trace(const char *tracedir, const char *filename)
 {
     FILE *tracefile;
     trace_t *trace;
@@ -549,8 +550,8 @@ static trace_t *read_trace(char *tracedir, char *filename)
 	
     }
     fclose(tracefile);
-    assert(max_index == trace->num_ids - 1);
-    assert(trace->num_ops == op_index);
+    assert((int)max_index == trace->num_ids - 1);
+    assert(trace->num_ops == (int)op_index);
     
     return trace;
 }
@@ -976,7 +977,7 @@ static void printresults(int n, stats_t *stats)
 /* 
  * app_error - Report an arbitrary application error
  */
-void app_error(char *msg) 
+void app_error(const char *msg) 
 {
     printf("%s\n", msg);
     exit(1);
@@ -985,7 +986,7 @@ void app_error(char *msg)
 /* 
  * unix_error - Report a Unix-style error
  */
-void unix_error(char *msg) 
+void unix_error(const char *msg) 
 {
     printf("%s: %s\n", msg, strerror(errno));
     exit(1);
@@ -994,7 +995,7 @@ void unix_error(char *msg)
 /*
  * malloc_error - Report an error returned by the mm_malloc package
  */
-void malloc_error(int tracenum, int opnum, char *msg)
+void malloc_error(int tracenum, int opnum, const char *msg)
 {
     errors++;
     printf("ERROR [trace %d, line %d]: %s\n", tracenum, LINENUM(opnum), msg);

@@ -18,6 +18,7 @@
 #include "mm.h"
 #include "memlib.h"
 
+#include "scan_tcmalloc_cpp.h"
 #include "scan_tcmalloc.h"
 #include "scan_implicitFreeList.h"
 #define EXPLICIT_FREE_LIST_FIT_TYPE 3

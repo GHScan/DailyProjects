@@ -42,7 +42,7 @@
 
 #define MPAGE_CLASS_COUNT 256
 
-#define boundupToDwSize(bytes) ((bytes + DWSIZE - 1) / DWSIZE * DWSIZE)
+#define roundupToDwSize(bytes) ((bytes + DWSIZE - 1) / DWSIZE * DWSIZE)
 
 #define ptr2PageIdx(ptr) (((char*)ptr - g_pageBase) / PAGE_SIZE)
 #define getMaxPageCount()  ptr2PageIdx(mem_sbrk(0))
@@ -417,7 +417,7 @@ int mm_init(void) {
 }
 
 void *mm_malloc(size_t size) {
-    int boundedSize = boundupToDwSize(size);
+    int boundedSize = roundupToDwSize(size);
     void *ptr;
     if (boundedSize <= BLOCK_CLASS_FENCE_2) {
         ptr = block_malloc(block_size2BlockClassIdx(boundedSize));
@@ -442,7 +442,7 @@ void *mm_realloc(void *ptr, size_t size) {
     if (ptr == NULL) return mm_malloc(size);
     if (size == 0) return mm_free(ptr), (void*)NULL;
 
-    int boundedSize = boundupToDwSize(size);
+    int boundedSize = roundupToDwSize(size);
 
     void *newPtr = NULL;
     int oldSize;
