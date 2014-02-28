@@ -13,19 +13,24 @@ g_lock = dummy.Lock()
 g_downloadedCount = 0
 g_filePathList = []
 
-def saveContent2File(filePath, content):
+def saveContent2File(filePath, ifile):
     filePath = g_localDirPath + filePath[len(g_netDirPath):]
     dirs, fname = os.path.split(filePath)
     if not os.path.isdir(dirs):
         os.makedirs(dirs)
-    file(filePath, 'wb').write(content)
+
+    BUF_SIZE = 2**20
+    with file(filePath, 'wb') as ofile:
+        while True:
+            data = ifile.read(BUF_SIZE)
+            if not data: break
+            ofile.write(data)
 
 def downloadFile(filePath):
     _, fname = os.path.split(filePath)
     query = urllib.urlencode({b'path':filePath.encode('utf-8')}).decode('utf-8')
     url = 'http://%s/download?%s' % (g_netHost, query)
-    content = urllib2.urlopen(url).read()
-    saveContent2File(filePath, content)
+    saveContent2File(filePath, urllib2.urlopen(url))
 
     with g_lock:
         global g_downloadedCount

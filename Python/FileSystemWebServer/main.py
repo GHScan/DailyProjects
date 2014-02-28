@@ -51,9 +51,16 @@ class Download(object):
         import mimetypes, datetime
         args = web.input()
         web.header('Content-Type', mimetypes.guess_type(args.path), True)
+        web.header('Transform-encoding', 'Chunked', True)
         dt = datetime.datetime.fromtimestamp(os.path.getmtime(args.path))
         web.http.modified(etag=Hash.getDataHash(('%s %s' % (dt, args.path)).encode('utf-8'), 'md5'))
-        return file(args.path, 'rb').read()
+
+        BUF_SIZE = 2**20
+        with file(args.path, 'rb') as f:
+            while True:
+                data = f.read(BUF_SIZE)
+                if not data: break
+                yield data
 
 if __name__ == '__main__':
     app = web.application(urls, globals())
