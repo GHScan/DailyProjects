@@ -15,9 +15,13 @@ public:
     Semaphore(int value) { sem_init(&mObj, 0, value); }
     ~Semaphore() { sem_destroy(&mObj); }
     void acquire() { sem_wait(&mObj); }
-    bool tryAcquire() {
-        if (sem_trywait(&mObj) != 0) {
-            if (errno != EAGAIN) error_check(errno);
+    bool tryAcquire(int timeoutsec) {
+        timespec time;
+        clock_gettime(CLOCK_REALTIME, &time);
+        time.tv_sec += timeoutsec;
+
+        if ((sem_timedwait(&mObj, &time)) != 0) {
+            if (errno != ETIMEDOUT) error_check(errno);
             return false;
         }
         return true;
@@ -61,7 +65,7 @@ public:
     }
     ~ThreadPool() {
         while (hasTask()) {
-            function<void()> f = popTask();
+            function<void()> f = popTask(0);
             if (f) safeCall(f);
         }
 
@@ -132,20 +136,16 @@ private:
         }
 
         while (!mPoolExit) {
-            function<void()> f = popTask();
-            if (!f) {
-                sleep(1);
-                continue;
+            if (function<void()> f = popTask(1)) {
+                safeCall(f);
             }
-
-            safeCall(f);
         }
 
         return nullptr;
     }
-    function<void()> popTask() {
+    function<void()> popTask(int timeoutsec) {
         function<void()> f;
-        if (!mTaskCount.tryAcquire()) return f;
+        if (!mTaskCount.tryAcquire(timeoutsec)) return f;
 
         {
             MutexGuard guard(mThisLocker);
@@ -205,5 +205,4 @@ int main() {
             puts("async_map finished!"); 
             for (auto i : a) cout << i << ','; puts("");
             });
-
 }
