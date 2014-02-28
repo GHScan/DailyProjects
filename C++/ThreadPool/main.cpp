@@ -7,6 +7,7 @@
 #include <functional>
 #include <exception>
 #include <queue>
+#include <memory>
 
 #define error_check(err) do{if (err != 0) fprintf(stderr, "%s,%d: %s\n", __FILE__, __LINE__, strerror(err)); } while(0)
 
@@ -55,6 +56,24 @@ private:
 
 class ThreadPool {
 public:
+    class MultiTaskResult {
+    public:
+        void join() {
+            mAllComplete.wait();
+        }
+    private:
+        friend class ThreadPool;
+        MultiTaskResult(int taskCount): mTaskCount(taskCount){ assert(mTaskCount > 0); }
+        void onTaskComplete() {
+            if (__sync_fetch_and_add(&mTaskCount, -1) == 1) {
+                mAllComplete.notifyOne();
+            }
+        }
+    private:
+        CondVar mAllComplete;
+        int mTaskCount;
+    };
+public:
     ThreadPool(int threadCnt): mTaskCount(0), mPoolExit(false) {
         for (int i = 0; i < threadCnt; ++i) {
             pthread_t tid;
@@ -75,40 +94,28 @@ public:
         }
     }
     
-    template<typename T, typename T2, typename IterT, typename IterT2>
-    void async_map(function<T2(T)> f, IterT begin, IterT end, IterT2 begin2, function<void()> callback) {
-        int *pn = new int(distance(begin, end));
-
-        for (; begin != end; ++begin, ++begin2) {
-            T v = *begin;
-            auto f2 = [begin2, f, v](){ *begin2 = f(v);};
-
-            pushTask([f2, pn, callback](){ 
-                    safeCall(f2);
-                    if (__sync_fetch_and_add(pn, -1) == 1) {
-                        delete pn;
-                        safeCall(callback);
-                    }
-                    });
+    template<typename FuncT, typename IterT>
+    shared_ptr<MultiTaskResult> apply(FuncT f, IterT begin, IterT end) {
+        vector<function<void()>> funcs;
+        for (; begin != end; ++begin) {
+            auto v = *begin;
+            funcs.push_back([f, v](){ f(v); });
         }
+        return postmulti(funcs.begin(), funcs.end());
     }
-    template<typename T, typename T2, typename IterT, typename IterT2>
-    void map(function<T2(T)> f, IterT begin, IterT end, IterT2 begin2) {
-        CondVar cond;
-        int n = distance(begin, end);
+    template<typename FuncIter>
+    shared_ptr<MultiTaskResult> postmulti(FuncIter begin, FuncIter end) { 
+        auto result = shared_ptr<MultiTaskResult>(new MultiTaskResult(distance(begin, end)));
 
-        for (; begin != end; ++begin, ++begin2) {
-            auto f2 = [begin, begin2, f](){ *begin2 = f(*begin); };
-
-            pushTask([&n, f2, &cond](){
-                    safeCall(f2);
-                    if (__sync_fetch_and_add(&n, -1) == 1) {
-                        cond.notifyOne();
-                    }
+        for (; begin != end; ++begin) {
+            auto f = *begin;
+            pushTask([f, result](){
+                    safeCall(f);
+                    result->onTaskComplete();
                     });
         }
 
-        cond.wait();
+        return result;
     }
     void post(function<void()> f) {
         pushTask(f);
@@ -190,19 +197,17 @@ int main() {
 
     ThreadPool p(4);
 
-    function<int(int)> f = [](int i){  
+    function<void(int)> f = [](int i){  
         sleep(1);
         printf("pid=%lx,id=%d\n", pthread_self(), i);
-        return i * 2;
     };
     vector<int> a = {1, 2, 3, 4, 5, 6, 7, 8};
 
-    p.map(f, a.begin(), a.end(), a.begin());
-    puts("map finished!");
+    p.apply(f, a.begin(), a.end())->join();
+    puts("join finished!");
     for (auto i : a) cout << i << ','; puts("");
 
-    p.async_map(f, a.begin(), a.end(), a.begin(), [&a](){ 
-            puts("async_map finished!"); 
-            for (auto i : a) cout << i << ','; puts("");
-            });
+    p.apply(f, a.begin(), a.end());
+
+    puts("exit main");
 }
