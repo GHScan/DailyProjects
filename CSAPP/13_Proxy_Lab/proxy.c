@@ -116,7 +116,11 @@ int main(int argc, char **argv)
         data->threadIdx = ++threadIdx;
         data->connfd = connfd;
         data->addr = addr;
-        Pthread_create(&data->tid, NULL, &threadForClient, data);
+
+        pthread_attr_t attr;
+        pthread_attr_init(&attr);
+        pthread_attr_setstacksize(&attr, 64 * 1024);
+        Pthread_create(&data->tid, &attr, &threadForClient, data);
     }
 
     fclose(g_logFile);
