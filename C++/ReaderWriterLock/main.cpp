@@ -4,6 +4,7 @@
 #include <semaphore.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <poll.h>
 
 class Semaphore {
 public:
@@ -94,7 +95,8 @@ static void createThread(function<void()> f) {
 }
 
 #define CONCURRENT 300
-#define LOOP 1000
+#define READER_LOOP 1000
+#define WRITER_LOOP 100
 #define WRITER_COUNT 3
 #define READER_COUNT (WRITER_COUNT * CONCURRENT)
 
@@ -121,7 +123,7 @@ static string doRead() {
 }
 static string doWrite() {
     char buf[32];
-    for (int i = 0; i < 1000; ++i) {
+    for (int i = 0; i < 100; ++i) {
         sprintf(buf, "%d", g_res + 1);
         sscanf(buf, "%d", &g_res2);
         g_res = g_res2;
@@ -134,13 +136,16 @@ static double getTime() {
     gettimeofday(&tv, NULL);
     return tv.tv_sec + double(tv.tv_usec) / 1000000;
 }
+static void sleep_us(int us) {
+    poll(NULL, 0, us);
+}
 
 int main() {
     for (int i = 0; i < g_readerCount; ++i) {
         createThread([&](){
-                sleep(1);
+                sleep_us(100);
                 double start = getTime();
-                for (int j = 0; j < LOOP; ++j) {
+                for (int j = 0; j < READER_LOOP; ++j) {
                     {
 #if USE_LOCK == LOCK_TYPE_RW
                         ReaderGuard guard(g_resRW);
@@ -160,9 +165,10 @@ int main() {
     }
     for (int i = 0; i < g_writerCount; ++i) {
         createThread([&](){
-                sleep(1);
+                sleep_us(100);
                 double start = getTime();
-                for (int j = 0; j < LOOP; ++j) {
+                for (int j = 0; j < WRITER_LOOP; ++j) {
+                    sleep_us(10);
                     {
 #if USE_LOCK == LOCK_TYPE_RW
                         WriterGuard guard(g_resRW);
