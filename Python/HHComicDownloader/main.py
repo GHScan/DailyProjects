@@ -63,7 +63,7 @@ def downloadImage(url, path):
     if dname and not os.path.isdir(dname):
         os.makedirs(dname)
     file(path, 'wb').write(content)
-    safePrint(u'downloaded -> %s' % path)
+    safePrint(u'downloaded -> %s\n' % path)
 
 def downloadBook(dirname, url, servers):
     imgUrls = getBookImageUrls(url, servers)
@@ -72,17 +72,16 @@ def downloadBook(dirname, url, servers):
         path = os.path.join(dirname, urllib2.posixpath.basename(imgUrl).decode('gb2312'))
         urlPaths.append((imgUrl, path))
 
-    safePrint(u'********** Start download: %s, (%d images)' % (dirname, len(urlPaths)))
-    g_pool.map(lambda t:downloadImage(*t), urlPaths[:3])
-    safePrint(u'********** Finish download: %s, (%d images)' % (dirname, len(urlPaths)))
+    safePrint(u'********** Start download: %s, (%d images)\n' % (dirname, len(urlPaths)))
+    g_pool.map(lambda t:downloadImage(*t), urlPaths)
+    safePrint(u'********** Finish download: %s, (%d images)\n' % (dirname, len(urlPaths)))
 
 def downloadBooks(url):
     servers = getServerList(url)
     bookUrls = getBookUrls(url)
-    safePrint(u'found %d books !' % len(bookUrls))
+    safePrint(u'found %d books !\n' % len(bookUrls))
     for bookName, bookUrl in bookUrls:
         downloadBook(os.path.join(u'Books', bookName), bookUrl, servers)
-        break
 
 if __name__ != '__main__': exit(0)
 if len(sys.argv) < 2:
