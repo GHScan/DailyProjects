@@ -375,21 +375,18 @@ private:
     MPage* mFreeLists[MPAGE_CLASS_COUNT];
 };
 //////////////////////////////
+struct _GlobalObjs {
+    PageManager pageMgr;
+    BlockFreeListManager blockFreeListMgr;
+    MPageFreeListManager mpageFreeListMgr;
+};
 int mm_init(void) {
-    int totalSpace = sizeof(PageManager) + sizeof(BlockFreeListManager) + sizeof(MPageFreeListManager);
-    totalSpace = roundUp(PAGE_SIZE, totalSpace);
+    _GlobalObjs *g = (_GlobalObjs*)mem_sbrk(roundUp(PAGE_SIZE, sizeof(_GlobalObjs)));
+    if (g == (void*)-1) return -1;
 
-    char *ptr = (char*)mem_sbrk(totalSpace);
-    if (ptr == (void*)-1) return -1;
-
-    g_pageMgr = new (ptr) PageManager((char*)mem_sbrk(0));
-    ptr += sizeof(*g_pageMgr);
-
-    g_blockFreeListMgr = new (ptr) BlockFreeListManager();
-    ptr += sizeof(*g_blockFreeListMgr);
-
-    g_mpageFreeListMgr = new (ptr) MPageFreeListManager();
-    ptr += sizeof(*g_mpageFreeListMgr);
+    g_pageMgr = new (&g->pageMgr) PageManager((char*)mem_sbrk(0));
+    g_blockFreeListMgr = new (&g->blockFreeListMgr) BlockFreeListManager();
+    g_mpageFreeListMgr = new (&g->mpageFreeListMgr) MPageFreeListManager();
 
     return 0;
 }
