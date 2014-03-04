@@ -28,24 +28,34 @@ public:
     void unlock() { release(); }
 private:
 };
+class PosixMutex {
+public:
+    PosixMutex() { pthread_mutex_init(&mMutex, NULL); }
+    ~PosixMutex() { pthread_mutex_destroy(&mMutex); }
+    void lock() { pthread_mutex_lock(&mMutex); }
+    void unlock() { pthread_mutex_unlock(&mMutex); }
+private:
+    pthread_mutex_t mMutex;
+};
+template<typename MutexT>
 class MutexGuard {
 public:
-    MutexGuard(Mutex &mutex): mMutex(mutex){ mMutex.lock(); }
+    MutexGuard(MutexT &mutex): mMutex(mutex){ mMutex.lock(); }
     ~MutexGuard(){ mMutex.unlock(); }
 private:
-    Mutex &mMutex;
+    MutexT &mMutex;
 };
 
 class ReaderWriterLock {
 public:
     ReaderWriterLock(): mReaderCount(0){}
     void lockRead() {
-        (MutexGuard(mWriterPriorMutex));
-        MutexGuard guard(mReaderCountMutex);
+        (MutexGuard<Mutex>(mWriterPriorMutex));
+        MutexGuard<Mutex> guard(mReaderCountMutex);
         if (++mReaderCount == 1) mResMutex.lock();
     }
     void unlockRead() {
-        MutexGuard guard(mReaderCountMutex);
+        MutexGuard<Mutex> guard(mReaderCountMutex);
         if (--mReaderCount == 0) mResMutex.unlock();
     }
     void lockWrite() {
@@ -62,19 +72,45 @@ private:
     Mutex mWriterPriorMutex;
     Mutex mResMutex;
 };
+class PosixReaderWriterLock {
+public:
+    PosixReaderWriterLock() {
+        pthread_rwlock_init(&mLock, NULL);
+    }
+    ~PosixReaderWriterLock() {
+        pthread_rwlock_destroy(&mLock);
+    }
+    void lockRead() {
+        pthread_rwlock_rdlock(&mLock);
+    }
+    void unlockRead() {
+        pthread_rwlock_unlock(&mLock);
+    }
+    void lockWrite() {
+        pthread_rwlock_wrlock(&mLock);
+    }
+    void unlockWrite() {
+        pthread_rwlock_unlock(&mLock);
+    }
+private:
+    pthread_rwlock_t mLock;
+};
+
+template<typename RWLockT>
 class ReaderGuard {
 public:
-    ReaderGuard(ReaderWriterLock &lock): mLock(lock){ mLock.lockRead(); }
+    ReaderGuard(RWLockT &lock): mLock(lock){ mLock.lockRead(); }
     ~ReaderGuard(){ mLock.unlockRead(); }
 private:
-    ReaderWriterLock &mLock;
+    RWLockT &mLock;
 };
+template<typename RWLockT>
 class WriterGuard {
 public:
-    WriterGuard(ReaderWriterLock& lock): mLock(lock){ mLock.lockWrite(); }
+    WriterGuard(RWLockT& lock): mLock(lock){ mLock.lockWrite(); }
     ~WriterGuard(){ mLock.unlockWrite(); }
 private:
-    ReaderWriterLock &mLock;
+    RWLockT &mLock;
 };
 
 struct ThreadData {
@@ -101,16 +137,20 @@ static void createThread(function<void()> f) {
 #define READER_COUNT (WRITER_COUNT * CONCURRENT)
 
 #define LOCK_TYPE_RW 1
-#define LOCK_TYPE_MUTEX 2
-#define LOCK_TYPE_NULL 3
-#define USE_LOCK LOCK_TYPE_RW
+#define LOCK_TYPE_POSIX_RW 2
+#define LOCK_TYPE_MUTEX 3
+#define LOCK_TYPE_POSIX_MUTEX 4
+#define LOCK_TYPE_NULL 5
+#define USE_LOCK LOCK_TYPE_POSIX_MUTEX
 
 Mutex g_gMutex;
 int g_writerCount = WRITER_COUNT;
 int g_readerCount = READER_COUNT;
 
 ReaderWriterLock g_resRW;
+PosixReaderWriterLock g_posixResRW;
 Mutex g_resMutex;
+PosixMutex g_posixResMutex;
 int g_res;
 int g_res2;
 
@@ -148,16 +188,20 @@ int main() {
                 for (int j = 0; j < READER_LOOP; ++j) {
                     {
 #if USE_LOCK == LOCK_TYPE_RW
-                        ReaderGuard guard(g_resRW);
+                        ReaderGuard<ReaderWriterLock> guard(g_resRW);
+#elif USE_LOCK == LOCK_TYPE_POSIX_RW
+                        ReaderGuard<PosixReaderWriterLock> guard(g_posixResRW);
 #elif USE_LOCK == LOCK_TYPE_MUTEX
-                        MutexGuard guard(g_resMutex);
+                        MutexGuard<Mutex> guard(g_resMutex);
+#elif USE_LOCK == LOCK_TYPE_POSIX_MUTEX
+                        MutexGuard<PosixMutex> guard(g_posixResMutex);
 #else
 #endif
                         doRead();
                     }
                 }
 
-                MutexGuard guard(g_gMutex);
+                MutexGuard<Mutex> guard(g_gMutex);
                 if (--g_readerCount == 0) {
                     printf("(%.3fsec), RW ratio=%d, all reader exit\n", getTime() - start, READER_COUNT / WRITER_COUNT);
                 }
@@ -171,16 +215,20 @@ int main() {
                     sleep_us(10);
                     {
 #if USE_LOCK == LOCK_TYPE_RW
-                        WriterGuard guard(g_resRW);
+                        WriterGuard<ReaderWriterLock> guard(g_resRW);
+#elif USE_LOCK == LOCK_TYPE_POSIX_RW
+                        WriterGuard<PosixReaderWriterLock> guard(g_posixResRW);
 #elif USE_LOCK == LOCK_TYPE_MUTEX
-                        MutexGuard guard(g_resMutex);
+                        MutexGuard<Mutex> guard(g_resMutex);
+#elif USE_LOCK == LOCK_TYPE_POSIX_MUTEX
+                        MutexGuard<PosixMutex> guard(g_posixResMutex);
 #else
 #endif
                         doWrite();
                     }
                 }
 
-                MutexGuard guard(g_gMutex);
+                MutexGuard<Mutex> guard(g_gMutex);
                 if (--g_writerCount == 0) {
                     printf("(%.3fsec), RW ratio=%d, all writer exit, g_res=%d,g_res2=%d\n", getTime() - start, READER_COUNT / WRITER_COUNT, g_res, g_res2);
                 }
