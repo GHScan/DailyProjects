@@ -22,8 +22,7 @@ def getBookUrls(url):
         bookname = m.group(2).decode('gb2312')
         bookurl = urllib2.urlparse.urlunparse((urlobj.scheme,urlobj.netloc,m.group(1))+('',)*3)
         bookUrls.append((bookname, bookurl))
-    bookUrls.sort(cmp=lambda a,b:-cmp(a[0],b[0]))
-    return bookUrls
+    return sorted(bookUrls, cmp=lambda a,b:-cmp(a[0], b[0]))
 
 def getServerList(url):
     urlobj = urllib2.urlparse.urlparse(url)
@@ -77,11 +76,25 @@ def downloadBook(dirname, url, servers):
     safePrint(u'********** Finish download: %s, (%d images)\n' % (dirname, len(urlPaths)))
 
 def downloadBooks(url):
+    safePrint(u'downloading the book list.l..')
     servers = getServerList(url)
     bookUrls = getBookUrls(url)
     safePrint(u'found %d books !\n' % len(bookUrls))
-    for bookName, bookUrl in bookUrls:
+    for bookName, bookUrl in filterBooksByUser(bookUrls):
         downloadBook(os.path.join(u'Books', bookName), bookUrl, servers)
+
+def filterBooksByUser(bookUrls):
+    for name, url in bookUrls: safePrint(name)
+
+    while True:
+        keyword = raw_input('input keyword(regex) to filter books:\n').decode(sys.getfilesystemencoding())
+        names = [name for name, url in bookUrls if re.search(keyword, name)]
+        for name in names: safePrint(name)
+        if raw_input('is the book list ok?(y/n):\n') == 'y': break
+
+    book2Url = dict(bookUrls)
+    return [(name, book2Url[name]) for name in names]
+
 
 if __name__ != '__main__': exit(0)
 if len(sys.argv) < 2:
