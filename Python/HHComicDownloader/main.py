@@ -76,7 +76,7 @@ def downloadBook(dirname, url, servers):
     safePrint(u'********** Finish download: %s, (%d images)\n' % (dirname, len(urlPaths)))
 
 def downloadBooks(url):
-    safePrint(u'downloading the book list.l..')
+    safePrint(u'downloading the book list...')
     servers = getServerList(url)
     bookUrls = getBookUrls(url)
     safePrint(u'found %d books !\n' % len(bookUrls))
@@ -84,13 +84,13 @@ def downloadBooks(url):
         downloadBook(os.path.join(u'Books', bookName), bookUrl, servers)
 
 def filterBooksByUser(bookUrls):
-    for name, url in bookUrls: safePrint(name)
+    for name, url in bookUrls: safePrint(name + u'\n')
 
     while True:
-        keyword = raw_input('input keyword(regex) to filter books:\n').decode(sys.getfilesystemencoding())
+        keyword = raw_input(u'input keyword(regex) to filter books:\n').decode(sys.getfilesystemencoding())
         names = [name for name, url in bookUrls if re.search(keyword, name)]
-        for name in names: safePrint(name)
-        if raw_input('is the book list ok?(y/n):\n') == 'y': break
+        for name in names: safePrint(name + u'\n')
+        if raw_input(u'is the book list ok?(y/n):\n') == 'y': break
 
     book2Url = dict(bookUrls)
     return [(name, book2Url[name]) for name in names]
