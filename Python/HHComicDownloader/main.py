@@ -19,7 +19,7 @@ def getBookUrls(url):
     comicID = re.search(r'var ComicID=(\d+)', html).group(1)
     bookUrls = []
     for m in re.finditer(r'<a href=(/hhpage/%s/\S+) target=_blank>([^<]+)</a>' % comicID, html):
-        bookname = m.group(2).decode('gb2312')
+        bookname = m.group(2).decode('gb18030')
         bookurl = urllib2.urlparse.urlunparse((urlobj.scheme,urlobj.netloc,m.group(1))+('',)*3)
         bookUrls.append((bookname, bookurl))
     return sorted(bookUrls, cmp=lambda a,b:-cmp(a[0], b[0]))
@@ -68,7 +68,7 @@ def downloadBook(dirname, url, servers):
     imgUrls = getBookImageUrls(url, servers)
     urlPaths = []
     for imgUrl in imgUrls:
-        path = os.path.join(dirname, urllib2.posixpath.basename(imgUrl).decode('gb2312'))
+        path = os.path.join(dirname, urllib2.posixpath.basename(imgUrl).decode('gb18030'))
         urlPaths.append((imgUrl, path))
 
     safePrint(u'********** Start download: %s, (%d images)\n' % (dirname, len(urlPaths)))
