@@ -2,19 +2,36 @@
 
 #include <stdarg.h>
 
+#include <execinfo.h>
+
 #include "Utils.h"
 
 const char *_ENSURE_CTX_A = "";
 const char *_ENSURE_CTX_B = "";
 
-Exception::Exception(const char *describ, const char *file, int line) {
-    mWhat = format("%s(%d): %s\n", file, line, describ);
+LogicError::LogicError(const char *describ, const char *file, int line)
+    : Exception(constructErrorMsg(describ, file, line).c_str()){
 }
-Exception::Exception() {
+string LogicError::constructErrorMsg(const char *describ, const char *file, int line) {
+    return format("%s(%d): %s\n", file, line, describ) + stackTrace();
+}
+string LogicError::stackTrace() {
+    string ret;
+
+    void *frames[32];
+    int n = ::backtrace(frames, ARRAY_SIZE(frames));
+    char **strs = ::backtrace_symbols(frames, n);
+    for (int i = 0; i < n; ++i) {
+        ret += strs[i]; 
+        ret += '\n';
+    }
+    free(strs);
+
+    return ret;
 }
 
-PosixException::PosixException(int err, const char *describ, const char *file, int line) {
-    mWhat = format("%s(%d): %s\n\t%s\n", file, line, describ, strerror(err));
+PosixException::PosixException(int err, const char *describ, const char *file, int line)
+    : RuntimeException(format("%s(%d): %s\n\t%s\n", file, line, describ, strerror(err)).c_str()) {
 }
 
 string format(const char *fmt, ...) {

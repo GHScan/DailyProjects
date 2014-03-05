@@ -41,7 +41,7 @@ public:
                 fclose(f);
             }
 
-        } catch(const exception& e) {
+        } catch(const RuntimeException& e) {
             fprintf(stderr, "Exception found while task running: %s\n", e.what());
         }
     } 

@@ -15,11 +15,12 @@ extern string format(const char *fmt, ...);
 
 #define DISABLE_COPY(type) type(const type&) = delete; type& operator = (const type&) = delete
 #define ENABLE_COPY(type) 
+
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 //////////////////////////////
 class Exception: public exception {
     ENABLE_COPY(Exception)
 public:
-    Exception(const char *describ, const char *file, int line);
     const char* what() const throw() { return mWhat.c_str(); }
     template<typename T>
     Exception& operator << (pair<const char*, T> varInfo) {
@@ -30,12 +31,27 @@ public:
     }
     Exception& operator << (const char *s) { return *this; }
 protected:
-    Exception();
-protected:
+    Exception(const char *what): mWhat(what){}
+private:
     string mWhat;
 };
 
-class PosixException: public Exception {
+class LogicError: public Exception {
+    ENABLE_COPY(LogicError)
+public:
+    LogicError(const char *describ, const char *file, int line);
+private:
+    string constructErrorMsg(const char *describ, const char *file, int line);
+    string stackTrace();
+};
+
+class RuntimeException: public Exception {
+    ENABLE_COPY(RuntimeException)
+protected:
+    RuntimeException(const char *what): Exception(what){}
+};
+
+class PosixException: public RuntimeException {
     ENABLE_COPY(PosixException)
 public:
     PosixException(int err, const char *describ, const char *file, int line);
@@ -45,7 +61,7 @@ extern const char *_ENSURE_CTX_A;
 extern const char *_ENSURE_CTX_B;
 #define _ENSURE_CTX_A(v) make_pair(#v, v) << _ENSURE_CTX_B
 #define _ENSURE_CTX_B(v) make_pair(#v, v) << _ENSURE_CTX_A
-#define ENSURE(b) if (b); else throw Exception(#b, __FILE__, __LINE__) << _ENSURE_CTX_A
+#define ENSURE(b) if (b); else throw LogicError(#b, __FILE__, __LINE__) << _ENSURE_CTX_A
 #define P_ENSURE_ERR(b, err) if (b); else throw PosixException(err, #b, __FILE__, __LINE__) << _ENSURE_CTX_A
 #define P_ENSURE(b) P_ENSURE_ERR(b, errno)
 #define P_ENSURE_R(exp) for (int err = exp; err != 0; err = 0) throw PosixException(err, #exp, __FILE__, __LINE__) << _ENSURE_CTX_A
