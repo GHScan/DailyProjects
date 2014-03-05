@@ -1,118 +1,20 @@
 #include "pch.h"
 
-#include <assert.h>
-#include <stdarg.h>
-#include <string.h>
-#include <errno.h>
-
-#include <exception>
-
 #include <unistd.h>
-#include <netinet/in.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
 #include <sys/wait.h>
-#include <netdb.h>
 
-//////////////////////////////
-#define _CONN(a, b) a##b
-#define CONN(a, b) _CONN(a, b)
+#include "Socket.h"
+#include "IO.h"
 
-static char* format(const char *fmt, ...) {
-    static char s_buf[256];
-    va_list args;
-    va_start(args, fmt);
-    vsprintf(s_buf, fmt, args);
-    va_end(args);
-    return s_buf;
-}
-
-class PosixException: public exception {
-public:
-    PosixException(const char *exp, int err, const char *fname, int line) {
-        mErrStr = format("%s\n\t%s(%d):%s\n", exp, fname, line, strerror(err));
-    }
-    const char* what() const throw() { return mErrStr.c_str(); }
-private: 
-    string mErrStr;
-};
-
-#define P_ASSERT(b, err) if (b); else throw PosixException(#b, err, __FILE__, __LINE__)
-
-class ExitScope {
-public:
-    ExitScope(function<void()> f):mF(f) { }
-    ~ExitScope() { if (mF) mF(); }
-    void dismiss() { mF = nullptr; }
-private:
-    function<void()> mF;
-};
-#define EXIT_SCOPE(f) ExitScope CONN(__scope_, __LINE__)(f);
-
-//////////////////////////////
-static int writen(int fd, const char *buf, int len) {
-    const char *cur = buf;
-    while (len > 0) {
-        int n = ::write(fd, cur, len);
-        if (n <= 0)  {
-            if (errno == EINTR) continue;
-            P_ASSERT(0, errno);
-        } else {
-            cur += n;
-            len -= n;
-        }
-    }
-    return cur - buf;
-}
-
-static int readn(int fd, char *buf, int len) {
-    char *cur = buf;
-    while (len > 0) {
-        int n = ::read(fd, cur, len);
-        if (n == 0) {
-            return cur - buf;
-        } else if (n < 0) {
-            if (errno == EINTR) continue;
-            P_ASSERT(0, errno);
-        } else {
-            cur += n;
-            len -= n;
-        }
-    }
-    return cur - buf;
-}
 static void tcpOpenAndRetrieve(const char *ip, short port, const char *request, int reqlen, vector<char> &response) {
+    TCPSocket sock = TCPSocket::create();
+    ON_EXIT_SCOPE([&sock](){ sock.close(); });
+
+    sock.connect(HostAddress::parse(ip, port));
+    BlockingIO::writeN(sock.getFd(), request, reqlen);
+
     char buf[1 << 14];
-
-    int sockfd = ::socket(AF_INET, SOCK_STREAM, 0);
-    P_ASSERT(sockfd != -1, errno);
-    EXIT_SCOPE([&](){ ::close(sockfd); });
-
-    in_addr ipaddr;
-    if (::inet_aton(ip, &ipaddr) == 0) {
-        hostent ret = {0}, *pret;
-        int err = 0;
-        if (::gethostbyname_r(ip, &ret, buf, sizeof(buf), &pret, &err) != 0) {
-            P_ASSERT(0, err);
-        }
-        for (in_addr_t **addrs = (in_addr_t**)ret.h_addr_list; *addrs; ++addrs) {
-            ipaddr.s_addr = **addrs;
-            break;
-        }
-    }
-
-    sockaddr_in addr;
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
-    addr.sin_addr = ipaddr;
-    if (::connect(sockfd, (sockaddr*)&addr, sizeof(addr)) == -1) {
-        P_ASSERT(0, errno);
-    }
-
-    writen(sockfd, request, reqlen);
-
-    for (int n = 0; (n = readn(sockfd, buf, sizeof(buf))) > 0; ) {
+    for (int n = 0; (n = BlockingIO::readSome(sock.getFd(), buf, sizeof(buf))) > 0; ) {
         response.insert(response.end(), buf, buf + n);
     }
 } 
@@ -126,15 +28,21 @@ public:
         return si;
     }
     void run(vector<char>& buf) {
-        tcpOpenAndRetrieve(mIP.c_str(), mPort, mRequest.empty() ? "" : mRequest.c_str(), mRequest.size(), buf);
-        if (buf.empty()) return;
-        if (mOutFile == "stdout") {
-            cout << &buf[0];
-        } else {
-            FILE *f = fopen(mOutFile.c_str(), "wb");
-            P_ASSERT(f != NULL, errno);
-            fwrite(&buf[0], buf.size(), 1, f);
-            fclose(f);
+        try {
+
+            tcpOpenAndRetrieve(mIP.c_str(), mPort, mRequest.empty() ? "" : mRequest.c_str(), mRequest.size(), buf);
+            if (buf.empty()) return;
+            if (mOutFile == "stdout") {
+                cout << &buf[0];
+            } else {
+                FILE *f = fopen(mOutFile.c_str(), "wb");
+                P_ENSURE(f != NULL);
+                fwrite(&buf[0], buf.size(), 1, f);
+                fclose(f);
+            }
+
+        } catch(const exception& e) {
+            fprintf(stderr, "Exception found while task running: %s\n", e.what());
         }
     } 
 private:
