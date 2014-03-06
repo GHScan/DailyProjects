@@ -131,7 +131,7 @@ void Client::onRead() {
     int n = BlockingIO::readSome(mSocket.getFd(), mReadBuf + mReadedSize, sizeof(mReadBuf) - mReadedSize);
     mReadedSize += n;
 
-    LOG("Readed %d bytes", n);
+    LOG("%p, Readed %d bytes", this, n);
 
     if (n == 0 || mReadedSize == sizeof(mReadBuf)) {
         if (mTask.outputFile == "stdout") {
@@ -162,7 +162,7 @@ void Client::onWrite() {
     const string &request = mTask.request;
     int n = BlockingIO::writeSome(mSocket.getFd(), request.c_str() + mReqWritenSize, (int)request.size() - mReqWritenSize);
 
-    LOG("Write %d bytes", n);
+    LOG("%p Write %d bytes", this, n);
 
     mReqWritenSize += n;
     if (mReqWritenSize == (int)request.size()) {
@@ -176,10 +176,8 @@ void Client::onError() {
     mMgr->destroyClient(this);
 }
 
-static void handleTaskList(const Task *begin, const Task *end, int maxActiveTask) {
-    ClientManager mgr(new SelectPoller());
-    // ClientManager mgr(new PollPoller());
-    // ClientManager mgr(new EPollPoller(false));
+static void handleTaskList(const Task *begin, const Task *end, int maxActiveTask, const char *pollerType) {
+    ClientManager mgr(IPoller::create(pollerType));
     while (begin != end || mgr.size() > 0) {
         try {
             while (begin != end && mgr.size() < maxActiveTask) {
@@ -194,9 +192,31 @@ static void handleTaskList(const Task *begin, const Task *end, int maxActiveTask
 }
 
 int main(int argc, char *argv[]) {
-    if (argc < 2) {
-        LOG_ERR("%s thread_count max_active_task\n", argv[0]);
-        return 1;
+    int threadCount = 1;
+    int maxActiveTask = 1;
+    const char *pollerType = "select";
+
+    ILogger::instance()->suppressionLog(true);
+
+    int opt;
+    while ((opt = getopt(argc, argv, "n:m:p:v")) != -1) {
+        switch (opt) {
+            case 'n':
+                threadCount = atoi(optarg);
+                break;
+            case 'm':
+                maxActiveTask = atoi(optarg);
+                break;
+            case 'p':
+                pollerType = optarg;
+                break;
+            case 'v':
+                ILogger::instance()->suppressionLog(false);
+                break;
+            default:
+                LOG_ERR("%s [-n thread_count] [-m max_active_task] [-p poller_type] [-v]", argv[0]);
+                return 1;
+        }
     }
 
     vector<Task> taskList;
@@ -205,9 +225,6 @@ int main(int argc, char *argv[]) {
         while (cin >> task) taskList.push_back(task);
     }
     int taskCount = (int)taskList.size();
-
-    int maxActiveTask = atoi(argv[2]);
-    int threadCount = atoi(argv[1]);
     int taskCountPerThread = (taskCount + threadCount - 1) / threadCount;
 
     vector<Thread> threads;
@@ -216,8 +233,8 @@ int main(int argc, char *argv[]) {
         if (begin >= taskCount) break;
         int end = min(taskCount, (i + 1) * taskCountPerThread);
 
-        auto td = Thread::create([&taskList, begin, end, maxActiveTask](){
-                    handleTaskList(&taskList[0] + begin, &taskList[0] + end, maxActiveTask);
+        auto td = Thread::create([&taskList, begin, end, maxActiveTask, pollerType](){
+                    handleTaskList(&taskList[0] + begin, &taskList[0] + end, maxActiveTask, pollerType);
                 });
         threads.push_back(td);
     }

@@ -1,11 +1,78 @@
 #include "pch.h"
 
+#include <set>
+#include <vector>
+#include <unordered_map>
+#include <map>
+
+#include <poll.h>
+#include <sys/epoll.h>
 #include <sys/select.h>
 #include <unistd.h>
 
 #include "Utils.h"
 #include "Poller.h"
 
+//////////////////////////////
+class SelectPoller: public IPoller {
+public:
+    SelectPoller();
+    ~SelectPoller();
+    virtual int size();
+    virtual void add(int fd, void *ud, int ef);
+    virtual void update(int fd, void *ud, int ef);
+    virtual void del(int fd);
+    virtual bool wait(vector<Event> &events, int timeout);
+private:
+    fd_set mFdSets[3];
+    map<int, void*> mFd2Ud;
+};
+
+class PollPoller: public IPoller {
+public:
+    PollPoller();
+    ~PollPoller();
+    virtual int size();
+    virtual void add(int fd, void *ud, int ef);
+    virtual void update(int fd, void *ud, int ef);
+    virtual void del(int fd);
+    virtual bool wait(vector<Event> &events, int timeout);
+private:
+    vector<pollfd> mFds;
+    unordered_map<int, void*> mFd2Ud;
+};
+
+class EPollPoller: public IPoller {
+public:
+    EPollPoller(bool edgeTrigger);
+    ~EPollPoller();
+    virtual int size();
+    virtual void add(int fd, void *ud, int ef);
+    virtual void update(int fd, void *ud, int ef);
+    virtual void del(int fd);
+    virtual bool wait(vector<Event> &events, int timeout);
+private:
+    void epControl(int op, int fd, void *ud, int ef);
+private:
+    vector<epoll_event> mTmpEvents;
+    int mEp;
+    int mSize;
+    bool mEdgeTrigger;
+};
+//////////////////////////////
+
+IPoller* IPoller::create(const char *_type) {
+    string type(_type);
+    if (type == "select") return new SelectPoller();
+    else if (type == "poll") return new PollPoller();
+    else if (type == "epoll") return new EPollPoller(false);
+    else if (type == "epoll-et") return new EPollPoller(true);
+    else {
+        ASSERT(0);
+        return nullptr;
+    }
+}
+//////////////////////////////
 SelectPoller::SelectPoller() {
     FD_ZERO(mFdSets + 0);
     FD_ZERO(mFdSets + 1);

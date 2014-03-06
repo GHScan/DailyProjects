@@ -95,15 +95,12 @@ class ILogger {
 public:
     ILogger(){}
     static ILogger* instance();
+    virtual void suppressionLog(bool b) = 0;
     virtual void log(const char *msg) = 0;
     virtual void logErr(const char *msg) = 0;
 };
 
-#ifdef NDEBUG
-#define LOG(fmt, ...)
-#else
 #define LOG(fmt, ...)  ILogger::instance()->log(format("%s(%d): " fmt, __FILE__, __LINE__, __VA_ARGS__).c_str())
-#endif
 #define LOG_ERR(fmt, ...) ILogger::instance()->logErr(format("%s(%d): " fmt, __FILE__, __LINE__, __VA_ARGS__).c_str())
 #define LOG_MSG(msg)  LOG("%s", msg)
 #define LOG_ERR_MSG(msg) LOG_ERR("%s", msg)

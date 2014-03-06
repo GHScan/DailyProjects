@@ -111,8 +111,22 @@ string cmdOpenAndRetrieve(const char **args, const char *input) {
 class Logger: public ILogger {
     DISABLE_COPY(Logger);
 public:
-    Logger(){}
+    Logger(): mSuppressionLog(false) {}
+    virtual void suppressionLog(bool b) {
+        mSuppressionLog = b;
+    }
     virtual void log(const char *msg) {
+        if (!mSuppressionLog) _stderrPrint(msg);
+    }
+    virtual void logErr(const char *msg) {
+        if (isatty(STDOUT_FILENO)) {
+            _stderrPrint(format("\x1b[01;40;31m%s\x1b[0m", msg).c_str());
+        } else {
+            _stderrPrint(msg);
+        }
+    }
+private:
+    void _stderrPrint(const char *msg) {
         LockGuard guard(mMutex);
 
         char buf[32] = "";
@@ -124,15 +138,9 @@ public:
         fprintf(stderr, "[%s] %s\n", buf, msg);
         fflush(stderr);
     }
-    virtual void logErr(const char *msg) {
-        if (isatty(STDOUT_FILENO)) {
-            log(format("\x1b[01;40;31m%s\x1b[0m", msg).c_str());
-        } else {
-            log(msg);
-        }
-    }
 private:
     Mutex mMutex;
+    bool mSuppressionLog;
 };
 
 ILogger* ILogger::instance() {
