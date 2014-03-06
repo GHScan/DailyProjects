@@ -18,25 +18,25 @@ extern string format(const char *fmt, ...);
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 //////////////////////////////
-class Exception: public exception {
-    ENABLE_COPY(Exception)
+class Throwable: public exception {
+    ENABLE_COPY(Throwable)
 public:
     const char* what() const throw() { return mWhat.c_str(); }
     template<typename T>
-    Exception& operator << (pair<const char*, T> varInfo) {
+    Throwable& operator << (pair<const char*, T> varInfo) {
         ostringstream os;
         os << "\t\t" << varInfo.first << ':' << varInfo.second << '\n';
         mWhat += os.str();
         return *this;
     }
-    Exception& operator << (const char *s) { return *this; }
+    Throwable& operator << (const char *s) { return *this; }
 protected:
-    Exception(const char *what): mWhat(what){}
+    Throwable(const char *what): mWhat(what){}
 private:
     string mWhat;
 };
 
-class LogicError: public Exception {
+class LogicError: public Throwable {
     ENABLE_COPY(LogicError)
 public:
     LogicError(const char *describ, const char *file, int line);
@@ -45,10 +45,10 @@ private:
     string stackTrace();
 };
 
-class RuntimeException: public Exception {
+class RuntimeException: public Throwable {
     ENABLE_COPY(RuntimeException)
 protected:
-    RuntimeException(const char *what): Exception(what){}
+    RuntimeException(const char *what): Throwable(what){}
 };
 
 class PosixException: public RuntimeException {
@@ -57,14 +57,14 @@ public:
     PosixException(int err, const char *describ, const char *file, int line);
 };
 
-extern const char *_ENSURE_CTX_A;
-extern const char *_ENSURE_CTX_B;
-#define _ENSURE_CTX_A(v) make_pair(#v, v) << _ENSURE_CTX_B
-#define _ENSURE_CTX_B(v) make_pair(#v, v) << _ENSURE_CTX_A
-#define ENSURE(b) if (b); else throw LogicError(#b, __FILE__, __LINE__) << _ENSURE_CTX_A
-#define P_ENSURE_ERR(b, err) if (b); else throw PosixException(err, #b, __FILE__, __LINE__) << _ENSURE_CTX_A
-#define P_ENSURE(b) P_ENSURE_ERR(b, errno)
-#define P_ENSURE_R(exp) for (int err = exp; err != 0; err = 0) throw PosixException(err, #exp, __FILE__, __LINE__) << _ENSURE_CTX_A
+extern const char *_ASSERT_VAR_A;
+extern const char *_ASSERT_VAR_B;
+#define _ASSERT_VAR_A(v) make_pair(#v, v) << _ASSERT_VAR_B
+#define _ASSERT_VAR_B(v) make_pair(#v, v) << _ASSERT_VAR_A
+#define ASSERT(b) if (b); else throw LogicError(#b, __FILE__, __LINE__) << _ASSERT_VAR_A
+#define P_ASSERT_ERR(b, err) if (b); else throw PosixException(err, #b, __FILE__, __LINE__) << _ASSERT_VAR_A
+#define P_ASSERT(b) P_ASSERT_ERR(b, errno)
+#define P_ASSERT_R(exp) for (int err = exp; err != 0; err = 0) throw PosixException(err, #exp, __FILE__, __LINE__) << _ASSERT_VAR_A
 
 //////////////////////////////
 class ScopeGuard {

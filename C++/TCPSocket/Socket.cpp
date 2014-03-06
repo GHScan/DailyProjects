@@ -25,7 +25,7 @@ HostAddress HostAddress::parse(const char *hostStr, short defaultPort) {
 }
 HostAddress HostAddress::fromIPPort(const char *ip, short port) {
     in_addr ia;
-    P_ENSURE(::inet_aton(ip, &ia) != 0);
+    P_ASSERT(::inet_aton(ip, &ia) != 0);
 
     sockaddr_in a;
     a.sin_family = AF_INET;
@@ -38,7 +38,7 @@ HostAddress HostAddress::fromDomainPort(const char *domain, short port) {
     int err;
     hostent ret, *result;
     ::gethostbyname_r(domain, &ret, buf, sizeof(buf), &result, &err);
-    P_ENSURE_ERR(result != nullptr, err);
+    P_ASSERT_ERR(result != nullptr, err);
 
     sockaddr_in a;
     a.sin_family = AF_INET;
@@ -59,62 +59,62 @@ socklen_t HostAddress::getInternalSize() const {
 
 TCPSocket TCPSocket::create() {
     int fd = ::socket(AF_INET, SOCK_STREAM, 0);
-    P_ENSURE(fd != -1);
+    P_ASSERT(fd != -1);
     return TCPSocket(fd);
 }
 TCPSocket TCPSocket::fromFd(int fd) {
     return TCPSocket(fd);
 }
 void TCPSocket::bind(const HostAddress &addr) {
-    P_ENSURE(::bind(mFd, addr.getInternal(), addr.getInternalSize()) != -1);
+    P_ASSERT(::bind(mFd, addr.getInternal(), addr.getInternalSize()) != -1);
 }
 void TCPSocket::listen(int blockLog) {
-    P_ENSURE(::listen(mFd, blockLog) != -1);
+    P_ASSERT(::listen(mFd, blockLog) != -1);
 }
 void TCPSocket::connect(const HostAddress &addr) {
-    P_ENSURE(::connect(mFd, addr.getInternal(), addr.getInternalSize()) != -1);
+    P_ASSERT(::connect(mFd, addr.getInternal(), addr.getInternalSize()) != -1);
 }
 void TCPSocket::connectAsync(const HostAddress &addr) {
     if (::connect(mFd, addr.getInternal(), addr.getInternalSize()) == -1) {
-        P_ENSURE(errno == EINPROGRESS);
+        P_ASSERT(errno == EINPROGRESS);
     }
 }
 TCPSocket TCPSocket::accept(HostAddress *addr) {
     socklen_t size = addr->getInternalSize();
     int fd = ::accept(mFd, addr->getInternal(), &size);
-    P_ENSURE(fd != -1 && size == addr->getInternalSize())(size);
+    P_ASSERT(fd != -1 && size == addr->getInternalSize())(size);
     return fromFd(fd);
 }
 
 void TCPSocket::close() {
     if (mFd != -1) {
-        P_ENSURE(::close(mFd) != -1);
+        P_ASSERT(::close(mFd) != -1);
         mFd = -1;
     }
 }
 void TCPSocket::shutdownRd() {
-    P_ENSURE(::shutdown(mFd, SHUT_RD) != -1);
+    P_ASSERT(::shutdown(mFd, SHUT_RD) != -1);
 }
 void TCPSocket::shutdownWr() {
-    P_ENSURE(::shutdown(mFd, SHUT_WR) != -1);
+    P_ASSERT(::shutdown(mFd, SHUT_WR) != -1);
 }
 
 void TCPSocket::getOption(int optName, char *buf, int buflen) {
     socklen_t len = buflen;
-    P_ENSURE(::getsockopt(mFd, SOL_SOCKET, optName, buf, &len) != -1);
-    P_ENSURE((int)len == buflen)(len)(buflen);
+    P_ASSERT(::getsockopt(mFd, SOL_SOCKET, optName, buf, &len) != -1);
+    P_ASSERT((int)len == buflen)(len)(buflen);
 }
 void TCPSocket::setOption(int optName, const char *buf, int buflen) {
-    P_ENSURE(::setsockopt(mFd, SOL_SOCKET, optName, buf, buflen) != -1)(buflen);
+    P_ASSERT(::setsockopt(mFd, SOL_SOCKET, optName, buf, buflen) != -1)(buflen);
 }
 void TCPSocket::setNonBlocking(bool b) {
     int flag = ::fcntl(mFd, F_GETFL);
-    P_ENSURE(flag != -1);
+    P_ASSERT(flag != -1);
 
     if (b) flag |= O_NONBLOCK;
     else flag &= ~O_NONBLOCK;
 
-    P_ENSURE(::fcntl(mFd, F_SETFL, flag) != -1);
+    P_ASSERT(::fcntl(mFd, F_SETFL, flag) != -1);
 }
 void TCPSocket::setReuseAddress() {
     setOption(SO_REUSEADDR, 1);

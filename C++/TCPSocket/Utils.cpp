@@ -6,11 +6,11 @@
 
 #include "Utils.h"
 
-const char *_ENSURE_CTX_A = "";
-const char *_ENSURE_CTX_B = "";
+const char *_ASSERT_VAR_A = "";
+const char *_ASSERT_VAR_B = "";
 
 LogicError::LogicError(const char *describ, const char *file, int line)
-    : Exception(constructErrorMsg(describ, file, line).c_str()){
+    : Throwable(constructErrorMsg(describ, file, line).c_str()){
 }
 string LogicError::constructErrorMsg(const char *describ, const char *file, int line) {
     return format("%s(%d): %s\n", file, line, describ) + stackTrace();
