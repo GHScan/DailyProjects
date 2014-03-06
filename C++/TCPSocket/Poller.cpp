@@ -113,7 +113,7 @@ EPollPoller::EPollPoller(bool edgeTrigger): mSize(0), mEdgeTrigger(edgeTrigger) 
 }
 EPollPoller::~EPollPoller() {
     ASSERT(size() == 0);
-    ::close(mEp);
+    CLOSE(mEp);
 }
 int EPollPoller::size() {
     return mSize;

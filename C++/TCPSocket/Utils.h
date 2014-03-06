@@ -17,6 +17,9 @@ extern string format(const char *fmt, ...);
 #define ENABLE_COPY(type) 
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
+
+#define CLOSE(fd) if (fd == -1); else { P_ENSURE(::close(fd) == 0); fd = -1; }
+#define DELETE(p) { delete p; p = nullptr; }
 //////////////////////////////
 #define EXCEPTION_CTX_OPERATOR(type) template<typename T>\
     type& operator << (pair<const char*, T> varInfo) {\

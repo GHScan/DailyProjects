@@ -70,7 +70,7 @@ Thread::Thread(pthread_t tid): mTid(tid) {
 void* Thread::threadProc(void *p) {
     ThreadCtx *ctx = (ThreadCtx*)p;
     function<void()> f = ctx->f;
-    delete ctx;
+    DELETE(ctx);
 
     try {
         f();
@@ -97,11 +97,11 @@ Thread Thread::create(function<void()> f, int stackSize) {
 
     {
         ThreadCtx *ctx = new ThreadCtx{ f };
-        ScopeGuard _ctxGuard([ctx](){ delete ctx; });
+        ON_EXIT_SCOPE([&ctx](){ DELETE(ctx); });
 
         P_ENSURE_R(::pthread_create(&tid, pattr, &Thread::threadProc, ctx));
 
-        _ctxGuard.dismiss();
+        ctx = nullptr;
     }
 
     return Thread(tid);

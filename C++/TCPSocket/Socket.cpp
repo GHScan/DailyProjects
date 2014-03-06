@@ -88,10 +88,7 @@ TCPSocket TCPSocket::accept(HostAddress *addr) {
 }
 
 void TCPSocket::close() {
-    if (mFd != -1) {
-        P_ENSURE(::close(mFd) != -1);
-        mFd = -1;
-    }
+    CLOSE(mFd);
 }
 void TCPSocket::shutdownRd() {
     P_ENSURE(::shutdown(mFd, SHUT_RD) != -1);

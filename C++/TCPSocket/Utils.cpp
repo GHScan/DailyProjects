@@ -74,29 +74,29 @@ string cmdOpenAndRetrieve(const char **args, const char *input) {
     int writePipe[2], readPipe[2];
     P_ENSURE(::pipe(writePipe) == 0);
     P_ENSURE(::pipe(readPipe) == 0);
-    auto cleanup = [readPipe, writePipe](){
+    auto _cleanup = [&readPipe, &writePipe](){
         for (int i = 0; i < 2; ++i) {
-            if (writePipe[i] != -1) ::close(writePipe[i]);
-            if (readPipe[i] != -1) ::close(readPipe[i]);
+            CLOSE(writePipe[i]);
+            CLOSE(readPipe[i]);
         }
     };
-    ON_EXIT_SCOPE(cleanup);
+    ON_EXIT_SCOPE(_cleanup);
 
     int pid = ::fork();
     P_ENSURE(pid >= 0);
     if (pid == 0) {
         ::dup2(writePipe[0], STDIN_FILENO);
         ::dup2(readPipe[1], STDOUT_FILENO);
-        ::close(writePipe[1]); writePipe[1] = -1;
-        ::close(readPipe[0]); readPipe[0] = -1;
+        CLOSE(writePipe[1]);
+        CLOSE(readPipe[0]);
         P_ENSURE(::execvp(args[0], (char *const*)args) != -1);
     }
 
-    ::close(writePipe[0]); writePipe[0] = -1;
-    ::close(readPipe[1]); readPipe[1] = -1;
+    CLOSE(writePipe[0]);
+    CLOSE(readPipe[1]);
 
     BlockingIO::writeN(writePipe[1], input, strlen(input));
-    ::close(writePipe[1]); writePipe[1] = -1;
+    CLOSE(writePipe[1]);
 
     string ret;
     char buf[512];

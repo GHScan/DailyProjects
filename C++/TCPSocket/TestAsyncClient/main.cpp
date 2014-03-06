@@ -75,7 +75,7 @@ private:
 ClientManager::ClientManager(IPoller *poller): mPoller(poller) {
 }
 ClientManager::~ClientManager() {
-    delete mPoller;
+    DELETE(mPoller);
 }
 Client* ClientManager::createClient(const Task &task) {
     Client *c = new Client(this, task);
@@ -84,7 +84,7 @@ Client* ClientManager::createClient(const Task &task) {
 }
 void ClientManager::destroyClient(Client *c) {
     mPoller->del(c->getFd());
-    delete c;
+    DELETE(c);
 }
 void ClientManager::updateClientEvent(Client *c, int ef) {
     mPoller->update(c->getFd(), c, ef);
