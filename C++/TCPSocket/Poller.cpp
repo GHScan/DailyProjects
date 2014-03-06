@@ -19,6 +19,7 @@ void SelectPoller::add(int fd, void *ud, int ef) {
 
     if (ef & EF_Readable) FD_SET(fd, mFdSets + 0);
     if (ef & EF_Writeable) FD_SET(fd, mFdSets + 1);
+    if (ef & EF_ErrFound) FD_SET(fd, mFdSets + 2);
     mFd2Ud[fd] = ud;
 }
 void SelectPoller::update(int fd, void *ud, int ef) {
@@ -30,6 +31,7 @@ void SelectPoller::del(int fd) {
 
     FD_CLR(fd, mFdSets + 0);
     FD_CLR(fd, mFdSets + 1);
+    FD_CLR(fd, mFdSets + 2);
     mFd2Ud.erase(fd);
 }
 bool SelectPoller::wait(vector<Event> &events, int timeout) {
@@ -39,7 +41,7 @@ bool SelectPoller::wait(vector<Event> &events, int timeout) {
     fd_set tmpFdSets[3] = { mFdSets[0], mFdSets[1], mFdSets[2]};
     timeval tval = { timeout / 1000, (timeout % 1000) * 1000 };
 
-    int n = ::select(mFd2Ud.rbegin()->first + 1, mFdSets + 0, mFdSets + 1, nullptr, &tval);
+    int n = ::select(mFd2Ud.rbegin()->first + 1, tmpFdSets + 0, tmpFdSets + 1, tmpFdSets + 2, &tval);
     P_ENSURE(n >= 0);
     if (n == 0) return false;
 
@@ -47,6 +49,7 @@ bool SelectPoller::wait(vector<Event> &events, int timeout) {
         Event event = {0};
         if (FD_ISSET(fdUd.first, tmpFdSets + 0)) event.flag |= EF_Readable;
         if (FD_ISSET(fdUd.first, tmpFdSets + 1)) event.flag |= EF_Writeable;
+        if (FD_ISSET(fdUd.first, tmpFdSets + 2)) event.flag |= EF_ErrFound;
         if (event.flag != 0) {
             event.ud = fdUd.second;
             events.push_back(event);
