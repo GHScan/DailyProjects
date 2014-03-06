@@ -1,7 +1,11 @@
 #ifndef POLLER_H
 #define POLLER_H
 
+#include "Utils.h"
+
 struct IPoller {
+    DISABLE_COPY(IPoller);
+
     enum EventFlag {
         EF_Readable = 1,
         EF_Writeable = 2,
@@ -12,6 +16,7 @@ struct IPoller {
         int flag;
     };
 
+    IPoller(){}
     virtual ~IPoller() {}
     virtual int size() = 0;
     virtual void add(int fd, void *ud, int ef) = 0;

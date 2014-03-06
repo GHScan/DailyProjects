@@ -228,6 +228,8 @@ int main(int argc, char *argv[]) {
     int taskCount = (int)taskList.size();
     int taskCountPerThread = (taskCount + threadCount - 1) / threadCount;
 
+    LOG("task count=%d, task per thread=%d", taskCount, taskCountPerThread);
+
     vector<Thread> threads;
     for (int i = 0; i < threadCount; ++i) {
         int begin = i * taskCountPerThread;

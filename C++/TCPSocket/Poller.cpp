@@ -15,6 +15,7 @@
 
 //////////////////////////////
 class SelectPoller: public IPoller {
+    DISABLE_COPY(SelectPoller);
 public:
     SelectPoller();
     ~SelectPoller();
@@ -29,6 +30,7 @@ private:
 };
 
 class PollPoller: public IPoller {
+    DISABLE_COPY(PollPoller);
 public:
     PollPoller();
     ~PollPoller();
@@ -43,6 +45,7 @@ private:
 };
 
 class EPollPoller: public IPoller {
+    DISABLE_COPY(EPollPoller);
 public:
     EPollPoller(bool edgeTrigger);
     ~EPollPoller();
