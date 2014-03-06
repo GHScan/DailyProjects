@@ -7,6 +7,7 @@
 struct BlockingIO {
     static int readSome(int fd, char *buf, int size);
     static int readN(int fd, char *buf, int size);
+    static int writeSome(int fd, const char *buf, int size);
     static int writeN(int fd, const char *buf, int size);
 };
 

@@ -8,7 +8,7 @@
 int BlockingIO::readSome(int fd, char *buf, int size) {
     int n = 0;
     while ((n = ::read(fd, buf, size)) < 0) {
-        P_ASSERT(errno == EINTR);
+        P_ENSURE(errno == EINTR);
     }
     return n;
 }
@@ -23,17 +23,20 @@ int BlockingIO::readN(int fd, char *buf, int size) {
     }
     return p - buf;
 }
+int BlockingIO::writeSome(int fd, const char *buf, int size) {
+    int n;
+    while ((n = ::write(fd, buf, size)) <= 0) {
+        P_ENSURE(errno == EINTR);
+    }
+    return n;
+}
 int BlockingIO::writeN(int fd, const char *buf, int size) {
     const char *p = buf;
     while (size > 0) {
-        int n = ::write(fd, p, size);
-        if (n <= 0) {
-            P_ASSERT(errno == EINTR);
-            continue;
-        } else {
-            size -= n;
-            p += n;
-        }
+        int n = writeSome(fd, buf, size);
+        ASSERT(n > 0);
+        size -= n;
+        p += n;
     }
     return p - buf;
 }
@@ -43,7 +46,7 @@ int NonblockingIO::readSome(int fd, char *buf, int size, bool &eof) {
 
     int n = ::read(fd, buf, size);
     if (n < 0) {
-        P_ASSERT(errno == EINTR || errno == EAGAIN);
+        P_ENSURE(errno == EINTR || errno == EAGAIN);
         return 0;
     } else if (n == 0) {
         eof = true;
@@ -55,7 +58,7 @@ int NonblockingIO::readSome(int fd, char *buf, int size, bool &eof) {
 int NonblockingIO::writeSome(int fd, const char *buf, int size) {
     int n = ::write(fd, buf, size);
     if  (n <= 0) {
-        P_ASSERT(errno == EINTR || errno == EAGAIN);
+        P_ENSURE(errno == EINTR || errno == EAGAIN);
         return 0;
     } else {
         return n;

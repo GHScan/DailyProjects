@@ -36,7 +36,7 @@ public:
                 cout << &buf[0];
             } else {
                 FILE *f = fopen(mOutFile.c_str(), "wb");
-                P_ASSERT(f != NULL);
+                P_ENSURE(f != NULL);
                 fwrite(&buf[0], buf.size(), 1, f);
                 fclose(f);
             }

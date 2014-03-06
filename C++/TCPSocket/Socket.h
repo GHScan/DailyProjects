@@ -40,7 +40,7 @@ public:
     void bind(const HostAddress &addr);
     void listen(int blockLog);
     void connect(const HostAddress &addr);
-    void connectAsync(const HostAddress &addr);
+    bool connectAsync(const HostAddress &addr);
     TCPSocket accept(HostAddress *addr);
 
     void close();

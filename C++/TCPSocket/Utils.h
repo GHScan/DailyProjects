@@ -18,21 +18,22 @@ extern string format(const char *fmt, ...);
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 //////////////////////////////
+#define EXCEPTION_CTX_OPERATOR(type) template<typename T>\
+    type& operator << (pair<const char*, T> varInfo) {\
+        ostringstream os;\
+        os << "\t\t" << varInfo.first << ':' << varInfo.second << '\n';\
+        mWhat += os.str();\
+        return *this;\
+    }\
+    type& operator << (const char *s) { return *this; }
+
 class Throwable: public exception {
     ENABLE_COPY(Throwable)
 public:
     const char* what() const throw() { return mWhat.c_str(); }
-    template<typename T>
-    Throwable& operator << (pair<const char*, T> varInfo) {
-        ostringstream os;
-        os << "\t\t" << varInfo.first << ':' << varInfo.second << '\n';
-        mWhat += os.str();
-        return *this;
-    }
-    Throwable& operator << (const char *s) { return *this; }
 protected:
     Throwable(const char *what): mWhat(what){}
-private:
+protected:
     string mWhat;
 };
 
@@ -40,6 +41,7 @@ class LogicError: public Throwable {
     ENABLE_COPY(LogicError)
 public:
     LogicError(const char *describ, const char *file, int line);
+    EXCEPTION_CTX_OPERATOR(LogicError);
 private:
     string constructErrorMsg(const char *describ, const char *file, int line);
     string stackTrace();
@@ -55,16 +57,19 @@ class PosixException: public RuntimeException {
     ENABLE_COPY(PosixException)
 public:
     PosixException(int err, const char *describ, const char *file, int line);
+    EXCEPTION_CTX_OPERATOR(PosixException);
 };
 
-extern const char *_ASSERT_VAR_A;
-extern const char *_ASSERT_VAR_B;
-#define _ASSERT_VAR_A(v) make_pair(#v, v) << _ASSERT_VAR_B
-#define _ASSERT_VAR_B(v) make_pair(#v, v) << _ASSERT_VAR_A
-#define ASSERT(b) if (b); else throw LogicError(#b, __FILE__, __LINE__) << _ASSERT_VAR_A
-#define P_ASSERT_ERR(b, err) if (b); else throw PosixException(err, #b, __FILE__, __LINE__) << _ASSERT_VAR_A
-#define P_ASSERT(b) P_ASSERT_ERR(b, errno)
-#define P_ASSERT_R(exp) for (int err = exp; err != 0; err = 0) throw PosixException(err, #exp, __FILE__, __LINE__) << _ASSERT_VAR_A
+#undef EXCEPTION_CTX_OPERATOR
+
+extern const char *_EXCEPTION_CTX_A;
+extern const char *_EXCEPTION_CTX_B;
+#define _EXCEPTION_CTX_A(v) make_pair(#v, v) << _EXCEPTION_CTX_B
+#define _EXCEPTION_CTX_B(v) make_pair(#v, v) << _EXCEPTION_CTX_A
+#define P_ENSURE_ERR(b, err) if (b); else throw PosixException(err, #b, __FILE__, __LINE__) << _EXCEPTION_CTX_A
+#define P_ENSURE(b) P_ENSURE_ERR(b, errno)
+#define P_ENSURE_R(exp) for (int err = exp; err != 0; err = 0) throw PosixException(err, #exp, __FILE__, __LINE__) << _EXCEPTION_CTX_A
+#define ASSERT(b) if (b); else throw LogicError(#b, __FILE__, __LINE__) << _EXCEPTION_CTX_A
 
 //////////////////////////////
 class ScopeGuard {
@@ -79,5 +84,21 @@ private:
 
 #define ON_EXIT_SCOPE(f) ScopeGuard CONN(__scopeVar_, __LINE__)(f)
 //////////////////////////////
+extern string cmdOpenAndRetrieve(const char **args, const char *input);
+
+//////////////////////////////
+class ILogger {
+    DISABLE_COPY(ILogger);
+public:
+    ILogger(){}
+    static ILogger* instance();
+    virtual void log(const char *msg) = 0;
+};
+
+#ifdef NDEBUG
+#define LOG(fmt, ...)
+#else
+#define LOG(fmt, ...)  ILogger::instance()->log(format("%s(%d): " fmt, __FILE__, __LINE__, __VA_ARGS__).c_str())
+#endif
 
 #endif
