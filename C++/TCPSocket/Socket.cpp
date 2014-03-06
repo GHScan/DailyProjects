@@ -38,7 +38,7 @@ HostAddress HostAddress::fromDomainPort(const char *domain, short port) {
     int err;
     hostent ret, *result;
     ::gethostbyname_r(domain, &ret, buf, sizeof(buf), &result, &err);
-    P_ENSURE_ERR(result != nullptr, err);
+    P_ENSURE_ERR(result != nullptr, err)(domain);
 
     sockaddr_in a;
     a.sin_family = AF_INET;

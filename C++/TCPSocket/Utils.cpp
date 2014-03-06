@@ -111,7 +111,7 @@ string cmdOpenAndRetrieve(const char **args, const char *input) {
 class Logger: public ILogger {
     DISABLE_COPY(Logger);
 public:
-    Logger(): mSuppressionLog(false) {}
+    Logger(): mSuppressionLog(false), mIdx(0) {}
     virtual void suppressionLog(bool b) {
         mSuppressionLog = b;
     }
@@ -135,12 +135,13 @@ private:
         tm _tm;
         strftime(buf, sizeof(buf), "%F %T", localtime_r(&now, &_tm));
 
-        fprintf(stderr, "[%s] %s\n", buf, msg);
+        fprintf(stderr, "[%d][%s] %s\n", mIdx++, buf, msg);
         fflush(stderr);
     }
 private:
     Mutex mMutex;
     bool mSuppressionLog;
+    int mIdx;
 };
 
 ILogger* ILogger::instance() {

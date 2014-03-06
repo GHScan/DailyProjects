@@ -22,6 +22,7 @@ istream& operator >> (istream &si, Task &t) {
         si >> reqLineCount;
         string line;
         getline(si, line);
+        t.request.clear();
         for (string line; reqLineCount-- > 0 && getline(si, line);) {
             t.request += line + '\n';
         }

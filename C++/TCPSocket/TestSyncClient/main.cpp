@@ -42,7 +42,7 @@ public:
             }
 
         } catch(const RuntimeException& e) {
-            fprintf(stderr, "Exception found while task running: %s\n", e.what());
+            LOG_ERR("Exception found while task running: %s", e.what());
         }
     } 
 private:
@@ -71,6 +71,7 @@ private:
         if (!si) return false;
         assert(header == "request:");
         getline(si, header);
+        mRequest.clear();
         for (string line; lineCount > 0 && getline(si, line); --lineCount) {
             mRequest += line + '\n';
         }
@@ -89,7 +90,7 @@ istream& operator >> (istream& si, Task& t) {
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        fprintf(stderr, "Usage : %s process_count", argv[0]);
+        LOG_ERR("Usage : %s process_count", argv[0]);
         return 1;
     }
 
