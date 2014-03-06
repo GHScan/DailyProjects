@@ -235,7 +235,7 @@ int main(int argc, char *argv[]) {
 
         auto td = Thread::create([&taskList, begin, end, maxActiveTask, pollerType](){
                     handleTaskList(&taskList[0] + begin, &taskList[0] + end, maxActiveTask, pollerType);
-                });
+                }, 64 * 1024);
         threads.push_back(td);
     }
     for (auto &thread : threads) thread.join();
