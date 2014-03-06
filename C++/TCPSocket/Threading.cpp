@@ -75,12 +75,12 @@ void* Thread::threadProc(void *p) {
     try {
         f();
     } catch(const RuntimeException& e) {
-        fprintf(stderr, "Uncaught runtime excpetion:\n %s", e.what());
+        LOG_ERR("Uncaught runtime excpetion:\n %s", e.what());
     } catch(const LogicError& e) {
-        fprintf(stderr, "Uncaught logic error:\n %s", e.what());
+        LOG_ERR("Uncaught logic error:\n %s", e.what());
         exit(1);
     } catch(const exception& e) {
-        fprintf(stderr, "Uncaught unkown exception:\n %s", e.what());
+        LOG_ERR("Uncaught unkown exception:\n %s", e.what());
         exit(2);
     }
     return nullptr;

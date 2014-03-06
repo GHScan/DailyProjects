@@ -124,6 +124,13 @@ public:
         fprintf(stderr, "[%s] %s\n", buf, msg);
         fflush(stderr);
     }
+    virtual void logErr(const char *msg) {
+        if (isatty(STDOUT_FILENO)) {
+            log(format("\x1b[01;40;31m%s\x1b[0m", msg).c_str());
+        } else {
+            log(msg);
+        }
+    }
 private:
     Mutex mMutex;
 };

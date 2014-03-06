@@ -39,9 +39,8 @@ public:
     void destroyClient(Client *c);
     void updateClientEvent(Client *c, int ef);
     void wait();
-    int size() const { return (int)mFd2Clients.size(); }
+    int size() const { return mPoller->size(); }
 private:
-    map<int, Client*> mFd2Clients;
     IPoller *mPoller;
 };
 
@@ -80,24 +79,22 @@ ClientManager::~ClientManager() {
 }
 Client* ClientManager::createClient(const Task &task) {
     Client *c = new Client(this, task);
-    mFd2Clients[c->getFd()] = c;
-    mPoller->add(c->getFd(), IPoller::EF_Writeable);
+    mPoller->add(c->getFd(), c, IPoller::EF_Writeable);
     return c;
 }
 void ClientManager::destroyClient(Client *c) {
     mPoller->del(c->getFd());
-    mFd2Clients.erase(c->getFd());
     delete c;
 }
 void ClientManager::updateClientEvent(Client *c, int ef) {
-    mPoller->update(c->getFd(), ef);
+    mPoller->update(c->getFd(), c, ef);
 }
 void ClientManager::wait() {
     vector<IPoller::Event> events;
     if (!mPoller->wait(events, 1000)) return;
 
     for (auto &event : events) {
-        Client *c = mFd2Clients[event.fd];
+        Client *c = (Client*)event.ud;
         if (event.flag & IPoller::EF_Readable) c->onRead();
         if (event.flag & IPoller::EF_Writeable) c->onWrite();
         if (event.flag & IPoller::EF_ErrFound) c->onError();
@@ -175,7 +172,7 @@ void Client::onWrite() {
     }
 }
 void Client::onError() {
-    fprintf(stderr, "onError : %s\n", strerror(mSocket.getOption<int>(SO_ERROR)));
+    LOG_ERR("onError : %s\n", strerror(mSocket.getOption<int>(SO_ERROR)));
     mMgr->destroyClient(this);
 }
 
@@ -191,14 +188,14 @@ static void handleTaskList(const Task *begin, const Task *end, int maxActiveTask
 
             mgr.wait();
         } catch(const RuntimeException& e) {
-            fprintf(stderr, "Found runtime exception while handling task list: %s\n", e.what());
+            LOG_ERR("Found runtime exception while handling task list: %s\n", e.what());
         }
     }
 }
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        fprintf(stderr, "%s thread_count max_active_task\n", argv[0]);
+        LOG_ERR("%s thread_count max_active_task\n", argv[0]);
         return 1;
     }
 

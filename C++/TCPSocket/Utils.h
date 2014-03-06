@@ -93,6 +93,7 @@ public:
     ILogger(){}
     static ILogger* instance();
     virtual void log(const char *msg) = 0;
+    virtual void logErr(const char *msg) = 0;
 };
 
 #ifdef NDEBUG
@@ -100,5 +101,7 @@ public:
 #else
 #define LOG(fmt, ...)  ILogger::instance()->log(format("%s(%d): " fmt, __FILE__, __LINE__, __VA_ARGS__).c_str())
 #endif
+
+#define LOG_ERR(fmt, ...) ILogger::instance()->logErr(format("%s(%d): " fmt, __FILE__, __LINE__, __VA_ARGS__).c_str())
 
 #endif
