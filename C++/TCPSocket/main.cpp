@@ -3,7 +3,7 @@
 #define APPTYPE_BlockingServer      3
 
 #ifndef APPTYPE
-#define APPTYPE APPTYPE_BlockingClient
+#define APPTYPE APPTYPE_BlockingServer
 #endif
 
 #if APPTYPE == APPTYPE_BlockingClient

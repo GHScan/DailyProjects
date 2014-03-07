@@ -18,6 +18,7 @@ public:
     static HostAddress parse(const char *hostStr, short defaultPort);
     static HostAddress fromIPPort(const char *ip, short port);
     static HostAddress fromDomainPort(const char *domain, short port);
+    static HostAddress fromLocal(short port);
 
     string toString() const;
     sockaddr* getInternal() { return &mAddr; }
@@ -61,7 +62,6 @@ public:
     void setReuseAddress();
 
     int getFd() const { return mFd; }
-
 private:
     TCPSocket(int fd): mFd(fd){}
 private:

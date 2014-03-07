@@ -113,6 +113,7 @@ public:
     void detach();
 
     pthread_t getTid() const { return mTid; }
+    void setCpuAffinity(int mask);
 private:
     struct ThreadCtx {
         function<void()> f;

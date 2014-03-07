@@ -46,6 +46,14 @@ HostAddress HostAddress::fromDomainPort(const char *domain, short port) {
     a.sin_addr = *((in_addr**)ret.h_addr_list)[0];
     return HostAddress((sockaddr*)&a);
 }
+HostAddress HostAddress::fromLocal(short port) {
+    sockaddr_in a;
+    a.sin_family = AF_INET;
+    a.sin_port = htons(port);
+    a.sin_addr.s_addr = INADDR_ANY;
+    return HostAddress((sockaddr*)&a);
+}
+
 string HostAddress::toString() const {
     sockaddr_in *pa = (sockaddr_in*)&mAddr;
 

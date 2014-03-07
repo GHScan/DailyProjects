@@ -88,6 +88,8 @@ private:
 #define ON_EXIT_SCOPE(f) ScopeGuard CONN(__scopeVar_, __LINE__)(f)
 //////////////////////////////
 extern string cmdOpenAndRetrieve(const char **args, const char *input);
+extern int getCpuCount();
+extern bool readFile(const char *path, vector<char> &buf);
 
 //////////////////////////////
 class ILogger {
@@ -95,7 +97,7 @@ class ILogger {
 public:
     ILogger(){}
     static ILogger* instance();
-    virtual void suppressionLog(bool b) = 0;
+    virtual void suppressLog(bool b) = 0;
     virtual void log(const char *msg) = 0;
     virtual void logErr(const char *msg) = 0;
 };
@@ -104,5 +106,52 @@ public:
 #define LOG_ERR(fmt, ...) ILogger::instance()->logErr(format("%s(%d): " fmt, __FILE__, __LINE__, __VA_ARGS__).c_str())
 #define LOG_MSG(msg)  LOG("%s", msg)
 #define LOG_ERR_MSG(msg) LOG_ERR("%s", msg)
+//////////////////////////////
+
+template<int BLOCK_SIZE, int CHUNK_SIZE = 4 * (4 * 1024)>
+class MemoryPool {
+    DISABLE_COPY(MemoryPool);
+public:
+    void* malloc() {
+        ++mMallocCount;
+        if (mFreeList == nullptr) allocChunk();
+        Block *b = mFreeList;
+        mFreeList = b->next;
+        return b;
+    }
+    void free(void *p) {
+        --mMallocCount;
+        Block *b = (Block*)p;
+        b->next = mFreeList;
+        mFreeList = b;
+    }
+
+    MemoryPool(): mFreeList(nullptr), mMallocCount(0) {
+    }
+    ~MemoryPool() {
+        ASSERT(mMallocCount == 0);
+        for (void *chunk : mChunks) ::free(chunk);
+    }
+private:
+    void allocChunk() {
+        Block *p = (Block*)::malloc(CHUNK_SIZE);
+        mChunks.push_back(p);
+        Block *pend = (Block*)((char*)p + CHUNK_SIZE);
+
+        for (; p + 1 <= pend; ++p) {
+            p->next = mFreeList;
+            mFreeList = p;
+        }
+    }
+private:
+    struct Block {
+        Block *next;
+        char padding[BLOCK_SIZE - sizeof(Block*)];
+    };
+private:
+    Block *mFreeList;
+    vector<void*> mChunks;
+    int mMallocCount;
+};
 
 #endif

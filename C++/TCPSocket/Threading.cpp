@@ -121,6 +121,17 @@ void Thread::canel() {
 void Thread::detach() {
     P_ENSURE_R(::pthread_detach(mTid));
 }
+void Thread::setCpuAffinity(int mask) {
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    for (int i = 0; i < 32; ++i) {
+        if ((mask >> i) & 1) {
+            CPU_SET(i, &cpuset);
+        }
+    }
+
+    P_ENSURE(::pthread_setaffinity_np(mTid, sizeof(cpuset), &cpuset) == 0);
+}
 
 Waiter::Waiter(): mSignaled(false) {
 }

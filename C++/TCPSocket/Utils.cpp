@@ -108,15 +108,33 @@ string cmdOpenAndRetrieve(const char **args, const char *input) {
     return ret;
 }
 
+int getCpuCount() {
+    int count = ::sysconf(_SC_NPROCESSORS_ONLN);
+    P_ENSURE(count != -1);
+    return count;
+}
+
+bool readFile(const char *path, vector<char> &buf) {
+    FILE *f = fopen(path, "rb");
+    if (f == nullptr) return false;
+    fseek(f, 0, SEEK_END);
+    int size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    buf.resize(size);
+    if (size > 0) fread(&buf[0], size, 1, f);
+    fclose(f);
+    return true;
+}
+
 class Logger: public ILogger {
     DISABLE_COPY(Logger);
 public:
-    Logger(): mSuppressionLog(false), mIdx(0) {}
-    virtual void suppressionLog(bool b) {
-        mSuppressionLog = b;
+    Logger(): mSuppressLog(false), mIdx(0) {}
+    virtual void suppressLog(bool b) {
+        mSuppressLog = b;
     }
     virtual void log(const char *msg) {
-        if (!mSuppressionLog) _stderrPrint(msg);
+        if (!mSuppressLog) _stderrPrint(msg);
     }
     virtual void logErr(const char *msg) {
         if (isatty(STDOUT_FILENO)) {
@@ -135,12 +153,12 @@ private:
         tm _tm;
         strftime(buf, sizeof(buf), "%F %T", localtime_r(&now, &_tm));
 
-        fprintf(stderr, "[%d][%s] %s\n", mIdx++, buf, msg);
-        fflush(stderr);
+        fprintf(stdout, "[%d][%s] %s\n", mIdx++, buf, msg);
+        fflush(stdout);
     }
 private:
     Mutex mMutex;
-    bool mSuppressionLog;
+    bool mSuppressLog;
     int mIdx;
 };
 
