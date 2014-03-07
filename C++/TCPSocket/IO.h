@@ -20,6 +20,10 @@ struct NonblockingIO {
     static int writeSome(int fd, const char *buf, int size);
 };
 //////////////////////////////
+
+// It is a convenience class for read blocking-socket and file. For file, it
+// can reduce the sys-call time, by batch the read operation with bufsize
+// aligned; For socket, it make the read snippet been transparent for user
 class BlockingReadBuffer {
     DISABLE_COPY(BlockingReadBuffer);
 public:
@@ -35,6 +39,8 @@ private:
 };
 //------------------------------
 
+// It is designed to work with blocking-socket and file; For file, it reduce
+// the sys-call time by batch the write operation with bufsize aligned
 class BlockingWriteBuffer {
     DISABLE_COPY(BlockingWriteBuffer);
 public:
@@ -48,30 +54,31 @@ private:
 };
 
 //////////////////////////////
-class NonblockingReadBuffer;
+class EventDrivenReadBuffer;
 
-class NonblockingReadBufferManager {
+class EventDrivenReadBufferManager {
 public:
-    NonblockingReadBufferManager();
-    ~NonblockingReadBufferManager();
-    NonblockingReadBuffer* createBuffer(int fd);
-    void destroyBuffer(NonblockingReadBuffer *buf);
+    EventDrivenReadBufferManager();
+    ~EventDrivenReadBufferManager();
+    EventDrivenReadBuffer* createBuffer(int fd);
+    void destroyBuffer(EventDrivenReadBuffer *buf);
 private:
-    vector<NonblockingReadBuffer*> mFreeBufs;
+    vector<EventDrivenReadBuffer*> mFreeBufs;
 };
 
-class NonblockingReadBuffer {
+class EventDrivenReadBuffer {
 public:
     bool readLine(string &line, bool &eof);
     int readN(char *buf, int size, bool &eof);
-    void notifyReadable();
+    void onReadNonblockingFd();
+    void onReadBlockingFd();
 private:
     void init(int fd);
     void uninit();
-    NonblockingReadBuffer();
+    EventDrivenReadBuffer();
     void readNFromBuf(char *buf, int size);
     void discardBuf(int size);
-    friend class NonblockingReadBufferManager;
+    friend class EventDrivenReadBufferManager;
 private:
     vector<char> mBuf;
     int mDataBegin, mDataEnd;
@@ -80,21 +87,21 @@ private:
 };
 
 //------------------------------
-class NonblockingWriteBuffer;
+class EventDrivenWriteBuffer;
 
-class NonblockingWriteBufferManager {
+class EventDrivenWriteBufferManager {
 public:
-    NonblockingWriteBufferManager();
-    ~NonblockingWriteBufferManager();
-    NonblockingWriteBuffer* createBuffer(int fd);
-    void destroyBuffer(NonblockingWriteBuffer *buf);
+    EventDrivenWriteBufferManager();
+    ~EventDrivenWriteBufferManager();
+    EventDrivenWriteBuffer* createBuffer(int fd);
+    void destroyBuffer(EventDrivenWriteBuffer *buf);
 private:
     struct DataBlock {
         DataBlock *next;
         char *payloadBegin, *payloadEnd;
         char data[4 * 1024 - sizeof(DataBlock*) - sizeof(char*) * 2];
     };
-    friend class NonblockingWriteBuffer;
+    friend class EventDrivenWriteBuffer;
 private:
     DataBlock* mallocDataBlock();
     void freeDataBlock(DataBlock *b);
@@ -103,18 +110,19 @@ private:
     int mBufCount;
 };
 
-class NonblockingWriteBuffer {
+class EventDrivenWriteBuffer {
 public:
     void write(const char *buf, int size);
-    void notifyWriteable();
+    void onWriteNonblockingFd();
+    void onWriteBlockingFd();
     bool hasPendingData() const { return mPendingDataBlocks != nullptr; }
 private:
-    NonblockingWriteBuffer(NonblockingWriteBufferManager *mgr, int fd);
-    ~NonblockingWriteBuffer();
-    friend class NonblockingWriteBufferManager;
+    EventDrivenWriteBuffer(EventDrivenWriteBufferManager *mgr, int fd);
+    ~EventDrivenWriteBuffer();
+    friend class EventDrivenWriteBufferManager;
 private:
-    NonblockingWriteBufferManager *mMgr;
-    NonblockingWriteBufferManager::DataBlock *mPendingDataBlocks;
+    EventDrivenWriteBufferManager *mMgr;
+    EventDrivenWriteBufferManager::DataBlock *mPendingDataBlocks;
     int mFd;
 };
 

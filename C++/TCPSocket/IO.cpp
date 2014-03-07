@@ -137,31 +137,31 @@ void BlockingWriteBuffer::flush() {
     mSpaceBegin = &mBuf[0];
 }
 //////////////////////////////
-NonblockingReadBufferManager::NonblockingReadBufferManager() {
+EventDrivenReadBufferManager::EventDrivenReadBufferManager() {
 }
-NonblockingReadBufferManager::~NonblockingReadBufferManager() {
+EventDrivenReadBufferManager::~EventDrivenReadBufferManager() {
     while (!mFreeBufs.empty()) {
         delete mFreeBufs.back();
         mFreeBufs.pop_back();
     }
 }
-NonblockingReadBuffer* NonblockingReadBufferManager::createBuffer(int fd) {
-    NonblockingReadBuffer *p = nullptr;
+EventDrivenReadBuffer* EventDrivenReadBufferManager::createBuffer(int fd) {
+    EventDrivenReadBuffer *p = nullptr;
     if (!mFreeBufs.empty()) {
         p = mFreeBufs.back();
         mFreeBufs.pop_back();
     } else {
-        p = new NonblockingReadBuffer();
+        p = new EventDrivenReadBuffer();
     }
     p->init(fd);
     return p;
 }
-void NonblockingReadBufferManager::destroyBuffer(NonblockingReadBuffer *buf) {
+void EventDrivenReadBufferManager::destroyBuffer(EventDrivenReadBuffer *buf) {
     buf->uninit();
     mFreeBufs.push_back(buf);
 }
 
-bool NonblockingReadBuffer::readLine(string &line, bool &eof) {
+bool EventDrivenReadBuffer::readLine(string &line, bool &eof) {
     line.clear();
 
     eof = mEof && mDataEnd == 0;
@@ -187,7 +187,7 @@ bool NonblockingReadBuffer::readLine(string &line, bool &eof) {
 
     return linePos != -1 || readBytes > 0;
 }
-int NonblockingReadBuffer::readN(char *buf, int size, bool &eof) {
+int EventDrivenReadBuffer::readN(char *buf, int size, bool &eof) {
     eof = mEof && mDataEnd == 0;
 
     int readBytes = 0;
@@ -202,18 +202,18 @@ int NonblockingReadBuffer::readN(char *buf, int size, bool &eof) {
     readNFromBuf(buf, readBytes);
     return readBytes;
 }
-void NonblockingReadBuffer::readNFromBuf(char *buf, int size) {
+void EventDrivenReadBuffer::readNFromBuf(char *buf, int size) {
     ASSERT(mDataEnd - mDataBegin >= size);
     memcpy(buf, &mBuf[0] + mDataBegin, size);
     mDataBegin += size;
     if (mDataBegin == mDataEnd) mDataBegin = mDataEnd = 0;
 }
-void NonblockingReadBuffer::discardBuf(int size) {
+void EventDrivenReadBuffer::discardBuf(int size) {
     ASSERT(mDataEnd - mDataBegin >= size);
     mDataBegin += size;
     if (mDataBegin == mDataEnd) mDataBegin = mDataEnd = 0;
 }
-void NonblockingReadBuffer::notifyReadable() {
+void EventDrivenReadBuffer::onReadNonblockingFd() {
     for (;;) {
         if (mDataEnd == (int)mBuf.size()) mBuf.resize(mBuf.size() + 1024);
 
@@ -224,42 +224,51 @@ void NonblockingReadBuffer::notifyReadable() {
         mDataEnd += n;
     }
 }
-void NonblockingReadBuffer::init(int fd) {
+void EventDrivenReadBuffer::onReadBlockingFd() {
+    if (mDataEnd == (int)mBuf.size()) mBuf.resize(mBuf.size() + 1024);
+    int n = BlockingIO::readSome(mFd, &mBuf[0] + mDataEnd, (int)mBuf.size() - mDataEnd);
+    if (n == 0) {
+        mEof = true;
+    } else {
+        mDataEnd += n;
+    }
+}
+void EventDrivenReadBuffer::init(int fd) {
     mFd = fd;
     mDataBegin = mDataEnd = 0;
     mEof = false;
 }
-void NonblockingReadBuffer::uninit() {
+void EventDrivenReadBuffer::uninit() {
     if (mDataEnd != mDataBegin) {
         LOG("Warning: %d bytes of data lost before reading ...", mDataEnd - mDataBegin);
     }
 }
-NonblockingReadBuffer::NonblockingReadBuffer(): mBuf(1024), mDataBegin(0), mDataEnd(0), mFd(-1), mEof(false) {
+EventDrivenReadBuffer::EventDrivenReadBuffer(): mBuf(1024), mDataBegin(0), mDataEnd(0), mFd(-1), mEof(false) {
 }
 //////////////////////////////
-NonblockingWriteBufferManager::NonblockingWriteBufferManager(): mBufCount(0) {
+EventDrivenWriteBufferManager::EventDrivenWriteBufferManager(): mBufCount(0) {
 }
-NonblockingWriteBufferManager::~NonblockingWriteBufferManager() {
+EventDrivenWriteBufferManager::~EventDrivenWriteBufferManager() {
     ASSERT(mBufCount == 0);
 }
-NonblockingWriteBuffer* NonblockingWriteBufferManager::createBuffer(int fd) {
+EventDrivenWriteBuffer* EventDrivenWriteBufferManager::createBuffer(int fd) {
     ++mBufCount;
-    return new NonblockingWriteBuffer(this, fd);
+    return new EventDrivenWriteBuffer(this, fd);
 }
-void NonblockingWriteBufferManager::destroyBuffer(NonblockingWriteBuffer *buf) {
+void EventDrivenWriteBufferManager::destroyBuffer(EventDrivenWriteBuffer *buf) {
     --mBufCount;
     delete buf;
 }
-NonblockingWriteBufferManager::DataBlock* NonblockingWriteBufferManager::mallocDataBlock() {
+EventDrivenWriteBufferManager::DataBlock* EventDrivenWriteBufferManager::mallocDataBlock() {
     return (DataBlock*)mMemPool.malloc();
 }
-void NonblockingWriteBufferManager::freeDataBlock(DataBlock *b) {
+void EventDrivenWriteBufferManager::freeDataBlock(DataBlock *b) {
     mMemPool.free(b);
 }
 
-void NonblockingWriteBuffer::write(const char *buf, int size) {
+void EventDrivenWriteBuffer::write(const char *buf, int size) {
     while (size > 0) {
-        NonblockingWriteBufferManager::DataBlock *b = mMgr->mallocDataBlock();
+        EventDrivenWriteBufferManager::DataBlock *b = mMgr->mallocDataBlock();
         int n = min((int)sizeof(b->data), size);
         memcpy(b->data, buf, n);
         buf += n;
@@ -271,9 +280,9 @@ void NonblockingWriteBuffer::write(const char *buf, int size) {
         mPendingDataBlocks = b;
     }
 }
-void NonblockingWriteBuffer::notifyWriteable() {
+void EventDrivenWriteBuffer::onWriteNonblockingFd() {
     while (mPendingDataBlocks != nullptr) {
-        NonblockingWriteBufferManager::DataBlock *b = mPendingDataBlocks;
+        EventDrivenWriteBufferManager::DataBlock *b = mPendingDataBlocks;
 
         while (b->payloadBegin != b->payloadEnd) {
             int n = NonblockingIO::writeSome(mFd, b->payloadBegin, b->payloadEnd - b->payloadBegin);
@@ -286,15 +295,27 @@ void NonblockingWriteBuffer::notifyWriteable() {
         mMgr->freeDataBlock(b);
     }
 }
-NonblockingWriteBuffer::NonblockingWriteBuffer(NonblockingWriteBufferManager *mgr, int fd)
+void EventDrivenWriteBuffer::onWriteBlockingFd() {
+    EventDrivenWriteBufferManager::DataBlock *b = mPendingDataBlocks;
+    if (b == nullptr) return;
+    ASSERT(b->payloadBegin != b->payloadEnd);
+
+    int n = BlockingIO::writeSome(mFd, b->payloadBegin, b->payloadEnd - b->payloadBegin);
+    b->payloadBegin += n;
+    if (b->payloadBegin == b->payloadEnd) {
+        mPendingDataBlocks = b->next;
+        mMgr->freeDataBlock(b);
+    }
+}
+EventDrivenWriteBuffer::EventDrivenWriteBuffer(EventDrivenWriteBufferManager *mgr, int fd)
     : mMgr(mgr), mPendingDataBlocks(nullptr), mFd(fd) {
 }
-NonblockingWriteBuffer::~NonblockingWriteBuffer() {
+EventDrivenWriteBuffer::~EventDrivenWriteBuffer() {
     if (mPendingDataBlocks != nullptr) {
         int bytes = 0;
 
         while (mPendingDataBlocks != nullptr) {
-            NonblockingWriteBufferManager::DataBlock *b = mPendingDataBlocks;
+            EventDrivenWriteBufferManager::DataBlock *b = mPendingDataBlocks;
             mPendingDataBlocks = b->next;
 
             bytes += b->payloadEnd - b->payloadBegin;
