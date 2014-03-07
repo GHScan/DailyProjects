@@ -3,6 +3,7 @@
 #include <map>
 
 #include <unistd.h>
+#include <signal.h>
 
 #include "Utils.h"
 #include "Threading.h"
@@ -54,7 +55,7 @@ static void handleHTTPRequest(const TCPSocket &socket) {
         return;
     }
 
-    while (!line.empty()) {
+    while (!trimString(line.c_str()).empty()) {
         if (!readBuf.readLine(line)) {
             LOG_ERR_MSG("Skip http header failed!");
             return;
@@ -85,7 +86,6 @@ static void serverThread(TCPSocket listenSocket, const char *pollerType) {
 
     vector<IPoller::Event> events;
     while (!g_shouldExit) {
-        events.clear();
         if (!poller->wait(events, 300)) continue;
 
         for (auto &event : events) {
@@ -102,7 +102,13 @@ static void serverThread(TCPSocket listenSocket, const char *pollerType) {
                     LOG("Accept client: tid=%d,fd=%d,%s", thread.getTid(), socket.getFd(), addr.toString().c_str());
                     poller->add(socket.getFd(), (void*)socket.getFd(), IPoller::EF_Readable);
                 } else {
-                    handleHTTPRequest(socket);
+
+                    try {
+                        handleHTTPRequest(socket);
+                    } catch(const RuntimeException& e) {
+                        LOG_ERR("Found runtime exception while handle http request: %s", e.what());
+                    }
+
                     poller->del(socket.getFd());
                     socket.close();
                     LOG_MSG("Close client");
@@ -116,6 +122,8 @@ int main(int argc, char *argv[]) {
     int threadCount = 1;
     short port = 7788;
     const char *pollerType = "select";
+
+    setSignalHandler(SIGPIPE, SIG_IGN);
 
     ILogger::instance()->suppressLog(true);
 
@@ -149,7 +157,7 @@ int main(int argc, char *argv[]) {
 
     Thread::create([]() {
 
-            LOG("%s", "Press any key to exit server...");
+            LOG_ERR("%s", "Press any key to exit server...");
             getchar();
             g_shouldExit = true;
 

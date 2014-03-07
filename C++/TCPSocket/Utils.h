@@ -87,10 +87,13 @@ private:
 
 #define ON_EXIT_SCOPE(f) ScopeGuard CONN(__scopeVar_, __LINE__)(f)
 //////////////////////////////
+extern string trimString(const char *str);
 extern string cmdOpenAndRetrieve(const char **args, const char *input);
 extern int getCpuCount();
 extern bool readFile(const char *path, vector<char> &buf);
 
+typedef void(*SigHandlerT)(int);
+extern SigHandlerT setSignalHandler(int signum, SigHandlerT handler);
 //////////////////////////////
 class ILogger {
     DISABLE_COPY(ILogger);

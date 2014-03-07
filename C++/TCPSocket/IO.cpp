@@ -140,6 +140,10 @@ void BlockingWriteBuffer::flush() {
 NonblockingReadBufferManager::NonblockingReadBufferManager() {
 }
 NonblockingReadBufferManager::~NonblockingReadBufferManager() {
+    while (!mFreeBufs.empty()) {
+        delete mFreeBufs.back();
+        mFreeBufs.pop_back();
+    }
 }
 NonblockingReadBuffer* NonblockingReadBufferManager::createBuffer(int fd) {
     NonblockingReadBuffer *p = nullptr;

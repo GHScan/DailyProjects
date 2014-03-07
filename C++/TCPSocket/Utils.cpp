@@ -4,6 +4,7 @@
 
 #include <execinfo.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include "Utils.h"
 #include "IO.h"
@@ -70,6 +71,14 @@ string format(const char *fmt, ...) {
     return v;
 }
 
+string trimString(const char *str) {
+    const char *begin = str;
+    const char *end = begin + strlen(begin);
+    while (begin < end && isspace(begin[0])) ++begin;
+    while (begin < end && isspace(end[-1])) --end;
+    return string(begin, end);
+}
+
 string cmdOpenAndRetrieve(const char **args, const char *input) {
     int writePipe[2], readPipe[2];
     P_ENSURE(::pipe(writePipe) == 0);
@@ -124,6 +133,15 @@ bool readFile(const char *path, vector<char> &buf) {
     if (size > 0) fread(&buf[0], size, 1, f);
     fclose(f);
     return true;
+}
+
+SigHandlerT setSignalHandler(int signum, SigHandlerT handler) {
+    struct sigaction act = {0}, old = {0};
+    P_ENSURE(::sigemptyset(&act.sa_mask) == 0);
+    act.sa_flags = SA_RESTART;
+    act.sa_handler = handler;
+    P_ENSURE(::sigaction(signum, &act, &old) == 0);
+    return old.sa_handler;
 }
 
 class Logger: public ILogger {

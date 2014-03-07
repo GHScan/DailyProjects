@@ -106,7 +106,7 @@ void SelectPoller::del(int fd) {
 }
 bool SelectPoller::wait(vector<Event> &events, int timeout) {
     ASSERT(size() > 0);
-    ASSERT(events.empty());
+    events.clear();
 
     fd_set tmpFdSets[3] = { mFdSets[0], mFdSets[1], mFdSets[2]};
     timeval tval = { timeout / 1000, (timeout % 1000) * 1000 };
@@ -158,7 +158,7 @@ void PollPoller::del(int fd) {
 }
 bool PollPoller::wait(vector<Event> &events, int timeout) {
     ASSERT(size() > 0);
-    ASSERT(events.empty());
+    events.clear();
 
     int n = ::poll(&mFds[0], mFds.size(), timeout);
     P_ENSURE(n >= 0);
@@ -212,7 +212,7 @@ void EPollPoller::epControl(int op, int fd, void *ud, int ef) {
 }
 bool EPollPoller::wait(vector<Event> &events, int timeout) {
     ASSERT(size() > 0);
-    ASSERT(events.empty());
+    events.clear();
 
     mTmpEvents.resize(128);
 
