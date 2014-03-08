@@ -121,6 +121,9 @@ void ProactorFile::writeN(const char *buf, int n, function<void()> callback) {
 void ProactorFile::destroy() {
     mService->destroyFile(this);
 }
+void ProactorFile::setDestroyCallback(function<void()> callback) {
+    mDestroyCallback = callback;
+}
 void ProactorFile::init(ProactorService *service, int fd) {
     ASSERT(fd != -1);
     mReadBuf.init(fd);
@@ -139,6 +142,11 @@ void ProactorFile::initWithConnectedCallbak(ProactorService *service, int fd, fu
     mService->getPoller()->add(mFd, this, IPoller::EF_Writeable);
 }
 void ProactorFile::uninit() {
+    if (mDestroyCallback != nullptr) {
+        mDestroyCallback();
+        mDestroyCallback = nullptr;
+    }
+
     mConnectedCallback = nullptr;
     mAcceptCallback = nullptr;
     mReadBuf.uninit();

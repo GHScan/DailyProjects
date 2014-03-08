@@ -2,9 +2,10 @@
 #define APPTYPE_NonblockingClient   2
 #define APPTYPE_BlockingServer      3
 #define APPTYPE_ProactorServer      4
+#define APPTYPE_ProactorServer2     5
 
 #ifndef APPTYPE
-#define APPTYPE APPTYPE_ProactorServer
+#define APPTYPE APPTYPE_ProactorServer2
 #endif
 
 #if APPTYPE == APPTYPE_BlockingClient
@@ -15,4 +16,6 @@
 #include "BlockingServer/main.cpp"
 #elif APPTYPE == APPTYPE_ProactorServer
 #include "ProactorServer/main.cpp"
+#elif APPTYPE == APPTYPE_ProactorServer2
+#include "ProactorServer2/main.cpp"
 #endif

@@ -47,6 +47,7 @@ public:
     int getFd() const { return mFd; }
     ProactorService* getService() { return mService; }
     void destroy();
+    void setDestroyCallback(function<void()> callback);
 private:
     ProactorFile(){}
     void init(ProactorService *service, int fd);
@@ -56,6 +57,7 @@ private:
     void onWrite();
     friend class ProactorService;
 private:
+    function<void()> mDestroyCallback;
     function<void(ProactorFile*)> mConnectedCallback;
     function<void(ProactorFile*, const HostAddress&)> mAcceptCallback;
     EventDrivenReadBuffer2 mReadBuf;
