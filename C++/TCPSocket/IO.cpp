@@ -67,7 +67,7 @@ int NonblockingIO::writeSome(int fd, const char *buf, int size) {
 BlockingReadBuffer::BlockingReadBuffer(int fd, int bufSize)
     : mBuf(bufSize), mDataBegin(nullptr), mDataEnd(nullptr), mFd(fd) {
 }
-bool BlockingReadBuffer::readLine(string &line) {
+bool BlockingReadBuffer::readLine(string &line, char delmit) {
     line.clear();
 
     for (;;) {
@@ -77,14 +77,14 @@ bool BlockingReadBuffer::readLine(string &line) {
         ASSERT(mDataBegin < mDataEnd);
 
         char *p = mDataBegin;
-        while (p != mDataEnd && p[0] != '\n') ++p;
+        while (p != mDataEnd && p[0] != delmit) ++p;
 
         line.insert(line.end(), mDataBegin, p);
 
         if (p == mDataEnd) {
             mDataBegin = mDataEnd;
         } else {
-            ASSERT(p[0] == '\n');
+            ASSERT(p[0] == delmit);
             mDataBegin = p + 1;
             return true;
         }
@@ -161,14 +161,18 @@ void EventDrivenReadBufferManager::destroyBuffer(EventDrivenReadBuffer *buf) {
     mFreeBufs.push_back(buf);
 }
 
-bool EventDrivenReadBuffer::readLine(string &line, bool &eof) {
+bool EventDrivenReadBuffer::isEof() const {
+    return mEof && mDataEnd == 0;
+}
+bool EventDrivenReadBuffer::readLine(string &line, char delmit) {
     line.clear();
-
-    eof = mEof && mDataEnd == 0;
 
     int linePos = -1;
     for (int i = mDataBegin; i < mDataEnd; ++i) {
-        if (mBuf[i] == '\n') linePos = i;
+        if (mBuf[i] == delmit) {
+            linePos = i;
+            break;
+        }
     }
 
     int readBytes = 0;
@@ -187,9 +191,7 @@ bool EventDrivenReadBuffer::readLine(string &line, bool &eof) {
 
     return linePos != -1 || readBytes > 0;
 }
-int EventDrivenReadBuffer::readN(char *buf, int size, bool &eof) {
-    eof = mEof && mDataEnd == 0;
-
+int EventDrivenReadBuffer::readN(char *buf, int size) {
     int readBytes = 0;
     if (mDataEnd - mDataBegin >= size) {
         readBytes = size;
@@ -323,5 +325,167 @@ EventDrivenWriteBuffer::~EventDrivenWriteBuffer() {
         }
 
         LOG("Warning : %d bytes of data lost before writing...", bytes);
+    }
+}
+//////////////////////////////
+void EventDrivenReadBuffer2::init(int fd) {
+    mFd = fd;
+    mEof = false;
+    mBuf.resize(1024);
+    mDataBegin = mDataEnd = 0;
+}
+void EventDrivenReadBuffer2::uninit() {
+    ASSERT(mReadLineCallback == nullptr);
+    ASSERT(mReadNCallback == nullptr);
+    if (mDataBegin != mDataEnd) {
+        LOG_ERR("Warning: %d bytes of data lost before read...", mDataEnd - mDataBegin);
+    }
+}
+void EventDrivenReadBuffer2::readLine(char delmit, function<void(bool eof, const char *buf, int n)> callback) {
+    ASSERT(mReadLineCallback == nullptr && mReadNCallback == nullptr);
+    mReadLineDelmit = delmit;
+    mReadLineCallback = callback;
+    tryCompleteReadLine();
+}
+void EventDrivenReadBuffer2::readN(int n, function<void(bool eof, const char *buf, int n)> callback) {
+    ASSERT(mReadLineCallback == nullptr && mReadNCallback == nullptr);
+    mReadNN = n;
+    mReadNCallback = callback;
+    tryCompleteReadN();
+}
+void EventDrivenReadBuffer2::onReadBlocking() {
+    if (mDataEnd == (int)mBuf.size()) mBuf.resize(mBuf.size() + 1024);
+    int n = BlockingIO::readSome(mFd, &mBuf[0] + mDataEnd, (int)mBuf.size() - mDataEnd);
+    if (n == 0) {
+        mEof = true;
+    } else {
+        mDataEnd += n;
+    }
+
+    tryCompleteReadLine();
+    tryCompleteReadN();
+}
+void EventDrivenReadBuffer2::onReadNonblocking() {
+    for (;;) {
+        if (mDataEnd == (int)mBuf.size()) mBuf.resize(mBuf.size() + 1024);
+        int n = NonblockingIO::readSome(mFd, &mBuf[0] + mDataEnd, (int)mBuf.size() - mDataEnd, mEof);
+        if (mEof) break;
+        if (n == 0 && errno == EAGAIN) break;
+        mDataEnd += n;
+    }
+
+    tryCompleteReadLine();
+    tryCompleteReadN();
+}
+void EventDrivenReadBuffer2::tryCompleteReadLine() {
+    if (mReadLineCallback == nullptr) return;
+
+    int linePos = -1;
+    for (int i = mDataBegin; i < mDataEnd; ++i) {
+        if (mBuf[i] == mReadLineDelmit) {
+            linePos = i;
+            break;
+        }
+    }
+
+    bool eof = mEof && mDataEnd == 0;
+    const char *buf = nullptr;
+    int n = 0;
+
+    if (linePos != -1) {
+        buf = &mBuf[0] + mDataBegin;
+        n = linePos - mDataBegin;
+    } else {
+        if (mEof) {
+            buf = &mBuf[0] + mDataBegin;
+            n = mDataEnd - mDataBegin;
+        }
+    }
+
+    if (buf != nullptr) {
+        mDataBegin += n;
+        if (linePos != -1) ++mDataBegin;
+        if (mDataBegin == mDataEnd) mDataBegin = mDataEnd = 0;
+
+        auto f = mReadLineCallback;
+        mReadLineCallback = nullptr;
+        f(eof, buf, n);
+    }
+}
+void EventDrivenReadBuffer2::tryCompleteReadN() {
+    if (mReadNCallback == nullptr) return;
+
+    bool eof = mEof && mDataEnd == 0;
+    const char *buf = nullptr;
+    int n = 0;
+
+    if (mDataEnd - mDataBegin >= mReadNN) {
+        buf = &mBuf[0] + mDataBegin;
+        n = mReadNN;
+    } else {
+        if (mEof) {
+            buf = &mBuf[0] + mDataBegin;
+            n = mDataEnd - mDataBegin;
+        }
+    }
+
+    if (buf != nullptr) {
+        mDataBegin += n;
+        if (mDataBegin == mDataEnd) mDataBegin = mDataEnd = 0;
+
+        auto f = mReadNCallback;
+        mReadNCallback = nullptr;
+        f(eof, buf, n);
+    }
+}
+
+
+void EventDrivenWriteBuffer2::init(int fd) {
+    mFd = fd;
+    mDataBegin = mDataEnd = nullptr;
+}
+void EventDrivenWriteBuffer2::uninit() {
+    ASSERT(mCallback == nullptr);
+    if (mDataEnd != mDataBegin) {
+        LOG_ERR("Warning: %d bytes of data lost before write...", mDataEnd - mDataBegin);
+    }
+}
+bool EventDrivenWriteBuffer2::hasPendingData() const {
+    return mCallback != nullptr;
+}
+void EventDrivenWriteBuffer2::writeN(const char *buf, int n, function<void()> callback) {
+    ASSERT(mCallback == nullptr);
+    mDataBegin = buf;
+    mDataEnd = buf + n;
+    mCallback = callback;
+}
+void EventDrivenWriteBuffer2::onWriteBlocking() {
+    if (mCallback == nullptr) return;
+
+    int n = BlockingIO::writeSome(mFd, mDataBegin, mDataEnd - mDataBegin);
+    mDataBegin += n;
+    if (mDataBegin == mDataEnd) {
+        mDataBegin = mDataEnd = nullptr;
+
+        auto f = mCallback;
+        mCallback = nullptr;
+        f();
+    }
+}
+void EventDrivenWriteBuffer2::onWriteNonblocking() {
+    if (mCallback == nullptr) return;
+
+    while (mDataBegin != mDataEnd) {
+        int n = NonblockingIO::writeSome(mFd, mDataBegin, mDataEnd - mDataBegin);
+        if (n == 0 && errno == EAGAIN) break;
+        mDataBegin += n;
+    }
+
+    if (mDataBegin == mDataEnd) {
+        mDataBegin = mDataEnd = nullptr;
+
+        auto f = mCallback;
+        mCallback = nullptr;
+        f();
     }
 }

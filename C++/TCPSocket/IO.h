@@ -3,6 +3,7 @@
 #define IO_H
 
 #include <utility>
+#include <functional>
 
 #include "Utils.h"
 
@@ -28,7 +29,7 @@ class BlockingReadBuffer {
     DISABLE_COPY(BlockingReadBuffer);
 public:
     BlockingReadBuffer(int fd, int bufSize);
-    bool readLine(string &line);
+    bool readLine(string &line, char delmit = '\n');
     int readN(char *buf, int size);
 private:
     bool doReadFile();
@@ -57,6 +58,7 @@ private:
 class EventDrivenReadBuffer;
 
 class EventDrivenReadBufferManager {
+    DISABLE_COPY(EventDrivenReadBufferManager);
 public:
     EventDrivenReadBufferManager();
     ~EventDrivenReadBufferManager();
@@ -67,9 +69,11 @@ private:
 };
 
 class EventDrivenReadBuffer {
+    DISABLE_COPY(EventDrivenReadBuffer);
 public:
-    bool readLine(string &line, bool &eof);
-    int readN(char *buf, int size, bool &eof);
+    bool isEof() const;
+    bool readLine(string &line, char delmit = '\n');
+    int readN(char *buf, int size);
     void onReadNonblockingFd();
     void onReadBlockingFd();
 private:
@@ -90,6 +94,7 @@ private:
 class EventDrivenWriteBuffer;
 
 class EventDrivenWriteBufferManager {
+    DISABLE_COPY(EventDrivenWriteBufferManager);
 public:
     EventDrivenWriteBufferManager();
     ~EventDrivenWriteBufferManager();
@@ -111,6 +116,7 @@ private:
 };
 
 class EventDrivenWriteBuffer {
+    DISABLE_COPY(EventDrivenWriteBuffer);
 public:
     void write(const char *buf, int size);
     void onWriteNonblockingFd();
@@ -123,6 +129,48 @@ private:
 private:
     EventDrivenWriteBufferManager *mMgr;
     EventDrivenWriteBufferManager::DataBlock *mPendingDataBlocks;
+    int mFd;
+};
+//////////////////////////////
+class EventDrivenReadBuffer2 {
+    DISABLE_COPY(EventDrivenReadBuffer2);
+public:
+    EventDrivenReadBuffer2(){}
+    void init(int fd);
+    void uninit();
+    void readLine(char delmit, function<void(bool eof, const char *buf, int n)> callback);
+    void readN(int n, function<void(bool eof, const char *buf, int n)> callback);
+    void onReadBlocking();
+    void onReadNonblocking();
+private:
+    void tryCompleteReadLine();
+    void tryCompleteReadN();
+private:
+    vector<char> mBuf;
+    int mDataBegin, mDataEnd;
+    int mFd;
+    bool mEof;
+private:
+    function<void(bool, const char*, int)> mReadLineCallback;
+    char mReadLineDelmit;
+private:
+    function<void(bool, const char*, int)> mReadNCallback;
+    int mReadNN;
+};
+
+class EventDrivenWriteBuffer2 {
+    DISABLE_COPY(EventDrivenWriteBuffer2);
+public:
+    EventDrivenWriteBuffer2(){}
+    void init(int fd);
+    void uninit();
+    bool hasPendingData() const;
+    void writeN(const char *buf, int n, function<void()> callback);
+    void onWriteBlocking();
+    void onWriteNonblocking();
+private:
+    const char *mDataBegin, *mDataEnd;
+    function<void()> mCallback;
     int mFd;
 };
 
