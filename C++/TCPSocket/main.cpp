@@ -6,7 +6,7 @@
 #define APPTYPE_ProactorClient      6
 
 #ifndef APPTYPE
-#define APPTYPE APPTYPE_NonblockingClient
+#define APPTYPE APPTYPE_ProactorClient
 #endif
 
 #if APPTYPE == APPTYPE_BlockingClient

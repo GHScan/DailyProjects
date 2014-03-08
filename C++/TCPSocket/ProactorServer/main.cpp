@@ -27,7 +27,6 @@ private:
     map<string, vector<char>*> mFiles;
 } g_fileServer;
 
-static int g_threadCount = 1;
 static short g_port = 7788;
 static const char *g_pollerType = "select";
 static bool g_blocking = true;
@@ -40,11 +39,8 @@ int main(int argc, char *argv[]) {
     ILogger::instance()->suppressLog(true);
 
     int opt;
-    while ((opt = getopt(argc, argv, "P:n:p:vb")) != -1) {
+    while ((opt = getopt(argc, argv, "P:p:vb")) != -1) {
         switch (opt) {
-            case 'n':
-                g_threadCount = atoi(optarg);
-                break;
             case 'p':
                 g_pollerType = optarg;
                 break;
