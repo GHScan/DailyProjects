@@ -23,6 +23,7 @@ public:
 
     IPoller* getPoller() { return mPoller; }
     bool isBlocking() const { return mBlocking; }
+    int size() const { return (int)mActiveFiles.size(); }
 
     void wait(int timeout);
 private:
