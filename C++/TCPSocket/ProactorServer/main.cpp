@@ -90,6 +90,7 @@ int main(int argc, char *argv[]) {
             }
 
             string urlStr(url);
+            // TODO: onSkipHeader's lifetime is out of control!!!!
             function<void(bool,const char*, int)> onSkipHeader = [client, urlStr, &onSkipHeader](bool eof, const char *buf, int n) {
                 if (eof) {
                     LOG_ERR_MSG("EOF to early!");

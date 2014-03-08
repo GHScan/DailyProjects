@@ -197,7 +197,7 @@ int main(int argc, char *argv[]) {
     int maxActiveTask = 1;
     const char *pollerType = "select";
 
-    ILogger::instance()->suppressionLog(true);
+    ILogger::instance()->suppressLog(true);
 
     int opt;
     while ((opt = getopt(argc, argv, "n:m:p:v")) != -1) {
@@ -212,7 +212,7 @@ int main(int argc, char *argv[]) {
                 pollerType = optarg;
                 break;
             case 'v':
-                ILogger::instance()->suppressionLog(false);
+                ILogger::instance()->suppressLog(false);
                 break;
             default:
                 LOG_ERR("%s [-n thread_count] [-m max_active_task] [-p poller_type] [-v]", argv[0]);
