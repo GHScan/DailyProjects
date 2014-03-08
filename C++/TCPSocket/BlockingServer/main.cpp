@@ -128,7 +128,7 @@ int main(int argc, char *argv[]) {
     ILogger::instance()->suppressLog(true);
 
     int opt;
-    while ((opt = getopt(argc, argv, "P:n:p:v")) != -1) {
+    while ((opt = getopt(argc, argv, "P:n:p:vb")) != -1) {
         switch (opt) {
             case 'n':
                 threadCount = atoi(optarg);
@@ -141,6 +141,8 @@ int main(int argc, char *argv[]) {
                 break;
             case 'v':
                 ILogger::instance()->suppressLog(false);
+                break;
+            case 'b':
                 break;
             default:
                 LOG_ERR("%s [-n thread_count] [-P port] [-p poller] [-v]", argv[0]);

@@ -122,8 +122,10 @@ public:
         bool blocking = true;
 
         int opt;
-        while ((opt = getopt(argc, argv, "P:p:vb")) != -1) {
+        while ((opt = getopt(argc, argv, "n:P:p:vb")) != -1) {
             switch (opt) {
+                case 'n':
+                    break;
                 case 'p':
                     pollerType = optarg;
                     break;
