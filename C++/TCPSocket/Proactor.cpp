@@ -176,12 +176,16 @@ void ProactorFile::onWrite() {
         mConnectedCallback = nullptr;
 
         TCPSocket socket = TCPSocket::fromFd(mFd);
-        P_ENSURE(socket.getOption<int>(SO_ERROR) == 0);
-        socket.setNonBlocking(!mService->isBlocking());
+        int err = socket.getOption<int>(SO_ERROR);
+        if (err == 0) {
+            socket.setNonBlocking(!mService->isBlocking());
+            mService->getPoller()->update(mFd, this, IPoller::EF_Readable);
 
-        mService->getPoller()->update(mFd, this, IPoller::EF_Readable);
-
-        f(this);
+            f(this);
+        } else {
+            LOG_ERR("Connect failed: %s", strerror(err));
+            mService->destroyFile(this);
+        }
     } else {
         if (mService->isBlocking()) mWriteBuf.onWriteBlocking();
         else mWriteBuf.onWriteNonblocking();

@@ -71,7 +71,11 @@ static void handleTaskList(const Task *begin, const Task *end) {
             });
         }
 
-        service.wait(1000);
+        try {
+            service.wait(1000);
+        } catch (const RuntimeException& e) {
+            LOG_ERR("Found runtime exception: %s", e.what());
+        }
     }
 }
 

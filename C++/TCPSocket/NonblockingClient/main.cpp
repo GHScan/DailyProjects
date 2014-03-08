@@ -119,7 +119,7 @@ Client::~Client() {
 void Client::onConnectComplete() {
     ASSERT(mState == S_Connecting);
 
-    P_ENSURE(mSocket.getOption<int>(SO_ERROR) == 0);
+    P_ENSURE_R(mSocket.getOption<int>(SO_ERROR));
     mState = S_WritingRequest;
     mReqWritenSize = 0;
     mSocket.setNonBlocking(false);
