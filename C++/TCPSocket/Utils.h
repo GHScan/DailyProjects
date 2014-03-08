@@ -47,7 +47,6 @@ public:
     EXCEPTION_CTX_OPERATOR(LogicError);
 private:
     string constructErrorMsg(const char *describ, const char *file, int line);
-    string stackTrace();
 };
 
 class RuntimeException: public Throwable {
@@ -91,6 +90,7 @@ extern string trimString(const char *str);
 extern string cmdOpenAndRetrieve(const char **args, const char *input);
 extern int getCpuCount();
 extern bool readFile(const char *path, vector<char> &buf);
+extern string traceStack(int skipFrame);
 
 typedef void(*SigHandlerT)(int);
 extern SigHandlerT setSignalHandler(int signum, SigHandlerT handler);

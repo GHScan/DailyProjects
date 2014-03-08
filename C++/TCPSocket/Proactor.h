@@ -1,6 +1,8 @@
 #ifndef PROACTOR_H
 #define PROACTOR_H
 
+#include <unordered_set>
+
 #include "Poller.h"
 #include "Socket.h"
 #include "IO.h"
@@ -26,11 +28,13 @@ public:
 private:
     ProactorFile* allocFile();
     void freeFile(ProactorFile *file);
-
+    void clearDeferDestroyFiles();
 private:
     IPoller *mPoller;
     bool mBlocking;
     vector<ProactorFile*> mFreeFiles;
+    vector<ProactorFile*> mDeferDestoryFiles;
+    unordered_set<ProactorFile*> mActiveFiles;
 };
 
 class ProactorFile {
@@ -41,6 +45,8 @@ public:
     void readN(int n, function<void(bool eof, const char *buf, int n)> callback);
     void writeN(const char *buf, int n, function<void()> callback);
     int getFd() const { return mFd; }
+    ProactorService* getService() { return mService; }
+    void destroy();
 private:
     ProactorFile(){}
     void init(ProactorService *service, int fd);

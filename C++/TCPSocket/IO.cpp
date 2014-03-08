@@ -335,8 +335,8 @@ void EventDrivenReadBuffer2::init(int fd) {
     mDataBegin = mDataEnd = 0;
 }
 void EventDrivenReadBuffer2::uninit() {
-    ASSERT(mReadLineCallback == nullptr);
-    ASSERT(mReadNCallback == nullptr);
+    mReadLineCallback = nullptr;
+    mReadNCallback = nullptr;
     if (mDataBegin != mDataEnd) {
         LOG_ERR("Warning: %d bytes of data lost before read...", mDataEnd - mDataBegin);
     }
@@ -445,7 +445,7 @@ void EventDrivenWriteBuffer2::init(int fd) {
     mDataBegin = mDataEnd = nullptr;
 }
 void EventDrivenWriteBuffer2::uninit() {
-    ASSERT(mCallback == nullptr);
+    mCallback = nullptr;
     if (mDataEnd != mDataBegin) {
         LOG_ERR("Warning: %d bytes of data lost before write...", mDataEnd - mDataBegin);
     }

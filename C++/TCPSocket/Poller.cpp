@@ -82,7 +82,7 @@ SelectPoller::SelectPoller() {
     FD_ZERO(mFdSets + 2);
 }
 SelectPoller::~SelectPoller() {
-    ASSERT(size() == 0);
+    ASSERT(size() == 0)(size());
 }
 void SelectPoller::add(int fd, void *ud, int ef) {
     ASSERT(fd < FD_SETSIZE)(fd);

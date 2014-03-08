@@ -8,6 +8,16 @@ ProactorService::ProactorService(const char *pollerType, bool blocking):
     mPoller(IPoller::create(pollerType)), mBlocking(blocking) {
 }
 ProactorService::~ProactorService() {
+    if (!mActiveFiles.empty()) {
+        for (ProactorFile *file : vector<ProactorFile*>(mActiveFiles.begin(), mActiveFiles.end())) {
+            LOG_ERR("Abnormal closed file: %d", file->getFd());
+            destroyFile(file);
+        }
+    }
+    ASSERT(mActiveFiles.empty());
+
+    clearDeferDestroyFiles();
+
     while (!mFreeFiles.empty()) {
         delete mFreeFiles.back();
         mFreeFiles.pop_back();
@@ -23,20 +33,24 @@ void ProactorService::createClientSocket(const HostAddress &serverAddr, function
 
         ProactorFile *file = allocFile();
         file->init(this, socket.getFd());
+        mActiveFiles.insert(file);
         connectedCallback(file);
     } else {
         ProactorFile *file = allocFile();
         file->initWithConnectedCallbak(this, socket.getFd(), connectedCallback);
+        mActiveFiles.insert(file);
     }
 }
 ProactorFile* ProactorService::createListenSocket(const HostAddress &bindAddr, int backLog) {
     TCPSocket socket = TCPSocket::create();
+    socket.setReuseAddress();
     socket.bind(bindAddr);
     socket.listen(backLog);
     socket.setNonBlocking(!mBlocking);
 
     ProactorFile *file = allocFile();
     file->init(this, socket.getFd());
+    mActiveFiles.insert(file);
     return file;
 }
 ProactorFile* ProactorService::attachFd(int fd) {
@@ -44,13 +58,25 @@ ProactorFile* ProactorService::attachFd(int fd) {
 
     ProactorFile *file = allocFile();
     file->init(this, fd);
+    mActiveFiles.insert(file);
     return file;
 }
 void ProactorService::destroyFile(ProactorFile *file) {
-    file->uninit();
-    freeFile(file);
+    mActiveFiles.erase(file);
+    mDeferDestoryFiles.push_back(file);
+}
+void ProactorService::clearDeferDestroyFiles() {
+    while (!mDeferDestoryFiles.empty()) {
+        ProactorFile *file = mDeferDestoryFiles.back();
+        mDeferDestoryFiles.pop_back();
+
+        file->uninit();
+        freeFile(file);
+    }
 }
 void ProactorService::wait(int timeout) {
+    clearDeferDestroyFiles();
+
     vector<IPoller::Event> events;
     if (!mPoller->wait(events, timeout)) return;
 
@@ -92,7 +118,11 @@ void ProactorFile::writeN(const char *buf, int n, function<void()> callback) {
     }
     mWriteBuf.writeN(buf, n, callback);
 }
+void ProactorFile::destroy() {
+    mService->destroyFile(this);
+}
 void ProactorFile::init(ProactorService *service, int fd) {
+    ASSERT(fd != -1);
     mReadBuf.init(fd);
     mWriteBuf.init(fd);
     mFd = fd;
@@ -100,6 +130,7 @@ void ProactorFile::init(ProactorService *service, int fd) {
     mService->getPoller()->add(mFd, this, IPoller::EF_Readable);
 }
 void ProactorFile::initWithConnectedCallbak(ProactorService *service, int fd, function<void(ProactorFile*)> callback) {
+    ASSERT(fd != -1);
     mConnectedCallback = callback;
     mReadBuf.init(fd);
     mWriteBuf.init(fd);
@@ -108,8 +139,8 @@ void ProactorFile::initWithConnectedCallbak(ProactorService *service, int fd, fu
     mService->getPoller()->add(mFd, this, IPoller::EF_Writeable);
 }
 void ProactorFile::uninit() {
-    ASSERT(mConnectedCallback == nullptr);
-    ASSERT(mAcceptCallback == nullptr);
+    mConnectedCallback = nullptr;
+    mAcceptCallback = nullptr;
     mReadBuf.uninit();
     mWriteBuf.uninit();
     mService->getPoller()->del(mFd);

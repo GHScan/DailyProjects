@@ -17,42 +17,11 @@ LogicError::LogicError(const char *describ, const char *file, int line)
     : Throwable(constructErrorMsg(describ, file, line).c_str()){
 }
 string LogicError::constructErrorMsg(const char *describ, const char *file, int line) {
-    return format("%s(%d): %s\n", file, line, describ) + stackTrace();
-}
-string LogicError::stackTrace() {
-    string ret;
-
-    void *frames[32];
-    int n = ::backtrace(frames, ARRAY_SIZE(frames));
-    char **strs = ::backtrace_symbols(frames, n);
-#ifndef NDEBUG
-    // skip the frames in exception class
-    for (int i = 3; i < n; ++i) { 
-#else
-    for (int i = 0; i < n; ++i) {
+    int skipFrame = 3;
+#ifdef NDEBUG
+    skipFrame = 0;
 #endif
-        ret += strs[i]; 
-        ret += '\n';
-    }
-    free(strs);
-
-#ifndef NDEBUG
-    char curExecName[256];
-    if (::readlink("/proc/self/exe", curExecName, sizeof(curExecName)) == -1) {
-        strcpy(curExecName, "./main");
-    }
-    string bashArgs = 
-        format(R"***(grep -oP '\[0x\w+\]' | grep -oP '0x\w+' | xargs addr2line -e '%s')***", curExecName);
-    const char *args[] = {
-        "bash",
-        "-c",
-        bashArgs.c_str(),
-        nullptr,
-    };
-    ret = cmdOpenAndRetrieve(args, ret.c_str());
-#endif
-
-    return ret;
+    return format("%s(%d): %s\n", file, line, describ) + traceStack(skipFrame);
 }
 
 PosixException::PosixException(int err, const char *describ, const char *file, int line)
@@ -63,7 +32,7 @@ string format(const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
     string v(256, 0);
-    while (vsnprintf((char*)v.c_str(), v.size(), fmt, args) == (int)v.size()) {
+    while (vsnprintf((char*)v.c_str(), v.size(), fmt, args) >= (int)v.size()) {
         v.resize(v.size() * 3 / 2);
     }
     v.resize(strlen(v.c_str()));
@@ -133,6 +102,36 @@ bool readFile(const char *path, vector<char> &buf) {
     if (size > 0) fread(&buf[0], size, 1, f);
     fclose(f);
     return true;
+}
+string traceStack(int skipFrame) { 
+    string ret;
+
+    void *frames[32];
+    int n = ::backtrace(frames, ARRAY_SIZE(frames));
+    char **strs = ::backtrace_symbols(frames, n);
+    for (int i = skipFrame; i < n; ++i) { 
+        ret += strs[i]; 
+        ret += '\n';
+    }
+    free(strs);
+
+#ifndef NDEBUG
+    char curExecName[256] = "";
+    if (::readlink("/proc/self/exe", curExecName, sizeof(curExecName)) == -1) {
+        strcpy(curExecName, "./main");
+    }
+    string bashArgs = 
+        format(R"***(grep -oP '\[0x\w+\]' | grep -oP '0x\w+' | xargs addr2line -e '%s')***", curExecName);
+    const char *args[] = {
+        "bash",
+        "-c",
+        bashArgs.c_str(),
+        nullptr,
+    };
+    ret = cmdOpenAndRetrieve(args, ret.c_str());
+#endif
+
+    return ret;
 }
 
 SigHandlerT setSignalHandler(int signum, SigHandlerT handler) {
