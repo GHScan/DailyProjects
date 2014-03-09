@@ -85,12 +85,12 @@ void ProactorService::wait(int timeout) {
     if (!mPoller->wait(events, timeout)) return;
 
     for (auto &event : events) {
-        if (event.flag & IPoller::EF_Readable) ((ProactorFile*)event.ud)->onRead();
-        if (event.flag & IPoller::EF_Writeable) ((ProactorFile*)event.ud)->onWrite();
+        ProactorFile *file = ((ProactorFile*)event.ud);
+        if (event.flag & IPoller::EF_Readable) file->onRead();
+        if (event.flag & IPoller::EF_Writeable) file->onWrite();
         if (event.flag & IPoller::EF_ErrFound) {
-            auto f = (ProactorFile*)event.ud;
-            LOG_ERR("Found error ini proactor file: %d,%s", f->getFd(), strerror(errno));
-            destroyFile(f);
+            LOG_ERR("Found error ini proactor file: %d,%s", file->getFd(), strerror(errno));
+            destroyFile(file);
         }
     }
 }
@@ -115,6 +115,9 @@ void ProactorFile::readLine(char delmit, function<void(bool eof, const char *buf
 }
 void ProactorFile::readN(int n, function<void(bool eof, const char *buf, int n)> callback) {
     mReadBuf.readN(n, callback);
+}
+void ProactorFile::readSome(function<void(bool eof, const char *buf, int n)> callback) {
+    mReadBuf.readSome(callback);
 }
 void ProactorFile::writeN(const char *buf, int n, function<void()> callback) {
     if (!mWriteBuf.hasPendingData()) {

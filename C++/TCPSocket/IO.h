@@ -140,11 +140,13 @@ public:
     void uninit();
     void readLine(char delmit, function<void(bool eof, const char *buf, int n)> callback);
     void readN(int n, function<void(bool eof, const char *buf, int n)> callback);
+    void readSome(function<void(bool eof, const char *buf, int n)> callback);
     void onReadBlocking();
     void onReadNonblocking();
 private:
     void tryCompleteReadLine();
     void tryCompleteReadN();
+    void tryCompleteReadSome();
 private:
     vector<char> mBuf;
     int mDataBegin, mDataEnd;
@@ -156,6 +158,8 @@ private:
 private:
     function<void(bool, const char*, int)> mReadNCallback;
     int mReadNN;
+private:
+    function<void(bool, const char*, int)> mReadSomeCallback;
 };
 
 class EventDrivenWriteBuffer2 {

@@ -25,7 +25,14 @@ string LogicError::constructErrorMsg(const char *describ, const char *file, int 
 }
 
 PosixException::PosixException(int err, const char *describ, const char *file, int line)
-    : RuntimeException(format("%s(%d): %s\n\t%s\n", file, line, describ, strerror(err)).c_str()) {
+    : RuntimeException(constructErrorMsg(err, describ, file, line).c_str()) {
+}
+string PosixException::constructErrorMsg(int err, const char *describ, const char *file, int line) {
+    string s = format("%s(%d): %s\n\t%s\n", file, line, describ, strerror(err));
+#ifndef NDEBUG
+    s += traceStack(3);
+#endif
+    return s;
 }
 
 string format(const char *fmt, ...) {

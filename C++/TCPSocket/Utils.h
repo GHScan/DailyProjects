@@ -60,6 +60,8 @@ class PosixException: public RuntimeException {
 public:
     PosixException(int err, const char *describ, const char *file, int line);
     EXCEPTION_CTX_OPERATOR(PosixException);
+private:
+    string constructErrorMsg(int err, const char *describ, const char *file, int line);
 };
 
 #undef EXCEPTION_CTX_OPERATOR

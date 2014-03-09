@@ -337,21 +337,27 @@ void EventDrivenReadBuffer2::init(int fd) {
 void EventDrivenReadBuffer2::uninit() {
     mReadLineCallback = nullptr;
     mReadNCallback = nullptr;
+    mReadSomeCallback = nullptr;
     if (mDataBegin != mDataEnd) {
         LOG_ERR("Warning: %d bytes of data lost before read...", mDataEnd - mDataBegin);
     }
 }
 void EventDrivenReadBuffer2::readLine(char delmit, function<void(bool eof, const char *buf, int n)> callback) {
-    ASSERT(mReadLineCallback == nullptr && mReadNCallback == nullptr);
+    ASSERT(mReadLineCallback == nullptr && mReadNCallback == nullptr && mReadSomeCallback == nullptr);
     mReadLineDelmit = delmit;
     mReadLineCallback = callback;
     tryCompleteReadLine();
 }
 void EventDrivenReadBuffer2::readN(int n, function<void(bool eof, const char *buf, int n)> callback) {
-    ASSERT(mReadLineCallback == nullptr && mReadNCallback == nullptr);
+    ASSERT(mReadLineCallback == nullptr && mReadNCallback == nullptr && mReadSomeCallback == nullptr);
     mReadNN = n;
     mReadNCallback = callback;
     tryCompleteReadN();
+}
+void EventDrivenReadBuffer2::readSome(function<void(bool eof, const char *buf, int n)> callback) {
+    ASSERT(mReadLineCallback == nullptr && mReadNCallback == nullptr && mReadSomeCallback == nullptr);
+    mReadSomeCallback = callback;
+    tryCompleteReadSome();
 }
 void EventDrivenReadBuffer2::onReadBlocking() {
     if (mDataEnd == (int)mBuf.size()) mBuf.resize(mBuf.size() + 1024);
@@ -364,6 +370,7 @@ void EventDrivenReadBuffer2::onReadBlocking() {
 
     tryCompleteReadLine();
     tryCompleteReadN();
+    tryCompleteReadSome();
 }
 void EventDrivenReadBuffer2::onReadNonblocking() {
     for (;;) {
@@ -376,6 +383,7 @@ void EventDrivenReadBuffer2::onReadNonblocking() {
 
     tryCompleteReadLine();
     tryCompleteReadN();
+    tryCompleteReadSome();
 }
 void EventDrivenReadBuffer2::tryCompleteReadLine() {
     if (mReadLineCallback == nullptr) return;
@@ -435,6 +443,27 @@ void EventDrivenReadBuffer2::tryCompleteReadN() {
 
         auto f = mReadNCallback;
         mReadNCallback = nullptr;
+        f(eof, buf, n);
+    }
+}
+void EventDrivenReadBuffer2::tryCompleteReadSome() {
+    if (mReadSomeCallback == nullptr) return;
+
+    bool eof = mEof && mDataEnd == 0;
+    const char *buf = nullptr;
+    int n = 0;
+
+    if (mDataEnd != mDataBegin) {
+        buf = &mBuf[0] + mDataBegin;
+        n = mDataEnd - mDataBegin;
+    }
+
+    if (buf != nullptr) {
+        mDataBegin += n;
+        if (mDataBegin == mDataEnd) mDataBegin = mDataEnd = 0;
+
+        auto f = mReadSomeCallback;
+        mReadSomeCallback = nullptr;
         f(eof, buf, n);
     }
 }

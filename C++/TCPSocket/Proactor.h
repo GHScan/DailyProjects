@@ -44,6 +44,7 @@ public:
     void accept(function<void(ProactorFile* file, const HostAddress& addr)> callback);
     void readLine(char delmit, function<void(bool eof, const char *buf, int n)> callback);
     void readN(int n, function<void(bool eof, const char *buf, int n)> callback);
+    void readSome(function<void(bool eof, const char *buf, int n)> callback);
     void writeN(const char *buf, int n, function<void()> callback);
     int getFd() const { return mFd; }
     ProactorService* getService() { return mService; }

@@ -4,9 +4,10 @@
 #define APPTYPE_ProactorServer      4
 #define APPTYPE_ProactorServer2     5
 #define APPTYPE_ProactorClient      6
+#define APPTYPE_WebProxy            7
 
 #ifndef APPTYPE
-#define APPTYPE APPTYPE_ProactorServer2
+#define APPTYPE APPTYPE_WebProxy
 #endif
 
 #if APPTYPE == APPTYPE_BlockingClient
@@ -21,4 +22,6 @@
 #include "ProactorServer2/main.cpp"
 #elif APPTYPE == APPTYPE_ProactorClient
 #include "ProactorClient/main.cpp"
+#elif APPTYPE == APPTYPE_WebProxy
+#include "WebProxy/main.cpp"
 #endif
