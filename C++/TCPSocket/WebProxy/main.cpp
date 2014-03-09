@@ -13,7 +13,7 @@ static const char *g_pollerType = "select";
 class Connection {
 public:
     Connection(ProactorFile *socket, const HostAddress &addr): 
-        mSrcSocket(socket), mDestSocket(nullptr), mRespForwardedPos(0), mCountOfEOF(0), mHasReqHeaderOver(false), mHasRespHeaderOver(false) {
+        mSrcSocket(socket), mDestSocket(nullptr), mRespForwardedPos(0), mCountOfEOF(0) {
 
         mID = format("Connection(%d,%s)", socket->getFd(), addr.toString().c_str());
 
@@ -114,8 +114,6 @@ private:
     vector<char> mResponse; // TO optimize
     int mRespForwardedPos;
     int mCountOfEOF;
-    bool mHasReqHeaderOver;
-    bool mHasRespHeaderOver;
 };
 
 static bool parseAppArgs(int argc, char *argv[]) {
