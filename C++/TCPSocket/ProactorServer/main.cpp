@@ -84,6 +84,8 @@ int main(int argc, char *argv[]) {
             }
 
             string urlStr(url);
+            if (url[0] != '.') urlStr = '.' + urlStr;
+
             // TODO: onSkipHeader's lifetime is out of control!!!!
             function<void(bool,const char*, int)> onSkipHeader = [client, urlStr, &onSkipHeader](bool eof, const char *buf, int n) {
                 if (eof) {

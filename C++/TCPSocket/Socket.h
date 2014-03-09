@@ -43,6 +43,7 @@ public:
     void connect(const HostAddress &addr);
     bool connectAsync(const HostAddress &addr);
     TCPSocket accept(HostAddress *addr);
+    bool acceptAsync(TCPSocket *socket, HostAddress *addr);
 
     void close();
     void shutdownRd();

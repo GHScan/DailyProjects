@@ -15,7 +15,6 @@ static void tcpOpenAndRetrieve(const char *host, const char *request, int reqlen
 
     sock.connect(HostAddress::parse(host, 80));
     BlockingIO::writeN(sock.getFd(), request, reqlen);
-    sock.shutdownWr();
 
     char buf[16 * 1024];
     for (int n = 0; (n = BlockingIO::readSome(sock.getFd(), buf, sizeof(buf))) > 0; ) {

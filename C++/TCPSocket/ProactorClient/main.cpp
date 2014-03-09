@@ -43,7 +43,6 @@ static void handleTaskList(const Task *begin, const Task *end) {
             const Task &task = *begin++;
             service.createClientSocket(HostAddress::parse(task.host.c_str(), 80), [&task](ProactorFile *client){
                 client->writeN(task.request.c_str(), task.request.size(), [&task, client](){
-                    TCPSocket::fromFd(client->getFd()).shutdownWr();
 
                     int outFd = task.outputFile == "stdout" ? STDOUT_FILENO : ::open(task.outputFile.c_str(), O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IWUSR);
                     P_ENSURE(outFd != -1);

@@ -94,6 +94,14 @@ TCPSocket TCPSocket::accept(HostAddress *addr) {
     P_ENSURE(fd != -1 && size == addr->getInternalSize())(size);
     return fromFd(fd);
 }
+bool TCPSocket::acceptAsync(TCPSocket *socket, HostAddress *addr) {
+    socklen_t size = addr->getInternalSize();
+    int fd = ::accept(mFd, addr->getInternal(), &size);
+    if (fd == -1 && errno == EAGAIN) return false;
+    P_ENSURE(fd != -1 && size == addr->getInternalSize())(size);
+    *socket = fromFd(fd);
+    return true;
+}
 
 void TCPSocket::close() {
     CLOSE(mFd);

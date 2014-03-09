@@ -167,8 +167,6 @@ void Client::onWrite() {
 
     mReqWritenSize += n;
     if (mReqWritenSize == (int)request.size()) {
-        mSocket.shutdownWr();
-
         mState = S_ReadingResponse;
         mReadedSize = 0;
         mMgr->updateClientEvent(this, IPoller::EF_Readable);

@@ -168,8 +168,7 @@ bool PollPoller::wait(vector<Event> &events, int timeout) {
         Event event = {0};
         if (pf.revents & (POLLIN | POLLRDHUP)) event.flag |= EF_Readable;
         if (pf.revents & (POLLOUT)) event.flag |= EF_Writeable;
-        if (pf.revents & (POLLERR | POLLNVAL))  event.flag |= EF_ErrFound;
-        if (pf.revents & (POLLHUP)); // do what?
+        if (pf.revents & (POLLERR | POLLNVAL | POLLHUP)) event.flag |= EF_ErrFound;
         if (event.flag != 0) {
             event.ud = mFd2Ud[pf.fd];
             events.push_back(event);
@@ -226,8 +225,7 @@ bool EPollPoller::wait(vector<Event> &events, int timeout) {
         Event event = {epevent->data.ptr};
         if (epevent->events & (EPOLLIN | EPOLLRDHUP)) event.flag |= EF_Readable;
         if (epevent->events & (EPOLLOUT)) event.flag |= EF_Writeable;
-        if (epevent->events & (EPOLLERR)) event.flag |= EF_ErrFound;
-        if (epevent->events & (EPOLLHUP)) ; // do what
+        if (epevent->events & (EPOLLERR | EPOLLHUP)) event.flag |= EF_ErrFound;
         ASSERT(event.flag != 0);
         events.push_back(event);
     }

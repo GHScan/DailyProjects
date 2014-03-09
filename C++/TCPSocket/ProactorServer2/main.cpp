@@ -57,6 +57,7 @@ private:
         }
 
         mUrl = url;
+        if (mUrl.front() != '.') mUrl = '.' + mUrl;
 
         mFile->readLine('\n', [this](bool eof, const char *buf, int len){
             onRequestHeaderRead(eof, buf, len);

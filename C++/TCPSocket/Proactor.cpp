@@ -158,17 +158,36 @@ void ProactorFile::uninit() {
     mService->getPoller()->del(mFd);
     CLOSE(mFd);
 }
-void ProactorFile::onRead() {
-    if (mAcceptCallback) {
+void ProactorFile::acceptBlocking() {
+    HostAddress addr;
+    TCPSocket socket = TCPSocket::fromFd(mFd);
+    socket = socket.accept(&addr);
+
+    ProactorFile *file = mService->attachFd(socket.getFd());
+
+    auto f = mAcceptCallback;
+    mAcceptCallback = nullptr;
+    f(file, addr);
+}
+void ProactorFile::acceptNonblocking() {
+    TCPSocket listenSocket = TCPSocket::fromFd(mFd);
+
+    for (;;) {
+        TCPSocket socket;
         HostAddress addr;
-        TCPSocket socket = TCPSocket::fromFd(mFd);
-        socket = socket.accept(&addr);
+        if (!listenSocket.acceptAsync(&socket, &addr)) break;
 
         ProactorFile *file = mService->attachFd(socket.getFd());
 
         auto f = mAcceptCallback;
         mAcceptCallback = nullptr;
         f(file, addr);
+    }
+}
+void ProactorFile::onRead() {
+    if (mAcceptCallback) {
+        if (mService->isBlocking()) acceptBlocking();
+        else acceptNonblocking();
     } else {
         if (mService->isBlocking()) mReadBuf.onReadBlocking();
         else mReadBuf.onReadNonblocking();

@@ -56,6 +56,8 @@ private:
     void uninit();
     void onRead();
     void onWrite();
+    void acceptBlocking();
+    void acceptNonblocking();
     friend class ProactorService;
 private:
     function<void()> mDestroyCallback;
