@@ -108,7 +108,7 @@ int BlockingReadBuffer::readN(char *buf, int size) {
     return p - buf;
 }
 bool BlockingReadBuffer::doReadFile() {
-    int n = BlockingIO::readN(mFd, &mBuf[0], mBuf.size());
+    int n = BlockingIO::readSome(mFd, &mBuf[0], mBuf.size());
     if (n == 0) return false;
     mDataBegin = &mBuf[0];
     mDataEnd = mDataBegin + n;

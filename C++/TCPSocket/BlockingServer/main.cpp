@@ -62,7 +62,10 @@ static void handleHTTPRequest(const TCPSocket &socket) {
         }
     }
 
-    const vector<char> *data = g_fileServer.getFileContent(url);
+    string urlStr(url);
+    if (url[0] != '.') urlStr = '.' + urlStr;
+
+    const vector<char> *data = g_fileServer.getFileContent(urlStr.c_str());
     vector<char> empty;
     data = data != nullptr ? data : &empty;
 
@@ -71,7 +74,7 @@ static void handleHTTPRequest(const TCPSocket &socket) {
     BlockingIO::writeN(socket.getFd(), response.c_str(), response.size());
     BlockingIO::writeN(socket.getFd(), &(*data)[0], data->size());
 
-    LOG("Recevie request : method=%s, version=%s, url=%s, body=%d", method, version, url, data->size());
+    LOG("Recevie request : method=%s, version=%s, url=%s, body=%d", method, version, urlStr.c_str(), data->size());
 }
 
 static void serverThread(TCPSocket listenSocket, const char *pollerType) {
