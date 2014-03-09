@@ -144,10 +144,6 @@ public:
             }
         }
 
-        if (string(pollerType) == "epoll-et" && blocking) {
-            LOG_ERR_MSG("Warning: edge-trigger poller should work with blocking socket!");
-        }
-
         mService = new ProactorService(pollerType, blocking);
 
         LOG_ERR_MSG("Press any key to exit server ...");

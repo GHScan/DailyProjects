@@ -61,10 +61,6 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if (string(g_pollerType) == "epoll-et" && g_blocking) {
-        LOG_ERR_MSG("Warning: edge-trigger poller should work with blocking socket!");
-    }
-
     ProactorService service(g_pollerType, g_blocking);
 
     ProactorFile *listenSocket = service.createListenSocket(HostAddress::fromLocal(g_port), 32);

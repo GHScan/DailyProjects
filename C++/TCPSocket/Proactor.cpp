@@ -6,6 +6,10 @@
 
 ProactorService::ProactorService(const char *pollerType, bool blocking): 
     mPoller(IPoller::create(pollerType)), mBlocking(blocking) {
+
+    if (string(pollerType) == "epoll-et" && blocking) {
+        LOG_ERR_MSG("Warning: edge-trigger poller should work with blocking socket!");
+    }
 }
 ProactorService::~ProactorService() {
     if (!mActiveFiles.empty()) {

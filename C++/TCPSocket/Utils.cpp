@@ -95,12 +95,17 @@ int getCpuCount() {
 bool readFile(const char *path, vector<char> &buf) {
     FILE *f = fopen(path, "rb");
     if (f == nullptr) return false;
+    ON_EXIT_SCOPE([f](){ fclose(f); });
+
     fseek(f, 0, SEEK_END);
     int size = ftell(f);
     fseek(f, 0, SEEK_SET);
+
     buf.resize(size);
-    if (size > 0) fread(&buf[0], size, 1, f);
-    fclose(f);
+    if (size > 0) {
+        P_ENSURE(fread(&buf[0], size, 1, f) > 0);
+    }
+
     return true;
 }
 string traceStack(int skipFrame) { 
