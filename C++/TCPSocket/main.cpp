@@ -1,27 +1,23 @@
-#define APPTYPE_BlockingClient      1
-#define APPTYPE_NonblockingClient   2
-#define APPTYPE_BlockingServer      3
-#define APPTYPE_ProactorServer      4
-#define APPTYPE_ProactorServer2     5
-#define APPTYPE_ProactorClient      6
-#define APPTYPE_WebProxy            7
+#define APPTYPE_BlockingClient      
+//#define APPTYPE_NonblockingClient   
+//#define APPTYPE_BlockingServer      
+//#define APPTYPE_ProactorServer      
+//#define APPTYPE_ProactorServer2     
+//#define APPTYPE_ProactorClient      
+//#define APPTYPE_WebProxy            
 
-#ifndef APPTYPE
-#define APPTYPE APPTYPE_WebProxy
-#endif
-
-#if APPTYPE == APPTYPE_BlockingClient
+#if defined(APPTYPE_BlockingClient)
 #include "BlockingClient/main.cpp"
-#elif APPTYPE == APPTYPE_NonblockingClient
+#elif defined(APPTYPE_NonblockingClient)
 #include "NonblockingClient/main.cpp"
-#elif APPTYPE == APPTYPE_BlockingServer
+#elif defined(APPTYPE_BlockingServer)
 #include "BlockingServer/main.cpp"
-#elif APPTYPE == APPTYPE_ProactorServer
+#elif defined(APPTYPE_ProactorServer)
 #include "ProactorServer/main.cpp"
-#elif APPTYPE == APPTYPE_ProactorServer2
+#elif defined(APPTYPE_ProactorServer2)
 #include "ProactorServer2/main.cpp"
-#elif APPTYPE == APPTYPE_ProactorClient
+#elif defined(APPTYPE_ProactorClient)
 #include "ProactorClient/main.cpp"
-#elif APPTYPE == APPTYPE_WebProxy
+#elif defined(APPTYPE_WebProxy)
 #include "WebProxy/main.cpp"
 #endif
