@@ -24,6 +24,14 @@ void list_removeIf(Node ** p, function<bool(int)> f) {
         }
     }
 }
+void list_removeIf_r(Node *& p, function<bool(int)> f) {
+    while (p != nullptr && f(p->value)) {
+        Node *t = p;
+        p = t->next;
+        delete t;
+    }
+    if (p != nullptr) list_removeIf_r(p->next, f);
+}
 void list_print(Node *p) {
     for (; p; p = p->next) {
         printf("%d,", p->value);
@@ -38,7 +46,7 @@ int main() {
     list_print(p);
     list_removeIf(&p, [](int i){return i%2;});
     list_print(p);
-    list_removeIf(&p, [](int i){return i%3;});
+    list_removeIf_r(p, [](int i){return i%3;});
     list_print(p);
 
     puts("finish");
