@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include <sys/time.h>
+#include "Utils.h"
 
 template<typename T>
 static void bubbleSort(T *begin, T *end) {
@@ -148,11 +148,6 @@ static void quickSort2(T *begin, T *end) {
     quickSort2(cur + 1, end);
 }
 
-static int myrand(int begin, int end) {
-    uint32_t r = ((rand() << 16) | rand());
-    r = r % uint32_t(end - begin) + begin;
-    return int(r);
-}
 template<typename T>
 static void quickSort3(T *begin, T *end) {
     if (end - begin <= 1) return;
@@ -230,26 +225,13 @@ struct FuncItem {
     int limit;
 };
 
-static double getTime() {
-    timeval tv;
-    gettimeofday(&tv, nullptr);
-    return tv.tv_sec + tv.tv_usec / 1000000.0;
-}
-
-template<typename T>
-static void assertSorted(const T *begin, const T *end) {
-    for (; begin < end - 1; ++begin) {
-        assert(begin[0] <= begin[1]);
-    }
-}
-
 static void timeSortFuncs(vector<FuncItem> &funcs) {
     int lens[] = {
         1, 5, 17, 31, 63, 95, 127, 257, 1025, 2045, 4097, 8190, 16*1024-1, 16*1024, 256*1024+1, 1024*1025,
     };
     for (int len : lens) {
         vector<int> v(len);
-        for (int &i : v) i = ((rand() << 16) | rand()) % len;
+        for (int &i : v) i = myrand(0, len);
 
         bool sorted = ((len - 1) & len) == 0;
         printf("@@@@ len = %.3fK, %s\n", len / 1024.0, sorted ? "sorted" : "");
@@ -307,5 +289,6 @@ int main() {
     };
 #undef ITEM
 
+    srand(time(nullptr));
     timeSortFuncs(items);
 }
