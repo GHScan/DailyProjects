@@ -6,6 +6,7 @@
 #include <string>
 
 #include <sys/time.h>
+#include <pthread.h>
 
 class Timer {
 public:
@@ -37,6 +38,18 @@ static inline int myrand(int begin, int end) {
     uint32_t r = ((rand() << 16) | rand());
     r = r % uint32_t(end - begin) + begin;
     return int(r);
+}
+
+static inline void setCpuAffinity(int mask) {
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    for (int i = 0; i < 32; ++i) {
+        if ((mask >> i) & 1) {
+            CPU_SET(i, &cpuset);
+        }
+    }
+
+    pthread_setaffinity_np(pthread_self(), sizeof(cpuset), &cpuset);
 }
 
 #endif
