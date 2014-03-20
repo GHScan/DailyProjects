@@ -158,6 +158,135 @@ static void mergeSort3(T *begin, T *end) {
 }
 
 template<typename T>
+struct MergeCombine4State {
+    T *begin, *end;
+    T *begin2, *end2;
+    T *dest;
+    MergeCombine4State(T *_begin, T *_end, T *_begin2, T *_end2, T *_dest):
+        begin(_begin), end(_end), begin2(_begin2), end2(_end2), dest(_dest){}
+    MergeCombine4State(){}
+};
+template<typename T>
+struct MergeSortInplace4State {
+    T *begin, *end, *temp;
+    int state;
+    MergeSortInplace4State(T *_begin, T *_end, T *_temp): begin(_begin), end(_end), temp(_temp), state(0){}
+    MergeSortInplace4State(){}
+};
+template<typename T>
+struct MergeSortTo4State {
+    T *begin, *end, *dest;
+    int state;
+    MergeSortTo4State(T *_begin, T *_end, T *_dest): begin(_begin), end(_end), dest(_dest), state(0){}
+    MergeSortTo4State(){}
+};
+template<typename T> 
+struct MergeSort4State {
+    enum {
+        T_MergeCombine,
+        T_MergeSortInplace,
+        T_MergeSortTo,
+    } type;
+    union {
+        MergeCombine4State<T> combine;
+        MergeSortInplace4State<T> inplace;
+        MergeSortTo4State<T> to;
+    };
+    MergeSort4State(const MergeCombine4State<T>& _combine): type(T_MergeCombine), combine(_combine){}
+    MergeSort4State(const MergeSortInplace4State<T>& _inplace): type(T_MergeSortInplace), inplace(_inplace){}
+    MergeSort4State(const MergeSortTo4State<T>& _to): type(T_MergeSortTo), to(_to){}
+    MergeSort4State(){}
+};
+template<typename T>
+static void mergeSort4(T *begin, T *end) {
+    static vector<T> _temp;
+    _temp.resize(end - begin);
+
+    MergeSort4State<T> _stack[32];
+    MergeSort4State<T> *top = _stack;
+
+    *top++ = MergeSort4State<T>(MergeSortInplace4State<T>(begin, end, &_temp[0]));
+
+    while (top > _stack) {
+        MergeSort4State<T>& s = top[-1];
+        switch (s.type) {
+            case MergeSort4State<T>::T_MergeCombine: {
+                    MergeCombine4State<T>& combine = s.combine;
+                    T *begin = combine.begin, *end = combine.end;
+                    T *begin2 = combine.begin2, *end2 = combine.end2;
+                    T *dest = combine.dest;
+                    while (begin != end && begin2 != end2) {
+                        if (begin[0] < begin2[0]) *dest++ = *begin++;
+                        else *dest++ = *begin2++;
+                    }
+                    for (; begin != end; ++begin) *dest++ = *begin;
+                    for (; begin2 != end2; ++begin2) *dest++ = *begin2;
+                    --top;
+                 }
+                break;
+            case MergeSort4State<T>::T_MergeSortInplace: {
+                    MergeSortInplace4State<T>& inplace = s.inplace;
+                    T *begin = inplace.begin, *end = inplace.end, *temp = inplace.temp;
+                    int count = end - begin;
+                    switch (inplace.state) {
+                        case 0:
+                            if (count <= 1) {
+                                --top;
+                            } else {
+                                inplace.state = 1;
+                                T *mid = begin + count / 2;
+                                *top++ = MergeSort4State<T>(MergeSortTo4State<T>(begin, mid, temp));
+                            }
+                            break;
+                        case 1: {
+                                inplace.state = 2;
+                                T *mid = begin + count / 2, *tmid = temp + count / 2;
+                                *top++ = MergeSort4State<T>(MergeSortTo4State<T>(mid, end, tmid));
+                            }
+                            break;
+                        case 2: {
+                                T *tmid = temp + count / 2, *tend = temp + count;
+                                top[-1] = MergeSort4State<T>(MergeCombine4State<T>(temp, tmid, tmid, tend, begin));
+                            }
+                            break;
+                        default: assert(0); break;
+                    }
+                 }
+                break;
+            case MergeSort4State<T>::T_MergeSortTo: {
+                    MergeSortTo4State<T>& to = s.to;
+                    T *begin = to.begin, *end = to.end, *dest = to.dest;
+                    int count = end - begin;
+                    T *mid = begin + count / 2;
+                    switch (to.state) {
+                        case 0:
+                            if (count <= 1) {
+                                if (count == 1) dest[0] = begin[0];
+                                --top;
+                            } else {
+                                to.state = 1;
+                                *top++ = MergeSort4State<T>(MergeSortInplace4State<T>(begin, mid, dest));
+                            }
+                            break;
+                        case 1: {
+                                to.state = 2;
+                                *top++ = MergeSort4State<T>(MergeSortInplace4State<T>(mid, end, dest));
+                            }
+                            break;
+                        case 2: {
+                                top[-1] = MergeSort4State<T>(MergeCombine4State<T>(begin, mid, mid, end, dest));
+                            }
+                            break;
+                        default: assert(0); break;
+                    }
+            }
+                break;
+            default: assert(0); break;
+        }
+    }
+}
+
+template<typename T>
 static void pushHeap(T *begin, T *end) {
     for (int cur = end - begin, parent; cur > 1; cur = parent) {
         parent = cur / 2;
@@ -426,6 +555,7 @@ int main() {
         ITEM(mergeSort, 0),
         ITEM(mergeSort2, 0),
         ITEM(mergeSort3, 0),
+        ITEM(mergeSort4, 0),
         ITEM(quickSort, 0),
         ITEM(quickSort2, 0),
         ITEM(quickSort3, 0),
