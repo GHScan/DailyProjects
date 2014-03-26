@@ -4,6 +4,7 @@
 #include <time.h>
 
 #include <string>
+#include <set>
 
 #include <sys/time.h>
 #include <pthread.h>
@@ -50,6 +51,44 @@ static inline void setCpuAffinity(int mask) {
     }
 
     pthread_setaffinity_np(pthread_self(), sizeof(cpuset), &cpuset);
+}
+
+static inline string checkoutCmd(const char *cmd) {
+    string ret;
+
+    string tfname = "__113adf1.txt";
+    int err = system(("(" + string(cmd) + ")>" + tfname).c_str());
+    if (err == -1) return ret;
+
+    FILE *f = fopen(tfname.c_str(), "rb");
+    if (f != nullptr) {
+        fseek(f, 0, SEEK_END);
+        int len = ftell(f);
+        fseek(f, 0, SEEK_SET);
+        ret.resize(len);
+        if (fread((char*)ret.c_str(), len, 1, f) != 1) {
+            fprintf(stderr, "read failed!");
+        }
+        fclose(f);
+    }
+
+    err = remove(tfname.c_str());
+    if (err == -1) return "";
+
+    return ret;
+}
+
+static inline vector<string> splitToKeywords(const string &_str, const string &delim = " \t\n") {
+    string str(_str);
+
+    set<string> out;
+    for (char *p = (char*)str.c_str(); ; p = nullptr) {
+        char *tok = strtok(p, delim.c_str());
+        if (tok == nullptr) break;
+        out.insert(tok);
+    }
+
+    return vector<string>(out.begin(), out.end());
 }
 
 #endif
