@@ -1,0 +1,49 @@
+len=1
+	(std::lower_bound<int*, int&>) : 0.000005
+	(lowerBound<int*, int&>) : 0.000022
+	(lowerBound2<int*, int&>) : 0.000005
+len=17
+	(std::lower_bound<int*, int&>) : 0.000396
+	(lowerBound<int*, int&>) : 0.000262
+	(lowerBound2<int*, int&>) : 0.000249
+len=31
+	(std::lower_bound<int*, int&>) : 0.001101
+	(lowerBound<int*, int&>) : 0.000622
+	(lowerBound2<int*, int&>) : 0.000616
+len=18
+	(std::lower_bound<int*, int&>) : 0.000456
+	(lowerBound<int*, int&>) : 0.000307
+	(lowerBound2<int*, int&>) : 0.000280
+len=19
+	(std::lower_bound<int*, int&>) : 0.000545
+	(lowerBound<int*, int&>) : 0.000377
+	(lowerBound2<int*, int&>) : 0.000269
+len=33
+	(std::lower_bound<int*, int&>) : 0.001134
+	(lowerBound<int*, int&>) : 0.000629
+	(lowerBound2<int*, int&>) : 0.000541
+len=62
+	(std::lower_bound<int*, int&>) : 0.002691
+	(lowerBound<int*, int&>) : 0.001515
+	(lowerBound2<int*, int&>) : 0.001323
+len=192
+	(std::lower_bound<int*, int&>) : 0.010177
+	(lowerBound<int*, int&>) : 0.007623
+	(lowerBound2<int*, int&>) : 0.004258
+len=2000
+	(std::lower_bound<int*, int&>) : 0.152296
+	(lowerBound<int*, int&>) : 0.098475
+	(lowerBound2<int*, int&>) : 0.063510
+len=4097
+	(std::lower_bound<int*, int&>) : 0.337986
+	(lowerBound<int*, int&>) : 0.219391
+	(lowerBound2<int*, int&>) : 0.121035
+len=8000
+	(std::lower_bound<int*, int&>) : 0.710149
+	(lowerBound<int*, int&>) : 0.477161
+	(lowerBound2<int*, int&>) : 0.297600
+len=16100
+	(std::lower_bound<int*, int&>) : 1.551852
+	(lowerBound<int*, int&>) : 1.084907
+	(lowerBound2<int*, int&>) : 0.689719
+finish

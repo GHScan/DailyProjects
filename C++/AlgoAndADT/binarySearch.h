@@ -41,6 +41,41 @@ static bool binarySearch(IterT begin, IterT end, const T &val) {
     return false;
 }
 
+template<typename IterT, typename T>
+static IterT lowerBound2(IterT begin, IterT end, const T &val) {
+    assert(begin < end);
+
+    if (begin[0] >= val) return begin;
+    if (val > end[-1]) return end;
+    assert(begin[0] < val && val <= end[-1]);
+
+    int range = (end - begin) - 1;
+    range |= range >> 1;
+    range |= range >> 2;
+    range |= range >> 4;
+    range |= range >> 8;
+    range |= range >> 16;
+    range = (range + 1) / 2;
+    assert(range >= 0 && range < (end - begin));
+
+    if (val > begin[range]) {
+        begin = end - 1 - range;
+    }
+    assert(begin[0] < val && val <= begin[range]);
+
+#define CASE(n) case (1 << n): if (val > begin[1 << (n - 1)]) begin += 1 << (n - 1);
+    switch (range) {
+        CASE(30); CASE(29); CASE(28); CASE(27); CASE(26); CASE(25); CASE(24); CASE(23); CASE(22); CASE(21);
+        CASE(20); CASE(19); CASE(18); CASE(17); CASE(16); CASE(15); CASE(14); CASE(13); CASE(12); CASE(11);
+        CASE(10); CASE(9); CASE(8); CASE(7); CASE(6); CASE(5); CASE(4); CASE(3); CASE(2); CASE(1);
+        case (1 << 0): break;
+        default: assert(0); break;
+    }
+#undef CASE
+
+    return begin + 1;
+}
+
 template<typename IterT>
 static void assertNthElement(IterT begin, IterT mid, IterT end) {
     for (IterT p = begin; p != mid; ++p) {
@@ -97,6 +132,7 @@ static void correctnessTest() {
             for (int i = 0; i < 1024; ++i) {
                 int k = myrand(0, len);
                 assert(lower_bound(data.begin(), data.end(), k) == lowerBound(data.begin(), data.end(), k));
+                assert(lower_bound(data.begin(), data.end(), k) == lowerBound2(data.begin(), data.end(), k));
                 assert(upper_bound(data.begin(), data.end(), k) == upperBound(data.begin(), data.end(), k));
                 assert(binary_search(data.begin(), data.end(), k) == binarySearch(data.begin(), data.end(), k));
             }
@@ -117,8 +153,60 @@ static void correctnessTest() {
     }
 }
 
+struct FuncItem {
+    const char *name;
+    int*(*f)(int*, int*, int&);
+};
+
+static void benchmark_lowerBound(const vector<FuncItem> &funcs) {
+    int lens[] = {
+        1, 17, 31, 18, 19, 33, 62, 192, 2000, 4097, 8000, 16100,
+    };
+
+    for (int len : lens) {
+        printf("len=%d\n", len);
+
+        vector<int> array;
+        for (int i = 0; i < len; ++i) array.push_back(i * 2 + 10);
+        int *begin = &array[0], *end = &array[0] + array.size();
+
+        vector<int> query;
+        for (int i = 0; i < len * 2; ++i) query.push_back(myrand(0, len * 2 + 20));
+
+        for (auto &func : funcs) {
+
+            vector<double> times(8);
+            for (double &time : times) {
+
+                time = getTime();
+                for (int n = 0; n < 512; ++n) {
+                    for (int q : query) func.f(begin, end, q);
+                }
+                time = getTime() - time;
+            }
+
+            sort(times.begin(), times.end());
+            printf("\t%s : %f\n", func.name, accumulate(times.begin(), times.begin() + 3, 0.0) / 3);
+        }
+    }
+}
+
 int main() {
     srand(time(nullptr));
+    setCpuAffinity(1);
 
     correctnessTest();
+
+    {
+#define ITEM(f) {#f, (int*(*)(int*, int*, int&))f, }
+        vector<FuncItem> funcs = {
+            ITEM((std::lower_bound<int*, int&>)),
+            ITEM((lowerBound<int*, int&>)),
+            ITEM((lowerBound2<int*, int&>)),
+        };
+#undef ITEM
+        benchmark_lowerBound(funcs);
+    }
+
+    puts("finish");
 }
