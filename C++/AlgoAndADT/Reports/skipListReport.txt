@@ -1,0 +1,4 @@
+Skiplist d=2 : 2.449439 s
+Skiplist d=9 : 0.083169 s
+stl map : 0.052321 s
+stl unordered_map : 0.014267 s

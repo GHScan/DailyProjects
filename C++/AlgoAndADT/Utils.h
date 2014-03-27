@@ -5,28 +5,29 @@
 
 #include <string>
 #include <set>
+#include <sstream>
 
 #include <sys/time.h>
 #include <pthread.h>
-
-class Timer {
-public:
-    Timer(const string& name = "", FILE *outFile = stdout): mName(name), mOutFile(outFile), mStart(clock()) {
-    }
-    ~Timer() {
-        fprintf(mOutFile, "%s : %f s\n", mName.c_str(), float(clock() - mStart) / CLOCKS_PER_SEC);
-    }
-private:
-    string mName;
-    FILE *mOutFile;
-    clock_t mStart;
-};
 
 static inline double getTime() {
     timeval tv;
     gettimeofday(&tv, nullptr);
     return tv.tv_sec + tv.tv_usec / 1000000.0;
 }
+
+class Timer {
+public:
+    Timer(const string& name = "", FILE *outFile = stdout): mName(name), mOutFile(outFile), mStart(getTime()) {
+    }
+    ~Timer() {
+        fprintf(mOutFile, "%s : %f s\n", mName.c_str(), getTime() - mStart);
+    }
+private:
+    string mName;
+    FILE *mOutFile;
+    double mStart;
+};
 
 template<typename T>
 static inline void assertSorted(const T *begin, const T *end) {
@@ -36,7 +37,7 @@ static inline void assertSorted(const T *begin, const T *end) {
 }
 
 static inline int myrand(int begin, int end) {
-    uint32_t r = ((rand() << 16) | rand());
+    uint32_t r = ((rand() << 16) | (rand() & 0xffff));
     r = r % uint32_t(end - begin) + begin;
     return int(r);
 }
@@ -89,6 +90,13 @@ static inline vector<string> splitToKeywords(const string &_str, const string &d
     }
 
     return vector<string>(out.begin(), out.end());
+}
+
+template<typename T>
+static inline string toString(const T &v) {
+    ostringstream so;
+    so << v;
+    return so.str();
 }
 
 #endif

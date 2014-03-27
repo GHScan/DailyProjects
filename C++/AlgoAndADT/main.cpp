@@ -5,4 +5,5 @@
 //#include "list.h"
 //#include "bst.h"
 //#include "singleStringMatch.h"
-#include "multiStringMatch.h"
+//#include "multiStringMatch.h"
+#include "skipList.h"
