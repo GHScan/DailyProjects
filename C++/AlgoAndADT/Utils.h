@@ -79,10 +79,10 @@ static inline string checkoutCmd(const char *cmd) {
 }
 
 static inline vector<string> splitToKeywords(const string &_str, const string &delim = " \t\n") {
-    string str(_str);
+    vector<char> str(_str.c_str(), _str.c_str() + _str.size());
 
     set<string> out;
-    for (char *p = (char*)str.c_str(); ; p = nullptr) {
+    for (char *p = &str[0]; ; p = nullptr) {
         char *tok = strtok(p, delim.c_str());
         if (tok == nullptr) break;
         out.insert(tok);

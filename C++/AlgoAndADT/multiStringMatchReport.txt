@@ -1,0 +1,5 @@
+return new FuncMatcher(strstr): time=0.362289s, mem=0.000000M, result=71921
+return new FuncMatcher(simpleStrstr): time=1.772806s, mem=0.000000M, result=71921
+return new CharacterHashMatcher(): time=0.492213s, mem=0.028164M, result=71921
+return new ACAutomationMatcher(): time=0.006334s, mem=4.000000M, result=71921
+return new ACAutomationMatcher2(): time=0.005738s, mem=4.000000M, result=71921
