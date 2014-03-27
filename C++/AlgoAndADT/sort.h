@@ -327,6 +327,22 @@ static void quickSort(T *begin, T *end) {
 }
 
 template<typename T>
+static void quickSort1(T *begin, T *end) {
+    if (end - begin <= 1) return;
+
+    T *lo = begin + 1, *hi = end - 1;
+    for (T *p = lo; p <= hi; ) {
+        if (*p < *begin) swap(*p++, *lo++);
+        else if (*p > *begin) swap(*p, *hi--);
+        else ++p;
+    }
+    swap(*begin, lo[-1]);
+
+    quickSort1(begin, lo - 1);
+    quickSort1(hi + 1, end);
+}
+
+template<typename T>
 static void quickSort2(T *begin, T *end) {
     if (end - begin <= 1) return;
     swap(begin[0], begin[(end - begin) / 2]);
@@ -557,6 +573,7 @@ int main() {
         ITEM(mergeSort3, 0),
         ITEM(mergeSort4, 0),
         ITEM(quickSort, 0),
+        ITEM(quickSort1, 0),
         ITEM(quickSort2, 0),
         ITEM(quickSort3, 0),
         ITEM(quickSort4, 0),
