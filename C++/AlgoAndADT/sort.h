@@ -453,6 +453,23 @@ static void quickSort_guard_swapMid(T *begin, T *end) {
 }
 
 template<typename T>
+static void quickSort_guard_swapMid_insertion(T *begin, T *end) {
+    if (end - begin <= INSERTION_CUTOFF) {
+        insertionSort(begin, end);
+        return;
+    }
+
+    swap(begin[0], begin[(end - begin) / 2]);
+    T *mid = end;
+    for (T *p = end - 1; p >= begin; ) {
+        while (*p < *begin) --p;
+        swap(*p--, *--mid);
+    }
+    quickSort_guard_swapMid_insertion(begin, mid);
+    quickSort_guard_swapMid_insertion(mid + 1, end);
+}
+
+template<typename T>
 static void quickSort_swapRand(T *begin, T *end) {
     if (end - begin <= 1) return;
     swap(begin[0], begin[myrand(0, end - begin)]);
@@ -698,6 +715,7 @@ int main() {
         ITEM(quickSort_3way, 0),
         ITEM(quickSort_guard, 0),
         ITEM(quickSort_guard_swapMid, 0),
+        ITEM(quickSort_guard_swapMid_insertion, 0),
         ITEM(quickSort_insertion, 0),
         ITEM(quickSort_segmentThenPostInsertion, 0),
         ITEM(quickSort_swapMid, 0),
