@@ -30,7 +30,7 @@ private:
 };
 
 template<typename T>
-static inline void assertSorted(const T *begin, const T *end) {
+static inline void assertOrdered(const T *begin, const T *end) {
     for (; begin < end - 1; ++begin) {
         assert(begin[0] <= begin[1]);
     }

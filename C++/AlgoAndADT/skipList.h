@@ -22,6 +22,7 @@ private:
 public:
     explicit SkipList(int maxLevel): mMaxLevel(maxLevel), mSize(0) {
         mHead = allocHeadNode();
+        assert(mMaxLevel < 32);
     }
     SkipList(const SkipList& o): mMaxLevel(o.mMaxLevel), mSize(0) {
         mHead = allocHeadNode();
