@@ -24,7 +24,7 @@ private:
 
 int myrand() 
 {
-    return ((rand() << 16) | rand()) & ~(1 << 31);
+    return rand() * RAND_MAX + rand();
 }
 
 void performanceTest()

@@ -37,7 +37,7 @@ static inline void assertOrdered(const T *begin, const T *end) {
 }
 
 static inline int myrand(int begin, int end) {
-    uint32_t r = ((rand() << 16) | (rand() & 0xffff));
+    uint32_t r = rand() * RAND_MAX + rand();
     r = r % uint32_t(end - begin) + begin;
     return int(r);
 }

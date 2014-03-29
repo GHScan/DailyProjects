@@ -177,7 +177,7 @@ private:
         return n;
     }
     int chooseLevel() const {
-        int rint = (rand() << 16) | (rand() & 0xffff);
+        int rint = rand() * RAND_MAX + rand();
         for (int level = 1; level < mMaxLevel; ++level) {
             if ((rint >> level) & 1) return level;
         }

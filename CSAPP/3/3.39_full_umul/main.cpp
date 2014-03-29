@@ -41,7 +41,7 @@ double test(void(*f)(uint32_t[2], uint32_t, uint32_t), uint32_t *inputs1, uint32
 }
 void genInputs(uint32_t *inputs, int n) {
     for (int i = 0; i < n; ++i) {
-        inputs[i] = (rand() << 16) | rand();
+        inputs[i] = rand() * RAND_MAX + rand();
     }
 }
 
