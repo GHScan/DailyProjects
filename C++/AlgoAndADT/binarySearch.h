@@ -76,6 +76,46 @@ static IterT lowerBound2(IterT begin, IterT end, const T &val) {
     return begin + 1;
 }
 
+template<typename IterT, typename T>
+static IterT lowerBound3(IterT begin, IterT end, const T &val) {
+    int count = end - begin;
+    assert(count > 0);
+
+    if (begin[0] >= val) return begin;
+    if (val > end[-1]) return end;
+    assert(begin[0] < val && val <= end[-1]);
+
+    int k;
+#ifdef __GNUC__
+    asm(
+            "bsr %0, %%eax;"
+            "movl %%eax, %1;"
+            :
+            :"r"(count - 1), "m"(k)
+            :"%eax"
+       );
+#endif
+
+    int range = 1 << k;
+    assert(range > 0 && range < count);
+    if (val > begin[range]) {
+        begin = end - 1 - range;
+    }
+    assert(begin[0] < val && val <= begin[range]);
+
+#define CASE(n) case n: if (val > begin[1 << (n - 1)]) begin += 1 << (n - 1);
+    switch (k) {
+        CASE(30); CASE(29); CASE(28); CASE(27); CASE(26); CASE(25); CASE(24); CASE(23); CASE(22); CASE(21);
+        CASE(20); CASE(19); CASE(18); CASE(17); CASE(16); CASE(15); CASE(14); CASE(13); CASE(12); CASE(11);
+        CASE(10); CASE(9); CASE(8); CASE(7); CASE(6); CASE(5); CASE(4); CASE(3); CASE(2); CASE(1);
+        case 0: break;
+        default: assert(0); break;
+    }
+#undef CASE
+
+    return begin + 1;
+}
+
 template<typename IterT>
 static void assertNthElement(IterT begin, IterT mid, IterT end) {
     for (IterT p = begin; p != mid; ++p) {
@@ -133,6 +173,7 @@ static void correctnessTest() {
                 int k = myrand(0, len);
                 assert(lower_bound(data.begin(), data.end(), k) == lowerBound(data.begin(), data.end(), k));
                 assert(lower_bound(data.begin(), data.end(), k) == lowerBound2(data.begin(), data.end(), k));
+                assert(lower_bound(data.begin(), data.end(), k) == lowerBound3(data.begin(), data.end(), k));
                 assert(upper_bound(data.begin(), data.end(), k) == upperBound(data.begin(), data.end(), k));
                 assert(binary_search(data.begin(), data.end(), k) == binarySearch(data.begin(), data.end(), k));
             }
@@ -203,6 +244,7 @@ int main() {
             ITEM((std::lower_bound<int*, int&>)),
             ITEM((lowerBound<int*, int&>)),
             ITEM((lowerBound2<int*, int&>)),
+            ITEM((lowerBound3<int*, int&>)),
         };
 #undef ITEM
         benchmark_lowerBound(funcs);
