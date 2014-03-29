@@ -355,6 +355,64 @@ static void heapSort(T *begin, T *end) {
 }
 
 template<typename T>
+static void pushHeap1(T *begin, T *end) {
+    int count = end - begin--;
+    for (int cur = count, parent; cur > 1; cur = parent) {
+        parent = cur / 2;
+        if (begin[parent] < begin[cur]) swap(begin[parent], begin[cur]);
+        else break;
+    }
+}
+template<typename T>
+static void popHeap1(T *begin, T *end) {
+    int count = end - begin--;
+    swap(begin[1], begin[count--]);
+    for (int cur = 1; cur * 2 <= count; ) {
+        int max = cur * 2;
+        int right = max + 1;
+        if (right <= count && begin[max] < begin[right]) max = right;
+        if (begin[cur] < begin[max]) {
+            swap(begin[cur], begin[max]);
+            cur = max;
+        } else break;
+    }
+}
+template<typename T>
+static void heapSort1(T *begin, T *end) {
+    for (T *p = begin + 1; p <= end; ++p) pushHeap1(begin, p);
+    for (T *p = end; p > begin; --p) popHeap1(begin, p);
+}
+
+template<typename T>
+static void siftDown(T *begin, int l, int n) {
+    int v = begin[l];
+    for (int c = l * 2; c <= n; c = l * 2) {
+        if (c + 1 <= n && begin[c] < begin[c + 1]) ++c;
+        if (begin[c] <= v) break;
+        begin[l] = begin[c];
+        l = c;
+    }
+    begin[l] = v;
+}
+template<typename T>
+static void makeHeap(T *begin, T *end) {
+    int count = end - begin--;
+    for (int i = count / 2; i >= 1; --i) {
+        siftDown(begin, i, count);
+    }
+}
+template<typename T>
+static void heapSort_optimal(T *begin, T *end) {
+    makeHeap(begin, end);
+
+    int count = end - begin--;
+    for (int i = count; i > 1; ) {
+        swap(begin[1], begin[i]);
+        siftDown(begin, 1, --i);
+    }
+}
+
+template<typename T>
 static void quickSort(T *begin, T *end) {
     if (end - begin <= 1) return;
     T *cur = begin;
@@ -707,6 +765,8 @@ int main() {
         ITEM(shellSort_2n, 0),
         ITEM(shellSort_3n, 0),
         ITEM(heapSort, 0),
+        ITEM(heapSort1, 0),
+        ITEM(heapSort_optimal, 0),
         ITEM(mergeSort_iteration, 0),
         ITEM(mergeSort_move, 0),
         ITEM(mergeSort_moveAndInplace, 0),
