@@ -240,6 +240,41 @@ public:
     }
 };
 
+class SuffixArrayMatcher: public IMatcher {
+public:
+    virtual double getMemoryUsage() {
+        return (int)mArray.capacity() * sizeof(mArray[0]) + (int)mPats.capacity() * sizeof(mPats[0]);
+    }
+    virtual void setPatternSize(int n) {
+        mPats.resize(n);
+    }
+    virtual void setPattern(int idx, const char *pat) {
+        mPats[idx] = pat;
+    }
+    virtual void find(const char *str, vector<vector<int>> &result) {
+        auto cmp = [](const char *a, const char *b){ return strcmp(a, b) < 0;};
+
+        int len = strlen(str);
+        mArray.resize(len);
+        for (int i = 0; i < len; ++i) mArray[i] = str + i;
+        sort(mArray.begin(), mArray.end(), cmp);
+
+        for (int i = 0; i < (int)mPats.size(); ++i) {
+            const char *pat = mPats[i];
+            int patLen = strlen(pat);
+            auto& r = result[i];
+
+            auto it = lower_bound(mArray.begin(), mArray.end(), pat, cmp);
+            for (; it != mArray.end() && strncmp(pat, *it, patLen) == 0; ++it) {
+                r.push_back(*it - str);
+            }
+            sort(r.begin(), r.end());
+        }
+    }
+private:
+    vector<const char*> mArray;
+    vector<const char*> mPats;
+};
 //////////////////////////////
 struct MatcherFactory {
     const char *name;
@@ -312,6 +347,7 @@ int main() {
         FACTORY(return new CharacterHashMatcher()),
         FACTORY(return new ACAutomationMatcher()),
         FACTORY(return new ACAutomationMatcher2()),
+        FACTORY(return new SuffixArrayMatcher()),
     };
     benchmark(factories);
 }
