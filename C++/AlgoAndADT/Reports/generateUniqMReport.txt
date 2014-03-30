@@ -1,0 +1,42 @@
+m=0.031K,n=1.000K
+	generateUniqM_set: 0.000014s
+	generateUniqM_hash: 0.000008s
+	generateUniqM_invhash: 0.000337s
+	generateUniqM_knuth: 0.000035s
+	generateUniqM_floyd: 0.000007s
+m=1.000K,n=1.000K
+	generateUniqM_set: 0.001113s
+	generateUniqM_hash: 0.000452s
+	generateUniqM_invhash: 0.000006s
+	generateUniqM_knuth: 0.000034s
+	generateUniqM_floyd: 0.000198s
+m=1.000K,n=1024.000K
+	generateUniqM_set: 0.000233s
+	generateUniqM_hash: 0.000203s
+	generateUniqM_invhash: 1.575873s
+	generateUniqM_knuth: 0.033787s
+	generateUniqM_floyd: 0.031131s
+m=32.000K,n=1024.000K
+	generateUniqM_set: 0.011557s
+	generateUniqM_hash: 0.008920s
+	generateUniqM_invhash: 0.886266s
+	generateUniqM_knuth: 0.035104s
+	generateUniqM_floyd: 0.038906s
+m=1024.000K,n=1024.000K
+	generateUniqM_set: over 5s !!!!
+	generateUniqM_hash: 3.436336s
+	generateUniqM_invhash: 0.004915s
+	generateUniqM_knuth: 0.035250s
+	generateUniqM_floyd: 0.311144s
+m=1.000K,n=1048576.000K
+	generateUniqM_set: 0.000261s
+	generateUniqM_hash: 0.012785s
+	generateUniqM_invhash: over 5s !!!!
+	generateUniqM_knuth: over 5s !!!!
+	generateUniqM_floyd: 0.000236s
+m=1024.000K,n=1048576.000K
+	generateUniqM_set: 0.860051s
+	generateUniqM_hash: 0.604908s
+	generateUniqM_invhash: over 5s !!!!
+	generateUniqM_knuth: over 5s !!!!
+	generateUniqM_floyd: over 5s !!!!

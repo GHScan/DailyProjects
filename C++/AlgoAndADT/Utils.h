@@ -41,6 +41,9 @@ static inline int myrand(int begin, int end) {
     r = r % uint32_t(end - begin) + begin;
     return int(r);
 }
+static inline int myrand(int end) {
+    return myrand(0, end);
+}
 
 static inline void setCpuAffinity(int mask) {
     cpu_set_t cpuset;
