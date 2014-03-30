@@ -1,20 +1,63 @@
-./randGen "0123456789" 1000000 5 12 | ./main 0 
--> 0.79s, 0.884M
+C++:
+    ./randGen "0123456789" 1000000 5 12 | ./main 0 
+    -> 0.79s, 0.884M
 
-./randGen "0123456789" 1000000 5 12 | ./main 1
--> 2.19s, 49.720M
+    ./randGen "0123456789" 1000000 5 12 | ./main 1
+    -> 2.19s, 49.720M
 
-./randGen "0123456789" 1000000 5 12 | ./main 2
--> 1.25s, 46.620M
+    ./randGen "0123456789" 1000000 5 12 | ./main 2
+    -> 1.25s, 46.620M
 
-./randGen "0123456789" 1000000 5 12 | ./main 3
--> 1.22s, 36.032M
+    ./randGen "0123456789" 1000000 5 12 | ./main 3
+    -> 1.22s, 36.032M
 
-./randGen "0123456789" 1000000 5 12 | ./main 4
--> 1.17s, 22.744M
+    ./randGen "0123456789" 1000000 5 12 | ./main 4
+    -> 1.17s, 22.744M
 
-@result:
-    StringPool_Set              : 1.40s, 48.836M
-    StringPool_Hash             : 0.46s, 45.736M
-    StringPool_OStream          : 0.43s, 35.147M
-    StringPool_OStreamManuHash  : 0.38s, 20.980M
+    @result:
+        StringPool_Set              : 1.40s, 48.836M
+        StringPool_Hash             : 0.46s, 45.736M
+        StringPool_OStream          : 0.43s, 35.147M
+        StringPool_OStreamManuHash  : 0.38s, 20.980M
+
+Python:
+    ./randGen "0123456789" 1000000 5 12 | python interning.py empty
+    ->  0.678s, 3.728M
+
+    ./randGen "0123456789" 1000000 5 12 | python interning.py dict
+    ->  1.313s, 60.356M
+
+    ./randGen "0123456789" 1000000 5 12 | python interning.py defaultdict
+    ->  1.342s, 60.520M
+
+    pypy worse...
+
+    @result
+        dict            : 0.635s, 56.628M
+        defaultdict     : 0.664s, 56.792M
+
+Lua:
+    ./randGen '0123456789' 1000000 5 12 | lua interning.lua Empty
+    -> 0.44s, 0.812M
+
+    ./randGen '0123456789' 1000000 5 12 | lua interning.lua Table
+    -> 1.2s, 63.788M
+
+    ./randGen '0123456789' 1000000 5 12 | luajit interning.lua Empty
+    -> 0.3s, 0.768M
+
+    ./randGen '0123456789' 1000000 5 12 | luajit interning.lua Table
+    -> 1.0s, 59.916M
+
+    @result
+        lua table   : 0.76s, 62.976M
+        luajit table: 0.70s, 59.148M
+AWK:
+    ./randGen '0123456789' 1000000 5 12 | time awk '{n++}END{ system("ps -v") }' 
+    -> 0.406s, 0.576M
+
+    ./randGen '0123456789' 1000000 5 12 | time awk '{words[$0]++}END{ system("ps -v") }
+    -> 4.188s, 56.132M
+
+    @result
+        array   : 3.782s, 55.556M
