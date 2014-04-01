@@ -75,7 +75,7 @@ static void insertionSort_guard(T *begin, T *end) {
 
 template<typename T>
 static void shellSort_2n(T *begin, T *end) {
-    for (int gap = (end - begin) / 2; gap > 0; gap /= 2) {
+    for (int gap = int(end - begin) / 2; gap > 0; gap /= 2) {
         for (T *start = begin + gap; start < end; ++start) {
             for (T *p = start - gap; p >= begin; p -= gap) {
                 if (p[0] <= p[gap]) break;
@@ -111,7 +111,7 @@ template<typename T>
 static void _mergeSortInplace(T *begin, T *end, T *temp);
 template<typename T>
 static void _mergeSortMove(T *begin, T *end, T *dest) {
-    int count = end - begin;
+    int count = int(end - begin);
     if (count <= 1) {
         if (count == 1) dest[0] = begin[0];
         return;
@@ -123,7 +123,7 @@ static void _mergeSortMove(T *begin, T *end, T *dest) {
 }
 template<typename T>
 static void _mergeSortInplace(T *begin, T *end, T *temp) {
-    int count = end - begin;
+    int count = int(end - begin);
     if (count <= 1) return;
     T *mid = begin + count / 2, *tmid = temp + count / 2, *tend = temp + count;
     _mergeSortMove(begin, mid, temp);
@@ -139,7 +139,7 @@ static void mergeSort_moveAndInplace(T *begin, T *end) {
 
 template<typename T>
 static void _mergeSortMove2(T *begin, T *end, T *dest) {
-    int count = end - begin;
+    int count = int(end - begin);
     if (count <= 1) {
         if (count == 1) dest[0] = begin[0];
         return;
@@ -156,7 +156,7 @@ static void mergeSort_move(T *begin, T *end) {
     static vector<T> _temp;
     _temp.resize(end - begin);
 
-    int count = end - begin;
+    int count = int(end - begin);
     T *temp = &_temp[0];
     T *mid = begin + count / 2, *tmid = temp + count / 2, *tend = temp + count;
     _mergeSortMove2(begin, mid, temp);
@@ -168,7 +168,7 @@ template<typename T>
 static void _mergeSortInplace3(T *begin, T *end, T *temp);
 template<typename T>
 static void _mergeSortMove3(T *begin, T *end, T *dest) {
-    int count = end - begin;
+    int count = int(end - begin);
     if (count <= 1) {
         if (count == 1) dest[0] = begin[0];
         return;
@@ -180,7 +180,7 @@ static void _mergeSortMove3(T *begin, T *end, T *dest) {
 }
 template<typename T>
 static void _mergeSortInplace3(T *begin, T *end, T *temp) {
-    int count = end - begin;
+    int count = int(end - begin);
     if (count <= INSERTION_CUTOFF) {
         insertionSort(begin, end);
         return;
@@ -197,6 +197,12 @@ static void mergeSort_moveAndInplace_insertion(T *begin, T *end) {
     _mergeSortInplace3(begin, end, &_temp[0]);
 }
 
+#ifdef _MSC_VER
+template<typename T>
+static void mergeSort_iteration(T *begin, T *end) {
+    return mergeSort_move(begin, end);
+}
+#else
 template<typename T>
 struct MergeCombine4State {
     T *begin, *end;
@@ -325,10 +331,11 @@ static void mergeSort_iteration(T *begin, T *end) {
         }
     }
 }
+#endif
 
 template<typename T>
 static void pushHeap(T *begin, T *end) {
-    for (int cur = end - begin, parent; cur > 1; cur = parent) {
+    for (int cur = int(end - begin), parent; cur > 1; cur = parent) {
         parent = cur / 2;
         if (begin[parent - 1] < begin[cur - 1]) swap(begin[parent - 1], begin[cur - 1]);
         else break;
@@ -336,7 +343,7 @@ static void pushHeap(T *begin, T *end) {
 }
 template<typename T>
 static void popHeap(T *begin, T *end) {
-    int count = end - begin;
+    int count = int(end - begin);
     swap(begin[0], begin[--count]);
     for (int cur = 1; cur * 2 <= count; ) {
         int max = cur * 2;
@@ -356,7 +363,7 @@ static void heapSort(T *begin, T *end) {
 
 template<typename T>
 static void pushHeap1(T *begin, T *end) {
-    int count = end - begin--;
+    int count = int(end - begin--);
     for (int cur = count, parent; cur > 1; cur = parent) {
         parent = cur / 2;
         if (begin[parent] < begin[cur]) swap(begin[parent], begin[cur]);
@@ -365,7 +372,7 @@ static void pushHeap1(T *begin, T *end) {
 }
 template<typename T>
 static void popHeap1(T *begin, T *end) {
-    int count = end - begin--;
+    int count = int(end - begin--);
     swap(begin[1], begin[count--]);
     for (int cur = 1; cur * 2 <= count; ) {
         int max = cur * 2;
@@ -396,7 +403,7 @@ static void siftDown(T *begin, int l, int n) {
 }
 template<typename T>
 static void makeHeap(T *begin, T *end) {
-    int count = end - begin--;
+    int count = int(end - begin--);
     for (int i = count / 2; i >= 1; --i) {
         siftDown(begin, i, count);
     }
@@ -405,7 +412,7 @@ template<typename T>
 static void heapSort_optimal(T *begin, T *end) {
     makeHeap(begin, end);
 
-    int count = end - begin--;
+    int count = int(end - begin--);
     for (int i = count; i > 1; ) {
         swap(begin[1], begin[i]);
         siftDown(begin, 1, --i);
@@ -530,7 +537,7 @@ static void quickSort_guard_swapMid_insertion(T *begin, T *end) {
 template<typename T>
 static void quickSort_swapRand(T *begin, T *end) {
     if (end - begin <= 1) return;
-    swap(begin[0], begin[myrand(0, end - begin)]);
+    swap(begin[0], begin[myrand(0, int(end - begin))]);
     T *cur = begin;
     for (T *p = begin + 1; p < end; ++p) {
         if (p[0] <= begin[0]) swap(p[0], *++cur);
@@ -562,7 +569,7 @@ static void quickSort_swapRand_insertion(T *begin, T *end) {
         insertionSort(begin, end);
         return;
     }
-    swap(begin[0], begin[myrand(0, end - begin)]);
+    swap(begin[0], begin[myrand(0, int(end - begin))]);
     T *cur = begin;
     for (T *p = begin + 1; p < end; ++p) {
         if (p[0] <= begin[0]) swap(p[0], *++cur);
@@ -635,9 +642,9 @@ template<typename T>
 class BSTSorter {
 public:
     BSTSorter(T *begin, T *end): mRoot(nullptr), mAllocatorBase(nullptr), mAllocatorNodes(nullptr) {
-        setupAllocator(end - begin);
+        setupAllocator(int(end - begin));
 
-        if (end - begin > 32 && isOrdered(begin, end)) {
+        if (int(end - begin) > 32 && isOrdered(begin, end)) {
             binaryInserts(begin, end);
         } else {
             sequentialInserts(begin, end);
@@ -654,7 +661,7 @@ private:
     };
 private:
     bool isOrdered(T *begin, T *end) {
-        int step = max(1, (end - begin) / 32);
+        int step = max(1, int(end - begin) / 32);
         for (; begin + step < end; begin += step) {
             if (!(begin[0] <= begin[step])) return false;
         }
@@ -792,6 +799,6 @@ int main() {
     };
 #undef ITEM
 
-    srand(time(nullptr));
+    srand((int)time(nullptr));
     timeSortFuncs(items);
 }

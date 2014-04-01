@@ -1,4 +1,6 @@
-//#include "sort.h"
+#include "pch.h"
+
+#include "sort.h"
 //#include "rotate.h"
 //#include "binarySearch.h"
 //#include "list.h"
@@ -6,4 +8,4 @@
 //#include "singleStringMatch.h"
 //#include "multiStringMatch.h"
 //#include "skipList.h"
-#include "randSeq.h"
+//#include "randSeq.h"

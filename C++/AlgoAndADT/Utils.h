@@ -2,11 +2,13 @@
 #define UTILS_H
 
 #include <time.h>
+#include <stdint.h>
 
 #include <string>
 #include <set>
 #include <sstream>
 
+#ifdef __GNUC__
 #include <sys/time.h>
 #include <pthread.h>
 
@@ -15,6 +17,37 @@ static inline double getTime() {
     gettimeofday(&tv, nullptr);
     return tv.tv_sec + tv.tv_usec / 1000000.0;
 }
+
+static inline void setCpuAffinity(int mask) {
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    for (int i = 0; i < 32; ++i) {
+        if ((mask >> i) & 1) {
+            CPU_SET(i, &cpuset);
+        }
+    }
+
+    pthread_setaffinity_np(pthread_self(), sizeof(cpuset), &cpuset);
+}
+#endif
+
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4311 4312)
+#include <Windows.h>
+#pragma warning(pop)
+
+static inline double getTime() {
+    long long time, freq;
+    ::QueryPerformanceFrequency((LARGE_INTEGER*)&freq);
+    ::QueryPerformanceCounter((LARGE_INTEGER*)&time);
+    return double(time) / freq;
+}
+
+static inline void setCpuAffinity(int mask) {
+    ::SetThreadAffinityMask(::GetCurrentThread(), mask);
+}
+#endif
 
 class Timer {
 public:
@@ -43,18 +76,6 @@ static inline int myrand(int begin, int end) {
 }
 static inline int myrand(int end) {
     return myrand(0, end);
-}
-
-static inline void setCpuAffinity(int mask) {
-    cpu_set_t cpuset;
-    CPU_ZERO(&cpuset);
-    for (int i = 0; i < 32; ++i) {
-        if ((mask >> i) & 1) {
-            CPU_SET(i, &cpuset);
-        }
-    }
-
-    pthread_setaffinity_np(pthread_self(), sizeof(cpuset), &cpuset);
 }
 
 static inline string checkoutCmd(const char *cmd) {
