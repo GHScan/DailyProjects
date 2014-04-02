@@ -76,8 +76,8 @@ int main(int argc, char *argv[]) {
             }
 
             string reqline(buf, buf + n);
-            char method[32], version[32], url[128];
-            if (sscanf(reqline.c_str(), "%s %s %s", method, url, version) != 3) {
+            char method[32] = "", url[128] = "", version[32] = "";
+            if (sscanf(reqline.c_str(), "%31s %127s %31s", method, url, version) != 3) {
                 LOG_ERR_MSG("Parse request line failed!");
                 client->destroy();
                 return;

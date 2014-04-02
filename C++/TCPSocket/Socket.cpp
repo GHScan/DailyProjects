@@ -61,7 +61,7 @@ string HostAddress::toString() const {
     ::inet_ntop(AF_INET, &pa->sin_addr, buf, sizeof(buf));
     return format("%s:%d", buf, ntohs(pa->sin_port));
 }
-socklen_t HostAddress::getInternalSize() const {
+socklen_t HostAddress::getInternalSize() {
     return sizeof(sockaddr_in);
 }
 

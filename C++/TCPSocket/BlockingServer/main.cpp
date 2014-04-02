@@ -49,8 +49,8 @@ static void handleHTTPRequest(const TCPSocket &socket) {
         return;
     }
 
-    char method[32], url[128], version[32];
-    if (sscanf(line.c_str(), "%s %s %s", method, url, version) != 3) {
+    char method[32] = "", url[128] = "", version[32] = "";
+    if (sscanf(line.c_str(), "%31s %127s %31s", method, url, version) != 3) {
         LOG_ERR_MSG("Parse http request line failed!");
         return;
     }

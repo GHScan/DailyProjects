@@ -28,6 +28,7 @@ private:
 } g_fileServer;
 
 class Client {
+    DISABLE_COPY(Client);
 public:
     Client(ProactorFile *file, const HostAddress& addr):
         mFile(file), mAddr(addr) {
@@ -49,8 +50,8 @@ private:
             return;
         }
 
-        char method[32], version[32], url[128];
-        if (sscanf(string(buf, buf + len).c_str(), "%s %s %s", method, url, version) != 3) {
+        char method[32] = "", url[128] = "", version[32] = "";
+        if (sscanf(string(buf, buf + len).c_str(), "%31s %127s %31s", method, url, version) != 3) {
             LOG_ERR("%s parse request line failed!", getID().c_str());
             mFile->destroy();
             return;
@@ -112,6 +113,7 @@ private:
 };
 
 class Server {
+    DISABLE_COPY(Server);
 public:
     Server(int argc, char *argv[]): mShouldExit(false) {
         setSignalHandler(SIGPIPE, SIG_IGN);

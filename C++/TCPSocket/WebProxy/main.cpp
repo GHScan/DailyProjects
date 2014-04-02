@@ -34,8 +34,8 @@ private:
             return;
         }
 
-        char method[32], version[32], url[1024];
-        if (sscanf(string(buf, buf + n).c_str(), "%s %s %s", method, url, version) != 3) {
+        char method[32] = "", version[32] = "", url[1024] = "";
+        if (sscanf(string(buf, buf + n).c_str(), "%31s %1023s %31s", method, url, version) != 3) {
             LOG_ERR("Connection(%s) parse request line failed !", getID());
             mSrcSocket->destroy();
             return;
@@ -103,7 +103,7 @@ private:
         mDestSocket->readSome([this](bool eof, const char *buf, int n){ onReadResponse(eof, buf, n); });
     }
 private:
-    const char *getID() { return mID.c_str(); }
+    const char *getID() const { return mID.c_str(); }
 private:
     string mID;
     ProactorFile *mSrcSocket;

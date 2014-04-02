@@ -129,7 +129,7 @@ string traceStack(int skipFrame) {
 
 #ifndef NDEBUG
     char curExecName[256] = "";
-    if (::readlink("/proc/self/exe", curExecName, sizeof(curExecName)) == -1) {
+    if (::readlink("/proc/self/exe", curExecName, sizeof(curExecName) - 1) == -1) {
         strcpy(curExecName, "./main");
     }
     string bashArgs = 

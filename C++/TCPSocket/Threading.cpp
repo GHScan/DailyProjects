@@ -115,7 +115,7 @@ void Thread::sleep(int us) {
 void Thread::join() {
     P_ENSURE_R(::pthread_join(mTid, nullptr));
 }
-void Thread::canel() {
+void Thread::cancel() {
     P_ENSURE_R(::pthread_cancel(mTid));
 }
 void Thread::detach() {

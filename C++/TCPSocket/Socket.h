@@ -23,7 +23,7 @@ public:
     string toString() const;
     sockaddr* getInternal() { return &mAddr; }
     const sockaddr* getInternal() const { return &mAddr; }
-    socklen_t getInternalSize() const;
+    static socklen_t getInternalSize();
 private:
     HostAddress(const sockaddr *addr): mAddr(*addr) {}
 private:

@@ -108,7 +108,7 @@ public:
     static void sleep(int us);
 
     void join();
-    void canel();
+    void cancel();
 
     void detach();
 
