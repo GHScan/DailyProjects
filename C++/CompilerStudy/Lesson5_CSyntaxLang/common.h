@@ -173,7 +173,7 @@ private:
     }
     virtual bool toBoolean() const { ASSERT(0); }
     virtual std::string toString() const { return m_value; }
-    virtual IValue* clone() { return new StringValue(m_value.c_str()); }
+    virtual IValue* clone() { return new StringValue(m_value); }
 private:
     std::string m_value;
 };

@@ -343,7 +343,7 @@ public:
     std::string result(const char *env);
     int getNodeCount() const;
 private:
-    void lexicalAnalysis(const char *src, std::vector<Token>& tokens);
+    static void lexicalAnalysis(const char *src, std::vector<Token>& tokens);
     void syntaxAnalysis(const std::vector<Token>& tokens);
     void optimize();
     void updateSymbolTable(const char *env);

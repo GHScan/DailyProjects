@@ -43,7 +43,7 @@ public:
         m_metas.push_back(meta);
         return (int)m_metas.size() - 1;
     }
-    const FuncMetaPtr& getMetaFromIdx(int idx) {
+    const FuncMetaPtr& getMetaFromIdx(int idx) const {
         return m_metas[idx];
     }
 

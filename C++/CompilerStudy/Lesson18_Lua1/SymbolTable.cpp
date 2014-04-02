@@ -43,7 +43,7 @@ void SymbolTable::declareLocal(const string& name) {
     m_blocks.back()[name] = m_lastLocalIdx++;
     m_maxLocalIdx = max(m_maxLocalIdx, m_lastLocalIdx);
 }
-int SymbolTable::getLocalIndex(const string& name) {
+int SymbolTable::getLocalIndex(const string& name) const {
     for (int i = (int)m_blocks.size() - 1; i >= 0; --i) {
         auto iter = m_blocks[i].find(name);
         if (iter != m_blocks[i].end()) return iter->second;

@@ -9,7 +9,7 @@ public:
     LocalVarIDAllocator(int initLocalIdx):
         m_initLocalIdx(initLocalIdx), m_curLocalIdx(initLocalIdx), m_maxLocalIdx(initLocalIdx){
     }
-    int getMaxLocalIdx() { return m_maxLocalIdx; }
+    int getMaxLocalIdx() const { return m_maxLocalIdx; }
     int allocID() {
         int id = VarID::fromLocal(m_curLocalIdx).getInt();
         m_maxLocalIdx = max(++m_curLocalIdx, m_maxLocalIdx);
@@ -57,7 +57,7 @@ public:
             m_allocator->freeID(m_varID);
         }
     }
-    int getVarID() {
+    int getVarID() const {
         ASSERT(m_varID != -1);
         return m_varID;
     }

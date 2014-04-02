@@ -150,7 +150,7 @@ int CLRGotoTable::getNextState(int state, const string& nonTerm)
 }
 
 CLRParserTable::CLRParserTable():
-    m_bnf(NULL), m_gotoTable(NULL), m_actionTable(NULL)
+    m_actionTable(NULL), m_gotoTable(NULL), m_bnf(NULL)
 {
 }
 CLRParserTable::~CLRParserTable()

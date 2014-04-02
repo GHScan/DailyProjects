@@ -545,7 +545,6 @@ private:
     ExprNodePtr call()
     {
         backupTokenPos();
-        ExprNodePtr r;
         std::string name = getCurToken().value;
         if (tryConsumeToken(TT_id) && tryConsumeToken(TT_notation, "(")) {
             ExprNode_Call *p = new ExprNode_Call(name);

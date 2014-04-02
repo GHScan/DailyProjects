@@ -23,7 +23,7 @@ public:
     void setGlobalTable(LuaTable *t) { m_gtable = t; }
 
     int getFunctionMetaIdx(const LuaFunctionMetaPtr &meta);
-    const LuaFunctionMetaPtr& getMeta(int idx) {
+    const LuaFunctionMetaPtr& getMeta(int idx) const {
         return m_metas[idx];
     }
 public:

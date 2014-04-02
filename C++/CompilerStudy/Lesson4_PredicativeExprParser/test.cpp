@@ -210,7 +210,7 @@ private:
         return NULL;
     }
 private:
-    void lexicalAnalysis(const char *src, std::vector<Token>& tokens)
+    static void lexicalAnalysis(const char *src, std::vector<Token>& tokens)
     {
         for (;;) {
             while (isspace(src[0])) ++src;

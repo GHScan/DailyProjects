@@ -80,6 +80,9 @@ private:
     void emitFunctionDeclare(const FunctionProtoPtr &proto);
     void optimize(llvm::PassManager *pm);
 
+    LLVMCompilerImpl(const LLVMCompilerImpl&);
+    LLVMCompilerImpl& operator = (const LLVMCompilerImpl&);
+
 private:
     SourceFileProtoPtr m_proto;
     llvm::Module *m_module;

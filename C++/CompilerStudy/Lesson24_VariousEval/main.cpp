@@ -103,7 +103,7 @@ private:
         return r;
     }
 private:
-    int getOperatorLBP(const Token &t) {
+    static int getOperatorLBP(const Token &t) {
         ASSERT(t.type == TT_Operator);
         switch (t.begin[0]) {
             case '+': return 1;

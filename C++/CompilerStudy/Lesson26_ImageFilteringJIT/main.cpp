@@ -89,7 +89,7 @@ public:
         m_fapply(destBuf, srcBuf);
     }
 private:
-    string combineCppSrc(int imageW, int imageH, int scanW, int *matrix, int matrixW, int matrixH) {
+    static string combineCppSrc(int imageW, int imageH, int scanW, int *matrix, int matrixW, int matrixH) {
         int fac = 0;
         for (int i = 0; i < matrixW * matrixH; ++i) fac += matrix[i];
         if (fac == 0) fac = 1;

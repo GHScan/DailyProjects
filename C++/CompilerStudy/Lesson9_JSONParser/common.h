@@ -149,7 +149,7 @@ protected:
     std::vector<int> m_backupTokenPos;
 };
 
-inline std::string readFile(const std::string fname)
+inline std::string readFile(const std::string &fname)
 {
     std::ifstream fi(fname.c_str());
     std::string r;

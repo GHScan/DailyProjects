@@ -17,7 +17,7 @@ public:
     int getBlockOff() const;
 
     void declareLocal(const string& name);
-    int getLocalIndex(const string& name);
+    int getLocalIndex(const string& name) const;
     int getUpValueIndex(const string& name);
     int getLocalCount() const;
 

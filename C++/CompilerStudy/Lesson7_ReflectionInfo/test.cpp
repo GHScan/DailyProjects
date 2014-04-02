@@ -340,11 +340,6 @@ private:
         PARSE_ASSERT(hasMoreToken());
         return m_tokens[m_curToken - 1]; 
     }
-    const Token& getCurToken() const 
-    {
-        PARSE_ASSERT(hasMoreToken());
-        return m_tokens[m_curToken] ;
-    }
     bool hasMoreToken() const { return m_curToken < (int)m_tokens.size();}
     void backupTokenPos() { m_backupTokenPos.push_back(m_curToken); }
     void discardTokenPosBackup() { m_backupTokenPos.pop_back(); }
