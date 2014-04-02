@@ -77,7 +77,7 @@ public:
             delete t;
         }
     }
-    bool contain(const T &val) {
+    bool contain(const T &val) const {
         for (Node *n = mRoot; n != nullptr; ) {
             if (val == n->value) return true;
             else if (val < n->value) n = n->left;

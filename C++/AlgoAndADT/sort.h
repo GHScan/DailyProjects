@@ -660,7 +660,7 @@ private:
         Node(int _value): left(nullptr), right(nullptr), value(_value){}
     };
 private:
-    bool isOrdered(T *begin, T *end) {
+    static bool isOrdered(T *begin, T *end) {
         int step = max(1, int(end - begin) / 32);
         for (; begin + step < end; begin += step) {
             if (!(begin[0] <= begin[step])) return false;

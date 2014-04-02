@@ -169,7 +169,7 @@ public:
             } else p = &(*p)->next;
         }
     }
-    void foreach(function<void(const T& val)> f) {
+    void foreach(function<void(const T& val)> f) const {
         for (Node *p = mHead; p != nullptr; p = p->next) {
             f(p->value);
         }

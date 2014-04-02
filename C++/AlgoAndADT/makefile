@@ -26,6 +26,9 @@ endif
 ifeq ($(do_profiling),1) 
 CXXFLAGS += -pg
 endif
+ifeq ($(test_coverage),1)
+CXXFLAGS += --coverage
+endif
 
 srcs = $(wildcard *.cpp)
 objs = $(srcs:.cpp=.o)
@@ -42,7 +45,7 @@ rel_build:
 rel_rebuild: clean
 	$(MAKE) rel_build
 clean: clean_actions
-	rm -f main $(objs) $(all_deps) $(pch_file).gch gmon.out
+	rm -f main $(objs) $(all_deps) $(pch_file).gch gmon.out *.gcno *.gcda *.gcov
 update_pch: $(pch_file).gch
 
 main: $(objs)
