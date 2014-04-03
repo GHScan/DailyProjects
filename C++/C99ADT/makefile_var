@@ -1,0 +1,14 @@
+do_profiling=0
+test_coverage=1
+build_dll=0
+macro_defs=
+include_dirs=
+lib_dirs=
+lib_files=
+
+.PHONY: 
+
+build_actions: 
+
+clean_actions:
+
