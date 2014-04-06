@@ -273,116 +273,116 @@ private:
 };
 class x86FunctionBuilder {
 public:
-    x86FunctionBuilder(x86JITEngine *parent, char *codeBuf): m_parent(parent), m_codeBuf(codeBuf), m_codeSize(0){}
+    x86FunctionBuilder(x86JITEngine *parent, char *codeBuf): m_parent(parent), m_codeBuf(codeBuf), m_codePtr(codeBuf) {}
     string& getFuncName() { return m_funcName;}
-    int getCodeSize() const{ return m_codeSize;}
+    int getCodeSize() const{ return m_codePtr - m_codeBuf;}
 
     void beginBuild(){
-        emit(1, 0x52); // push edx
-        emit(1, 0x55); // push ebp
-        emit(2, 0x8b, 0xec); // mov ebp, esp
-        emit(2, 0x81, 0xec); emitValue(MAX_LOCAL_COUNT * 4); // sub esp, MAX_LOCAL_COUNT * 4
+        emit(0x52, -1); // push edx
+        emit(0x55, -1); // push ebp
+        emit(0x8b, 0xec, -1); // mov ebp, esp
+        emit(0x81, 0xec, -1); emitValue(MAX_LOCAL_COUNT * 4); // sub esp, MAX_LOCAL_COUNT * 4
     }
     void endBuild(){
         markLabel(&m_retLabel);
-        emit(2, 0x8b, 0xe5);  // mov esp,ebp 
-        emit(1, 0x5d); // pop ebp  
-        emit(1, 0x5a); // pop edx  
-        emit(1, 0xc3); // ret
+        emit(0x8b, 0xe5, -1);  // mov esp,ebp 
+        emit(0x5d, -1); // pop ebp  
+        emit(0x5a, -1); // pop edx  
+        emit(0xc3, -1); // ret
     }
 
     void loadImm(int imm){
-        emit(1, 0x68); emitValue(imm); // push imm
+        emit(0x68, -1); emitValue(imm); // push imm
     }
     void loadLiteralStr(const string &literalStr){
         const char *loc = m_parent->_getLiteralStringLoc(literalStr);
-        emit(1, 0x68); emitValue(loc); // push loc
+        emit(0x68, -1); emitValue(loc); // push loc
     }
     void loadLocal(int idx){
-        emit(2, 0xff, 0xb5); emitValue(localIdx2EbpOff(idx)); // push dword ptr [ebp + idxOff]
+        emit(0xff, 0xb5, -1); emitValue(localIdx2EbpOff(idx)); // push dword ptr [ebp + idxOff]
     }
     void storeLocal(int idx) {
-        emit(3, 0x8b, 0x04, 0x24); // mov eax, dword ptr [esp]
-        emit(2, 0x89, 0x85); emitValue(localIdx2EbpOff(idx)); // mov dword ptr [ebp + idxOff], eax
-        emit(2, 0x83, 0xc4); emitValue((char)4); // add esp, 4
+        emit(0x8b, 0x04, 0x24, -1); // mov eax, dword ptr [esp]
+        emit(0x89, 0x85, -1); emitValue(localIdx2EbpOff(idx)); // mov dword ptr [ebp + idxOff], eax
+        emit(0x83, 0xc4, -1); emitValue((char)4); // add esp, 4
     }
     void incLocal(int idx) {
-        emit(2, 0xff, 0x85); emitValue(localIdx2EbpOff(idx)); // inc dword ptr [ebp + idxOff]
+        emit(0xff, 0x85, -1); emitValue(localIdx2EbpOff(idx)); // inc dword ptr [ebp + idxOff]
     }
     void decLocal(int idx) {
-        emit(2, 0xff, 0x8d); emitValue(localIdx2EbpOff(idx)); // dec dword ptr [ebp + idxOff]
+        emit(0xff, 0x8d, -1); emitValue(localIdx2EbpOff(idx)); // dec dword ptr [ebp + idxOff]
     }
     void pop(int n){
-        emit(2, 0x81, 0xc4); emitValue(n * 4); // add esp, n * 4
+        emit(0x81, 0xc4, -1); emitValue(n * 4); // add esp, n * 4
     }
     void dup(){
-        emit(3, 0xff, 0x34, 0x24); // push dword ptr [esp]
+        emit(0xff, 0x34, 0x24, -1); // push dword ptr [esp]
     }
 
     void doArithmeticOp(TokenID opType) {
-        emit(4, 0x8b, 0x44, 0x24, 0x04); // mov eax, dword ptr [esp+4]
+        emit(0x8b, 0x44, 0x24, 0x04, -1); // mov eax, dword ptr [esp+4]
         switch (opType) {
             case TID_OP_ADD: 
-                emit(3, 0x03, 0x04, 0x24); // add eax, dword ptr [esp]
+                emit(0x03, 0x04, 0x24, -1); // add eax, dword ptr [esp]
                 break;
             case TID_OP_SUB: 
-                emit(3, 0x2b, 0x04, 0x24); // sub eax, dword ptr [esp]
+                emit(0x2b, 0x04, 0x24, -1); // sub eax, dword ptr [esp]
                 break;
             case TID_OP_MUL: 
-                emit(4, 0x0f, 0xaf, 0x04, 0x24); // imul eax, dword ptr [esp]
+                emit(0x0f, 0xaf, 0x04, 0x24, -1); // imul eax, dword ptr [esp]
                 break;
             case TID_OP_DIV: 
             case TID_OP_MOD: 
-                emit(2, 0x33, 0xd2); // xor edx, edx
-                emit(3, 0xf7, 0x3c, 0x24); // idiv dword ptr [esp]
+                emit(0x33, 0xd2, -1); // xor edx, edx
+                emit(0xf7, 0x3c, 0x24, -1); // idiv dword ptr [esp]
                 if (opType == TID_OP_MOD) {
-                    emit(2, 0x8b, 0xc2); // mov eax, edx
+                    emit(0x8b, 0xc2, -1); // mov eax, edx
                 }
                 break;  
             default: ASSERT(0); break;
         }
-        emit(4, 0x89, 0x44, 0x24, 0x04); // mov dword ptr [esp+4], eax
-        emit(3, 0x83, 0xc4, 0x04); // add esp, 4
+        emit(0x89, 0x44, 0x24, 0x04, -1); // mov dword ptr [esp+4], eax
+        emit(0x83, 0xc4, 0x04, -1); // add esp, 4
     }
     void cmp(TokenID cmpType) {
         x86Label label_1, label_0, label_end;
-        emit(4, 0x8b, 0x44, 0x24, 0x04); // mov eax, dword ptr [esp+4] 
-        emit(3, 0x8b, 0x14, 0x24); // mov edx, dword ptr[esp]
-        emit(2, 0x83, 0xc4); emitValue((char)8);// add esp, 8
-        emit(2, 0x3b, 0xc2); // cmp eax, edx
+        emit(0x8b, 0x44, 0x24, 0x04, -1); // mov eax, dword ptr [esp+4] 
+        emit(0x8b, 0x14, 0x24, -1); // mov edx, dword ptr[esp]
+        emit(0x83, 0xc4, -1); emitValue((char)8);// add esp, 8
+        emit(0x3b, 0xc2, -1); // cmp eax, edx
         condJmp(cmpType, &label_1);
         jmp(&label_0);
         markLabel(&label_1);
-        emit(2, 0x6a, 0x01); // push 1
+        emit(0x6a, 0x01, -1); // push 1
         jmp(&label_end);
         markLabel(&label_0);
-        emit(2, 0x6a, 0x00); // push 0
+        emit(0x6a, 0x00, -1); // push 0
         markLabel(&label_end);
     }
 
-    void markLabel(x86Label *label){ label->mark(m_codeBuf + m_codeSize); }
+    void markLabel(x86Label *label){ label->mark(m_codePtr); }
     void jmp(x86Label *label) { 
-        emit(1, 0xe9);
-        char *ref = m_codeBuf + m_codeSize;
+        emit(0xe9, -1);
+        char *ref = m_codePtr;
         emitValue(NULL);
         label->addRef(ref); 
     }
     void trueJmp(x86Label *label) {
-        emit(3, 0x8b, 0x04, 0x24); // mov eax, dword ptr [esp]
-        emit(3, 0x83, 0xc4, 0x04); // add esp, 4
-        emit(2, 0x85, 0xc0); // test eax, eax
+        emit(0x8b, 0x04, 0x24, -1); // mov eax, dword ptr [esp]
+        emit(0x83, 0xc4, 0x04, -1); // add esp, 4
+        emit(0x85, 0xc0, -1); // test eax, eax
         condJmp(TID_OP_NEQUAL, label); 
     }
     void falseJmp(x86Label *label) {
-        emit(3, 0x8b, 0x04, 0x24); // mov eax, dword ptr [esp]
-        emit(3, 0x83, 0xc4, 0x04); // add esp, 4
-        emit(2, 0x85, 0xc0); // test eax, eax
+        emit(0x8b, 0x04, 0x24, -1); // mov eax, dword ptr [esp]
+        emit(0x83, 0xc4, 0x04, -1); // add esp, 4
+        emit(0x85, 0xc0, -1); // test eax, eax
         condJmp(TID_OP_EQUAL, label); 
     }
     void ret() { jmp(&m_retLabel); }
     void retExpr() {
-        emit(3, 0x8b, 0x04, 0x24); // mov eax, dword ptr [esp]
-        emit(3, 0x83, 0xc4, 0x04); // add esp, 4
+        emit(0x8b, 0x04, 0x24, -1); // mov eax, dword ptr [esp]
+        emit(0x83, 0xc4, 0x04, -1); // add esp, 4
         jmp(&m_retLabel);
     }
 
@@ -392,36 +392,37 @@ public:
     void endCall(const string &funcName, int callID, int paramCount){
         char ** entry = m_parent->_getFunctionEntry(funcName);
         for (int i = 0; i < paramCount - 1; ++i) {
-            emit(3, 0xff, 0xb4, 0x24); emitValue(((i + 1) * 2 - 1) * 4); // push dword ptr [esp+4*i]
+            emit(0xff, 0xb4, 0x24, -1); emitValue(((i + 1) * 2 - 1) * 4); // push dword ptr [esp+4*i]
         }
-        emit(2, 0xff, 0x15); emitValue(entry); // call [entry]
+        emit(0xff, 0x15, -1); emitValue(entry); // call [entry]
         pop(paramCount + (paramCount > 0 ? paramCount - 1 : 0));
-        emit(1, 0x50); // push eax
+        emit(0x50, -1); // push eax
     }
 private:
-    void emit(int n, ...) {
+    void emit(int c, ...) {
         va_list args;
-        va_start(args, n);
-        for (int i = 0; i < n; ++i) m_codeBuf[m_codeSize++] = (char)va_arg(args, int);
+        va_start(args, c);
+        *m_codePtr++ = c;
+        for (c = va_arg(args, int); c != -1; c = va_arg(args, int)) *m_codePtr++ = c;
         va_end(args);
     }
     template<typename T>
     void emitValue(T val) {
-        memcpy(m_codeBuf + m_codeSize, &val, sizeof(val));
-        m_codeSize += sizeof(val);
+        memcpy(m_codePtr, &val, sizeof(val));
+        m_codePtr += sizeof(val);
     }
 private:
     void condJmp(TokenID tid, x86Label *label) {
         switch (tid) {
-            case TID_OP_LESS: emit(2, 0x0f, 0x8c); break;
-            case TID_OP_LESSEQ: emit(2, 0x0f, 0x8e); break;
-            case TID_OP_GREATER: emit(2, 0x0f, 0x8f); break;
-            case TID_OP_GREATEREQ: emit(2, 0x0f, 0x8d); break;
-            case TID_OP_EQUAL: emit(2, 0x0f, 0x84); break;
-            case TID_OP_NEQUAL: emit(2, 0x0f, 0x85); break;
+            case TID_OP_LESS: emit(0x0f, 0x8c, -1); break;
+            case TID_OP_LESSEQ: emit(0x0f, 0x8e, -1); break;
+            case TID_OP_GREATER: emit(0x0f, 0x8f, -1); break;
+            case TID_OP_GREATEREQ: emit(0x0f, 0x8d, -1); break;
+            case TID_OP_EQUAL: emit(0x0f, 0x84, -1); break;
+            case TID_OP_NEQUAL: emit(0x0f, 0x85, -1); break;
             default: ASSERT(0); break;
         }
-        char *ref = m_codeBuf + m_codeSize;
+        char *ref = m_codePtr;
         emitValue(NULL);
         label->addRef(ref);
     }
@@ -430,7 +431,7 @@ private:
 private:
     x86JITEngine *m_parent;
     char *m_codeBuf;
-    int m_codeSize;
+    char *m_codePtr;
     string m_funcName;
     x86Label m_retLabel;
 };

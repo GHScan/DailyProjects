@@ -32,7 +32,7 @@ struct LinkedListSortAlgo {
     }
 
     void run(T *begin, T *end) {
-        printf("%s: len=%d\n", getName(), end - begin);
+        printf("%s: len=%.3fK\n", getName(), (end - begin) / 1024.0);
 
         Node *head = nullptr;
         {
@@ -107,7 +107,7 @@ public:
     using typename LinkedListSortAlgo<T>::Node;
 
     virtual const char *getName() { return "quickSort"; }
-    virtual int getLimit() { return 512 * 1024; }
+    virtual int getLimit() { return 1024 * 1024; }
     virtual void sort(Node *begin, Node *end) {
         if (begin == end || begin->next == end) return;
 
@@ -149,7 +149,7 @@ private:
 };
 
 static void benchmark(vector<LinkedListSortAlgo<int>*> algos) {
-    int lens[] = {1, 5, 13, 19, 33, 65, 128, 255, 512, 1024, 2 * 1024, 4 * 1024, 8 * 1024, 16 * 1024, 32 * 1024, 64 * 1024, 128 * 1024, 256 * 1024, 512 * 1024};
+    int lens[] = {1, 5, 13, 19, 33, 65, 128, 255, 512, 1024, 2 * 1024, 4 * 1024, 8 * 1024, 16 * 1024, 32 * 1024, 64 * 1024, 128 * 1024, 256 * 1024, 512 * 1024, 1024*1024};
     for (int len : lens) {
         vector<int> data(len);
         for (int &d : data) d = myrand(len);
