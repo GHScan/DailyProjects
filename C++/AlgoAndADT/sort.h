@@ -628,7 +628,59 @@ static void quickSort_optimal(T *begin, T *end) {
 
 static int ANSICqsortCmp(const void *a, const void *b) { return *(int*)a - *(int*)b;}
 static void ANSICqsort(int *begin, int *end) {
-    qsort(begin, end - begin, sizeof(begin[0]), ANSICqsortCmp);
+    qsort(begin, end - begin, sizeof(begin[0]), &ANSICqsortCmp);
+}
+
+static void _cswap(void *a, void *b, void *tmp, int elemSize) {
+    memcpy(tmp, a, elemSize);
+    memcpy(a, b, elemSize);
+    memcpy(b, tmp, elemSize);
+}
+static void _cinsertionSort(void *_begin, void *_end, int elemSize, int(*fcmp)(const void*, const void*)) {
+    char *begin = (char*)_begin, *end = (char*)_end;
+    char *tmp = (char*)alloca(elemSize);
+    for (char *p = begin + elemSize; p < end; p += elemSize) {
+        memcpy(tmp, p, elemSize);
+        char *q = p - elemSize;
+        for (; q >= begin && fcmp(tmp, q) < 0; q -= elemSize) {
+            memcpy(q + elemSize, q, elemSize);
+        }
+        memcpy(q + elemSize, tmp, elemSize);
+    }
+}
+static void _cQuickSort(void *_begin, void *_end, int elemSize, int(*fcmp)(const void*, const void*)) {
+    char *begin = (char*)_begin, *end = (char*)_end;
+    int count = (end - begin) / elemSize;
+    if (count <= INSERTION_CUTOFF) {
+        _cinsertionSort(begin, end, elemSize, fcmp);
+        return;
+    }
+
+    char *tmp = (char*)alloca(elemSize);
+
+    _cswap(begin, begin + count / 2 * elemSize, tmp, elemSize);
+    if (fcmp(&end[-elemSize], begin) < 0) {
+        _cswap(begin, &end[-elemSize], tmp, elemSize);
+    }
+
+    char *lo = begin + elemSize, *hi = end - 2 * elemSize;
+    while (lo <= hi) {
+        while (fcmp(lo, begin) < 0) lo += elemSize;
+        while (fcmp(begin, hi) < 0) hi -= elemSize;
+        if (lo <= hi) {
+            _cswap(lo, hi, tmp, elemSize);
+            lo += elemSize;
+            hi -= elemSize;
+        }
+    }
+    lo -= elemSize;
+
+    _cswap(begin, lo, tmp, elemSize);
+    _cQuickSort(begin, lo, elemSize, fcmp);
+    _cQuickSort(lo + elemSize, end, elemSize, fcmp);
+}
+static void cQuickSort(int *begin, int *end) {
+    _cQuickSort(begin, end, sizeof(begin[0]), &ANSICqsortCmp);
 }
 
 template<typename T>
@@ -791,6 +843,7 @@ int main() {
         ITEM(quickSort_swapRand_insertion, 0),
         ITEM(quickSort_optimal, 0),
         ITEM(quickSort_hack, 0),
+        ITEM(cQuickSort, 0),
         ITEM(ANSICqsort, 0),
         ITEM(sort, 0),
         ITEM(stable_sort, 0),

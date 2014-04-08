@@ -1,6 +1,6 @@
 #include "pch.h"
 
-//#include "sort.h"
+#include "sort.h"
 //#include "rotate.h"
 //#include "binarySearch.h"
 //#include "list.h"
@@ -9,4 +9,4 @@
 //#include "multiStringMatch.h"
 //#include "skipList.h"
 //#include "randSeq.h"
-#include "memPoolTest.h"
+//#include "memPoolTest.h"
