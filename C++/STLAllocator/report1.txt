@@ -1,0 +1,6 @@
+EmptyAllocator=0.421s
+allocator=2.145s
+allocator(tcmalloc)=1.258s
+TemporalAllocator=0.585s
+TemporalAllocator(tcmalloc)=0.450s
+NodeOptimalAllocator=0.995s
