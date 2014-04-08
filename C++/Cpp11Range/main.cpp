@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include <chrono>
+
 template<typename T>
 class RangeObj {
 public:
@@ -59,6 +61,18 @@ RangeObj<T> range(T end) {
     return range(T(), end);
 }
 
+class Timer {
+public:
+    Timer(const char *name): mName(name), mStart(chrono::high_resolution_clock::now()) {
+    }
+    ~Timer() {
+        printf("%s: %.3f\n", mName, chrono::duration<double>(chrono::high_resolution_clock::now() - mStart).count());
+    }
+private:
+    const char *mName;
+    chrono::high_resolution_clock::time_point mStart;
+};
+
 int main() {
     for (auto i : range(5)) printf("%d,", i);
     puts("");
@@ -77,4 +91,25 @@ int main() {
 
     for (auto i : range<float>(3, 0, -0.5)) printf("%.2f,", i);
     puts("");
+
+    const int LOOP = 1024;
+    const int N = 1024 * 1024;
+    int r = 0;
+    {
+        Timer _t("for");
+        for (int i = 0; i < LOOP; ++i) {
+            for (int i = 0; i < N; ++i) r += i & 0x123;
+        }
+    }
+
+    int r2 = 0;
+    {
+        Timer _t("range");
+        for (int i = 0; i < LOOP; ++i) {
+            for (int i : range(N)) r2 += i & 0x123;
+        }
+    }
+    assert(r == r2);
+
+    return r - r2;
 }
