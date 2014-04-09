@@ -12,6 +12,6 @@ def findMaxPrime(n):
     while not isPrime(n): n -= 1
     return n
 
-for i in range(4, 32):
+for i in range(1, 32):
     n = 1 << i
     print n, ':', findMaxPrime(n)
