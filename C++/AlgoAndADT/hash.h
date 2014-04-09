@@ -57,6 +57,8 @@ public:
         std::swap(mBuckets, o.mBuckets);
         std::swap(mSize, o.mSize);
         std::swap(mLoadFactor, o.mLoadFactor);
+        std::swap(mHash, o.mHash);
+        std::swap(mEqual, o.mEqual);
     }
 
     bool insert(const KT &k, const VT &v) {
@@ -173,6 +175,8 @@ public:
         std::swap(mBuckets, o.mBuckets);
         std::swap(mSize, o.mSize);
         std::swap(mLoadFactor, o.mLoadFactor);
+        std::swap(mHash, o.mHash);
+        std::swap(mEqual, o.mEqual);
     }
 
     bool insert(const KT &k, const VT &v) {
@@ -249,6 +253,142 @@ private:
     float mLoadFactor;
     HashT mHash;
     EqualT mEqual;
+};
+
+template<typename KT, typename VT, typename HashT = hash<KT>, typename EqualT = equal_to<KT>>
+class OpenAddressingHashTable2 {
+private:
+    struct Node {
+        KT key;
+        VT value;
+        Node(const KT &k, const VT &v): key(k), value(v){}
+    };
+public:
+    OpenAddressingHashTable2(int bucketSize = 4): mSize(0), mLoadFactor(0.5), mEmptyNode(-1, VT()) {
+        mBuckets.resize(bucketSize, mEmptyNode);
+        rehash();
+    }
+    ~OpenAddressingHashTable2() {
+        clear();
+    }
+
+    OpenAddressingHashTable2(const OpenAddressingHashTable2& o): mSize(0), mLoadFactor(o.mLoadFactor), mEmptyNode(o.mEmptyNode) {
+        mBuckets.resize(o.mBuckets.size(), mEmptyNode);
+        o.foreach([this](const KT &k, VT &v){ insert(k, v); });
+    }
+    OpenAddressingHashTable2& operator = (const OpenAddressingHashTable2& o) {
+        if (this != &o) {
+            OpenAddressingHashTable2 tmp(o);
+            swap(tmp);
+        }
+        return *this;
+    }
+    OpenAddressingHashTable2(OpenAddressingHashTable2&& o): OpenAddressingHashTable2(0) {
+        swap(o);
+    }
+    OpenAddressingHashTable2& operator = (OpenAddressingHashTable2&& o) {
+        swap(o);
+        return *this;
+    }
+
+    void clear() {
+        mBuckets.assign(mBuckets.size(), mEmptyNode);
+        mSize = 0;
+    }
+    int size() const { return mSize; }
+    bool empty() const { return size() == 0; }
+    void setLoadFactor(float loadFactor) { 
+        assert(loadFactor < 1);
+        mLoadFactor = loadFactor; 
+    }
+    void swap(OpenAddressingHashTable2& o) {
+        std::swap(mBuckets, o.mBuckets);
+        std::swap(mSize, o.mSize);
+        std::swap(mLoadFactor, o.mLoadFactor);
+        std::swap(mHash, o.mHash);
+        std::swap(mEqual, o.mEqual);
+        std::swap(mEmptyNode, o.mEmptyNode);
+    }
+
+    bool insert(const KT &k, const VT &v) {
+        if (mSize > mLoadFactor * mBuckets.size()) rehash();
+
+        Node *p = findBucket(mBuckets, k);
+        if (!isEmpty(*p)) {
+            p->value = v;
+            return false;
+        }
+        p->key = k; 
+        p->value = v;
+        ++mSize;
+        return true;
+    }
+    bool remove(const KT &k) {
+        Node *p = findBucket(mBuckets, k);
+        if (isEmpty(*p)) return false;
+        *p = mEmptyNode;
+        --mSize;
+
+        for (auto i = (p - &mBuckets[0] + 1) % mBuckets.size(); !isEmpty(mBuckets[i]); i = (i + 1) % mBuckets.size()) {
+            Node n = mBuckets[i];
+            mBuckets[i] = mEmptyNode;
+            p = findBucket(mBuckets, n.key);
+            assert(isEmpty(*p));
+            *p = n;
+        }
+        return true;
+    }
+    VT* get(const KT &k) {
+        Node *p = findBucket(mBuckets, k);
+        return isEmpty(*p) ? nullptr : &p->value;
+    }
+
+    void foreach(function<void(const KT&, const VT&)> f) const {
+        for (const Node &n : mBuckets) {
+            if (!isEmpty(n)) f(n.key, n.value);
+        }
+    }
+    void foreach(function<void(const KT&, VT&)> f) {
+        for (Node &n : mBuckets) {
+            if (!isEmpty(n)) f(n.key, n.value);
+        }
+    }
+
+    void setDeletedKey(const KT &k) { mEmptyNode = Node(k, VT()); }
+private:
+    void rehash() {
+        vector<Node> newBuckets(chooseLargerSize(mBuckets.size()), mEmptyNode);
+        for (Node &n : mBuckets) {
+            if (!isEmpty(n)) std::swap(n, *findBucket(newBuckets, n.key));
+        }
+        mBuckets.swap(newBuckets);
+    }
+    static int chooseLargerSize(int size) {
+        static int SIZE_LIST[] = { 7, 13, 31, 61, 127, 251, 509, 1021, 2039, 4093, 8191, 16381, 32749, 65521, 131071, 262139, 524287, 1048573, 2097143, 4194301, 8388593, 16777213, 33554393, 67108859, 134217689, 268435399, 536870909, 1073741789, 2147483647, };
+        int i = 0;
+        for (; i < ARRAY_SIZE(SIZE_LIST) - 1 && SIZE_LIST[i] <= size; ++i);
+        assert(SIZE_LIST[i] > size);
+        return SIZE_LIST[i];
+    }
+    Node* findBucket(vector<Node> &buckets, const KT &k) {
+        auto i = mHash(k) % buckets.size();
+        auto j = i;
+        do {
+            if (isEmpty(buckets[j]) || mEqual(buckets[j].key, k)) break;
+            j = (j + 1) % buckets.size();
+        } while (j != i);
+        return &buckets[j];
+    }
+    bool isEmpty(const Node &n) const {
+        return mEqual(n.key, mEmptyNode.key);
+    }
+private:
+    vector<Node> mBuckets;
+    int mSize;
+    float mLoadFactor;
+    HashT mHash;
+    EqualT mEqual;
+    Node mEmptyNode;
 };
 
 template<typename TableT>
@@ -385,6 +525,7 @@ typedef STLWrapper<map<int, int>> STLMap;
 typedef STLWrapper<unordered_map<int, int>> STLHash;
 typedef ChainingHashTable<int, int> ChainingHash;
 typedef OpenAddressingHashTable<int, int> OpenAddressingHash;
+typedef OpenAddressingHashTable2<int, int> OpenAddressingHash2;
 
 #define CORRECTNESS_TEST(type) correctnessTest<type>(#type);
 #define BENCHMARK(type) benchmark<type>(#type);
@@ -397,8 +538,10 @@ int main() {
     CORRECTNESS_TEST(STLHash);
     CORRECTNESS_TEST(ChainingHash);
     CORRECTNESS_TEST(OpenAddressingHash);
+    CORRECTNESS_TEST(OpenAddressingHash2);
     BENCHMARK(STLMap);
     BENCHMARK(STLHash);
     BENCHMARK(ChainingHash);
     BENCHMARK(OpenAddressingHash);
+    BENCHMARK(OpenAddressingHash2);
 }
