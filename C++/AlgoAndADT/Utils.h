@@ -123,4 +123,6 @@ static inline string toString(const T &v) {
     return so.str();
 }
 
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
+
 #endif
