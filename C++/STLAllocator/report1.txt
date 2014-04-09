@@ -4,3 +4,11 @@ allocator(tcmalloc)=1.258s
 TemporalAllocator=0.585s
 TemporalAllocator(tcmalloc)=0.450s
 NodeOptimalAllocator=0.995s
+
+result:
+awk 'BEGIN{FS="[=s]"}NR==1{empty=$2}NR>1{$2=$2-empty; if(NR==2)base=$2; printf "%-30s: time=%4.3f,faster=%6.3f\n", $1, $2, base/$2 }' report1.txt
+allocator                     : time=1.724,faster= 1.000
+allocator(tcmalloc)           : time=0.837,faster= 2.060
+TemporalAllocator             : time=0.164,faster=10.512
+TemporalAllocator(tcmalloc)   : time=0.029,faster=59.448
+NodeOptimalAllocator          : time=0.574,faster= 3.003

@@ -329,7 +329,7 @@ static void benchmarkAllocator(const char *name) {
     vector<int*> data;
     data.reserve(SIZE);
     for (int i = 0; i < 8; ++i) {
-        while (data.size() < SIZE) {
+        while ((int)data.size() < SIZE) {
             switch (rand() % 5) {
                 case 0: case 1: case 2: case 3:
                     data.push_back(a.allocate(1));
