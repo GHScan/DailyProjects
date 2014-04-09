@@ -106,8 +106,8 @@ static size_t rangeHash(ItT begin, ItT end) {
     return seed;
 }
 
-template<typename KT, typename HashT = hash<KT>, typename EqualT = equal_to<KT>, int REHASH_THRESHOLD = 2>
-class OpenListHashTable {
+template<typename KT, typename HashT = hash<KT>, typename EqualT = equal_to<KT>>
+class ChainingHashTable {
 private:
     struct Node {
         KT key;
@@ -115,11 +115,11 @@ private:
         Node(const KT &_key, Node *_next): key(_key), next(_next){}
     };
 public:
-    OpenListHashTable(): mSize(0) {
+    ChainingHashTable(): mSize(0), mLoadFactor(1) {
         mBucketSize = 7;
         mBuckets = (Node**)::calloc(mBucketSize, sizeof(Node*));
     }
-    ~OpenListHashTable() {
+    ~ChainingHashTable() {
         for (int i = 0; i < mBucketSize; ++i) {
             for (Node *n = mBuckets[i], *next; n != nullptr; n = next) {
                 next = n->next;
@@ -130,7 +130,7 @@ public:
     }
 
     KT* insert(const KT &k) {
-        if (mSize / mBucketSize > REHASH_THRESHOLD) rehash();
+        if (mSize > mBucketSize * mLoadFactor) rehash();
 
         size_t i = mHash(k) % mBucketSize;
         for (Node *n = mBuckets[i], *next; n != nullptr; n = next) {
@@ -181,8 +181,66 @@ private:
     MemoryPool<sizeof(Node)> mPool;
     HashT mHash;
     EqualT mEqual;
+    float mLoadFactor;
 };
 
+template<typename KT, typename HashT = hash<KT>, typename EqualT = equal_to<KT>>
+class OpenAddressingHashTable {
+public:
+    OpenAddressingHashTable(): mSize(0), mLoadFactor(0.5f) {
+        rehash();
+    }
+    ~OpenAddressingHashTable() {
+        for (KT *p : mArray) freeK(p);
+    }
+
+    KT* insert(const KT &k) {
+        if (mSize > mArray.size() * mLoadFactor) rehash();
+
+        auto& p = findArray(mArray, k);
+        if (p) return p;
+        ++mSize;
+        p = allocK(k);
+        return p;
+    }
+    KT* get(const KT &k) {
+        return findArray(mArray, k);
+    }
+private:
+    void rehash() {
+        static int SIZE_LIST[] = { 7, 13, 31, 61, 127, 251, 509, 1021, 2039, 4093, 8191, 16381, 32749, 65521, 131071, 262139, 524287, 1048573, 2097143, 4194301, 8388593, 16777213, 33554393, 67108859, 134217689, 268435399, 536870909, 1073741789, 2147483647, };
+        int i = 0;
+        for (; i < sizeof(SIZE_LIST) / sizeof(SIZE_LIST[0]) - 1 && SIZE_LIST[i] <= (int)mArray.size(); ++i);
+        vector<KT*> newArray(SIZE_LIST[i], nullptr);
+        for (KT *p : mArray) {
+            if (p) findArray(newArray, *p) = p;
+        }
+        mArray.swap(newArray);
+    }
+    KT*& findArray(vector<KT*> &array, const KT &k) {
+        auto i = mHash(k) % array.size();
+        auto j = i;
+        do {
+            if (array[j] == nullptr || mEqual(*array[j], k)) break;
+            j = (j + 1) % array.size();
+        } while(j != i);
+        return array[j];
+    }
+    KT* allocK(const KT &k) {
+        return new (mPool.malloc()) KT(k);
+    }
+    void freeK(KT *k) {
+        k->~KT();
+        mPool.free(k);
+    }
+private:
+    MemoryPool<sizeof(KT)> mPool;
+    vector<KT*> mArray;
+    int mSize;
+    HashT mHash;
+    EqualT mEqual;
+    float mLoadFactor;
+};
 //////////////////////////////
 
 struct InterningString {
@@ -257,7 +315,7 @@ private:
     unordered_set<InterningString, InterningStringHash_Str, InterningStringEqual_Str> mSet;
 };
 
-class StringPool_OStreamOpenListHash {
+class StringPool_OStreamChainingHash {
 public:
     InterningString intern(const char* begin, const char *end) {
         InterningString s = {begin, end - begin};
@@ -269,7 +327,22 @@ public:
     }
 private:
     OWordStream mOS;
-    OpenListHashTable<InterningString, InterningStringHash_Str, InterningStringEqual_Str> mSet;
+    ChainingHashTable<InterningString, InterningStringHash_Str, InterningStringEqual_Str> mSet;
+};
+
+class StringPool_OStreamOpenAddressingHash {
+public:
+    InterningString intern(const char* begin, const char *end) {
+        InterningString s = {begin, end - begin};
+        if (InterningString *p = mSet.get(s)) return *p;
+        else {
+            s.str = mOS.append(begin, end + 1);
+            return *mSet.insert(s);
+        }
+    }
+private:
+    OWordStream mOS;
+    OpenAddressingHashTable<InterningString, InterningStringHash_Str, InterningStringEqual_Str> mSet;
 };
 
 template<typename StringPoolT>
@@ -286,7 +359,7 @@ static void go() {
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        fprintf(stderr, "Usage : %s 0/1/2/3\n", argv[0]);
+        fprintf(stderr, "Usage : %s 0-5\n", argv[0]);
         return 1;
     }
 
@@ -295,7 +368,8 @@ int main(int argc, char *argv[]) {
         case 1: GO(StringPool_Set); break;
         case 2: GO(StringPool_Hash); break;
         case 3: GO(StringPool_OStream); break;
-        case 4: GO(StringPool_OStreamOpenListHash); break;
+        case 4: GO(StringPool_OStreamChainingHash); break;
+        case 5: GO(StringPool_OStreamOpenAddressingHash); break;
         default: break;
     }
 }

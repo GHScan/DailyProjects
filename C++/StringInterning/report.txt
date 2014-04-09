@@ -12,13 +12,17 @@ C++:
     -> 1.22s, 36.032M
 
     ./randGen "0123456789" 1000000 5 12 | ./main 4
-    -> 1.17s, 22.744M
+    -> 1.09s, 26.208M
+
+    ./randGen "0123456789" 1000000 5 12 | ./main 5
+    -> 1.16s, 25.472M
 
     @result:
-        StringPool_Set              : 1.40s, 48.836M
-        StringPool_Hash             : 0.46s, 45.736M
-        StringPool_OStream          : 0.43s, 35.147M
-        StringPool_OStreamManuHash  : 0.38s, 20.980M
+        StringPool_Set                          : 1.40s, 48.836M
+        StringPool_Hash                         : 0.46s, 45.736M
+        StringPool_OStream                      : 0.43s, 35.147M
+        StringPool_OStreamChainingHash          : 0.30s, 25.323M
+        StringPool_OStreamOpenAddressingHash    : 0.37s, 24.590M
 
 Python:
     ./randGen "0123456789" 1000000 5 12 | python interning.py empty
