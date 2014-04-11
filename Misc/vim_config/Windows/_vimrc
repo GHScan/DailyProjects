@@ -84,3 +84,7 @@ if has("autocmd")
   autocmd Filetype java setlocal omnifunc=javacomplete#Complete
   autocmd Filetype java setlocal completefunc=javacomplete#CompleteParamsInfo
 endif
+
+if filereadable("./workspace_vimrc")
+    source ./workspace_vimrc
+endif
