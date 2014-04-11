@@ -1,0 +1,29 @@
+#ifndef CONFIG_H
+#define CONFIG_H
+
+// version
+#define     by_BYZANTINE_VERSION  "1.0.0"
+
+// build type
+#cmakedefine    by_DEBUG
+
+// word size
+#cmakedefine    by_64BIT
+
+// compiler type
+#cmakedefine    by_MSVC
+#cmakedefine    by_GCC
+
+// OS type
+#cmakedefine    by_WINDOWS
+#cmakedefine    by_LINUX
+#cmakedefine    by_DARWIN
+
+// others
+#if defined(by_MSVC)
+#define     by_FUNCTION     __FUNCTION__
+#elif defined(by_GCC)
+#define     by_FUNCTION     __func__
+#endif
+
+#endif
