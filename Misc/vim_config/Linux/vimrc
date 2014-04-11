@@ -40,7 +40,7 @@ nnoremap <silent><F5>   :cp<CR>
 nnoremap <silent><F6>   :cn<CR>
 nnoremap <silent><F8>   :!./main<CR>
 
-command Analyze !cppcheck --enable=all --inconclusive --std=posix --std=c++11 --suppress=missingIncludeSystem .
+command Analyze !cppcheck -j4 --enable=all --inconclusive --std=posix --std=c++11 --suppress=missingIncludeSystem . 2>_err.txt
 
 set fileencodings=ucs-bom,utf-8,cp936,gb18030,big5,euc-jp,euc-kr,latin1
 
@@ -65,4 +65,8 @@ let clang_complete_patterns = 1 "补全代码块，如循环结构
 if has("autocmd")
   autocmd Filetype java setlocal omnifunc=javacomplete#Complete
   autocmd Filetype java setlocal completefunc=javacomplete#CompleteParamsInfo
+endif
+
+if filereadable("./workspace_vimrc")
+    source ./workspace_vimrc
 endif
