@@ -10,4 +10,5 @@
 //#include "skipList.h"
 //#include "randSeq.h"
 //#include "memPoolTest.h"
-#include "hash.h"
+//#include "hash.h"
+#include "arithmeticSimulation.h"
