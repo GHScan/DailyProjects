@@ -1,6 +1,6 @@
 #include "pch.h"
 
-//#include "sort.h"
+#include "sort.h"
 //#include "rotate.h"
 //#include "binarySearch.h"
 //#include "list.h"
@@ -11,4 +11,4 @@
 //#include "randSeq.h"
 //#include "memPoolTest.h"
 //#include "hash.h"
-#include "arithmeticSimulation.h"
+//#include "arithmeticSimulation.h"

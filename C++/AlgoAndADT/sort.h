@@ -197,6 +197,50 @@ static void mergeSort_moveAndInplace_insertion(T *begin, T *end) {
     _mergeSortInplace3(begin, end, &_temp[0]);
 }
 
+template<typename T>
+static void _mergeCombineWithHalfTempSpace(T *begin, T *mid, T *end, T *temp) {
+    assert(mid - begin >= end - mid);
+    if (end - mid == 0) return;
+
+    T *tempEnd = temp + (mid - begin);
+
+    T *p1 = begin, *p2 = mid;
+    for (T *p = temp; p != tempEnd; ++p) {
+        if (p1 == mid) {
+            *p = *p2++;
+        } else if (p2 == end) {
+            *p = *p1++;
+        } else {
+            if (*p1 < *p2) *p = *p1++;
+            else *p = *p2++;
+        }
+    }
+
+    int step = p1 - begin;
+    T *tempDest = begin, *p1Dest = temp;
+    for (T *tempSrc = temp; tempSrc != tempEnd; ) {
+        for (int i = min(step, tempEnd - tempSrc); i > 0; --i) *tempDest++ = *tempSrc++;
+        for (int i = min(step, mid - p1); i > 0; --i) *p1Dest++ = *p1++;
+    }
+    assert(p1 == mid);
+    assert((p1Dest - temp) + (end - p2) == end - mid);
+
+    T *p2Dest = p1Dest;
+    for (; p2 != end; ) *p2Dest++ = *p2++;
+    assert(p2Dest - temp == end - mid);
+
+    _mergeCombine(temp, p1Dest, p1Dest, p2Dest, mid);
+}
+template<typename T>
+static void mergeSort_halfTempSpace(T *begin, T *end) {
+    static vector<T> _temp;
+    _temp.resize((end - begin + 1) / 2);
+    T *mid = begin + (end - begin + 1) / 2;
+    _mergeSortInplace3(begin, mid, &_temp[0]);
+    _mergeSortInplace3(mid, end, &_temp[0]);
+    _mergeCombineWithHalfTempSpace(begin, mid, end, &_temp[0]);
+}
+
 #ifdef _MSC_VER
 template<typename T>
 static void mergeSort_iteration(T *begin, T *end) {
@@ -830,6 +874,7 @@ int main() {
         ITEM(mergeSort_move, 0),
         ITEM(mergeSort_moveAndInplace, 0),
         ITEM(mergeSort_moveAndInplace_insertion, 0),
+        ITEM(mergeSort_halfTempSpace, 0),
         ITEM(quickSort, 0),
         ITEM(quickSort_3way, 0),
         ITEM(quickSort_guard, 0),
