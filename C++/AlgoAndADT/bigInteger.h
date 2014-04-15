@@ -45,9 +45,7 @@ private:
     }
     static string toString(const Buffer &buf) {
         uint32_t n = 1, divisor = 10;
-        for (; divisor < BASE; divisor *= 10, ++n);
-        --n;  divisor /= 10;
-        assert(divisor < BASE);
+        for (; divisor * 10 < BASE; divisor *= 10, ++n);
 
         ostringstream so;
 

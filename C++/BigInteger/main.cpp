@@ -567,13 +567,14 @@ public:
         return mNegative ? -d : d;
     }
     string& toString(string& s, int base) const {
+        assert(base >= 0 && base < 36);
+
         s.clear();
 
         Char2DigitTable *table = Char2DigitTable::instance();
 
-        int groupSize = (int)::floor(Ops::LOG_BASE / ::log(base));
-        int groupValue = (int)::pow(base, groupSize);
-        assert(groupValue < (int)Ops::BASE);
+        int groupSize = 1 , groupValue = base;
+        for (; groupValue * base < Ops::BASE; groupValue *= base, ++groupSize);
 
         BufferT tempBuf(mBuf);
         for (; tempBuf.size() > 1 || tempBuf.back() >= groupValue; ) {
@@ -788,6 +789,25 @@ public:
         return r;
     }
 
+    BigInteger& operator ++ () {
+        *this += 1;
+        return *this;
+    }
+    BigInteger operator ++ (int) {
+        BigInteger old(*this);
+        ++*this;
+        return old;
+    }
+    BigInteger& operator -- () {
+        *this -= 1;
+        return *this;
+    }
+    BigInteger operator -- (int) {
+        BigInteger old(*this);
+        --*this;
+        return old;
+    }
+
     int compareABS(const BigInteger& o) const {
         return Ops::compare(mBuf.ptr(), mBuf.size(), o.mBuf.ptr(), o.mBuf.size());
     }
@@ -865,7 +885,7 @@ inline istream& operator >> (istream &si, BigInteger &i) {
 
 static void correctnessTest() {
     BigInteger big(1);
-    for (int i = 37; i < 3997; ++i) big *= i;
+    for (BigInteger i = 37; i < 3997; ++i) big *= i;
 
 #define CHECK_MOD(mod, value) assert((big % mod).toInt<int>() == value)
     CHECK_MOD(2137442214, 941586270);
