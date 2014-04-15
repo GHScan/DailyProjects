@@ -131,6 +131,7 @@ private:
 
 template<typename T, typename DoubleT, typename TripleT>
 struct ExtendedPreciseOp {
+    static const int GAUSS_MULTIPLY_CUTOFF = 128 / sizeof(T);
     static const DoubleT BASE = DoubleT(1) << (sizeof(T) * 8);
     static double LOG_BASE;
     static double logBase(double f) {
@@ -184,7 +185,7 @@ struct ExtendedPreciseOp {
         }
 
         assert(carry < BASE);
-        add_1_to_n(x + ny, nx - ny, carry, pcarry);
+        if (carry) add_1_to_n(x + ny, nx - ny, carry, pcarry);
     }
     static void sub_1_from_n(T * RESTRICT x, int nx, T y, T * RESTRICT pborrow = nullptr) {
         DoubleT borrow = y;
@@ -251,7 +252,7 @@ struct ExtendedPreciseOp {
         }
 
         assert(carry < BASE);
-        add_1_to_n(r + nx, nr - nx, carry);
+        if (carry) add_1_to_n(r + nx, nr - nx, carry);
     }
     static void mul_m_to_n(T * RESTRICT r, int nr, const T * RESTRICT x, int nx, const T * RESTRICT y, int ny) {
         assert(length(x, nx) == nx && length(y, ny) == ny);
@@ -282,14 +283,10 @@ struct ExtendedPreciseOp {
         nx = length(x, nx);
         ny = length(y, ny);
         if (nx != ny) {
-            _gauss_mul_m_to_n(r, nr, x, nx, y, nx, tmp, nt);
+            _gauss_mul_m_to_n(r, nr, x, nx, y, ny, tmp, nt);
             return;
         }
-        // 30: 0.14, 0.41
-        // 50: 0.118, 0.353
-        // 64: 0.118, 0.352
-        // 96: 0.136, 0.409
-        if (nx <= 64) {
+        if (nx <= GAUSS_MULTIPLY_CUTOFF) {
             _gauss_mul_m_to_n_directly(r, nr, x, nx, y, nx);
             return;
         }
@@ -388,6 +385,70 @@ struct ExtendedPreciseOp {
     static void gauss_mul_m_to_n(T * RESTRICT r, int nr, const T * RESTRICT x, int nx, const T * RESTRICT y, int ny, T * RESTRICT tmp, int nt) {
         assert(isZero(r, length(r, nr)));
         _gauss_mul_m_to_n(r, nr, x, nx, y, ny, tmp, nt);
+    }
+    static void _square_small(T * RESTRICT r, int nr, const T * RESTRICT x, int nx) {
+        assert(length(x, nx) == nx);
+        assert(nr >= 2 * nx);
+        assert(r != x);
+
+        for (int i = 0; i < nx; ++i) {
+            TripleT v = x[i];
+            TripleT carry = r[i + i] + v * v;
+            r[i + i] = carry % BASE;
+            carry /= BASE;
+
+            v *= 2;
+            for (int j = i + 1; j < nx; ++j) {
+                carry += r[i + j] + x[j] * v;
+                r[i + j] = carry % BASE;
+                carry /= BASE;
+            }
+            for (int j = i + nx; j < nr && carry; ++j) {
+                carry += r[j];
+                r[j] = carry % BASE;
+                carry /= BASE;
+            }
+            assert(carry < BASE);
+        }
+    }
+    static void _square(T * RESTRICT r, int nr, const T * RESTRICT x, int nx, T * RESTRICT tmp, int nt) {
+        assert(length(x, nx) == nx);
+        assert(nr >= 2 * nx);
+        assert(nt >= 3 * nx);
+        assert(r != x && r != tmp);
+
+        if (nx <= GAUSS_MULTIPLY_CUTOFF) {
+            // _square_small(r, nr, x, nx);
+            _gauss_mul_m_to_n_directly(r, nr, x, nx, x, nx);
+            return;
+        }
+
+        int half = (nx + 1) / 2;
+        const T* a = x + half, *b = x;
+        int na = nx - half, nb = half;
+        na = length(a, na);
+        nb = length(b, nb);
+
+        _square(r, nr, b, nb, tmp, nt);
+        _square(r + 2 * half, nr - 2 * half, a, na, tmp, nt);
+
+        T *ab = tmp;
+        int nab = na + nb;
+        setZero(ab, nab);
+        _gauss_mul_m_to_n(ab, nab, a, na, b, nb, ab + nab, nt - nab);
+        nab = length(ab, nab);
+        mul_1_to_n(ab, nab + 1, ab, nab, 2);
+        nab = length(ab, nab + 1);
+        add_m_to_n(r + half, nr - half, ab, nab);
+    }
+    static void square(T * RESTRICT r, int nr, const T * RESTRICT x, int nx, T * RESTRICT tmp, int nt) {
+        assert(isZero(r, length(r, nr)));
+        assert(length(x, nx) == nx);
+        assert(nr == nx * 2);
+        assert(nt >= nx * 3);
+        assert(r != x && r != tmp);
+
+        _square(r, nr, x, nx, tmp, nt);
     }
     static T div_1_from_n(T * RESTRICT x, int nx, T y) {
         assert(length(x, nx) == nx);
@@ -684,7 +745,7 @@ public:
     }
     BigInteger& operator *= (const BigInteger &o) {
         if (this == &o) {
-            // Ok
+            return *this = square();
         }
 
         // O(N^2)
@@ -786,6 +847,15 @@ public:
             }
         }
 
+        return r;
+    }
+    BigInteger square() const {
+        BufferT result(mBuf.size() * 2), tmpBuf(mBuf.size() * 3 + 32);
+        Ops::square(result.ptr(), result.size(), mBuf.ptr(), mBuf.size(), tmpBuf.ptr(), tmpBuf.size());
+        result.resize(Ops::length(result.ptr(), result.size()));
+
+        BigInteger r;
+        std::swap(r.mBuf, result);
         return r;
     }
 
