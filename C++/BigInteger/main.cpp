@@ -1,12 +1,15 @@
 #include "pch.h"
 
-#include <assert.h>
 #include <stdint.h>
 
 #include <type_traits>
 #include <limits>
 
+#ifdef __GNUC__
 #define RESTRICT __restrict__
+#else
+#define RESTRICT __restrict
+#endif
 
 class Char2DigitTable {
 public:
@@ -102,10 +105,12 @@ public:
     void reserve(int capacity) {
         if (capacity <= mCapacity) return;
         if (isDynamicBuffer()) {
-            mBuf = (T*)realloc(mBuf, capacity * sizeof(T));
+            if (T *p = (T*)realloc(mBuf, capacity * sizeof(T))) mBuf = p;
+            else assert(0);
         } else {
             mBuf = (T*)malloc(capacity * sizeof(T));
-            memcpy(mBuf, mStaticBuffer, sizeof(mStaticBuffer));
+            if (mBuf == nullptr) assert(0);
+            else memcpy(mBuf, mStaticBuffer, sizeof(mStaticBuffer));
         }
         mCapacity = capacity;
     }
@@ -126,220 +131,354 @@ private:
 
 template<typename T, typename DoubleT, typename TripleT>
 struct ExtendedPreciseOp {
-    static const DoubleT BASE = 1 << (sizeof(T) * 8);
+    static const DoubleT BASE = DoubleT(1) << (sizeof(T) * 8);
     static double LOG_BASE;
     static double logBase(double f) {
         return ::log(f) / LOG_BASE;
     }
 
-    static int length(const T *a, int na) {
-        for (; na > 1 && a[na - 1] == 0; --na);
-        return na;
+    static int length(const T *x, int nx) {
+        for (; nx > 1 && x[nx - 1] == 0; --nx);
+        return nx;
     }
-    static int compare(const T *a, const T *b, int n) {
+    static int compare(const T *x, const T *y, int n) {
         int i = n - 1;
-        for (; i > 0 && a[i] == b[i]; --i);
-        if (a[i] == b[i]) return 0;
-        else return a[i] > b[i] ? 1 : -1;
+        for (; i > 0 && x[i] == y[i]; --i);
+        if (x[i] == y[i]) return 0;
+        else return x[i] > y[i] ? 1 : -1;
     }
-    static int compare(const T *a, int na, const T *b, int nb) {
-        assert(length(a, na) == na && length(b, nb) == nb);
-        if (na != nb) return na > nb ? 1 : -1;
-        else return compare(a, b, na);
+    static int compare(const T *x, int nx, const T *y, int ny) {
+        assert(length(x, nx) == nx && length(y, ny) == ny);
+        if (nx != ny) return nx > ny ? 1 : -1;
+        else return compare(x, y, nx);
     }
-    static bool isZero(const T *a, int na) {
-        return na == 1 && a[0] == 0;
+    static bool isZero(const T *x, int nx) {
+        return nx == 1 && x[0] == 0;
     }
-    static void add_1_to_n(T * RESTRICT a, int na, T b) {
-        DoubleT carry = b;
-        for (int i = 0; i < na && carry != 0; ++i) {
-            carry += a[i];
-            a[i] = carry % BASE;
-            carry /= BASE;
-        }
-        assert(carry == 0);
+    static void setZero(T *x, int nx) {
+        for (int i = 0; i < nx; ++i) x[i] = T();
     }
-    static void add_m_to_n(T * RESTRICT a, int na, const T * RESTRICT b, int nb) {
-        assert(length(b, nb) == nb);
-        assert(max(length(a, na), nb) + 1 == na);
-        assert(a != b);
-
-        DoubleT carry = 0;
-        for (int i = 0; i < nb; ++i) {
-            carry += DoubleT(a[i]) + b[i];
-            a[i] = carry % BASE;
+    static void add_1_to_n(T * RESTRICT x, int nx, T y, T * RESTRICT pcarry = nullptr) {
+        DoubleT carry = y;
+        for (int i = 0; i < nx && carry != 0; ++i) {
+            carry += x[i];
+            x[i] = carry % BASE;
             carry /= BASE;
         }
 
         assert(carry < BASE);
-        add_1_to_n(a + nb, na - nb, carry);
+        if (pcarry != nullptr) {
+            assert(carry + *pcarry < BASE);
+            *pcarry += carry;
+        } else assert(carry == 0);
     }
-    static void sub_1_from_n(T * RESTRICT a, int na, T b) {
-        assert(na > 1 || a[0] >= b);
-        DoubleT borrow = b;
-        for (int i = 0; i < na && borrow != 0; ++i) {
-            if (a[i] >= borrow) {
-                a[i] -= borrow;
-                borrow = 0;
-            } else {
-                a[i] += BASE - borrow;
-                borrow = 1;
-            }
-        }
-        assert(borrow == 0);
-    }
-    static void sub_m_from_n(T * RESTRICT a, int na, const T * RESTRICT b, int nb) {
-        assert(length(a, na) == na);
-        assert(length(b, nb) == nb);
-        assert(compare(a, na, b, nb) >= 0);
-        assert(a != b);
+    static void add_m_to_n(T * RESTRICT x, int nx, const T * RESTRICT y, int ny, T * RESTRICT pcarry = nullptr) {
+        assert(length(y, ny) == ny);
+        assert(x != y);
 
-        DoubleT borrow = 0;
-        for (int i = 0; i < nb; ++i) {
-            borrow += b[i];
-            if (a[i] >= borrow) {
-                a[i] -= borrow;
+        DoubleT carry = 0;
+        for (int i = 0; i < ny; ++i) {
+            carry += DoubleT(x[i]) + y[i];
+            x[i] = carry % BASE;
+            carry /= BASE;
+        }
+
+        assert(carry < BASE);
+        add_1_to_n(x + ny, nx - ny, carry, pcarry);
+    }
+    static void sub_1_from_n(T * RESTRICT x, int nx, T y, T * RESTRICT pborrow = nullptr) {
+        DoubleT borrow = y;
+        for (int i = 0; i < nx && borrow != 0; ++i) {
+            if (x[i] >= borrow) {
+                x[i] -= borrow;
                 borrow = 0;
             } else {
-                a[i] += BASE - borrow;
+                x[i] += BASE - borrow;
                 borrow = 1;
             }
         }
 
         assert(borrow < BASE);
-        sub_1_from_n(a + nb, na - nb, borrow);
+        if (pborrow != nullptr) {
+            assert(borrow + *pborrow < BASE);
+            *pborrow += borrow;
+        } else assert(borrow == 0);
     }
-    static void mul_1_to_n(T * r, int nr, const T * a, int na, T b) {
-        assert(length(a, na) == na);
-        assert(nr == na + 1);
-        // assert(r != a);
+    static void sub_m_from_n(T * RESTRICT x, int nx, const T * RESTRICT y, int ny, T * RESTRICT pborrow = nullptr) {
+        assert(length(x, nx) == nx);
+        assert(length(y, ny) == ny);
+        assert(x != y);
+
+        DoubleT borrow = 0;
+        for (int i = 0; i < ny; ++i) {
+            borrow += y[i];
+            if (x[i] >= borrow) {
+                x[i] -= borrow;
+                borrow = 0;
+            } else {
+                x[i] += BASE - borrow;
+                borrow = 1;
+            }
+        }
+
+        assert(borrow < BASE);
+        sub_1_from_n(x + ny, nx - ny, borrow, pborrow);
+    }
+    static void mul_1_to_n(T * r, int nr, const T * x, int nx, T y) {
+        assert(length(x, nx) == nx);
+        assert(nr == nx + 1);
+        // assert(r != x);
 
         DoubleT carry = 0;
-        for (int i = 0; i < na; ++i) {
-            carry += DoubleT(a[i]) * b;
+        for (int i = 0; i < nx; ++i) {
+            carry += DoubleT(x[i]) * y;
             r[i] = carry % BASE;
             carry /= BASE;
         }
         assert(carry < BASE);
-        r[na] = carry;
+        r[nx] = carry;
     }
-    static void mul_1_to_n_accum(T * RESTRICT r, int nr, const T * RESTRICT a, int na, T b) {
-        assert(length(a, na) == na);
-        assert(nr > na);
-        assert(r != a);
+    static void mul_1_to_n_accum(T * RESTRICT r, int nr, const T * RESTRICT x, int nx, T y) {
+        assert(length(x, nx) == nx);
+        assert(nr > nx);
+        assert(r != x);
 
         DoubleT carry = 0;
-        for (int i = 0; i < na; ++i) {
-            carry += DoubleT(a[i]) * b + r[i];
+        for (int i = 0; i < nx; ++i) {
+            carry += DoubleT(x[i]) * y + r[i];
             r[i] = carry % BASE;
             carry /= BASE;
         }
 
         assert(carry < BASE);
-        add_1_to_n(r + na, nr - na, carry);
+        add_1_to_n(r + nx, nr - nx, carry);
     }
-    static void mul_m_to_n(T * RESTRICT r, int nr, const T * RESTRICT a, int na, const T * RESTRICT b, int nb) {
-        assert(length(a, na) == na);
-        assert(length(b, nb) == nb);
-        assert(na >= nb);
-        assert(nr == na + nb);
+    static void mul_m_to_n(T * RESTRICT r, int nr, const T * RESTRICT x, int nx, const T * RESTRICT y, int ny) {
+        assert(length(x, nx) == nx && length(y, ny) == ny);
+        assert(nx >= ny);
         assert(isZero(r, length(r, nr)));
-        assert(r != a && r != b);
+        assert(nr == nx + ny);
+        assert(r != x && r != y);
 
-        for (int i = 0; i < nb; ++i) {
-            mul_1_to_n_accum(r + i, nr - i, a, na, b[i]);
+        for (int i = 0; i < ny; ++i) {
+            mul_1_to_n_accum(r + i, nr - i, x, nx, y[i]);
         }
     }
-    static T div_1_from_n(T * RESTRICT a, int na, T b) {
-        assert(length(a, na) == na);
-        assert(compare(a, na, &b, 1) >= 0);
+
+    static void _gauss_mul_m_to_n_directly(T * RESTRICT r, int nr, const T * RESTRICT x, int nx, const T * RESTRICT y, int ny) {
+        assert(length(x, nx) == nx && length(y, ny) == ny);
+        assert(nx >= ny);
+        assert(nr >= nx + ny);
+        assert(r != x && r != y);
+        if (isZero(x, nx) || isZero(y, ny)) return;
+
+        for (int i = 0; i < ny; ++i) {
+            mul_1_to_n_accum(r + i, nr - i, x, nx, y[i]);
+        }
+    }
+    static void _gauss_mul_m_to_m(T * RESTRICT r, int nr, const T * RESTRICT x, int nx, const T * RESTRICT y, int ny, T * RESTRICT tmp, int nt) {
+        assert(nr >= nx * 2);
+        assert(nt >= nx * 4);
+        nx = length(x, nx);
+        ny = length(y, ny);
+        if (nx != ny) {
+            _gauss_mul_m_to_n(r, nr, x, nx, y, nx, tmp, nt);
+            return;
+        }
+        // 30: 0.14, 0.41
+        // 50: 0.118, 0.353
+        // 64: 0.118, 0.352
+        // 96: 0.136, 0.409
+        if (nx <= 64) {
+            _gauss_mul_m_to_n_directly(r, nr, x, nx, y, nx);
+            return;
+        }
+
+        int half = (nx + 1) / 2;
+        const T* a = x + half, *b = x, *c = y + half, *d = y;
+        int na = nx - half, nb = half, nc = nx - half, nd = half;
+
+        T carry = 0, borrow = 0;
+        // ac
+        {
+            int nac = na + nc;
+            setZero(tmp, nac);
+            _gauss_mul_m_to_m(tmp, nac, a, na, c, nc, tmp + nac, nt - nac);
+            nac = length(tmp, nac);
+            add_m_to_n(r + half, nr - half, tmp, nac, &carry);
+            add_m_to_n(r + 2 * half, nr - 2 * half, tmp, nac, &carry);
+        }
+        // bd
+        {
+            int nbd = nb + nd;
+            setZero(tmp, nbd);
+            _gauss_mul_m_to_m(tmp, nbd, b, nb, d, nd, tmp + nbd, nt - nbd);
+            nbd = length(tmp, nbd);
+            add_m_to_n(r, nr, tmp, nbd, &carry);
+            add_m_to_n(r + half, nr - half, tmp, nbd, &carry);
+        }
+        // (a-b)(d-c)
+        {
+            bool positive = true;
+            na = length(a, na), nb = length(b, nb), nc = length(c, nc), nd = length(d, nd);
+            T *ab, *dc;
+            int nab, ndc;
+
+            ab = tmp;
+            if (compare(a, na, b, nb) >= 0) {
+                for (nab = 0; nab < na; ++nab) ab[nab] = a[nab];
+                sub_m_from_n(ab, nab, b, nb);
+            } else {
+                positive = !positive;
+                for (nab = 0; nab < nb; ++nab) ab[nab] = b[nab];
+                sub_m_from_n(ab, nab, a, na);
+            }
+            nab = length(ab, nab);
+
+            dc = ab + nab;
+            if (compare(d, nd, c, nc) >= 0) {
+                for (ndc = 0; ndc < nd; ++ndc) dc[ndc] = d[ndc];
+                sub_m_from_n(dc, ndc, c, nc);
+            } else {
+                positive = !positive;
+                for (ndc = 0; ndc < nc; ++ndc) dc[ndc] = c[ndc];
+                sub_m_from_n(dc, ndc, d, nd);
+            }
+            ndc = length(dc, ndc);
+
+            if (positive) {
+                _gauss_mul_m_to_n(r + half, nr - half, ab, nab, dc, ndc, dc + ndc, nt - nab - ndc);
+            } else {
+                T *tr = dc + ndc; 
+                int ntr = nab + ndc;
+                setZero(tr, ntr);
+                _gauss_mul_m_to_n(tr, ntr, ab, nab, dc, ndc, tr + ntr, nt - nab - ndc - ntr);
+                ntr = length(tr, ntr);
+                sub_m_from_n(r + half, length(r + half, nr - half), tr, ntr, &borrow);
+            }
+        }
+        assert(carry - borrow == 0);
+    }
+    static void _gauss_mul_m_to_n(T * RESTRICT r, int nr, const T * RESTRICT x, int nx, const T * RESTRICT y, int ny, T * RESTRICT tmp, int nt) {
+        assert(length(x, nx) == nx && length(y, ny) == ny);
+        if (nx < ny) {
+            _gauss_mul_m_to_n(r, nr, y, ny, x, nx, tmp, nt);
+            return;
+        } else if (nx == ny) {
+            _gauss_mul_m_to_m(r, nr, x, nx, y, ny, tmp, nt);
+            return;
+        }
+        assert(nx >= ny && ny > 0);
+        if (ny < 3) {
+            _gauss_mul_m_to_n_directly(r, nr, x, nx, y, ny);
+            return;
+        }
+        assert(nr >= nx + ny);
+        assert(r != x && r != y);
+        assert(nt >= 4 * ny);
+
+        int i = 0;
+        for (; i + ny <= nx; i += ny) {
+            _gauss_mul_m_to_m(r + i, nr - i, x + i, ny, y, ny, tmp, nt);
+        }
+        if (i < nx) {
+            _gauss_mul_m_to_n(r + i, nr - i, y, ny, x + i, nx - i, tmp, nt);
+        }
+    }
+    static void gauss_mul_m_to_n(T * RESTRICT r, int nr, const T * RESTRICT x, int nx, const T * RESTRICT y, int ny, T * RESTRICT tmp, int nt) {
+        assert(isZero(r, length(r, nr)));
+        _gauss_mul_m_to_n(r, nr, x, nx, y, ny, tmp, nt);
+    }
+    static T div_1_from_n(T * RESTRICT x, int nx, T y) {
+        assert(length(x, nx) == nx);
+        assert(compare(x, nx, &y, 1) >= 0);
 
         DoubleT remain = 0;
-        for (int i = na - 1; i >= 0; --i) {
-            remain = remain * BASE + a[i];
-            a[i] = remain / b;
-            remain %= b;
+        for (int i = nx - 1; i >= 0; --i) {
+            remain = remain * BASE + x[i];
+            x[i] = remain / y;
+            remain %= y;
         }
         return remain;
     }
-    static T div_n_from_nplus1(T * RESTRICT a, int na, const T * RESTRICT b, int nb, T * RESTRICT temp, int nt) {
-        assert(length(b, nb) == nb);
-        assert(na == nb + 1);
-        assert(na == nt);
-        assert(nb >= 2);
-        assert(a != b && a != temp && b != temp);
+    static T div_n_from_nplus1(T * RESTRICT x, int nx, const T * RESTRICT y, int ny, T * RESTRICT temp, int nt) {
+        assert(length(y, ny) == ny);
+        assert(nx == ny + 1);
+        assert(nx == nt);
+        assert(ny >= 2);
+        assert(x != y && x != temp && y != temp);
 
-        TripleT _a(a[na - 1]);
-        _a = _a * BASE + a[na - 2];
-        _a = _a * BASE + a[na - 3];
-        TripleT _b(b[nb - 1]);
-        _b = _b * BASE + b[nb - 2];
+        TripleT _a(x[nx - 1]);
+        _a = _a * BASE + x[nx - 2];
+        _a = _a * BASE + x[nx - 3];
+        TripleT _b(y[ny - 1]);
+        _b = _b * BASE + y[ny - 2];
 
         assert(_a / _b < BASE);
-        T q = _a / _b;
-        mul_1_to_n(temp, nt, b, nb, q);
-        if (compare(a, temp, na) < 0) {
+        T q = T(_a / _b);
+        mul_1_to_n(temp, nt, y, ny, q);
+        if (compare(x, temp, nx) < 0) {
             --q;
-            mul_1_to_n(temp, nt, b, nb, q);
+            mul_1_to_n(temp, nt, y, ny, q);
         }
-        sub_m_from_n(a, na, temp, nt);
+        sub_m_from_n(x, length(x, nx), temp, length(temp, nt));
 
         return q;
     }
-    static void div_m_from_n(T * RESTRICT a, int na, const T * RESTRICT b, int nb, T * RESTRICT q, int nq, T * RESTRICT temp, int nt) {
-        assert(length(b, nb) == nb);
-        assert(length(a, na) + 1 == na);
-        assert(compare(a, na - 1, b, nb) >= 0);
-        assert(q == nullptr || na - 1 - (nb - 1) == nq);
-        assert(nt == nb + 1);
-        assert(nb >= 2);
-        assert(a != b && a != q && a != temp);
-        assert(b != q && b != temp && q != temp);
+    static void div_m_from_n(T * RESTRICT x, int nx, const T * RESTRICT y, int ny, T * RESTRICT q, int nq, T * RESTRICT temp, int nt) {
+        assert(length(y, ny) == ny);
+        assert(length(x, nx) + 1 == nx);
+        assert(compare(x, nx - 1, y, ny) >= 0);
+        assert(q == nullptr || nx - 1 - (ny - 1) == nq);
+        assert(nt == ny + 1);
+        assert(ny >= 2);
+        assert(x != y && x != q && x != temp);
+        assert(y != q && y != temp && q != temp);
 
-        for (int i = na - nb - 1; i >= 0; --i) {
-            T k = div_n_from_nplus1(a + i, nb + 1, b, nb, temp, nt);
+        for (int i = nx - ny - 1; i >= 0; --i) {
+            T k = div_n_from_nplus1(x + i, ny + 1, y, ny, temp, nt);
             if (q != nullptr) q[i] = k;
         }
     }
     template<typename UintT>
-    static void convertFromUint(T *a, int na, UintT v, typename enable_if<!is_signed<UintT>::value, void>::type* =0) {
-        assert(sizeof(na * sizeof(T) >= sizeof(UintT)));
+    static void convertFromUint(T *x, int nx, UintT v, typename enable_if<!is_signed<UintT>::value, void>::type* =0) {
+        assert(nx * sizeof(T) >= sizeof(UintT));
         int i = 0;
-        for (; i < na && v > 0; ++i) {
-            a[i] = v % BASE;
+        for (; i < nx && v > 0; ++i) {
+            x[i] = v % BASE;
             v /= BASE;
         }
-        for (; i < na; ++i) a[i] = 0;
+        for (; i < nx; ++i) x[i] = 0;
         assert(v == 0);
     }
     template<typename UintT>
-    static UintT convertToUint(const T* a, int na, typename enable_if<!is_signed<UintT>::value, void>::type* =0) {
-        assert(sizeof(na * sizeof(T) <= sizeof(UintT)));
-        assert(length(a, na) == na);
+    static UintT convertToUint(const T* x, int nx, typename enable_if<!is_signed<UintT>::value, void>::type* =0) {
+        assert(nx * sizeof(T) <= sizeof(UintT));
+        assert(length(x, nx) == nx);
         UintT v = 0;
-        for (int i = na - 1; i >= 0; --i) {
-            v = v * BASE + a[i];
+        for (int i = nx - 1; i >= 0; --i) {
+            v = v * BASE + x[i];
         }
         return v;
     }
-    static void convertFromDouble(T *a, int na, double f) {
+    static void convertFromDouble(T *x, int nx, double f) {
         assert(f >= 0);
-        assert(na >= (int)ceil(logBase(f)));
+        assert(nx >= (int)ceil(logBase(f)));
         double fbase = BASE;
         int i = 0;
-        for (; i < na && f > 0; ++i) {
-            a[i] = (T)fmod(f, fbase);
+        for (; i < nx && f > 0; ++i) {
+            x[i] = (T)fmod(f, fbase);
             f = floor(f / fbase);
         }
-        for (; i < na; ++i) a[i] = 0;
+        for (; i < nx; ++i) x[i] = 0;
         assert(f == 0);
     }
-    static double convertToDouble(const T *a, int na) {
-        assert(length(a, na) == na);
-        assert(na <= logBase(numeric_limits<double>::max()));
+    static double convertToDouble(const T *x, int nx) {
+        assert(length(x, nx) == nx);
+        assert(nx <= logBase(numeric_limits<double>::max()));
         double r = 0, fbase = BASE;
-        for (int i = na - 1; i >= 0; --i) {
-            r = r * fbase + a[i];
+        for (int i = nx - 1; i >= 0; --i) {
+            r = r * fbase + x[i];
         }
         return r;
     }
@@ -349,8 +488,11 @@ double ExtendedPreciseOp<T, DoubleT, TripleT>::LOG_BASE = ::log(BASE);
 
 class BigInteger {
 private:
-    typedef uint8_t T;
-    typedef ExtendedPreciseOp<T, uint32_t, uint32_t> Ops;
+    //typedef uint8_t T;
+    //typedef ExtendedPreciseOp<T, uint32_t, uint32_t> Ops;
+    //typedef SmallVector<T, 16 / sizeof(T)> BufferT;
+    typedef uint16_t T;
+    typedef ExtendedPreciseOp<T, uint32_t, uint64_t> Ops;
     typedef SmallVector<T, 16 / sizeof(T)> BufferT;
 
 public:
@@ -382,9 +524,9 @@ public:
 
         char sign = '+';
         const char *p = str;
-        while (isspace(*p)) ++p;
+        while (isspace((uint8_t)*p)) ++p;
         if (*p == '+' || *p == '-') sign = *p++;
-        while (isspace(*p)) ++p;
+        while (isspace((uint8_t)*p)) ++p;
         const char *digits = p;
         for (; *p && table->toDigit(*p, base) != -1; ++p);
         if (p == digits) {
@@ -429,33 +571,47 @@ public:
 
         Char2DigitTable *table = Char2DigitTable::instance();
 
+        int groupSize = (int)::floor(Ops::LOG_BASE / ::log(base));
+        int groupValue = (int)::pow(base, groupSize);
+        assert(groupValue < Ops::BASE);
+
         BufferT tempBuf(mBuf);
-        for (; tempBuf.size() > 1 || tempBuf.back() >= base; ) {
-            T remain = Ops::div_1_from_n(tempBuf.ptr(), tempBuf.size(), base);
-            s += table->toChar(remain);
+        for (; tempBuf.size() > 1 || tempBuf.back() >= groupValue; ) {
+            T remain = Ops::div_1_from_n(tempBuf.ptr(), tempBuf.size(), groupValue);
             if (tempBuf.back() == 0) tempBuf.pop_back();
+            for (int i = 0; i < groupSize; ++i, remain /= base) {
+                s += table->toChar(remain % base);
+            }
         }
         assert(tempBuf.size() == 1);
 
-        s += table->toChar(tempBuf.back());
+        for (T v = tempBuf.back(); v > 0; v /= base) {
+            s += table->toChar(v % base);
+        }
         reverse(s.begin(), s.end());
         if (mNegative) s.insert(s.begin(), '-');
         
         return s;
     }
+    string toString(int base = 10) const {
+        string s;
+        toString(s, base);
+        return s;
+    }
 
     int log2Ceil() const {
         for (int i = 0; i < mBuf.size() - 1; ++i) {
-            if (mBuf[i]) return log2Floor() + 1;
+            if (mBuf[i]) return getBitCount();
         }
         T top = mBuf.back();
-        return log2Floor() + (((top - 1) & top) ? 1 : 0);
+        return getBitCount() + (((top - 1) & top) ? 0 : -1);
     }
-    int log2Floor() const {
+    int getBitCount() const {
         int i = sizeof(T) * 8 - 1;
         for (T top = mBuf.back(); !(top >> i); --i);
-        return i + (mBuf.size() - 1) * sizeof(T) * 8;
+        return i + 1 + (mBuf.size() - 1) * sizeof(T) * 8;
     }
+    int getBufferSize() const { return mBuf.size(); }
     const T* getBuffer() const { return mBuf.ptr(); }
 
     BigInteger(const BigInteger &o): BigInteger() {
@@ -527,14 +683,22 @@ public:
             // Ok
         }
 
-        BufferT tempBuf(mBuf.size() + o.mBuf.size());
-        if (mBuf.size() >= o.mBuf.size()) {
-            Ops::mul_m_to_n(tempBuf.ptr(), tempBuf.size(), mBuf.ptr(), mBuf.size(), o.mBuf.ptr(), o.mBuf.size());
-        } else {
-            Ops::mul_m_to_n(tempBuf.ptr(), tempBuf.size(), o.mBuf.ptr(), o.mBuf.size(), mBuf.ptr(), mBuf.size());
-        }
-        tempBuf.resize(Ops::length(tempBuf.ptr(), tempBuf.size()));
-        std::swap(mBuf, tempBuf);
+        // O(N^2)
+            //BufferT tempBuf(mBuf.size() + o.mBuf.size());
+            //if (mBuf.size() >= o.mBuf.size()) {
+            //    Ops::mul_m_to_n(tempBuf.ptr(), tempBuf.size(), mBuf.ptr(), mBuf.size(), o.mBuf.ptr(), o.mBuf.size());
+            //} else {
+            //    Ops::mul_m_to_n(tempBuf.ptr(), tempBuf.size(), o.mBuf.ptr(), o.mBuf.size(), mBuf.ptr(), mBuf.size());
+            //}
+            //tempBuf.resize(Ops::length(tempBuf.ptr(), tempBuf.size()));
+            //std::swap(mBuf, tempBuf);
+
+        // O(N^1.59)
+        BufferT result(mBuf.size() + o.mBuf.size());
+        BufferT tmp(min(mBuf.size(), o.mBuf.size()) * 4 + 32);
+        Ops::gauss_mul_m_to_n(result.ptr(), result.size(), o.mBuf.ptr(), o.mBuf.size(), mBuf.ptr(), mBuf.size(), tmp.ptr(), tmp.size());
+        result.resize(Ops::length(result.ptr(), result.size()));
+        std::swap(mBuf, result);
 
         mNegative = mNegative != o.mNegative;
 
@@ -608,7 +772,7 @@ public:
         if (mod != nullptr) accum %= *mod;
         for (int i = 0; i < o.mBuf.size(); ++i) {
             T v = o.mBuf[i];
-            for (int i = 0; i < int(sizeof(T)) * 8; ++i, v /= 2) {
+            for (int j = 0; j < int(sizeof(T)) * 8 && (v > 0 || i < o.mBuf.size() - 1); ++j, v /= 2) {
                 if (v & 1) {
                     r *= accum;
                     if (mod != nullptr) r %= *mod;
@@ -648,7 +812,7 @@ private:
             if (mNegative) return compareABS(o) > 0;
             else return compareABS(o) < 0;
         } else {
-            return mNegative;
+            return mNegative == 1;
         }
     }
     void normlizeZero() {
@@ -672,6 +836,7 @@ inline BigInteger operator - (BigInteger &&l, const BigInteger &r) { return move
 inline BigInteger operator * (const BigInteger &l, const BigInteger &r) { return BigInteger(l) *= r; }
 inline BigInteger operator * (BigInteger &&l, const BigInteger &r) { return move(l *= r); }
 inline BigInteger operator * (const BigInteger &l, BigInteger &&r) { return move(r *= l); }
+inline BigInteger operator * (BigInteger &&l, BigInteger &&r) { return move(r *= l); }
 inline BigInteger operator / (const BigInteger &l, const BigInteger &r) { return BigInteger(l) /= r; }
 inline BigInteger operator / (BigInteger &&l, const BigInteger &r) { return move(l /= r); }
 inline BigInteger operator % (const BigInteger &l, const BigInteger &r) { return BigInteger(l) %= r; }
@@ -685,9 +850,7 @@ inline bool operator <= (const BigInteger &l, const BigInteger &r) { return !(r 
 inline bool operator >= (const BigInteger &l, const BigInteger &r) { return !(l < r); }
 
 inline ostream& operator << (ostream &so, const BigInteger &i) {
-    string s;
-    i.toString(s, 10);
-    so << s;
+    so << i.toString();
     return so;
 }
 inline istream& operator >> (istream &si, BigInteger &i) {
@@ -697,11 +860,54 @@ inline istream& operator >> (istream &si, BigInteger &i) {
     return si;
 }
 
-int main() {
-    for (; cin;) {
-        BigInteger base(0), p(0);
-        cin >> base >> p;
-        cout << base.pow(p) << endl;
-        break;
+static void correctnessTest() {
+    BigInteger big(1);
+    for (int i = 37; i < 3997; ++i) big *= i;
+
+#define CHECK_MOD(mod, value) assert((big % mod).toInt<int>() == value)
+    CHECK_MOD(2137442214, 941586270);
+    CHECK_MOD(1593476709, 239985834);
+    CHECK_MOD(672706286, 422409064);
+    CHECK_MOD(1232087163, 858076431);
+    CHECK_MOD(1935794919, 1527939018);
+    CHECK_MOD(1902954453, 1055560455);
+    CHECK_MOD(602715690, 357563520);
+    CHECK_MOD(254874191, 102339237);
+    CHECK_MOD(127786646, 32322940);
+    CHECK_MOD(1833255524, 832052676);
+#undef CHECK_MOD
+}
+
+static void benchmark() {
+    BigInteger big(37);
+    for (int i = 10; i < 23; ++i) {
+        clock_t start = clock();
+        BigInteger r = big.pow(1<<i);
+        printf("%d=%d,%f\n", i, r.getBitCount(), float(clock() - start) / CLOCKS_PER_SEC);
     }
+}
+
+static void benchmark2() {
+    BigInteger big(1);
+    for (int i = 37; i < 3997; ++i) big *= i;
+
+    for (int i = 10; i < 23; ++i) {
+        clock_t start = clock();
+        for (int j = 2; j < (1<<i); ++j) big % j;
+        printf("%d=%f\n", i, float(clock() - start) / CLOCKS_PER_SEC);
+    }
+}
+
+static void benchmark3() {
+    BigInteger big(37);
+    for (int i = 10; i < 23; ++i) {
+        BigInteger r = big.pow(1<<i);
+        clock_t start = clock();
+        int len = (int)r.toString().size();
+        printf("%d=%d,%f\n", i, len, float(clock() - start) / CLOCKS_PER_SEC);
+    }
+}
+
+int main() {
+    correctnessTest();
 }
