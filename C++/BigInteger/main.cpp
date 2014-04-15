@@ -573,7 +573,7 @@ public:
 
         int groupSize = (int)::floor(Ops::LOG_BASE / ::log(base));
         int groupValue = (int)::pow(base, groupSize);
-        assert(groupValue < Ops::BASE);
+        assert(groupValue < (int)Ops::BASE);
 
         BufferT tempBuf(mBuf);
         for (; tempBuf.size() > 1 || tempBuf.back() >= groupValue; ) {
@@ -585,9 +585,12 @@ public:
         }
         assert(tempBuf.size() == 1);
 
-        for (T v = tempBuf.back(); v > 0; v /= base) {
+        T v = tempBuf.back();
+        for (; v >= base; v /= base) {
             s += table->toChar(v % base);
         }
+        s += table->toChar(v);
+
         reverse(s.begin(), s.end());
         if (mNegative) s.insert(s.begin(), '-');
         
