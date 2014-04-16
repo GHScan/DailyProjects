@@ -660,6 +660,7 @@ public:
         } else {
             if (o.mBuf.size() == 1) {
                 Ops::div_1_from_n(mBuf.ptr(), mBuf.size(), o.mBuf[0]);
+                mBuf.resize(Ops::length(mBuf.ptr(), mBuf.size()));
             } else {
                 BufferT qbuf(mBuf.size() - o.mBuf.size() + 1), tmpBuf(o.mBuf.size() + 1);
                 mBuf.push_back(0);

@@ -92,6 +92,10 @@ public:
     const T* ptr() const { return mBuf; }
     int size() const { return mSize; }
     bool isDynamicBuffer() const { return mBuf != mStaticBuffer;}
+    void assign(int size, const T &v) {
+        resize(size);
+        for (int i = 0; i < size; ++i) mBuf[i] = v;
+    }
     void resize(int size, const T &init = T()) {
         if (size > mSize) {
             reserve(size);

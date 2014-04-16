@@ -126,7 +126,7 @@ struct ExtendedPrecisionOp {
         assert(nr == na);
         assert(b < BASE);
 
-        T remain = 0;
+        DoubleT remain = 0;
         for (int i = na - 1; i >= 0; --i) {
             remain = remain * BASE + a[i];
             r[i] = remain / b;
@@ -282,13 +282,16 @@ struct ExtendedPrecisionOp {
         {
             T *RESTRICT a10 = t;
             int na10 = na1;
-            a10[na10] = add(a10, na10, a1, na1, a0, na0);
+            memcpy(a10, a1, na1 * sizeof(T));
+            a10[na10] = addInplace(a10, na10, a0, length(a0, na0));
             ++na10;
 
             T *RESTRICT b10 = a10 + na10;
             int nb10 = nb1;
-            b10[nb10] = add(b10, nb10, b1, nb1, b0, nb0);
+            memcpy(b10, b1, nb1 * sizeof(T));
+            b10[nb10] = addInplace(b10, nb10, b0, length(b0, nb0));
             ++nb10;
+
             _mulSameSizeAccumulate(r + half, nr - half, a10, b10, nb10, b10 + nb10, nt - na10 - nb10);
         }
         // a1b1
@@ -386,7 +389,7 @@ struct ExtendedPrecisionOp {
     }
     static void _squareAccumulate(T * RESTRICT r, int nr, const T * RESTRICT a, int na, T * RESTRICT t, int nt) {
         assert(r != a && r != t);
-        assert(nr == na * 2);
+        assert(nr >= na * 2);
         assert(nt >= na * 2);
 
         if (na <= RECURSIVE_LIMIT_N) {
@@ -432,6 +435,7 @@ struct ExtendedPrecisionOp {
         assert(na == nb + 1);
         assert(nt == nb + 1);
         assert(a != b);
+        assert(compare(a + 1, length(a + 1, na - 1), b, nb) < 0);
 
         TripleT _a(a[na - 1]);
         _a = _a * BASE + a[na - 2];
@@ -439,8 +443,13 @@ struct ExtendedPrecisionOp {
         TripleT _b(b[nb - 1]);
         _b = _b * BASE + b[nb - 2];
 
-        assert(_a / _b < BASE);
-        T q = _a / _b;
+        T q;
+        if (_a / _b < BASE) {
+            q = T(_a / _b);
+        } else {
+            assert(_a / _b == BASE);
+            q = BASE - 1;
+        }
 
         t[nt - 1] = mulSingle(t, nt - 1, b, nb, q);
         if (compare(a, t, na) < 0) {
@@ -453,6 +462,7 @@ struct ExtendedPrecisionOp {
         if (subInplace(a, na, t, nt)) {
             assert(0);
         }
+        assert(compare(a, length(a, na), b, nb) < 0);
 
         return q;
     }
@@ -495,23 +505,23 @@ struct ExtendedPrecisionOp {
     }
 
     static bool toDouble(double &d, const T* a, int na) {
-        static const int MAX_DOUBLE_BITS = floor(log(numeric_limits<double>::max()) / log(2));
+        static const int MAX_DOUBLE_BITS = (int)floor(log(numeric_limits<double>::max()) / log(2));
 
         d = 0;
         for (int i = na - 1; i >= 0; --i) {
             d = d * BASE + a[i];
         }
 
-        return na * sizeof(T) * 8 < MAX_DOUBLE_BITS;
+        return na * (int)sizeof(T) * 8 < MAX_DOUBLE_BITS;
     }
     static int fromDouble(T *a, int na, double d) {
         assert(d >= 0);
-        int requireN = ceil((log(d) / log(2)) / (sizeof(T) * 8));
+        int requireN = (int)ceil((log(d) / log(2)) / (sizeof(T) * 8));
         if (a == nullptr) return requireN;
         assert(na >= requireN);
 
         for (int i = 0; i < na; ++i) {
-            a[i] = fmod(d, BASE);
+            a[i] = (T)fmod(d, BASE);
             d = floor(d / BASE);
         }
         assert(d == 0);
@@ -520,7 +530,7 @@ struct ExtendedPrecisionOp {
     }
 
     static int fromString(T *a, int na, const char *str, int size, int base) {
-        const float tPerChar = (log(base) / log(2)) / (sizeof(T) * 8);
+        const double tPerChar = (log(base) / log(2)) / (sizeof(T) * 8);
         int requireN = (int)ceil(size * tPerChar);
         if (a == nullptr) return requireN;
         assert(na >= requireN);
@@ -565,7 +575,7 @@ struct ExtendedPrecisionOp {
     static int toString(char *str, int size, T *a, int na, int base) {
         assert(length(a, na) == na);
 
-        const float charPerT = (sizeof(T) * 8) / (log(base) / log(2));
+        const double charPerT = (sizeof(T) * 8) / (log(base) / log(2));
         int requireN = (int)ceil(na * charPerT);
         if (str == nullptr) return requireN;
         assert(size >= requireN);
@@ -588,12 +598,12 @@ struct ExtendedPrecisionOp {
         for (; v >= base; v /= base) {
             *p++ = table->toChar(v % base);
         }
-        *p++ = v;
+        *p++ = table->toChar(v);
         *p = 0;
 
         reverse(str, p);
 
-        return p - str - 1;
+        return int(p - str);
     }
 
     static int findHighestBitIndex(T v) {
@@ -605,11 +615,15 @@ struct ExtendedPrecisionOp {
 
 class BigInteger {
 private:
-    typedef uint8_t T;
+    //typedef uint8_t T;
+    //typedef SmallVector<T, 16 / sizeof(T)> Buffer;
+    //typedef ExtendedPrecisionOp<T, uint32_t, uint32_t> Ops;
+    typedef uint16_t T;
     typedef SmallVector<T, 16 / sizeof(T)> Buffer;
-    typedef ExtendedPrecisionOp<T, uint32_t, uint32_t> Ops;
+    typedef ExtendedPrecisionOp<T, uint32_t, uint64_t> Ops;
 public:
     static BigInteger ONE;
+    static BigInteger NEGATIVE_ONE;
     static BigInteger ZERO;
 public:
     template<typename Int>
@@ -629,7 +643,7 @@ public:
         normalize();
     }
     BigInteger(const char *str, int base): BigInteger(0) {
-        fromString(str, strlen(str), base);
+        fromString(str, (int)strlen(str), base);
     }
 
     template<typename Int>
@@ -650,9 +664,9 @@ public:
     int fromString(const char *str, int size, int base) {
         int i = 0;
         char sign = '+';
-        for (; i < size && isspace(str[i]); ++i);
+        for (; i < size && isspace((uint8_t)str[i]); ++i);
         if (i < size && (str[i] == '-' || str[i] == '+')) sign = str[i++];
-        for (; i < size && isspace(str[i]); ++i);
+        for (; i < size && isspace((uint8_t)str[i]); ++i);
 
         Char2DigitTable *table = Char2DigitTable::instance();
 
@@ -672,7 +686,7 @@ public:
 
         Buffer tmp(mBuf);
         s.resize(Ops::toString(nullptr, 0, tmp.ptr(), tmp.size(), base));
-        int n = Ops::toString(&s[0], s.size(), tmp.ptr(), tmp.size(), base);
+        int n = Ops::toString(&s[0], (int)s.size(), tmp.ptr(), tmp.size(), base);
         s.resize(n);
     }
     string toString(int base = 10) const {
@@ -681,7 +695,7 @@ public:
         return s;
     }
 
-    bool isNegative() const { return mNegative; }
+    bool isNegative() const { return mNegative == 1; }
     bool isPositive() const { return !mNegative; }
     bool isZero() const { return Ops::isZero(mBuf.ptr(), mBuf.size()); }
     const T* getBuffer() const { return mBuf.ptr(); }
@@ -691,7 +705,7 @@ public:
     }
 
     BigInteger square() const {
-        Buffer result(mBuf.size() * 2), temp(mBuf.size() * 2);
+        Buffer result(mBuf.size() * 2), temp(mBuf.size() * 2 + 32 * 2);
         Ops::square(result.ptr(), result.size(), mBuf.ptr(), mBuf.size(), temp.ptr(), temp.size());
         return BigInteger(move(result), 0);
     }
@@ -701,7 +715,7 @@ public:
 
         for (int i = 0; i < a.mBuf.size(); ++i) {
             T v = a.mBuf[i];
-            for (int i = sizeof(T) * 8; i > 0 && (i < a.mBuf.size() - 1 || v > 0); --i, v /= 2) {
+            for (int j = sizeof(T) * 8; j > 0 && (i < a.mBuf.size() - 1 || v > 0); --j, v /= 2) {
                 if (v & 1) {
                     r = r * accum;
                     if (mod != nullptr) r = r % *mod;
@@ -761,12 +775,11 @@ public:
     BigInteger& operator -= (const BigInteger &a) {
         if (mNegative == a.mNegative) {
             switch (compareABS(a)) {
-                case 0:
-                    *this = ZERO;
-                    break;
                 case 1:
                     bufferSubInplace(mBuf, a.mBuf);
                     break;
+                case 0:
+                    return *this = ZERO;
                 case -1: {
                     Buffer tmp(a.mBuf);
                     bufferSubInplace(tmp, mBuf);
@@ -793,13 +806,17 @@ public:
             case -1:
                 break;
             case 0:
-                mBuf = ZERO.mBuf;
-                break;
+                return *this = ZERO;
             case 1: {
-                    Buffer tmp(a.mBuf.size() + 1);
-                    mBuf.push_back(0);
-                    Ops::div(mBuf.ptr(), mBuf.size(), a.mBuf.ptr(), a.mBuf.size(), nullptr, 0, tmp.ptr(), tmp.size());
-                    bufferNormalize(mBuf);
+                    if (a.mBuf.size() == 1) {
+                        T r = Ops::divSingleInplace(mBuf.ptr(), mBuf.size(), a.mBuf[0]);
+                        mBuf.assign(1, r);
+                    } else {
+                        Buffer tmp(a.mBuf.size() + 1);
+                        mBuf.push_back(0);
+                        Ops::div(mBuf.ptr(), mBuf.size(), a.mBuf.ptr(), a.mBuf.size(), nullptr, 0, tmp.ptr(), tmp.size());
+                        bufferNormalize(mBuf);
+                    }
                 }
                 break;
             default: assert(0); break;
@@ -830,25 +847,30 @@ public:
         assert(!b.isZero());
 
         Buffer quotient, tmp;
-        const Buffer *remainder;
+        const Buffer *remainder = nullptr;
         switch (a.compareABS(b)) {
             case -1:
                 quotient = ZERO.mBuf;
                 remainder = &a.mBuf;
                 break;
             case 0:
-                quotient = ONE.mBuf;
-                remainder = &ZERO.mBuf;
-                break;
+                return a.mNegative == b.mNegative ? ONE : NEGATIVE_ONE;
             case 1: {
-                    tmp = a.mBuf;
-                    tmp.push_back(0);
-                    remainder = &tmp;
-                    quotient.resize(tmp.size() - b.mBuf.size() + 1);
-                    Buffer tmp2(b.mBuf.size() + 1);
-                    Ops::div(tmp.ptr(), tmp.size(), b.mBuf.ptr(), b.mBuf.size(), quotient.ptr(), quotient.size(), tmp2.ptr(), tmp2.size());
-                    bufferNormalize(tmp);
-                    bufferNormalize(quotient);
+                    if (b.mBuf.size() == 1) {
+                        quotient.resize(a.mBuf.size());
+                        T r = Ops::divSingle(quotient.ptr(), quotient.size(), a.mBuf.ptr(), a.mBuf.size(), b.mBuf[0]);
+                        tmp.assign(1, r);
+                        remainder = &tmp;
+                    } else {
+                        tmp = a.mBuf;
+                        tmp.push_back(0);
+                        remainder = &tmp;
+                        quotient.resize(tmp.size() - b.mBuf.size() + 1);
+                        Buffer tmp2(b.mBuf.size() + 1);
+                        Ops::div(tmp.ptr(), tmp.size(), b.mBuf.ptr(), b.mBuf.size(), quotient.ptr(), quotient.size(), tmp2.ptr(), tmp2.size());
+                        bufferNormalize(tmp);
+                        bufferNormalize(quotient);
+                    }
                 }
                 break;
             default: assert(0); break;
@@ -891,7 +913,7 @@ public:
     friend istream& operator >> (istream &si, BigInteger &v) {
         string s;
         si >> s;
-        int n = v.fromString(s.c_str(), s.size(), 10);
+        int n = v.fromString(s.c_str(), (int)s.size(), 10);
         for (; (int)s.size() > n; s.pop_back()) si.putback(s.back());
         return si;
     }
@@ -919,6 +941,7 @@ private:
     T mNegative;
 };
 BigInteger BigInteger::ONE(1);
+BigInteger BigInteger::NEGATIVE_ONE(-1);
 BigInteger BigInteger::ZERO(0);
 
 #endif
