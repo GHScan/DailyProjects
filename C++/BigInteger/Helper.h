@@ -14,6 +14,7 @@ public:
         return &s_ins;
     }
     int toDigit(unsigned char c, int base) const {
+        assert(base >= 2 && base <= 36);
         int r = mTable[c];
         return r >= 0 && r < base ? r : -1;
     }

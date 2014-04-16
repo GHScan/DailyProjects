@@ -9,7 +9,7 @@
 #include <limits>
 
 template<typename T, typename DoubleT, typename TripleT>
-struct ExtendedPreciseOp {
+struct ExtendedPrecisionOp {
     static const int GAUSS_MULTIPLY_CUTOFF = 128 / sizeof(T);
     static const DoubleT BASE = DoubleT(1) << (sizeof(T) * 8);
     static double LOG_BASE;
@@ -424,15 +424,15 @@ struct ExtendedPreciseOp {
     }
 };
 template<typename T, typename DoubleT, typename TripleT>
-double ExtendedPreciseOp<T, DoubleT, TripleT>::LOG_BASE = ::log(BASE);
+double ExtendedPrecisionOp<T, DoubleT, TripleT>::LOG_BASE = ::log(BASE);
 
 class BigInteger {
 private:
     //typedef uint8_t T;
-    //typedef ExtendedPreciseOp<T, uint32_t, uint32_t> Ops;
+    //typedef ExtendedPrecisionOp<T, uint32_t, uint32_t> Ops;
     //typedef SmallVector<T, 16 / sizeof(T)> BufferT;
     typedef uint16_t T;
-    typedef ExtendedPreciseOp<T, uint32_t, uint64_t> Ops;
+    typedef ExtendedPrecisionOp<T, uint32_t, uint64_t> Ops;
     typedef SmallVector<T, 16 / sizeof(T)> BufferT;
 
 public:

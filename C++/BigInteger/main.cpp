@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "bigInteger.h"
+#include "bigInteger2.h"
 
 static void correctnessTest() {
     BigInteger big(1);
