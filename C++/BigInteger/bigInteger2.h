@@ -146,7 +146,6 @@ struct ExtendedPrecisionOp {
             swap(a, b);
             swap(na, nb);
         }
-
         assert(length(a, na) == na && length(b, nb) == nb);
         assert(na >= nb && nr == na);
         assert(r != a && r != b);
@@ -251,19 +250,16 @@ struct ExtendedPrecisionOp {
     }
 
     static void _mulSmallAccumulate(T * RESTRICT r, int nr, const T* RESTRICT a, int na, const T * RESTRICT b, int nb) {
+        assert(length(a, na) == na && length(b, nb) == nb);
+        assert(na >= nb);
         assert(nr >= na + nb);
         assert(r != a && r != b && a != b);
-        na = length(a, na);
-        nb = length(b, nb);
-        if (na < nb) {
-            swap(a, b);
-            swap(na, nb);
-        }
         for (int i = 0; i < nb; ++i) {
             mulSingleAccumulate(r + i, nr - i, a, na, b[i]);
         }
     }
     static void _mulSameSizeAccumulate(T * RESTRICT r, int nr, const T* RESTRICT a, const T* RESTRICT b, int n, T * RESTRICT t, int nt) {
+        assert(length(a, n) == n && length(b, n) == n);
         assert(nr >= n + n);
         assert(nt >= n + n);
         assert(r != a && r != b && r != t);
@@ -277,29 +273,35 @@ struct ExtendedPrecisionOp {
         int half = n / 2;
         const T * RESTRICT a1 = a + half, * RESTRICT a0 = a, * RESTRICT b1 = b + half, * RESTRICT b0 = b;
         int na1 = n - half, na0 = half, nb1 = n - half, nb0 = half;
+        na1 = length(a1, na1), na0 = length(a0, na0);
+        nb1 = length(b1, nb1), nb0 = length(b0, nb0);
 
         // (a1+a0)(b1+b0)
         {
             T *RESTRICT a10 = t;
-            int na10 = na1;
-            memcpy(a10, a1, na1 * sizeof(T));
-            a10[na10] = addInplace(a10, na10, a0, length(a0, na0));
-            ++na10;
+            int na10 = max(na1, na0);
+            if (add(a10, na10, a1, na1, a0, na0)) {
+                a10[na10++] = 1;
+            } else {
+                na10 = length(a10, na10);
+            }
 
             T *RESTRICT b10 = a10 + na10;
-            int nb10 = nb1;
-            memcpy(b10, b1, nb1 * sizeof(T));
-            b10[nb10] = addInplace(b10, nb10, b0, length(b0, nb0));
-            ++nb10;
+            int nb10 = max(nb1, nb0);
+            if (add(b10, nb10, b1, nb1, b0, nb0)) {
+                b10[nb10++] = 1;
+            } else {
+                nb10 = length(b10, nb10);
+            }
 
-            _mulSameSizeAccumulate(r + half, nr - half, a10, b10, nb10, b10 + nb10, nt - na10 - nb10);
+            _mulAccumulate(r + half, nr - half, a10, na10, b10, nb10, b10 + nb10, nt - na10 - nb10);
         }
         // a1b1
         {
             T *RESTRICT a1b1 = t;
             int na1b1 = na1 + nb1;
             setZero(a1b1, na1b1);
-            _mulSameSizeAccumulate(a1b1, na1b1, a1, b1, nb1, a1b1 + na1b1, nt - na1b1);
+            _mulAccumulate(a1b1, na1b1, a1, na1, b1, nb1, a1b1 + na1b1, nt - na1b1);
             na1b1 = length(a1b1, na1b1);
 
             if (addInplace(r + 2 * half, nr - 2 * half, a1b1, na1b1)) {
@@ -314,7 +316,7 @@ struct ExtendedPrecisionOp {
             T *RESTRICT a0b0 = t;
             int na0b0 = na0 + nb0;
             setZero(a0b0, na0b0);
-            _mulSameSizeAccumulate(a0b0, na0b0, a0, b0, nb0, a0b0 + na0b0, nt - na0b0);
+            _mulAccumulate(a0b0, na0b0, a0, na0, b0, nb0, a0b0 + na0b0, nt - na0b0);
             na0b0 = length(a0b0, na0b0);
 
             if (addInplace(r, nr, a0b0, na0b0)) {
@@ -325,12 +327,13 @@ struct ExtendedPrecisionOp {
             }
         }
     }
-    static void _mulDiffSizeAccumulate(T * RESTRICT r, int nr, const T * RESTRICT a, int na, const T * RESTRICT b, int nb, T * RESTRICT t, int nt) {
+    static void _mulAccumulate(T * RESTRICT r, int nr, const T * RESTRICT a, int na, const T * RESTRICT b, int nb, T * RESTRICT t, int nt) {
         if (na < nb) {
             swap(a, b);
             swap(na, nb);
         }
-        assert(na > nb);
+        assert(length(a, na) == na && length(b, nb) == nb);
+        assert(na >= nb);
         assert(nr >= na + nb);
         assert(nt >= nb * 2);
         assert(r != a && r != b && r != t);
@@ -339,14 +342,18 @@ struct ExtendedPrecisionOp {
         if (na <= RECURSIVE_LIMIT_N || nb <= 2) {
             _mulSmallAccumulate(r, nr, a, na, b, nb);
             return;
+        } 
+        if (na == nb) {
+            _mulSameSizeAccumulate(r, nr, a, b, nb, t, nt);
+            return;
         }
 
         int i = 0;
         for (; i + nb <= na; i += nb) {
-            _mulSameSizeAccumulate(r + i, nr - i, a + i, b, nb, t, nt);
+            _mulAccumulate(r + i, nr - i, b, nb, a + i, length(a + i, nb), t, nt);
         }
         if (i < na) {
-            _mulDiffSizeAccumulate(r + i, nr - i, b, nb, a + i, na - i, t, nt);
+            _mulAccumulate(r + i, nr - i, b, nb, a + i, length(a + i, na - i), t, nt);
         }
     }
     // enable: a==b
@@ -358,14 +365,13 @@ struct ExtendedPrecisionOp {
         assert(nr == na + nb);
 
         if (a == b) square(r, nr, a, na, t, nt);
-        else if (na == nb) _mulSameSizeAccumulate(r, nr, a, b, na, t, nt);
-        else _mulDiffSizeAccumulate(r, nr, a, na, b, nb, t, nt);
+        else _mulAccumulate(r, nr, a, na, b, nb, t, nt);
     }
 
     static void _squareSmallAccumulate(T * RESTRICT r, int nr, const T * RESTRICT a, int na) {
+        assert(length(a, na) == na);
         assert(nr >= na * 2);
         assert(r != a);
-        na = length(a, na);
 
         for (int i = 0; i < na; ++i) {
             TripleT v = a[i];
@@ -388,9 +394,10 @@ struct ExtendedPrecisionOp {
         }
     }
     static void _squareAccumulate(T * RESTRICT r, int nr, const T * RESTRICT a, int na, T * RESTRICT t, int nt) {
-        assert(r != a && r != t);
+        assert(length(a, na) == na);
         assert(nr >= na * 2);
         assert(nt >= na * 2);
+        assert(r != a && r != t && a != t);
 
         if (na <= RECURSIVE_LIMIT_N) {
             _squareSmallAccumulate(r, nr, a, na);
@@ -400,6 +407,7 @@ struct ExtendedPrecisionOp {
         int half = na / 2;
         const T* RESTRICT a1 = a + half, * RESTRICT a0 = a;
         int na1 = na - half, na0 = half;
+        na1 = length(a1, na1), na0 = length(a0, na0);
 
         _squareAccumulate(r + 2 * half, nr - 2 * half, a1, na1, t, nt);
         _squareAccumulate(r, nr, a0, na0, t, nt);
@@ -407,14 +415,9 @@ struct ExtendedPrecisionOp {
         T *RESTRICT a10 = t;
         int na10 = na1 + na0;
         setZero(a10, na10);
-        if (na1 == na0) {
-            _mulSameSizeAccumulate(a10, na10, a1, a0, na0, a10 + na10, nt - na10);
-        } else {
-            _mulDiffSizeAccumulate(a10, na10, a1, na1, a0, na0, a10 + na10, nt - na10);
-        }
+        _mulAccumulate(a10, na10, a1, na1, a0, na0, a10 + na10, nt - na10);
         a10[na10] = mulSingleInplace(a10, na10, 2);
-        ++na10;
-        na10 = length(a10, na10);
+        na10 = length(a10, na10 + 1);
         if (addInplace(r + half, nr - half, a10, na10)) {
             assert(0);
         }
