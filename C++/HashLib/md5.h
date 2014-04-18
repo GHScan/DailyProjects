@@ -15,8 +15,9 @@ public:
 public:
     Md5();
     void update(const void *buf, int n);
+    void finalize();
     void digest(uint8_t out[OUTPUT_BYTES]); //little endian
-    string hexdigest();
+    string digestStr();
 
 private:
     uint32_t mH[4];

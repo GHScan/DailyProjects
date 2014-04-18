@@ -38,7 +38,7 @@ inline void writeUint_bigEndian(void *p, UintT i) {
     *(UintT*)p = i;
 }
 
-static uint32_t leftRotate(uint32_t a, uint32_t n) {
+inline uint32_t leftRotate(uint32_t a, uint32_t n) {
     return (a << n) | (a >> (32 - n));
 }
 

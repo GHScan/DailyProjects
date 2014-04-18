@@ -8,6 +8,6 @@ static void runUnitTests() {
 }
 
 int main(int argc, char *argv[]) {
-    // runUnitTests();
+    runUnitTests();
     tool_md5(argc, argv);
 }

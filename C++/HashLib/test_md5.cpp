@@ -5,7 +5,8 @@
 static string str2Md5(const string& s) {
     Md5 m;
     if (!s.empty()) m.update(s.c_str(), (int)s.size());
-    return m.hexdigest();
+    m.finalize();
+    return m.digestStr();
 }
 
 void test_md5() {
@@ -30,11 +31,12 @@ void test_md5() {
 
 static string getFileMd5(FILE *f) {
     Md5 m;
-    char buf[4096];
+    char buf[16*1024];
     for (int n; !feof(f) && (n = (int)fread(buf, 1, sizeof(buf), f)) > 0; ) {
         m.update(buf, n);
     }
-    return m.hexdigest();
+    m.finalize();
+    return m.digestStr();
 }
 
 void tool_md5(int argc, char *argv[]) {
