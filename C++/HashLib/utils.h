@@ -41,6 +41,9 @@ inline void writeUint_bigEndian(void *p, UintT i) {
 inline uint32_t leftRotate(uint32_t a, uint32_t n) {
     return (a << n) | (a >> (32 - n));
 }
+inline uint32_t rightRotate(uint32_t a, uint32_t n) {
+    return (a >> n) | (a << (32 - n));
+}
 
 #define ASIZE(a) (sizeof(a) / sizeof((a)[0]))
 
