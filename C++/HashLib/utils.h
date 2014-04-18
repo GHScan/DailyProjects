@@ -3,6 +3,9 @@
 #define UTILS_H
 
 #include <stdint.h>
+#include <assert.h>
+
+#include <string>
 
 inline uint32_t reverseUint(uint32_t i) {
     auto p = (const uint8_t*)&i;
@@ -43,6 +46,20 @@ inline uint32_t leftRotate(uint32_t a, uint32_t n) {
 }
 inline uint32_t rightRotate(uint32_t a, uint32_t n) {
     return (a >> n) | (a << (32 - n));
+}
+
+inline string binary2string(const void *_p, int n) {
+    const uint8_t *p = (const uint8_t*)_p;
+    assert(p != nullptr && n > 0);
+
+    const char *HEX = "0123456789abcdef";
+
+    string s(n * 2, 0);
+    for (int i = 0; i < n; ++i) {
+        s[i * 2 + 0] = HEX[p[i] >> 4];
+        s[i * 2 + 1] = HEX[p[i] & 0xf];
+    }
+    return s;
 }
 
 #define ASIZE(a) (sizeof(a) / sizeof((a)[0]))

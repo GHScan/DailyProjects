@@ -125,24 +125,19 @@ void Md5::update(const void *_buf, int n) {
     if (n > 0) update(buf, n);
 }
 
+static const uint8_t PADDING[Md5::BLOCK_BYTES] = {
+    0x80, 
+};
 void Md5::finalize() {
     if (mSize == (uint64_t)-1) return;
 
+    uint8_t sizeBytes[sizeof(mSize)];
+    writeUint_littleEndian<uint64_t>(sizeBytes, mSize * 8);
+
     const int FILL_BYTES = BLOCK_BYTES - LENGTH_BYTES;
-    const int blockSize = mSize % BLOCK_BYTES;
-    if (blockSize >= FILL_BYTES) {
-        mBuf[blockSize] = 0x80;
-        for (int i = blockSize + 1; i < BLOCK_BYTES; ++i) mBuf[i] = 0;
-        process(mBuf, mH);
-        for (int i = 0; i < FILL_BYTES; ++i) mBuf[i] = 0;
-    } else {
-        mBuf[blockSize] = 0x80;
-        for (int i = blockSize + 1; i < FILL_BYTES; ++i) mBuf[i] = 0;
-    }
-
-    writeUint_littleEndian<uint64_t>(mBuf + FILL_BYTES, mSize * 8);
-    process(mBuf, mH);
-
+    const int blockOff = mSize % BLOCK_BYTES;
+    update(PADDING, blockOff < FILL_BYTES ? (FILL_BYTES - blockOff) : (FILL_BYTES + BLOCK_BYTES - blockOff));
+    update(sizeBytes, sizeof(sizeBytes));
     mSize = -1;
 }
 
@@ -158,13 +153,5 @@ void Md5::digest(uint8_t out[OUTPUT_BYTES]) {
 string Md5::digestStr() {
     uint8_t out[OUTPUT_BYTES]; 
     digest(out); 
-
-    const char *HEX = "0123456789abcdef";
-
-    string s(OUTPUT_BYTES * 2, 0);
-    for (int i = 0; i < OUTPUT_BYTES; ++i) {
-        s[i * 2 + 0] = HEX[out[i] >> 4];
-        s[i * 2 + 1] = HEX[out[i] & 0xf];
-    }
-    return s;
+    return binary2string(out, sizeof(out));
 }
