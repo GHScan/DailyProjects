@@ -9,7 +9,6 @@ class Md5 {
 public:
     static const int OUTPUT_BYTES = 16;
     static const int BLOCK_BYTES = 64;
-    static const int WORD_BYTES = 4;
     static const int LENGTH_BYTES = 8;
 
 public:
@@ -20,7 +19,7 @@ public:
     string digestStr();
 
 private:
-    uint32_t mH[4];
+    uint32_t mH[OUTPUT_BYTES / sizeof(uint32_t)];
     uint8_t mBuf[BLOCK_BYTES];
     uint64_t mSize;
 };

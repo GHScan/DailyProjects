@@ -3,11 +3,11 @@
 #include "utils.h"
 #include "md5.h"
 
-static void process(const uint8_t data[Md5::BLOCK_BYTES], uint32_t H[4]) {
-    const int BLOCK_WORDS = Md5::BLOCK_BYTES / Md5::WORD_BYTES;
+static void process(const uint8_t data[Md5::BLOCK_BYTES], uint32_t H[Md5::OUTPUT_BYTES / sizeof(uint32_t)]) {
+    const int BLOCK_WORDS = Md5::BLOCK_BYTES / sizeof(uint32_t);
     uint32_t w[BLOCK_WORDS];
     for (int i = 0; i < BLOCK_WORDS; ++i) {
-        w[i] = readUint_littleEndian<uint32_t>(data + i * Md5::WORD_BYTES);
+        w[i] = readUint_littleEndian<uint32_t>(data + i * sizeof(uint32_t));
     }
 
     uint32_t a = H[0], b = H[1], c = H[2], d = H[3];
@@ -89,7 +89,6 @@ static void process(const uint8_t data[Md5::BLOCK_BYTES], uint32_t H[4]) {
 }
 
 Md5::Md5(): mSize(0) {
-    static_assert(sizeof(mH[0]) == WORD_BYTES, "");
     static_assert(sizeof(mSize) == LENGTH_BYTES, "");
 
     mH[0] = 0x67452301;
@@ -151,8 +150,8 @@ void Md5::digest(uint8_t out[OUTPUT_BYTES]) {
     assert(out != nullptr);
     assert(mSize == (uint64_t)-1);
 
-    for (int i = 0; i < 4; ++i) {
-        writeUint_littleEndian<uint32_t>(out + i * 4, mH[i]);
+    for (auto i = 0u; i < ASIZE(mH); ++i) {
+        writeUint_littleEndian<uint32_t>(out + i * sizeof(uint32_t), mH[i]);
     }
 }
 
