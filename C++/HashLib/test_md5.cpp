@@ -22,13 +22,13 @@ void test_md5() {
         {"65656565656565656565656565656565656565656565656565656565656565656", "5ea6f884c40d938d1fe6dce7a3c53fbf",},
     };
     for (auto &data : datas) {
-        cout << data[0] << endl;
-        cout << str2Md5(data[0]) << endl;
         assert(data[1] == str2Md5(data[0]));
+        (void)data;
+        (void)str2Md5;
     }
 }
 
-static string handleFile(FILE *f) {
+static string getFileMd5(FILE *f) {
     Md5 m;
     char buf[4096];
     for (int n; !feof(f) && (n = (int)fread(buf, 1, sizeof(buf), f)) > 0; ) {
@@ -38,16 +38,17 @@ static string handleFile(FILE *f) {
 }
 
 void tool_md5(int argc, char *argv[]) {
-    FILE *f = stdin;
-
-    if (argc > 1) {
-        if ((f = fopen(argv[1], "rb")) == nullptr) {
-            fprintf(stderr, "Fail to open file: %s\n", argv[1]);
-            return;
+    if (argc < 2) {
+        cout << getFileMd5(stdin) << " -\n";
+    } else {
+        FILE *f;
+        for (int i = 1; i < argc; ++i) {
+            if ((f = fopen(argv[i], "rb")) == nullptr) {
+                fprintf(stderr, "Fail to open file: %s\n", argv[i]);
+                continue;
+            }
+            cout << getFileMd5(f) << " " << argv[i] << endl;
+            fclose(f);
         }
     }
-
-    cout << handleFile(f);
-
-    if (argc > 1) fclose(f);
 }
