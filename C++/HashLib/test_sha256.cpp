@@ -23,8 +23,6 @@ void test_sha256() {
         {"65656565656565656565656565656565656565656565656565656565656565656", "f47abc3f74e2628d9641b3382e1ac0c664416e8a47cb2b3421f94c58eef2469a",},
     };
     for (auto &data : datas) {
-        cout << data[0] << endl;
-        cout << str2Sha256(data[0]) << endl;
         assert(data[1] == str2Sha256(data[0]));
         (void)data;
         (void)str2Sha256;

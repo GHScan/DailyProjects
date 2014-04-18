@@ -11,8 +11,8 @@ static void process(const uint8_t data[Sha256::BLOCK_BYTES], uint32_t H[Sha256::
         w[i] = readUint_bigEndian<uint32_t>(data + i * sizeof(uint32_t));
     }
     for (int i = BLOCK_WORDS; i < EXTENDED_BLOCK_WORDS; ++i) {
-        uint32_t s0 = rightRotate(w[i - 15], 7) ^ rightRotate(w[i - 15], 18) ^ rightRotate(w[i - 15], 3);
-        uint32_t s1 = rightRotate(w[i - 2], 17) ^ rightRotate(w[i - 2], 19) ^ rightRotate(w[i - 2], 10);
+        uint32_t s0 = rightRotate(w[i - 15], 7) ^ rightRotate(w[i - 15], 18) ^ (w[i - 15] >> 3);
+        uint32_t s1 = rightRotate(w[i - 2], 17) ^ rightRotate(w[i - 2], 19) ^ (w[i - 2] >> 10);
         w[i] = w[i - 16] + s0 + w[i - 7] + s1;
     }
 
