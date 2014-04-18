@@ -29,25 +29,25 @@ static inline void process(const uint8_t data[Md5::BLOCK_BYTES], uint32_t H[4]) 
     for (int i = 0; i < 16; ++i) {
         uint32_t f = (b & c) | ((~b) & d);
         uint32_t g = i;
-        a = ((a + f + K[i] + w[g]) << R[i]) + b;
+        a = leftRotate(a + f + K[i] + w[g], R[i]) + b;
         ROTATE();
     }
     for (int i = 16; i < 32; ++i) {
         uint32_t f = (d & b) | ((~d) & c);
         uint32_t g = (5 * i + 1) % 16;
-        a = ((a + f + K[i] + w[g]) << R[i]) + b;
+        a = leftRotate(a + f + K[i] + w[g], R[i]) + b;
         ROTATE();
     }
     for (int i = 32; i < 48; ++i) {
         uint32_t f = (b ^ c) ^ d;
         uint32_t g = (3 * i + 5) % 16;
-        a = ((a + f + K[i] + w[g]) << R[i]) + b;
+        a = leftRotate(a + f + K[i] + w[g], R[i]) + b;
         ROTATE();
     }
     for (int i = 48; i < 64; ++i) {
         uint32_t f = c ^ (b | (~d));
         uint32_t g = (7 * i) % 16;
-        a = ((a + f + K[i] + w[g]) << R[i]) + b;
+        a = leftRotate(a + f + K[i] + w[g], R[i]) + b;
         ROTATE();
     }
 #undef ROTATE
@@ -108,7 +108,7 @@ void Md5::digest(uint8_t out[OUTPUT_BYTES]) {
         for (int i = blockSize + 1; i < FILL_BYTES; ++i) mBuf[i] = 0;
     }
 
-    writeUint_littleEndian<uint64_t>(mBuf + FILL_BYTES, mSize);
+    writeUint_littleEndian<uint64_t>(mBuf + FILL_BYTES, mSize * 8);
     process(mBuf, mH);
 
     mSize = -1;
