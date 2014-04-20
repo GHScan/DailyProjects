@@ -84,8 +84,7 @@ static void uncompressT(IInputStream *si, IOutputStream *so) {
                     n += more;
                 }
 
-                T repeat = readBuf[i + 2];
-                for (; repeat > 0; --repeat) writeBuf.push_back(readBuf[i + 1]);
+                writeBuf.resize(writeBuf.size() + readBuf[i + 2], readBuf[i + 1]);
                 i += 3;
             }
         }
