@@ -49,7 +49,7 @@ static void compressT(IInputStream *si, IOutputStream *so) {
                     writeBuf.push_back(MAGIC);
                     writeBuf.push_back(readBuf[start]);
                     writeBuf.push_back(repeat);
-                    start += repeat;
+                    start += int(repeat);
                 }
             }
         }

@@ -172,7 +172,7 @@ namespace HuffmanUncompressionAlgo {
     }
 
     static void uncompress(const uint8_t *src, int srcsize, uint8_t *dest, int destsize) {
-        InputBitStream bs(src, srcsize);
+        InputBitStream bs(src, srcsize * 8);
 
         HuffmanNode nodes[HUFFMAN_NODE_COUNT] = {0};
         int rootID = _deserializeHuffmanTree(&bs, nodes);
@@ -193,7 +193,7 @@ void HuffmanCompressor::compress(IInputStream *si, IOutputStream *so) {
 
         uint32_t *dest = (uint32_t*)&writeBuf[0];
         dest[0] = srcsize;
-        dest[1] = HuffmanCompressionAlgo::compress(&readBuf[0], srcsize, &writeBuf[0] + 8, writeBuf.size() - 8);;
+        dest[1] = HuffmanCompressionAlgo::compress(&readBuf[0], srcsize, &writeBuf[0] + 8, (int)writeBuf.size() - 8);;
         assert(dest[1] + 8 < writeBuf.size());
         so->write(dest, dest[1] + 8);
     }
@@ -211,5 +211,7 @@ void HuffmanCompressor::uncompress(IInputStream *si, IOutputStream *so) {
 
         HuffmanUncompressionAlgo::uncompress(&readBuf[0], sizes[1], &writeBuf[0], sizes[0]);
         so->write(&writeBuf[0], sizes[0]);
+
+        i += sizes[1] + 8;
     }
 }

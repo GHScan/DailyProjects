@@ -20,7 +20,7 @@ public:
     }
     template<typename IntT>
     typename enable_if<is_integral<IntT>::value, IntT>::type fetchInt() const {
-        assert(mPos + sizeof(IntT) * 8 <= mBitCount);
+        assert(mPos + (int)sizeof(IntT) * 8 <= mBitCount);
 
         typedef typename make_unsigned<IntT>::type UintT;
 
@@ -79,7 +79,9 @@ private:
 
 class OutputBitStream {
 public:
-    OutputBitStream(void *buf, int bitCount): mBuf((uint8_t*)buf), mBitCount(bitCount), mPos(0) {}
+    OutputBitStream(void *buf, int bitCount): mBuf((uint8_t*)buf), mBitCount(bitCount), mPos(0) {
+        memset(buf, 0, bitCount / 8);
+    }
     int bitCount() const { return mBitCount; }
     int pos() const { return mPos; }
     void rewind() { mPos = 0; }
@@ -93,7 +95,7 @@ public:
     }
     template<typename IntT>
     void writeInt(IntT i, typename enable_if<is_integral<IntT>::value, IntT>::type* =0) {
-        assert(mPos + sizeof(IntT) * 8 <= mBitCount);
+        assert(mPos + (int)sizeof(IntT) * 8 <= mBitCount);
 
         typedef typename make_unsigned<IntT>::type UintT;
 
@@ -114,9 +116,9 @@ public:
 
         if (mPos % ELEM_BITS) {
             for (; bitCount >= 64; bitCount -= 64) writeInt(*((uint64_t*&)buf)++);
-            if (bitCount >= 32) writeInt(*((uint32_t*&)buf)++);
-            if (bitCount >= 16) writeInt(*((uint16_t*&)buf)++);
-            if (bitCount >= 8) writeInt(*((uint8_t*&)buf)++);
+            if (bitCount >= 32) writeInt(*((uint32_t*&)buf)++), bitCount -= 32;
+            if (bitCount >= 16) writeInt(*((uint16_t*&)buf)++), bitCount -= 16;
+            if (bitCount >= 8) writeInt(*((uint8_t*&)buf)++), bitCount -= 8;
             if (bitCount) {
                 auto _buf = (const uint8_t*)buf;
                 for (int i = 0; i < bitCount; ++i) {
