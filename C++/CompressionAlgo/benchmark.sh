@@ -17,7 +17,7 @@ if [ ! -f bigFile ]; then
     ./createBigFile.sh 64
 fi
 
-algos="rle rle_2 rle_4"
+algos="rle rle_2 rle_4 huff_4k huff_16k huff_64k"
 testFiles="all.c pch.h.gch main10 bigFile"
 
 for f in $testFiles; do
@@ -33,4 +33,4 @@ for f in $testFiles; do
     done
 done
 
-#rm -f all.c main10 bigFile
+rm -f all.c main10 bigFile

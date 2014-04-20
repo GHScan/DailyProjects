@@ -17,12 +17,14 @@ ICompressor* ICompressor::create(const char *_type) {
         return new RleCompressor(4);
     } else if (type == "rle_8") {
         return new RleCompressor(8);
-    } else if (type == "huff_1k") {
-        return new HuffmanCompressor(1024);
+    } else if (type == "huff") {
+        return new HuffmanCompressor(4 * 1024);
     } else if (type == "huff_4k") {
         return new HuffmanCompressor(4 * 1024);
-    } else if (type == "huff_32k") {
-        return new HuffmanCompressor(32 * 1024);
+    } else if (type == "huff_16k") {
+        return new HuffmanCompressor(16 * 1024);
+    } else if (type == "huff_64k") {
+        return new HuffmanCompressor(64 * 1024);
     }
     return nullptr;
 }

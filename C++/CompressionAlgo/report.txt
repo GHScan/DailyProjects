@@ -1,0 +1,28 @@
+all.c :
+	                 rle : rate=89.33%, compress=67.3M/s, uncompress=38M/s
+	               rle_2 : rate=95.18%, compress=89.7M/s, uncompress=90M/s
+	               rle_4 : rate=99.04%, compress=89.7M/s, uncompress=135M/s
+	             huff_4k : rate=62.82%, compress=20.7M/s, uncompress=19M/s
+	            huff_16k : rate=62.09%, compress=24.5M/s, uncompress=18M/s
+	            huff_64k : rate=61.75%, compress=24.5M/s, uncompress=18M/s
+pch.h.gch :
+	                 rle : rate=63.25%, compress=149.3M/s, uncompress=132M/s
+	               rle_2 : rate=71.48%, compress=239.8M/s, uncompress=250M/s
+	               rle_4 : rate=83.36%, compress=304.0M/s, uncompress=355M/s
+	             huff_4k : rate=44.14%, compress=24.0M/s, uncompress=35M/s
+	            huff_16k : rate=41.86%, compress=35.0M/s, uncompress=35M/s
+	            huff_64k : rate=41.15%, compress=43.0M/s, uncompress=36M/s
+main10 :
+	                 rle : rate=110.70%, compress=108.9M/s, uncompress=101M/s
+	               rle_2 : rate=99.43%, compress=175.9M/s, uncompress=276M/s
+	               rle_4 : rate=99.61%, compress=276.0M/s, uncompress=372M/s
+	             huff_4k : rate=69.72%, compress=19.1M/s, uncompress=20M/s
+	            huff_16k : rate=68.44%, compress=26.9M/s, uncompress=20M/s
+	            huff_64k : rate=70.89%, compress=30.7M/s, uncompress=19M/s
+bigFile :
+	                 rle : rate=1.25%, compress=615.7M/s, uncompress=226M/s
+	               rle_2 : rate=0.07%, compress=1220.2M/s, uncompress=89M/s
+	               rle_4 : rate=0.07%, compress=1100.1M/s, uncompress=89M/s
+	             huff_4k : rate=12.74%, compress=59.6M/s, uncompress=199M/s
+	            huff_16k : rate=12.56%, compress=82.0M/s, uncompress=147M/s
+	            huff_64k : rate=12.52%, compress=83.3M/s, uncompress=169M/s

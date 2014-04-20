@@ -5,7 +5,7 @@
 
 void test_huffman() {
     {
-        const char *type = "huff_1k";
+        const char *type = "huff";
         {
 
             string s0 = "abcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcd";

@@ -66,7 +66,7 @@ namespace HuffmanCompressionAlgo {
         auto &node = nodes[nodeID];
         if (node.leftID == HUFFMAN_NODE_NULL_ID) {
             assert(node.rightID == HUFFMAN_NODE_NULL_ID);
-            codeStrs[node.byte] = curS;
+            codeStrs[node.byte] = curS.empty() ? "0" : curS;
         } else {
             assert(node.rightID != HUFFMAN_NODE_NULL_ID);
             curS += '0';
