@@ -33,6 +33,11 @@ public:
         return (IntT)r;
     }
 
+    void advance(int bitCount) {
+        assert(mPos + bitCount <= mBitCount);
+        mPos += bitCount;
+    }
+
     bool readBool() {
         bool b = fetchBool();
         ++mPos;
@@ -44,7 +49,6 @@ public:
         mPos += sizeof(i) * 8;
         return i;
     }
-
     void readBits(void *buf, int bitCount) {
         assert(mPos + bitCount <= mBitCount);
 

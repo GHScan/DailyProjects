@@ -33,4 +33,3 @@ for f in $testFiles; do
     done
 done
 
-rm -f all.c main10 bigFile

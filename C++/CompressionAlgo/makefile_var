@@ -12,4 +12,4 @@ lib_files=
 build_actions: 
 
 clean_actions:
-
+	rm -f all.c bigFile main10

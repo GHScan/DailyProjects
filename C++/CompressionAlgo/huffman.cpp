@@ -161,13 +161,68 @@ namespace HuffmanUncompressionAlgo {
         return rootID;
     }
 
-    static void _uncompressBufferWithHuffmanTree(InputBitStream *bs, int rootID, HuffmanNode nodes[HUFFMAN_NODE_COUNT], uint8_t *dest, int destsize) {
-        for (int i = 0; i < destsize; ++i) {
-            auto node = &nodes[rootID];
-            while (node->leftID != HUFFMAN_NODE_NULL_ID) {
-                node = bs->readBool() ? &nodes[node->rightID] : &nodes[node->leftID];
+    static int _leafCount(int nodeID, HuffmanNode nodes[HUFFMAN_NODE_COUNT]) {
+        auto &node = nodes[nodeID];
+        if (node.leftID == HUFFMAN_NODE_NULL_ID) return 1;
+        else return _leafCount(node.leftID, nodes) + _leafCount(node.rightID, nodes);
+    }
+
+    template<typename IntT>
+    static void _recursiveBuildQuickLookupTableWithHuffmanNode(int depth, IntT code, int nodeID, HuffmanNode nodes[HUFFMAN_NODE_COUNT], uint16_t lookupTable[1 << (sizeof(IntT) * 8)]) {
+        if (depth > sizeof(IntT) * 8) return;
+
+        auto &node = nodes[nodeID];
+        if (node.leftID == HUFFMAN_NODE_NULL_ID) {
+            int bitCount = depth == 0 ? 1 : depth;
+            IntT step = IntT(1 << bitCount);
+            for (int i = 0; i < 1 << (sizeof(IntT) * 8 - bitCount); ++i, code += step) {
+                lookupTable[code] = node.byte | uint16_t(bitCount << 8);
             }
-            dest[i] = node->byte;
+        } else {
+            _recursiveBuildQuickLookupTableWithHuffmanNode<IntT>(depth + 1, code | (0 << depth), node.leftID, nodes, lookupTable);
+            _recursiveBuildQuickLookupTableWithHuffmanNode<IntT>(depth + 1, code | (1 << depth), node.rightID, nodes, lookupTable);
+        }
+    }
+    template<typename IntT>
+    static void _buildQuickLookupTable(int rootID, HuffmanNode nodes[HUFFMAN_NODE_COUNT], uint16_t lookupTable[1 << (sizeof(IntT) * 8)]) {
+        _recursiveBuildQuickLookupTableWithHuffmanNode<IntT>(0, 0, rootID, nodes, lookupTable);
+    }
+    template<typename IntT>
+    static int _quickLookup(InputBitStream *bs, uint16_t lookupTable[1 << (sizeof(IntT) * 8)]) {
+        uint16_t v = lookupTable[bs->fetchInt<IntT>()];
+        if (v >> 8) {
+            bs->advance(v >> 8);
+            return v & 0xff;
+        } else {
+            return -1;
+        }
+    }
+    static int _lookup(InputBitStream *bs, int rootID, HuffmanNode nodes[HUFFMAN_NODE_COUNT]) {
+        auto node = &nodes[rootID];
+        while (node->leftID != HUFFMAN_NODE_NULL_ID) {
+            node = &nodes[bs->readBool() ? node->rightID : node->leftID];
+        }
+        return node->byte;
+    }
+    static void _uncompressBufferWithHuffmanTree(InputBitStream *bs, int rootID, HuffmanNode nodes[HUFFMAN_NODE_COUNT], uint8_t *dest, int destsize) {
+        int i = 0;
+
+        if (_leafCount(rootID, nodes) > 2) {
+            typedef uint8_t QuickLookupType;
+            uint16_t lookupTable[1 << (sizeof(QuickLookupType) * 8)] = {0};
+            _buildQuickLookupTable<QuickLookupType>(rootID, nodes, lookupTable);
+
+            for (; i + (int)sizeof(QuickLookupType) * 8 <= destsize; ++i) {
+                int byte;
+                if ((byte = _quickLookup<QuickLookupType>(bs, lookupTable)) == -1) {
+                    byte = _lookup(bs, rootID, nodes);
+                }
+                dest[i] = byte;
+            }
+        }
+
+        for (; i < destsize; ++i) {
+            dest[i] = _lookup(bs, rootID, nodes);
         }
     }
 
