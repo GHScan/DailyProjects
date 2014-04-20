@@ -107,12 +107,9 @@ void RleCompressor::compress(IInputStream *si, IOutputStream *so) {
     so->write(toLittleEndian<uint32_t>(size));
     if (size % mBlockSize) {
         char buf[32];
-        int readBytes, writeBytes;
-        readBytes = si->read(buf, size % mBlockSize);
-        assert(readBytes == size % mBlockSize);
-        writeBytes = so->write(buf, readBytes);
-        assert(readBytes == writeBytes);
-        (void)readBytes, (void)writeBytes;
+        int remain = size % mBlockSize;
+        if (si->read(buf, remain) != remain) assert(0);
+        if (so->write(buf, remain) != remain) assert(0);
     }
 
     switch (mBlockSize) {
@@ -129,12 +126,9 @@ void RleCompressor::uncompress(IInputStream *si, IOutputStream *so) {
     size = fromLittleEndian(size);
     if (size % mBlockSize) {
         char buf[32];
-        int readBytes, writeBytes;
-        readBytes = si->read(buf, size % mBlockSize);
-        assert(readBytes == int(size) % mBlockSize);
-        writeBytes = so->write(buf, readBytes);
-        assert(readBytes == writeBytes);
-        (void)readBytes, (void)writeBytes;
+        int remain = size % mBlockSize;
+        if (si->read(buf, remain) != remain) assert(0);
+        if (so->write(buf, remain) != remain) assert(0);
     }
 
     switch (mBlockSize) {

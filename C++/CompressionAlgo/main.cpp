@@ -6,9 +6,11 @@
 #include "stream.h"
 
 extern void test_rle();
+extern void test_huffman();
 
 static void runUnitTests() {
     test_rle();
+    test_huffman();
 }
 
 int main(int argc, char *argv[]) {
@@ -16,14 +18,14 @@ int main(int argc, char *argv[]) {
 
     FILE *fi = stdin;
     FILE *fo = stdout;
-    ICompressor *compressor = nullptr;
+    const char *compressorType = nullptr;
     bool isUncompress = false;
 
     int opt;
     while ((opt = getopt(argc, argv, "a:i:o:x")) != -1) {
         switch (opt) {
             case 'a':
-                compressor = ICompressor::create(optarg);
+                compressorType = optarg;
                 break;
             case 'i':
                 if ((fi = fopen(optarg, "rb")) == nullptr) {
@@ -45,19 +47,16 @@ int main(int argc, char *argv[]) {
                 return EXIT_FAILURE;
         }
     }
-    if (compressor == nullptr) {
+    if (compressorType == nullptr) {
         fprintf(stderr, "Can't find compressor !");
         return EXIT_FAILURE;
     }
 
     {
-        FileInputStream si(fi);
-        FileOutputStream so(fo);
-        if (isUncompress) compressor->uncompress(&si, &so);
-        else compressor->compress(&si, &so);
+        if (isUncompress) ICompressor::uncompressFile(fi, fo, compressorType);
+        else ICompressor::compressFile(fi, fo, compressorType);
     }
 
-    delete compressor;
     if (fi != stdin) fclose(fi);
     if (fo != stdout) fclose(fo);
 }

@@ -11,9 +11,7 @@ struct IInputStream {
     template<typename T>
     T read() {
         T v;
-        int n = read(&v, sizeof(v));
-        (void)n;
-        assert(n == sizeof(v));
+        if (read(&v, sizeof(v)) != sizeof(v)) assert(0);
         return v;
     }
 };
@@ -23,9 +21,7 @@ struct IOutputStream {
 
     template<typename T>
     void write(const T &val) {
-        int n = write(&val, sizeof(val));
-        (void)n;
-        assert(n == sizeof(val));
+        if (write(&val, sizeof(val)) != sizeof(val)) assert(0);
     }
 };
 
