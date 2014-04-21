@@ -6,6 +6,8 @@
 
 #include <type_traits>
 
+#define ASIZE(a) (sizeof(a) / sizeof((a)[0]))
+
 inline bool isLittleEndian(int i = 1) {
     return 1 == (char&)i;
 }
@@ -35,5 +37,7 @@ inline T toLittleEndian(T v) {
 inline int pow2Roundup(int size) {
     return 1 << ((int)ceil(log(size) / log(2)));
 }
+
+int primeRounddown(int size);
 
 #endif

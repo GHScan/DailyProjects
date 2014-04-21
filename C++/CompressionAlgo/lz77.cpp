@@ -87,10 +87,8 @@ static int readLiteralOrRef(InputBitStream *bs, uint8_t* windowEnd) {
 
 class Lz77ChunkCompressor {
 public:
-    Lz77ChunkCompressor(int chunkSize, int windowSize): mBucketMask(pow2Roundup(chunkSize) - 1), mWindowSize(windowSize), mAllocator(mBucketMask + 1) {
-        assert(((mBucketMask + 1) & mBucketMask) == 0);
-
-        mBuckets = (Ref**)::malloc((mBucketMask + 1) * sizeof(mBuckets[0]));
+    Lz77ChunkCompressor(int chunkSize, int windowSize): mBucketSize(primeRounddown(windowSize)), mWindowSize(windowSize), mAllocator(windowSize) {
+        mBuckets = (Ref**)::malloc(mBucketSize * sizeof(mBuckets[0]));
         mInvalidRef = Ref{nullptr, nullptr};
     }
     ~Lz77ChunkCompressor() {
@@ -135,7 +133,7 @@ private:
 private:
     void setupWithInitWindow(const uint8_t *window, int winSize) {
         mAllocator.reset();
-        for (int i = 0; i <= mBucketMask; ++i) {
+        for (int i = 0; i < mBucketSize; ++i) {
             mBuckets[i] = &mInvalidRef;
         }
 
@@ -146,7 +144,7 @@ private:
     Ref* findLongestMatch(const uint8_t *begin, const uint8_t *end, const uint8_t *window, int *size) {
         if (end - begin < MIN_DUPLICATE_SIZE) return nullptr;
 
-        Ref *p = mBuckets[mHash(*(DuplicateCheckType*)begin) & mBucketMask];
+        Ref *p = mBuckets[mHash(*(DuplicateCheckType*)begin) % mBucketSize];
         for (; p->data >= window && *(DuplicateCheckType*)p->data != *(DuplicateCheckType*)begin; p = p->next);
         if (p->data < window) return nullptr;
 
@@ -171,7 +169,7 @@ private:
     void addRef(const uint8_t *data, const uint8_t *window) {
         if (data < window) return;
 
-        Ref **p = &mBuckets[mHash(*(DuplicateCheckType*)data) & mBucketMask];
+        Ref **p = &mBuckets[mHash(*(DuplicateCheckType*)data) % mBucketSize];
         Ref *ref = mAllocator.malloc();
         ref->data = data;
         ref->next = *p;
@@ -180,8 +178,8 @@ private:
 
 private:
     Ref **mBuckets;
+    int mBucketSize;
     Ref mInvalidRef;
-    int mBucketMask;
     int mWindowSize;
     TStackAllocator<Ref> mAllocator;
     hash<DuplicateCheckType> mHash;
