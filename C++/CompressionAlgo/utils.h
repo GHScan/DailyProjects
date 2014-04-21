@@ -9,6 +9,9 @@ inline bool isLittleEndian(int i = 1) {
     return 1 == (char&)i;
 }
 
+inline uint8_t reverseInt(uint8_t i) {
+    return i;
+}
 inline uint16_t reverseInt(uint16_t i) {
     return uint16_t(i << 8) | uint16_t(i >> 8);
 }

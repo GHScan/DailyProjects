@@ -5,6 +5,8 @@
 
 #include <type_traits>
 
+#include "utils.h"
+
 class InputBitStream {
 public:
     InputBitStream(const void *buf, int bitCount): mBuf((const uint8_t*)buf), mBitCount(bitCount), mPos(0) { }
@@ -26,9 +28,9 @@ public:
 
         const int ELEM_BITS = sizeof(UintT) * 8;
         const UintT *buf = ((const UintT*)mBuf) + mPos / ELEM_BITS;
-        UintT r = buf[0] >> (mPos % ELEM_BITS);
+        UintT r = fromLittleEndian(buf[0]) >> (mPos % ELEM_BITS);
         if (mPos % ELEM_BITS) {
-            r |= buf[1] << (ELEM_BITS - mPos % ELEM_BITS);
+            r |= fromLittleEndian(buf[1]) << (ELEM_BITS - mPos % ELEM_BITS);
         }
         return (IntT)r;
     }
@@ -105,11 +107,11 @@ public:
 
         const int ELEM_BITS = sizeof(UintT) * 8;
         UintT *buf = ((UintT*)mBuf) + mPos / ELEM_BITS;
-        assert((buf[0] >> (mPos % ELEM_BITS)) == 0);
-        buf[0] |= i << (mPos % ELEM_BITS);
+        assert((fromLittleEndian(buf[0]) >> (mPos % ELEM_BITS)) == 0);
+        buf[0] = toLittleEndian<UintT>(fromLittleEndian(buf[0]) | (i << (mPos % ELEM_BITS)));
         if (mPos % ELEM_BITS) {
-            assert(buf[1] == 0);
-            buf[1] |= i >> (ELEM_BITS - mPos % ELEM_BITS);
+            assert(fromLittleEndian(buf[1]) == 0);
+            buf[1] = toLittleEndian<UintT>(fromLittleEndian(buf[1]) | (i >> (ELEM_BITS - mPos % ELEM_BITS)));
         }
 
         mPos += sizeof(i) * 8;
