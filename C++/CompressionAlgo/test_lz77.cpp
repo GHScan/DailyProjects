@@ -1,9 +1,9 @@
 #include "pch.h"
 #include "compressor.h"
 
-void test_lzw() {
+void test_lz77() {
     {
-        const char *type = "lzw";
+        const char *type = "lz77";
         {
 
             string s0 = "abcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcd";

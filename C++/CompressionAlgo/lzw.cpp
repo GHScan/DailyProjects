@@ -5,8 +5,8 @@
 #include "bitStream.h"
 #include "lzw.h"
 
-static int estimateMaxLZWCompressedSize(int srcsize) {
-    return (srcsize * 10) / 8;
+static int estimateMaxLZWCompressedSize(int size) {
+    return (size * 10) / 8;
 }
 
 static uint32_t readCode(InputBitStream *bs) {
@@ -47,7 +47,7 @@ static void writeCode(OutputBitStream *bs, uint32_t code) {
 
 class LZWChunkCompressor {
 public:
-    LZWChunkCompressor(int srcsizeHint): mBucketMask(pow2Roundup(min(srcsizeHint, 128 * 1024)) - 1), mAllocator(mBucketMask + 1) {
+    LZWChunkCompressor(int chunkSizeHint): mBucketMask(pow2Roundup(min(chunkSizeHint, 128 * 1024)) - 1), mAllocator(mBucketMask + 1) {
         assert((mBucketMask & (mBucketMask + 1)) == 0);
         mBuckets = (Ref**)::calloc(mBucketMask + 1, sizeof(mBuckets[0]));
     }
@@ -57,16 +57,16 @@ public:
     LZWChunkCompressor(const LZWChunkCompressor&) = delete;
     LZWChunkCompressor& operator = (const LZWChunkCompressor&) = delete;
 
-    int compress(const uint8_t *src, int srcsize, uint8_t *dest, int destsize) {
+    int compress(const uint8_t *chunk, int chunkSize, uint8_t *dest, int destsize) {
         OutputBitStream bs(dest, destsize * 8);
 
         int code = 256;
-        for (int i = 0; i < srcsize;) {
-            int longestCode = src[i];
-            Ref cur(code++, src + i++);
+        for (int i = 0; i < chunkSize;) {
+            int longestCode = chunk[i];
+            Ref cur(code++, chunk + i++);
             cur.extend();
 
-            for (; i < srcsize; ++i) {
+            for (; i < chunkSize; ++i) {
                 cur.extend();
                 Ref *p = mBuckets[cur.hash & mBucketMask];
                 for (; p != nullptr && !cur.equal(p); p = p->next);
@@ -74,7 +74,7 @@ public:
                 longestCode = p->code;
             }
 
-            if (i < srcsize) {
+            if (i < chunkSize) {
                 Ref *newRef = mAllocator.malloc();
                 *newRef = cur;
                 Ref **p = &mBuckets[cur.hash & mBucketMask];
@@ -121,9 +121,9 @@ public:
             mCode2Ref.push_back(Ref{(uint8_t*)&mChars[i], 1});
         }
     }
-    void uncompress(const uint8_t *src, int srcsize, uint8_t *dest, int destsize) {
+    void uncompress(const uint8_t *chunk, int chunkSize, uint8_t *dest, int destsize) {
         assert(destsize > 0);
-        InputBitStream bs(src, srcsize * 8);
+        InputBitStream bs(chunk, chunkSize * 8);
 
         mCode2Ref.resize(256);
         mCode2Ref.reserve(destsize * sizeof(Ref));
@@ -168,11 +168,11 @@ void LzwCompressor::compress(IInputStream *si, IOutputStream *so) {
     LZWChunkCompressor compressor(mChunkSize);
 
     for (int i = 0, size = si->size(); i < size; i += mChunkSize) {
-        int srcsize = min(size - i, mChunkSize);
-        if (si->read(&readBuf[0], srcsize) != srcsize) assert(0);
+        int chunkSize = min(size - i, mChunkSize);
+        if (si->read(&readBuf[0], chunkSize) != chunkSize) assert(0);
         uint32_t *sizes = (uint32_t*)&writeBuf[0];
-        sizes[0] = srcsize;
-        sizes[1] = compressor.compress(&readBuf[0], srcsize, &writeBuf[0] + 8, (int)writeBuf.size() - 8);
+        sizes[0] = chunkSize;
+        sizes[1] = compressor.compress(&readBuf[0], chunkSize, &writeBuf[0] + 8, (int)writeBuf.size() - 8);
 
         if (so->write(&writeBuf[0], sizes[1] + 8) != (int)sizes[1] + 8) assert(0);
     }

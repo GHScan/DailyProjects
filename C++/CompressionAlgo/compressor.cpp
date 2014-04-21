@@ -5,6 +5,7 @@
 #include "rle.h"
 #include "huffman.h"
 #include "lzw.h"
+#include "lz77.h"
 
 ICompressor* ICompressor::create(const char *_type) {
     string type(_type);
@@ -34,6 +35,14 @@ ICompressor* ICompressor::create(const char *_type) {
         return new LzwCompressor(128 * 1024);
     } else if (type == "lzw_1024k") {
         return new LzwCompressor(1024 * 1024);
+    } else if (type == "lz77") {
+        return new Lz77Compressor(64 * 1024, 16 * 1024);
+    } else if (type == "lz77_16k") {
+        return new Lz77Compressor(64 * 1024, 16 * 1024);
+    } else if (type == "lz77_128k") {
+        return new Lz77Compressor(1024 * 1024, 128 * 1024);
+    } else if (type == "lz77_1024k") {
+        return new Lz77Compressor(2 * 1024 * 1024, 1024 * 1024);
     }
     return nullptr;
 }

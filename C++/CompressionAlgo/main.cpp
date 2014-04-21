@@ -8,11 +8,13 @@
 extern void test_rle();
 extern void test_huffman();
 extern void test_lzw();
+extern void test_lz77();
 
 static void runUnitTests() {
     test_rle();
     test_huffman();
     test_lzw();
+    test_lz77();
 }
 
 int main(int argc, char *argv[]) {
