@@ -204,6 +204,7 @@ void Lz77Compressor::compress(IInputStream *si, IOutputStream *so) {
     int initWinSize = 0;
     for (int i = 0, size = si->size(); i < size; i += mChunkSize) {
         int chunkSize = min(size - i, mChunkSize);
+        readBuf.resize(initWinSize + chunkSize);
         if (si->read(&readBuf[initWinSize], chunkSize) != chunkSize) assert(0);
 
         uint32_t *sizes = (uint32_t*)&writeBuf[0];
