@@ -117,6 +117,8 @@ public:
                 writeRef(&bs, windowEnd - match->data, size, windowEnd);
             }
 
+            if (windowEnd + size >= chunkEnd) break;
+
             for (int i = 0; i < size; ++i) {
                 addRef(++windowEnd - MIN_DUPLICATE_SIZE, window);
             }
