@@ -250,23 +250,24 @@ void HuffmanCompressor::compress(IInputStream *si, IOutputStream *so) {
         dest[0] = srcsize;
         dest[1] = HuffmanCompressionAlgo::compress(&readBuf[0], srcsize, &writeBuf[0] + 8, (int)writeBuf.size() - 8);;
         assert(dest[1] + 8 < writeBuf.size());
-        so->write(dest, dest[1] + 8);
+        if (so->write(dest, dest[1] + 8) != (int)dest[1] + 8) assert(0);
     }
 }
 
 void HuffmanCompressor::uncompress(IInputStream *si, IOutputStream *so) {
-    vector<uint8_t> readBuf(mChunkSize + HUFFMAN_COMPRESSION_OVERHEAD + 8), writeBuf(mChunkSize);
+    vector<uint8_t> readBuf, writeBuf;
 
     for (int i = 0, size = si->size(); i < size; ) {
-        if (si->read(&readBuf[0], 8) != 8) assert(0);
         uint32_t sizes[2];
-        memcpy(sizes, &readBuf[0], 8);
-        if (si->read(&readBuf[0], sizes[1]) != (int)sizes[1]) assert(0);
-        writeBuf.resize(max(writeBuf.size(), sizes[0]));
+        if (si->read(sizes, sizeof(sizes)) != sizeof(sizes)) assert(0);
+        readBuf.resize(sizes[1]);
+        writeBuf.resize(sizes[0]);
 
-        HuffmanUncompressionAlgo::uncompress(&readBuf[0], sizes[1], &writeBuf[0], sizes[0]);
-        so->write(&writeBuf[0], sizes[0]);
+        if (si->read(&readBuf[0], (int)readBuf.size()) != (int)readBuf.size()) assert(0);
 
-        i += sizes[1] + 8;
+        HuffmanUncompressionAlgo::uncompress(&readBuf[0], (int)readBuf.size(), &writeBuf[0], (int)writeBuf.size());
+        if (so->write(&writeBuf[0], (int)writeBuf.size()) != (int)writeBuf.size()) assert(0);
+
+        i += (int)readBuf.size() + 8;
     }
 }

@@ -7,10 +7,12 @@
 
 extern void test_rle();
 extern void test_huffman();
+extern void test_lzw();
 
 static void runUnitTests() {
     test_rle();
     test_huffman();
+    test_lzw();
 }
 
 int main(int argc, char *argv[]) {

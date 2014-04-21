@@ -1,10 +1,10 @@
-#include "pch.h"
 
+#include "pch.h"
 #include "compressor.h"
 
-void test_huffman() {
+void test_lzw() {
     {
-        const char *type = "huff";
+        const char *type = "lzw";
         {
 
             string s0 = "abcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcd";

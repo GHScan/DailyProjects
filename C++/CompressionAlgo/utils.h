@@ -2,6 +2,7 @@
 #define UTILS_H
 
 #include <stdint.h>
+#include <math.h>
 
 #include <type_traits>
 
@@ -29,6 +30,10 @@ inline T fromLittleEndian(T v) {
 template<typename T>
 inline T toLittleEndian(T v) {
     return isLittleEndian() ? v : reverseInt(v);
+}
+
+inline int pow2Roundup(int size) {
+    return 1 << ((int)ceil(log(size) / log(2)));
 }
 
 #endif
