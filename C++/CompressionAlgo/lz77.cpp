@@ -7,6 +7,7 @@
 
 typedef uint32_t DuplicateCheckType;
 static const int MIN_DUPLICATE_SIZE = sizeof(DuplicateCheckType);
+static const int MAX_CHAIN_LENGTH = 32;
 
 static int estimateLz77MaxCompressedSize(int size) {
     return (size * 10)  / 8;
@@ -152,12 +153,16 @@ private:
         int longest = MIN_DUPLICATE_SIZE;
         Ref *longestRef = p;
 
-        for (; p->data >= window && begin + longest < end; p = p->next) {
-            if (((DuplicateCheckType*)(p->data + longest))[-1] != ((DuplicateCheckType*)(begin + longest))[-1]) continue;
-            if (memcmp(p->data, begin, longest) != 0) continue;
-            if (p->data[longest] != begin[longest]) continue;
-            longestRef = p;
-            for (; begin + longest < end && p->data[longest] == begin[longest]; ++longest);
+        if (begin + longest < end) {
+            int chainLen = MAX_CHAIN_LENGTH;
+            for (; p->data >= window && chainLen-- > 0; p = p->next) {
+                if (*(DuplicateCheckType*)p->data != *(DuplicateCheckType*)begin) continue;
+                if (((DuplicateCheckType*)(p->data + longest))[-1] != ((DuplicateCheckType*)(begin + longest))[-1]) continue;
+                if (memcmp(p->data, begin, longest) != 0) continue;
+                if (p->data[longest] != begin[longest]) continue;
+                longestRef = p;
+                for (; begin + longest < end && p->data[longest] == begin[longest]; ++longest);
+            }
         }
 
         *size = longest;
