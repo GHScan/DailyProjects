@@ -8,6 +8,16 @@
    )
  )
 
+(define (_min x y)
+  (if (< x y) x y)
+ )
+(define (sum_of_max2_v2 x y z)
+ (- 
+  (+ x y z)
+  (_min x (_min y z))
+  )
+ )
+
 (print (sum_of_max2 1 2 3))
 (print (sum_of_max2 2 1 3))
 (print (sum_of_max2 3 1 2))
