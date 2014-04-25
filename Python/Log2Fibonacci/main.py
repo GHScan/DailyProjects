@@ -16,6 +16,11 @@ def _febn(v0, m0, n):
 def febn(n):
     return _febn((1, 0), ((1, 1), (1, 0)), n)
 
+def febn_numpy(n):
+    import numpy
+    m = numpy.mat('1 1; 1 0', object)
+    return ((1, 0)*(m**n)).item(0, 1)
+
 for i in range(10):
     print febn(i)
 print febn(1000)
