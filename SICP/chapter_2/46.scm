@@ -1,0 +1,26 @@
+#lang racket
+
+(provide (all-defined-out))
+
+(define (vect-make x y)
+ (cons x y)
+ )
+(define (vect-xcor v)
+ (car v)
+ )
+(define (vect-ycor v)
+ (cdr v)
+ )
+(define (vect-add v0 v1)
+ (vect-make (+ (vect-xcor v0) (vect-xcor v1))
+            (+ (vect-ycor v0) (vect-ycor v1)))
+ )
+(define (vect-sub v0 v1)
+ (vect-make (- (vect-xcor v0) (vect-xcor v1))
+            (- (vect-ycor v0) (vect-ycor v1)))
+ )
+(define (vect-scale s v)
+ (vect-make (* (vect-xcor v) s)
+            (* (vect-ycor v) s))
+ )
+

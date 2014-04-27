@@ -1,0 +1,31 @@
+#lang racket
+
+(require racket/pretty)
+(require "46.scm")
+
+(define (frame-make origin edge1 edge2)
+ (list origin edge1 edge2)
+ )
+(define (frame-origin f)
+ (list-ref f 0)
+ )
+(define (frame-edge1 f)
+ (list-ref f 1)
+ )
+(define (frame-edge2 f)
+ (list-ref f 2)
+ )
+
+(define (frame-coord-map f)
+  (lambda (v)
+    (vect-add (frame-origin f)
+              (vect-add (vect-scale (vect-xcor v) (frame-edge1 f))
+                        (vect-scale (vect-ycor v) (frame-edge2 f))))
+    )
+  )
+
+(define frame1 (frame-make (vect-make 1 1) (vect-make 0.707 -0.707) (vect-make 0.707 0.707)))
+(define frame1-map (frame-coord-map frame1))
+(pretty-print (map frame1-map (list (vect-make 0 0) 
+                                    (vect-make 0.5 0.5) 
+                                    (vect-make 1 1))))
