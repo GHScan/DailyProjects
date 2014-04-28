@@ -1,0 +1,46 @@
+#lang racket
+
+(define (make-node k v left right)
+  (list k v left right)
+  )
+(define (node-key node)
+  (car node)
+  )
+(define (node-value node)
+  (cadr node)
+  )
+(define (node-left node)
+  (caddr node)
+  )
+(define (node-right node)
+  (cadddr node)
+  )
+
+(define (insert kv node)
+  (cond
+    ((null? node) 
+     (make-node (car kv) (cdr kv) empty empty))
+    ((= (car kv) (node-key node)) 
+     node)
+    ((< (car kv) (node-key node))
+     (make-node (node-key node) (node-value node) (insert kv (node-left node)) (node-right node))
+     )
+    (else
+      (make-node (node-key node) (node-value node) (node-left node) (insert kv (node-right node)))
+      ))
+  )
+(define (lookup k node)
+  (cond 
+    ((null? node) empty)
+    ((= k (node-key node)) (node-value node))
+    ((< k (node-key node)) (lookup k (node-left node)))
+    (else (lookup k (node-right node))))
+  )
+
+(define (build-from-kvlist kvlist)
+  (foldr insert empty kvlist)
+  )
+
+(define set1 (build-from-kvlist '((1 1)(8 64)(2 4)(3 9)(4 16)(4 16)(2 4))))
+(pretty-print set1)
+(pretty-print (build-list 10 (lambda (i) (lookup i set1))))
