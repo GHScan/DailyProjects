@@ -1,0 +1,33 @@
+#lang racket
+
+(define (expr-prior expr)
+  (if (number? expr)
+    10
+    (let ((op (list-ref expr 0)))
+      (cond
+        ((eq? '+ op) 1)
+        ((eq? '- op) 1)
+        ((eq? '* op) 2)
+        ((eq? '/ op) 2)
+        ((eq? '% op) 2)
+        (else (error "invalid op" op))
+        ))
+    )
+  )
+(define (infix-print expr)
+  (if (number? expr)
+    (display expr)
+    (let ((op (list-ref expr 0))(l (list-ref expr 1))(r (list-ref expr 2)))
+      (let ((quote-left (< (expr-prior l)(expr-prior expr)))
+            (quote-right (<= (expr-prior r)(expr-prior expr))))
+        (cond (quote-left (display "(")))
+        (infix-print l)
+        (cond (quote-left (display ")")))
+        (display op)
+        (cond (quote-right (display "(")))
+        (infix-print r)
+        (cond (quote-right (display ")")))
+        )))
+  )
+
+(infix-print '(- (* 12 (- (+ 2 3) (- 3 4))) 5))
