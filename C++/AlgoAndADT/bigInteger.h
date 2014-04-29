@@ -18,15 +18,23 @@ public:
     BigInteger(uint32_t i) {
         fromUint(mBuf, i);
     }
-    BigInteger operator + (const BigInteger &o) {
+    BigInteger operator + (const BigInteger &o) const {
         BigInteger r;
         add(r.mBuf, mBuf, o.mBuf);
         return move(r);
     }
-    BigInteger operator * (const BigInteger &o) {
+    BigInteger operator * (const BigInteger &o) const {
         BigInteger r;
         mul(r.mBuf, mBuf, o.mBuf);
         return move(r);
+    }
+    BigInteger pow(int n) {
+        if (n == 0) {
+            return BigInteger(1);
+        } else {
+            BigInteger halfN(pow(n / 2));
+            return halfN * halfN * (n % 2 ? *this : 1);
+        }
     }
     bool operator == (const BigInteger &o) const { return compare(mBuf, o.mBuf) == 0; }
     bool operator != (const BigInteger &o) const { return !(*this == o); }
@@ -107,7 +115,7 @@ private:
     static void mul(Buffer &result, const Buffer &x, const Buffer &y) {
         assert(isNormalized(x) && isNormalized(y));
         if (x.size() < y.size()) {
-            add(result, y, x);
+            mul(result, y, x);
             return;
         }
 
@@ -155,10 +163,38 @@ private:
     Buffer mBuf;
 };
 
-int main() {
-    BigInteger big(1);
-    for (BigInteger i = 1; i < 100; i = i + 1) {
-        big = big * i;
-        cout << big << endl;
+struct Matrix2x2 {
+    BigInteger nums[4];
+    static Matrix2x2 IDENTITY;
+    const BigInteger& operator [] (int i) const {
+        return nums[i];
     }
+    Matrix2x2 operator * (const Matrix2x2 &m1) const {
+        const Matrix2x2 &m0 = *this;
+        return Matrix2x2{
+                m0[0] * m1[0] + m0[1] * m1[2],
+                m0[0] * m1[1] + m0[1] * m1[3],
+                m0[2] * m1[0] + m0[3] * m1[2],
+                m0[2] * m1[1] + m0[3] * m1[3]};
+    }
+    Matrix2x2 pow(int n) {
+        if (n == 0) return IDENTITY;
+        else {
+            Matrix2x2 half(pow(n / 2));
+            return half * half * (n % 2 ? *this : IDENTITY);
+        }
+    }
+};
+Matrix2x2 Matrix2x2::IDENTITY = {1, 0, 0, 1};
+
+static BigInteger fib(int n) {
+    Matrix2x2 m{1, 1, 1, 0};
+    return m.pow(n)[1];
+}
+
+int main() {
+    for (int i = 0; i < 10; ++i) {
+        cout << fib(i) << endl;
+    }
+    cout << fib(1000) << endl;
 }
