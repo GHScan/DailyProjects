@@ -1,0 +1,41 @@
+#lang racket
+
+(define (make-account balance init-passwd)
+  (define (withdraw value)
+    (if (>= balance value)
+      (begin (set! balance (- balance value))
+             balance)
+      "Insufficient funds")
+    )   
+  (define (deposit value)
+    (set! balance (+ balance value))
+    balance
+    )
+  (define (call-the-cops args)
+    (error "Call the cops!")
+    )
+  (define passwd-mismatch-time 0)
+
+  (lambda (passwd message)
+    (if (eq? passwd init-passwd)
+      (begin (set! passwd-mismatch-time 0)
+             (cond
+               ((eq? message 'withdraw) withdraw)
+               ((eq? message 'deposit) deposit)))
+      (if (= passwd-mismatch-time 6)
+        call-the-cops
+        (begin (set! passwd-mismatch-time (+ 1 passwd-mismatch-time))
+               (lambda args "Invalid password"))))
+    ))
+
+(define acc (make-account 100 '123))
+((acc '123 'withdraw) 10)
+((acc '234 'deposit) 20)
+((acc '123 'deposit) 20)
+((acc '234 'deposit) 20)
+((acc '234 'deposit) 20)
+((acc '234 'deposit) 20)
+((acc '234 'deposit) 20)
+((acc '234 'deposit) 20)
+((acc '234 'deposit) 20)
+((acc '234 'deposit) 20)
