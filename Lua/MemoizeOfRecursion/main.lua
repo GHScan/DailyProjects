@@ -7,13 +7,10 @@ end
 function memoize(f)
     local cache = {}
     return function(x)
-        if cache[x] then
-            return cache[x]
-        else
-            local r = f(x)
-            cache[x] = r
-            return r
+        if not cache[x] then 
+            cache[x] = f(x)
         end
+        return cache[x]
     end
 end
 
