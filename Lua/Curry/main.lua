@@ -1,46 +1,26 @@
-function fastCurry(f)
-    local args = {}
-    local proxy
-    proxy = function(x)
-        if x then
-            args[#args + 1] = x
-            return proxy
-        else
-            return f(unpack(args))
-        end
-    end
-    return proxy
-end
-function fastCurryN(f, n)
-    local args = {}
-    local proxy
-    proxy = function(x)
-        if n == 0 then
+function curry(...)
+    local n, f, args = select(1, ...), select(2, ...), {select(3, ...)}
+    local curried
+    curried = function(...)
+        local newArgs = {...}
+        for _, arg in ipairs(newArgs) do args[#args + 1] = arg end
+        if #args >= n then
             return f(unpack(args))
         else
-            n = n - 1
-            args[#args + 1] = x
-            return proxy
+            return curried
         end
     end
-    return proxy
+    return curried
 end
+
 
 --
 local function sum4(a, b, c, d)
     return a + b + c + d
 end
-print(fastCurry(sum4)(1)(2)(3)(4)())
-print(fastCurryN(sum4, 4)(1)(2)(3)(4)())
-
-------------------------------
-function curry(f)
-    return function(x)
-        return function(...)
-            return f(x, ...)
-        end
-    end
-end
-
-print(curry(sum4)(1)(2, 3, 4))
-print(curry(curry(curry(curry(sum4)(1))(2))(3))(4)())
+print(sum4(1, 2, 3, 4))
+print(curry(4, sum4)(1)(2)(3)(4))
+print(curry(4, sum4)(1, 2)(3)(4))
+print(curry(4, sum4)(1, 2)(3, 4))
+print(curry(4, sum4)(1, 2, 3, 4))
+print(curry(4, sum4, 1, 2)(3, 4))

@@ -1,14 +1,14 @@
 #lang racket
 
 (define (curry n f . args)
-  (define (create-proxy boundArgs)
+  (define (create-curried boundArgs)
     (lambda args 
       (if (>= (+ (length boundArgs) (length args)) n)
         (apply f (append boundArgs args))
-        (create-proxy (append boundArgs args)))
+        (create-curried (append boundArgs args)))
       )
     )
-  (create-proxy args)
+  (create-curried args)
   )
 
 (((curry 2 +) 1) 2 3 4)
