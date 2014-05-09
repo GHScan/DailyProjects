@@ -1,0 +1,27 @@
+#lang racket
+
+(define (curry n f . args)
+  (define (create-proxy boundArgs)
+    (lambda args 
+      (if (>= (+ (length boundArgs) (length args)) n)
+        (apply f (append boundArgs args))
+        (create-proxy (append boundArgs args)))
+      )
+    )
+  (create-proxy args)
+  )
+
+(((curry 2 +) 1) 2 3 4)
+(((curry 3 +) 1 2) 3 4)
+((curry 3 list) 1 2)
+((curry 2 cons) 1)
+((curry 2 cons) 1 2)
+(((curry 3 list) 1 2) 3)
+(((curry 2 list) 1) 3)
+((((curry 3 foldl) +) 0) '(1 2 3))
+(map ((curry 2 +) 10) '(1 2 3))
+(map (curry 2 + 10) '(1 2 3))
+(map (compose (curry 1 * 2) (curry 1 + 10)) '(1 2 3))
+(define foo (curry 3 (lambda (x y z) (list x y z))))
+(foo 1 2 3)
+(((((foo) 1) 2)) 3)
