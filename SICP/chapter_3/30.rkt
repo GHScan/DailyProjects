@@ -18,10 +18,7 @@
   )
 
 (define (write-number-to-wires wires number)
-  (if (null? wires)
-    true
-    (begin (set-signal! (car wires) (= 1 (remainder number 2)))
-           (write-number-to-wires (cdr wires) (quotient number 2))))
+  (foldl (lambda (wire value) (set-signal! wire (= 1 (remainder value 2))) (quotient value 2)) number wires)
   )
 (define (read-number-from-wires wires)
   (foldr (lambda (wire value) (+ (* 2 value) (if (get-signal wire) 1 0))) 0 wires)
@@ -38,7 +35,7 @@
 (ripple-carry-adder a-bits b-bits cin s-bits cout)
 (printf "\n@done: ~a\n" (propagate))
 
-(define (add-bit32 a b)
+(define (bit32-add a b)
   (printf "\n @add-bit32: ~a + ~a = " a b)
   (write-number-to-wires a-bits a)
   (write-number-to-wires b-bits b)
@@ -48,10 +45,10 @@
   (printf ", ~a delay" (agenda-current-time the-agenda))
   )
 
-(add-bit32 1 1)
-(add-bit32 19 54)
-(add-bit32 223 472)
-(add-bit32 1024 1025)
-(add-bit32 4096 4100)
-(add-bit32 16384 16400)
-(add-bit32 65535 65536)
+(bit32-add 1 1)
+(bit32-add 19 54)
+(bit32-add 223 472)
+(bit32-add 1024 1025)
+(bit32-add 4096 4100)
+(bit32-add 16384 16400)
+(bit32-add 65535 65536)
