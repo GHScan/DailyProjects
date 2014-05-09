@@ -1,5 +1,4 @@
-
-function curry(f)
+function fastCurry(f)
     local args = {}
     local proxy
     proxy = function(x)
@@ -12,7 +11,7 @@ function curry(f)
     end
     return proxy
 end
-function curryN(f, n)
+function fastCurryN(f, n)
     local args = {}
     local proxy
     proxy = function(x)
@@ -31,5 +30,17 @@ end
 local function sum4(a, b, c, d)
     return a + b + c + d
 end
-print(curry(sum4)(1)(2)(3)(4)())
-print(curryN(sum4, 4)(1)(2)(3)(4)())
+print(fastCurry(sum4)(1)(2)(3)(4)())
+print(fastCurryN(sum4, 4)(1)(2)(3)(4)())
+
+------------------------------
+function curry(f)
+    return function(x)
+        return function(...)
+            return f(x, ...)
+        end
+    end
+end
+
+print(curry(sum4)(1)(2, 3, 4))
+print(curry(curry(curry(curry(sum4)(1))(2))(3))(4)())
