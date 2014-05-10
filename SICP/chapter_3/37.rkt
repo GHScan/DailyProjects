@@ -1,0 +1,41 @@
+#lang racket
+
+(require "33.rkt")
+
+;------------------------------
+(define (cv x)
+  (define c (make-connector))
+  (constant x c)
+  c)
+(define (c+ a b)
+  (define c (make-connector))
+  (adder a b c)
+  c)
+(define (c- a b)
+  (define c (make-connector))
+  (adder b c a)
+  c)
+(define (c* a b)
+  (define c (make-connector))
+  (multiplier a b c)
+  c)
+(define (c/ a b)
+  (define c (make-connector))
+  (multiplier b c a)
+  c)
+;------------------------------
+
+(define (celsius-fahrenheit-converter-2 c)
+  (c+ (cv 32)
+      (c* c (c/ (cv 9) (cv 5))))
+  )
+
+(let ((c (make-connector)))
+  (printf "\n------ celsius-fahrenheit-converter-2 -----")
+  (define f (celsius-fahrenheit-converter-2 c))
+  (probe "Celsius tmp" c)
+  (probe "Fahrenheit tmp" f)
+  (c 'set-value! 25 'user)
+  (c 'forget! 'user)
+  (f 'set-value! 212 'user)
+  )
