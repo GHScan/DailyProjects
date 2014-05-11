@@ -9,4 +9,4 @@ def primeList(maxN):
                 l[j] = False
     return [i for (i,b) in zip(range(2,maxN), l[2:]) if b]
 
-print (primeList(100))
+print primeList(100)
