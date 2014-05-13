@@ -1,14 +1,12 @@
 #lang racket
 
-(define (curry n f . args)
-  (define (create-curried boundArgs)
-    (lambda args 
-      (if (>= (+ (length boundArgs) (length args)) n)
-        (apply f (append boundArgs args))
-        (create-curried (append boundArgs args)))
-      )
+(define (curry n f . bound-args)
+  (lambda args
+    (let ((full-args (append bound-args args)))
+      (if (>= (length full-args) n)
+        (apply f full-args)
+        (apply curry n f full-args)))
     )
-  (create-curried args)
   )
 
 (((curry 2 +) 1) 2 3 4)
@@ -25,3 +23,4 @@
 (define foo (curry 3 (lambda (x y z) (list x y z))))
 (foo 1 2 3)
 (((((foo) 1) 2)) 3)
+(map (curry 2 * 2) (range 10))
