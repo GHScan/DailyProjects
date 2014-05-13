@@ -1,0 +1,56 @@
+BloomFilter<HasherSeq_List<Hasher_Default>>:
+	n=1000000, m=1048576, k=1, memory=0.12MB, fail=%34.1986
+	n=1000000, m=2097152, k=2, memory=0.25MB, fail=%42.9104
+	n=1000000, m=4194304, k=3, memory=0.50MB, fail=%25.2001
+	n=1000000, m=8388608, k=6, memory=1.00MB, fail=%9.77368
+	n=1000000, m=16777216, k=12, memory=2.00MB, fail=%2.21455
+	n=1000000, m=33554432, k=24, memory=4.00MB, fail=%0.200875
+BloomFilter<HasherSeq_Double<Hasher_Default>>:
+	n=1000000, m=1048576, k=1, memory=0.12MB, fail=%34.1986
+	n=1000000, m=2097152, k=2, memory=0.25MB, fail=%26.3906
+	n=1000000, m=4194304, k=3, memory=0.50MB, fail=%11.8163
+	n=1000000, m=8388608, k=6, memory=1.00MB, fail=%1.22578
+	n=1000000, m=16777216, k=12, memory=2.00MB, fail=%0.01425
+	n=1000000, m=33554432, k=24, memory=4.00MB, fail=%2.5e-05
+BloomFilter<HasherSeq_List<Hasher_Jenkins>>:
+	n=1000000, m=1048576, k=1, memory=0.12MB, fail=%16.7038
+	n=1000000, m=2097152, k=2, memory=0.25MB, fail=%16.8941
+	n=1000000, m=4194304, k=3, memory=0.50MB, fail=%8.0428
+	n=1000000, m=8388608, k=6, memory=1.00MB, fail=%0.84255
+	n=1000000, m=16777216, k=12, memory=2.00MB, fail=%0.008875
+	n=1000000, m=33554432, k=24, memory=4.00MB, fail=%0
+BloomFilter<HasherSeq_Double<Hasher_Jenkins>>:
+	n=1000000, m=1048576, k=1, memory=0.12MB, fail=%16.7038
+	n=1000000, m=2097152, k=2, memory=0.25MB, fail=%16.9114
+	n=1000000, m=4194304, k=3, memory=0.50MB, fail=%8.0575
+	n=1000000, m=8388608, k=6, memory=1.00MB, fail=%0.842825
+	n=1000000, m=16777216, k=12, memory=2.00MB, fail=%0.008625
+	n=1000000, m=33554432, k=24, memory=4.00MB, fail=%0
+BloomFilter<HasherSeq_List<Hasher_FNV1a>>:
+	n=1000000, m=1048576, k=1, memory=0.12MB, fail=%11.8126
+	n=1000000, m=2097152, k=2, memory=0.25MB, fail=%14.2651
+	n=1000000, m=4194304, k=3, memory=0.50MB, fail=%5.61832
+	n=1000000, m=8388608, k=6, memory=1.00MB, fail=%0.4494
+	n=1000000, m=16777216, k=12, memory=2.00MB, fail=%0.002625
+	n=1000000, m=33554432, k=24, memory=4.00MB, fail=%0
+BloomFilter<HasherSeq_Double<Hasher_FNV1a>>:
+	n=1000000, m=1048576, k=1, memory=0.12MB, fail=%11.8126
+	n=1000000, m=2097152, k=2, memory=0.25MB, fail=%11.235
+	n=1000000, m=4194304, k=3, memory=0.50MB, fail=%6.94175
+	n=1000000, m=8388608, k=6, memory=1.00MB, fail=%2.08245
+	n=1000000, m=16777216, k=12, memory=2.00MB, fail=%0.2954
+	n=1000000, m=33554432, k=24, memory=4.00MB, fail=%0.005175
+BloomFilter<HasherSeq_List<Hasher_Murmur>>:
+	n=1000000, m=1048576, k=1, memory=0.12MB, fail=%16.702
+	n=1000000, m=2097152, k=2, memory=0.25MB, fail=%16.8792
+	n=1000000, m=4194304, k=3, memory=0.50MB, fail=%8.02967
+	n=1000000, m=8388608, k=6, memory=1.00MB, fail=%0.827475
+	n=1000000, m=16777216, k=12, memory=2.00MB, fail=%0.009025
+	n=1000000, m=33554432, k=24, memory=4.00MB, fail=%0
+BloomFilter<HasherSeq_Double<Hasher_Murmur>>:
+	n=1000000, m=1048576, k=1, memory=0.12MB, fail=%16.702
+	n=1000000, m=2097152, k=2, memory=0.25MB, fail=%16.9174
+	n=1000000, m=4194304, k=3, memory=0.50MB, fail=%8.0556
+	n=1000000, m=8388608, k=6, memory=1.00MB, fail=%0.830775
+	n=1000000, m=16777216, k=12, memory=2.00MB, fail=%0.008725
+	n=1000000, m=33554432, k=24, memory=4.00MB, fail=%2.5e-05
