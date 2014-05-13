@@ -2,17 +2,17 @@
 
 import inspect
 
-def curry(f, *_args):
-    args = list(_args)
-    argn = len(inspect.getargspec(f).args)
-    def curried(*newargs):
-        args.extend(newargs)
-        if len(args) >= argn:
-            return f(*args)
+def curry(f, *boundArgs):
+    n = len(inspect.getargspec(f).args)
+    def curried(*args):
+        allArgs = boundArgs + args
+        if len(allArgs) >= n:
+            return f(*allArgs)
         else:
-            return curried
+            return curry(f, *allArgs)
     return curried
 
+#------------------------------
 def sum4(a, b, c, d): 
     return a + b + c + d
 
@@ -22,3 +22,10 @@ print curry(sum4)(1, 2)(3)(4)
 print curry(sum4)(1, 2)(3, 4)
 print curry(sum4)(1, 2, 3, 4)
 print curry(sum4, 1, 2)(3, 4)
+
+#------------------------------
+def add(a, b): return a + b
+def sub(a, b): return a - b
+def mul(a, b): return a * b
+def div(a, b): return a / b
+print map(curry(mul, 2), range(10))
