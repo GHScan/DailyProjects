@@ -39,6 +39,8 @@
 
 ;------------------------------
 ; quick-sort
+
+; curry is too slow, because it should concat the args every time
 (define (quick-sort l)
   (if (or (empty? l) (empty? (cdr l)))
     l
@@ -48,9 +50,17 @@
   )
 
 (define (quick-sort-v2 l)
+  (if (or (empty? l) (empty? (cdr l)))
+    l
+    (let ((first (car l))(rest (cdr l)))
+      (append (quick-sort-v2 (filter (lambda (i) (< i first)) rest))
+              (cons first (quick-sort-v2 (filter (lambda (i) (>= i first)) rest))))))
+  )
+
+(define (quick-sort-v3 l)
   (define (partition l depth v left right)
     (if (empty? l)
-      (append (quick-sort-v2 left) (cons v (quick-sort-v2 right)))
+      (append (quick-sort-v3 left) (cons v (quick-sort-v3 right)))
       (if (or (< (car l) v) (and (= (car l) v) (= 0 (remainder depth 2))))
         (partition (cdr l) (add1 depth) v (cons (car l) left) right)
         (partition (cdr l) (add1 depth) v left (cons (car l) right)))
@@ -59,6 +69,7 @@
     l
     (partition (cdr l) 0 (car l) empty empty))
   )
+
 ;------------------------------
 ; merge-sort
 
@@ -124,6 +135,7 @@
             bubble-sort
             quick-sort
             quick-sort-v2
+            quick-sort-v3
             merge-sort
             bst-sort
             (lambda (data) (sort data <))
@@ -157,6 +169,7 @@
             (cons 20000 bubble-sort)
             (cons 500000 quick-sort)
             (cons 1000000 quick-sort-v2)
+            (cons 1000000 quick-sort-v3)
             (cons 1000000 merge-sort)
             (cons 1000000 bst-sort)
             (cons 1000000 (lambda (data) (sort data <)))
