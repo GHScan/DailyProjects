@@ -1,5 +1,6 @@
 #lang racket
 
+(require compatibility/mlist)
 ;------------------------------
 ; insertion-sort
 (define (insert v l)
@@ -70,6 +71,23 @@
     (partition (cdr l) 0 (car l) empty empty))
   )
 
+; use mpair to avoid redundant memory allocation, especially for mappend!
+(define (quick-sort-v4 l) 
+  (define (iter l)
+    (define (partition l depth v left right)
+      (if (eq? empty l)
+        (mappend! (iter left) (mcons v (iter right)))
+        (let ((rest (mcdr l)))
+          (if (or (< (mcar l) v) (and (= (mcar l) v) (= 0 (remainder depth 2))))
+            (begin (set-mcdr! l left) (partition rest (add1 depth) v l right))
+            (begin (set-mcdr! l right) (partition rest (add1 depth) v left l))))))
+    (if (eq? empty l)
+      l
+      (partition (mcdr l) 0 (mcar l) empty empty))
+    )
+
+  (mlist->list (iter (list->mlist l)))
+  )
 ;------------------------------
 ; merge-sort
 
@@ -136,6 +154,7 @@
             quick-sort
             quick-sort-v2
             quick-sort-v3
+            quick-sort-v4
             merge-sort
             bst-sort
             (lambda (data) (sort data <))
@@ -170,6 +189,7 @@
             (cons 500000 quick-sort)
             (cons 1000000 quick-sort-v2)
             (cons 1000000 quick-sort-v3)
+            (cons 1000000 quick-sort-v4)
             (cons 1000000 merge-sort)
             (cons 1000000 bst-sort)
             (cons 1000000 (lambda (data) (sort data <)))
