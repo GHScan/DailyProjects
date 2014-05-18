@@ -228,6 +228,9 @@
                               (cons 'append append)
                               (cons 'apply script-apply)
                               (cons 'pretty-print pretty-print)
+                              (cons 'current-inexact-milliseconds current-inexact-milliseconds)
+                              (cons 'printf printf)
+                              (cons 'range range)
                               ))
         (spectial-forms (list 
                           (cons 'if eval-if)
@@ -292,5 +295,35 @@
     '(eval! '(foldl (curry 3 + 1) 0 (build-list 10 identity)))))
   )
 
+(define (benchmark)
+  (eval G
+        '(define (timing f loop)
+           (define (iter n)
+             (if (= 1 n)
+               (f)
+               (begin (f) (iter (- n 1))))
+             )
+           (define start (current-inexact-milliseconds))
+           (iter loop)
+           (printf "~a\n" (- (current-inexact-milliseconds) start))
+           ))
+  (eval G
+        '(define (fib n)
+           (define (iter n a b)
+             (if (= 0 n)
+               a
+               (iter (- n 1) b (+ a b)))
+             )
+           (iter n 0 1)
+           ))
+  (eval G
+   '(begin 
+       (timing (lambda () (fib 30)) 5000)
+       (timing (lambda () (map (curry 2 * 2) (range 256))) 300)
+       ))
+  )
+
+;------------------------------
 (setup)
 ;(run-test)
+;(benchmark)
