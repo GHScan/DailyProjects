@@ -58,6 +58,15 @@
               (cons first (quick-sort-v2 (filter (lambda (i) (>= i first)) rest))))))
   )
 
+(define (quick-sort-v2.2 l)
+  (if (or (empty? l) (empty? (cdr l)))
+    l 
+    (let ((first (car l))(rest (cdr l)))
+      (append (quick-sort-v2.2 (filter (lambda (i) (< i first)) rest))
+              (cons first (filter (lambda (i) (= i first)) rest))
+              (quick-sort-v2.2 (filter (lambda (i) (> i first)) rest)))))
+  )
+
 (define (quick-sort-v3 l)
   (define (partition l depth v left right)
     (if (empty? l)
@@ -153,6 +162,7 @@
             bubble-sort
             quick-sort
             quick-sort-v2
+            quick-sort-v2.2
             quick-sort-v3
             quick-sort-v4
             merge-sort
@@ -188,6 +198,7 @@
             (cons 20000 bubble-sort)
             (cons 500000 quick-sort)
             (cons 1000000 quick-sort-v2)
+            (cons 1000000 quick-sort-v2.2)
             (cons 1000000 quick-sort-v3)
             (cons 1000000 quick-sort-v4)
             (cons 1000000 merge-sort)
