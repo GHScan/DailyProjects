@@ -131,6 +131,10 @@
   (let ((names (map car (car exp)))(vars (map cadr (car exp)))(body (cdr exp)))
     (eval-script-procedure (eval-lambda env (cons names body)) (map (curry eval env) vars)))
   )
+
+(define (eval-eval! env exp)
+  (eval env (eval env (car exp)))
+  )
 ;------------------------------
 (define the-special-forms (make-hasheq))
 
@@ -224,7 +228,6 @@
                               (cons 'append append)
                               (cons 'apply script-apply)
                               (cons 'pretty-print pretty-print)
-                              (cons 'eval (curry eval G))
                               ))
         (spectial-forms (list 
                           (cons 'if eval-if)
@@ -237,6 +240,7 @@
                           (cons 'quote eval-quote)
                           (cons 'begin eval-begin)
                           (cons 'set! eval-set!)
+                          (cons 'eval! eval-eval!)
                           )))
     (for-each (lambda (p) (add-builtin (car p) (cdr p))) builtin-procedures)
     (for-each (lambda (p) (special-form-add (car p) (cdr p))) spectial-forms))
@@ -285,7 +289,7 @@
 
   (pretty-print 
    (eval G 
-    '(eval '(foldl (curry 3 + 1) 0 (build-list 10 identity)))))
+    '(eval! '(foldl (curry 3 + 1) 0 (build-list 10 identity)))))
   )
 
 (setup)
