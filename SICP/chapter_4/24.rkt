@@ -61,12 +61,13 @@
   (symbol? exp)
   )
 (define (compile-variable exp)
-  (define lookup 
-    (lambda (env)
-     (let ((depth (env-get-variable-depth env exp)))
-      (set! lookup (lambda (env) (env-lookup-variable env depth exp)))
-      (lookup env))))
-  (lambda (env) (lookup env))
+  (let ((depth false))
+    (lambda (env) 
+      (if depth
+        (env-lookup-variable env depth exp)
+        (begin (set! depth (env-get-variable-depth env exp)) 
+               (env-lookup-variable env depth exp)))
+      ))
   )
 
 (define (exp-special-form? exp)
@@ -127,14 +128,13 @@
   )
 
 (define (compile-set! exp)
-  (define setter 
-    (lambda (env value)
-      (let ((depth (env-get-variable-depth env (car exp))))
-        (set! setter (lambda (env value) (env-set-variable! env depth (car exp) value)))
-        (setter env value))))
-  (let ((value (compile (cadr exp))))
-    (lambda (env) (setter env (value env))))
-  )
+ (let ((name (car exp))(depth false)(value (compile (cadr exp))))
+  (lambda (env)
+   (if depth
+    (env-set-variable! env depth name (value env))
+    (begin (set! depth (env-get-variable-depth env name))
+           (env-set-variable! env depth name (value env))))))
+ )
 
 (define (compile-and exp)
   (define (iter p procs)
