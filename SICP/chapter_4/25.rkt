@@ -299,6 +299,7 @@
                     (cons 'cons cons)
                     (cons 'car car)
                     (cons 'cdr cdr)
+                    (cons 'pair? pair?)
                     (cons 'null? null?)
                     (cons 'empty empty)
                     (cons 'list list)
@@ -313,6 +314,7 @@
                     (cons 'current-inexact-milliseconds current-inexact-milliseconds)
                     (cons 'printf printf)
                     (cons 'range range)
+                    (cons 'eq? eq?)
                     ))
         (spectial-forms (list 
                           (cons 'if compile-if)
