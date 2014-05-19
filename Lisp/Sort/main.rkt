@@ -42,35 +42,35 @@
 ; quick-sort
 
 ; curry is too slow, because it should concat the args every time
-(define (quick-sort l)
+(define (quick-sort-curry l)
   (if (or (empty? l) (empty? (cdr l)))
     l
     (let ((first (car l))(rest (cdr l)))
-      (append (quick-sort (filter (curry > first) rest))
-              (cons first (quick-sort (filter (curry <= first) rest))))))
+      (append (quick-sort-curry (filter (curry > first) rest))
+              (cons first (quick-sort-curry (filter (curry <= first) rest))))))
   )
 
-(define (quick-sort-v2 l)
+(define (quick-sort-classic l)
   (if (or (empty? l) (empty? (cdr l)))
     l
     (let ((first (car l))(rest (cdr l)))
-      (append (quick-sort-v2 (filter (lambda (i) (< i first)) rest))
-              (cons first (quick-sort-v2 (filter (lambda (i) (>= i first)) rest))))))
+      (append (quick-sort-classic (filter (lambda (i) (< i first)) rest))
+              (cons first (quick-sort-classic (filter (lambda (i) (>= i first)) rest))))))
   )
 
-(define (quick-sort-v2.2 l)
+(define (quick-sort-3way l)
   (if (or (empty? l) (empty? (cdr l)))
     l 
     (let ((first (car l))(rest (cdr l)))
-      (append (quick-sort-v2.2 (filter (lambda (i) (< i first)) rest))
+      (append (quick-sort-3way (filter (lambda (i) (< i first)) rest))
               (cons first (filter (lambda (i) (= i first)) rest))
-              (quick-sort-v2.2 (filter (lambda (i) (> i first)) rest)))))
+              (quick-sort-3way (filter (lambda (i) (> i first)) rest)))))
   )
 
-(define (quick-sort-v3 l)
+(define (quick-sort-partition l)
   (define (partition l depth v left right)
     (if (empty? l)
-      (append (quick-sort-v3 left) (cons v (quick-sort-v3 right)))
+      (append (quick-sort-partition left) (cons v (quick-sort-partition right)))
       (if (or (< (car l) v) (and (= (car l) v) (= 0 (remainder depth 2))))
         (partition (cdr l) (add1 depth) v (cons (car l) left) right)
         (partition (cdr l) (add1 depth) v left (cons (car l) right)))
@@ -80,8 +80,22 @@
     (partition (cdr l) 0 (car l) empty empty))
   )
 
+(define (quick-sort-partition-3way l)
+  (define (partition l v left mid right)
+    (if (empty? l)
+      (append (quick-sort-partition-3way left) (append (cons v mid) (quick-sort-partition-3way right)))
+      (cond
+        ((< (car l) v) (partition (cdr l) v (cons (car l) left) mid right))
+        ((> (car l) v) (partition (cdr l) v left mid (cons (car l) right)))
+        (else (partition (cdr l) v left (cons (car l) mid) right))))
+    )
+  (if (empty? l)
+    l
+    (partition (cdr l) (car l) empty empty empty))
+  )
+
 ; use mpair to avoid redundant memory allocation, especially for mappend!
-(define (quick-sort-v4 l) 
+(define (quick-sort-mutable l) 
   (define (iter l)
     (define (partition l depth v left right)
       (if (eq? empty l)
@@ -96,6 +110,10 @@
     )
 
   (mlist->list (iter (list->mlist l)))
+  )
+
+(define (quick-sort-builtin l)
+  (sort l <)
   )
 ;------------------------------
 ; merge-sort
@@ -160,14 +178,15 @@
           (list 
             insertion-sort
             bubble-sort
-            quick-sort
-            quick-sort-v2
-            quick-sort-v2.2
-            quick-sort-v3
-            quick-sort-v4
+            quick-sort-curry
+            quick-sort-classic
+            quick-sort-3way
+            quick-sort-partition
+            quick-sort-partition-3way
+            quick-sort-mutable
+            quick-sort-builtin
             merge-sort
             bst-sort
-            (lambda (data) (sort data <))
             ))
 ;------------------------------
 ; benchmark
@@ -196,12 +215,13 @@
           (list 
             (cons 20000 insertion-sort)
             (cons 20000 bubble-sort)
-            (cons 500000 quick-sort)
-            (cons 1000000 quick-sort-v2)
-            (cons 1000000 quick-sort-v2.2)
-            (cons 1000000 quick-sort-v3)
-            (cons 1000000 quick-sort-v4)
+            (cons 500000 quick-sort-curry)
+            (cons 1000000 quick-sort-classic)
+            (cons 1000000 quick-sort-3way)
+            (cons 1000000 quick-sort-partition)
+            (cons 1000000 quick-sort-partition-3way)
+            (cons 1000000 quick-sort-mutable)
+            (cons 1000000 quick-sort-builtin)
             (cons 1000000 merge-sort)
             (cons 1000000 bst-sort)
-            (cons 1000000 (lambda (data) (sort data <)))
             ))
