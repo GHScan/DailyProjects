@@ -1,5 +1,6 @@
 #lang racket
 
+(provide (all-defined-out))
 ;------------------------------
 (define thunk-tag (list 'thunk))
 (define forced-thunk-tag (list 'forced-thunk))
@@ -10,6 +11,10 @@
   (and (mpair? value) (or (eq? forced-thunk-tag (mcar value)) (eq? thunk-tag (mcar value))))
   )
 (define (thunk-value thunk)
+  ; call by name
+  ;((mcdr thunk))
+
+  ; call by need
   (if (eq? forced-thunk-tag (mcar thunk))
     (mcdr thunk)
     (begin (set-mcar! thunk forced-thunk-tag)
