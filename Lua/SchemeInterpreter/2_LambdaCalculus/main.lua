@@ -1,4 +1,5 @@
 function S_parse(s)
+    s = string.gsub(s, ';[^\n]+\n', '')
     s = string.gsub(s, '%s+', ',')
     s = string.gsub(s, '[%(%)]', {['(']='{',[')']='}'})
     s = string.gsub(s, '[^{},%d][^{},]*', '"%1"')
@@ -28,6 +29,9 @@ function S_createVM()
             ['+'] = function(a, b) return a + b end,
             ['='] = function(a, b) return a == b and _true or _false end,
             ['print'] = print,
+            ['print-church'] = function(n)
+                print(n(function(i) return i+1 end)(0))
+            end,
         },
         specialForms = {
             ['lambda'] = function(vm, env, exp)
