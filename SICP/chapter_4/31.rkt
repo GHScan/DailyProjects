@@ -365,6 +365,7 @@
                     (cons 'printf printf)
                     (cons 'range range)
                     (cons 'eq? eq?)
+                    (cons 'random random)
                     ))
         (spectial-forms (list 
                           (cons 'if compile-if)
@@ -471,10 +472,21 @@
              (stream-cons (apply proc (map stream-car streams)) 
                           (apply stream-map proc (map stream-cdr streams))))
            )
+         (define (stream-filter pred s)
+           (cond
+             ((null? s) empty)
+             ((pred (stream-car s)) (stream-cons (stream-car s) (stream-filter pred (stream-cdr s))))
+             (else (stream-filter pred (stream-cdr s))))
+           )
          (define (stream->list s)
            (if (null? s)
              empty
              (cons (stream-car s) (stream->list (stream-cdr s))))
+           )
+         (define (stream-append a b)
+           (if (null? a)
+             b
+             (stream-cons (stream-car a) (stream-append (stream-cdr a) b)))
            )
          (define (stream-take s n)
            (if (= n 0)
@@ -485,6 +497,18 @@
            (if (= n 1)
              (stream-car s)
              (stream-ref (stream-cdr s) (- n 1)))
+           )
+         (define (stream-sort s)
+           (if (null? s) 
+             s
+             (let ((first (stream-car s))(rest (stream-cdr s)))
+               (stream-append (stream-sort (stream-filter (lambda (i) (< i first)) rest)) 
+                              (stream-cons first (stream-sort (stream-filter (lambda (i) (>= i first)) rest))))))
+           )
+         (define (stream-randoms n max)
+           (if (= 0 n)
+             empty
+             (stream-cons (random max) (stream-randoms (- n 1) max)))
            )
          ))
 
@@ -498,10 +522,22 @@
          (pretty-print (stream->list (stream-take integers 10)))
          (pretty-print (stream->list (stream-take fib 10)))
          (timing (curry 2 stream-ref fib 20) 10)
-         (stream-ref (stream-map (lambda (i) (printf "{~a}\n" i) i) integers) 10)
+         (pretty-print (stream-ref (stream-map (lambda (i) (printf "{~a}\n" i) i) integers) 10))
+         (printf "# sort \n")
+         (timing (lambda () (stream->list (stream-sort (stream-randoms 256 8192)))) 10)
+         (timing (lambda () (stream->list (stream-sort (stream-randoms 512 8192)))) 10)
+         (timing (lambda () (stream->list (stream-sort (stream-randoms 1024 8192)))) 10)
+         (timing (lambda () (stream->list (stream-sort (stream-randoms 2048 8192)))) 10)
+         (printf "# first of sort \n")
+         (timing (lambda () (identity (stream-car (stream-sort (stream-randoms 256 8192))))) 10)
+         (timing (lambda () (identity (stream-car (stream-sort (stream-randoms 512 8192))))) 10)
+         (timing (lambda () (identity (stream-car (stream-sort (stream-randoms 1024 8192))))) 10)
+         (timing (lambda () (identity (stream-car (stream-sort (stream-randoms 2048 8192))))) 10)
          ))
 
 ;------------------------------
+; test call-by-reference
+
 (eval G
       '(begin
          (define (swap (a by-ref) (b by-ref)) 
