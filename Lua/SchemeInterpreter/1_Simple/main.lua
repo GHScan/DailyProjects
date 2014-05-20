@@ -1,4 +1,4 @@
-function S_source2Exp(s)
+function S_parse(s)
     s = string.gsub(s, '%s+', ',')
     s = string.gsub(s, '[%(%)]', {['(']='{',[')']='}'})
     s = string.gsub(s, '[^{},%d][^{},]*', '"%1"')
@@ -10,28 +10,16 @@ function S_lookupVar(vm, env, name)
         env = env[vm]
     end
 end
-function S_call(vm, env, exp)
-    local p = S_evalExp(vm, env, exp[1])
-    if type(p) == 'function' then
-        local args = {}
-        for i = 2, #exp do args[i - 1] = S_evalExp(vm, env, exp[i]) end
-        return p(unpack(args))
-    else
-        local newEnv = {[vm]=p.env}
-        for i = 1, math.min(#exp - 1, #p.proto[2]) do 
-            newEnv[p.proto[2][i]] = S_evalExp(vm, env, exp[i + 1]) 
-        end
-        for i = 3, #p.proto - 1 do 
-            S_evalExp(vm, newEnv, p.proto[i]) 
-        end
-        return S_evalExp(vm, newEnv, p.proto[#p.proto])
-    end
-end
-function S_evalExp(vm, env, exp)
+function S_interpret(vm, env, exp)
     if type(exp) == 'number' then return exp 
     elseif type(exp) == 'string' then return S_lookupVar(vm, env, exp) 
     elseif vm.specialForms[exp[1]] then return vm.specialForms[exp[1]](vm, env, exp) 
-    else return S_call(vm, env, exp) end
+    else 
+        local p = S_interpret(vm, env, exp[1])
+        local args = {}
+        for i = 2, #exp do args[i - 1] = S_interpret(vm, env, exp[i]) end
+        return p(unpack(args))
+    end
 end
 function S_createVM()
     return {
@@ -43,20 +31,29 @@ function S_createVM()
         },
         specialForms = {
             ['lambda'] = function(vm, env, exp)
-                return {proto=exp, env=env}
+                return function(...)
+                    local newEnv = {[vm]=env}
+                    for i = 1, #exp[2] do
+                        newEnv[exp[2][i]] = arg[i]
+                    end
+                    for i = 3, #exp - 1 do
+                        S_interpret(vm, newEnv, exp[i])
+                    end
+                    return S_interpret(vm, newEnv, exp[#exp])
+                end
             end,
             ['if'] = function(vm, env, exp)
-                if S_evalExp(vm, env, exp[2]) then
-                    return S_evalExp(vm, env, exp[3])
+                if S_interpret(vm, env, exp[2]) then
+                    return S_interpret(vm, env, exp[3])
                 else
-                    return S_evalExp(vm, env, exp[4])
+                    return S_interpret(vm, env, exp[4])
                 end
             end,
         },
     }
 end
 function S_eval(vm, s)
-    return S_evalExp(vm, vm.G, S_source2Exp(s))
+    return S_interpret(vm, vm.G, S_parse(s))
 end
 
 S_eval(S_createVM(), io.read('*a'))
