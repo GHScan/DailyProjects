@@ -58,6 +58,19 @@
               (cons first (quick-sort-classic (filter (lambda (i) (>= i first)) rest))))))
   )
 
+(define (quick-sort-continuation l)
+  (define (sort l continue)
+    (if (null? l)
+      (continue empty)
+      (let ((first (car l))(rest (cdr l)))
+        (let ((left (filter (lambda (i) (< i first)) rest))(right (filter (lambda (i) (>= i first)) rest)))
+          (sort left (lambda (ordered) 
+                       (sort right (lambda (ordered-2) 
+                                     (continue (append ordered (cons first ordered-2))))))))))
+    )
+  (sort l (lambda (ordered) (set! l ordered)))
+  l)
+
 (define (quick-sort-3way l)
   (if (or (empty? l) (empty? (cdr l)))
     l 
@@ -144,6 +157,20 @@
   (car (prefix-merge-sort l (length l)))
   )
 
+(define (merge-sort-continuation l)
+  (define (prefix-merge-sort l n continue)
+    (cond 
+      ((= 0 n) (continue empty l))
+      ((= 1 n) (continue (list (car l)) (cdr l)))
+      (else
+        (let ((half (quotient n 2)))
+          (prefix-merge-sort l half 
+                             (lambda (ordered rest) 
+                               (prefix-merge-sort rest (- n half) 
+                                                  (lambda (ordered-2 rest-2) (continue (merge ordered ordered-2) rest-2))))))))
+    )
+  (prefix-merge-sort l (length l) (lambda (ordered rest) (set! l ordered)))
+  l)
 ;------------------------------
 ; bst-sort
 (define (bst-insert v node)
@@ -180,12 +207,14 @@
             bubble-sort
             quick-sort-curry
             quick-sort-classic
+            quick-sort-continuation
             quick-sort-3way
             quick-sort-partition
             quick-sort-partition-3way
             quick-sort-mutable
             quick-sort-builtin
             merge-sort
+            merge-sort-continuation
             bst-sort
             ))
 ;------------------------------
@@ -217,11 +246,13 @@
             (cons 20000 bubble-sort)
             (cons 500000 quick-sort-curry)
             (cons 1000000 quick-sort-classic)
+            (cons 1000000 quick-sort-continuation)
             (cons 1000000 quick-sort-3way)
             (cons 1000000 quick-sort-partition)
             (cons 1000000 quick-sort-partition-3way)
             (cons 1000000 quick-sort-mutable)
             (cons 1000000 quick-sort-builtin)
             (cons 1000000 merge-sort)
+            (cons 1000000 merge-sort-continuation)
             (cons 1000000 bst-sort)
             ))
