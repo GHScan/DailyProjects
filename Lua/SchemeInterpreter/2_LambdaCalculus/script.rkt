@@ -3,7 +3,7 @@
       ((lambda (less-equal? equal? three four)
          ;------------------------------
          ((lambda (for-each fib)
-            (for-each (lambda (i) (print-church (fib zero one zero i))) zero (mul four four))
+            (for-each (lambda (i) (print (fib zero one zero i))) zero (mul four four))
             )
           (Y 
             (lambda (self)
