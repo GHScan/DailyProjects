@@ -29,6 +29,44 @@
     value)
   )
 ;------------------------------
+(define ref-tag (list 'ref))
+(define (make-ref env name)
+  (if (symbol? name)
+    (list ref-tag env (make-variable-location name))
+    (error "ref should be symbol:" name))
+  )
+(define (ref? ref)
+  (and (pair? ref) (eq? (car ref) ref-tag))
+  )
+(define (read-ref ref)
+  (read-variable-location (cadr ref) (caddr ref))
+  )
+(define (write-ref ref value)
+  (write-variable-location (cadr ref) (caddr ref) value)
+  )
+;------------------------------
+(define (make-variable-location name)
+  (let ((depth false)(ref 0))
+    (lambda (m env new-value)
+      (if depth 'ok (set! depth (env-get-variable-depth env name)))
+      (if (eq? ref 0) (set! ref (ref? (env-lookup-variable env depth name))) 'ok)
+      (cond 
+        ((eq? m 'get) 
+         (let ((value (env-lookup-variable env depth name)))
+           (if ref (read-ref value) value)))
+        ((eq? m 'set) 
+         (if ref
+           (write-ref (env-lookup-variable env depth name) new-value)
+           (env-set-variable! env depth name new-value)))
+        (else (error "invalid message: " name m)))))
+  )
+(define (read-variable-location env loc)
+  (loc 'get env true)
+  )
+(define (write-variable-location env loc value)
+  (loc 'set env value)
+  )
+;------------------------------
 (define (make-env prev-env)
   (cons (make-hasheq) prev-env)
   )
@@ -76,6 +114,7 @@
       ((symbol? p-arg) (env-define-variable! env p-arg (force-value (arg caller-env))))
       ((eq? (cadr p-arg) 'by-name) (env-define-variable! env (car p-arg) (make-thunk caller-env arg)))
       ((eq? (cadr p-arg) 'by-need) (env-define-variable! env (car p-arg) (make-memoize-thunk caller-env arg)))
+      ((eq? (cadr p-arg) 'by-ref) (env-define-variable! env (car p-arg) (make-ref caller-env (arg caller-env))))
       (else (error "Invalid argument declaration: " p-arg)))
     )
   (cond
@@ -112,13 +151,8 @@
   (symbol? exp)
   )
 (define (compile-variable exp)
-  (let ((depth false))
-    (lambda (env) 
-      (if depth
-        (env-lookup-variable env depth exp)
-        (begin (set! depth (env-get-variable-depth env exp)) 
-               (env-lookup-variable env depth exp)))
-      ))
+  (let ((loc (make-variable-location exp)))
+    (lambda (env) (read-variable-location env loc)))
   )
 
 (define (exp-special-form? exp)
@@ -179,12 +213,8 @@
   )
 
 (define (compile-set! exp)
-  (let ((name (car exp))(depth false)(value (compile (cadr exp))))
-    (lambda (env)
-      (if depth
-        (env-set-variable! env depth name (value env))
-        (begin (set! depth (env-get-variable-depth env name))
-               (env-set-variable! env depth name (value env))))))
+  (let ((loc (make-variable-location (car exp)))(value (compile (cadr exp))))
+    (lambda (env) (write-variable-location env loc (value env))))
   )
 
 (define (compile-and exp)
@@ -218,6 +248,7 @@
   (let ((value (compile (car exp))))
     (lambda (env) (eval env (value env))))
   )
+
 ;------------------------------
 (define the-special-forms (make-hasheq))
 
@@ -431,31 +462,31 @@
 (eval G '(define (stream-cons (a by-need) (b by-need)) (lambda (first) (if first a b))))
 
 (eval G
- '(begin
-     (define (stream-car pair) (pair true))
-     (define (stream-cdr pair) (pair false))
-     (define (stream-map proc . streams)
-       (if (null? (car streams))
-         empty
-         (stream-cons (apply proc (map stream-car streams)) 
-                      (apply stream-map proc (map stream-cdr streams))))
-       )
-     (define (stream->list s)
-       (if (null? s)
-         empty
-         (cons (stream-car s) (stream->list (stream-cdr s))))
-       )
-     (define (stream-take s n)
-       (if (= n 0)
-         empty
-         (stream-cons (stream-car s) (stream-take (stream-cdr s) (- n 1))))
-       )
-     (define (stream-ref s n)
-       (if (= n 1)
-         (stream-car s)
-         (stream-ref (stream-cdr s) (- n 1)))
-       )
-     ))
+      '(begin
+         (define (stream-car pair) (pair true))
+         (define (stream-cdr pair) (pair false))
+         (define (stream-map proc . streams)
+           (if (null? (car streams))
+             empty
+             (stream-cons (apply proc (map stream-car streams)) 
+                          (apply stream-map proc (map stream-cdr streams))))
+           )
+         (define (stream->list s)
+           (if (null? s)
+             empty
+             (cons (stream-car s) (stream->list (stream-cdr s))))
+           )
+         (define (stream-take s n)
+           (if (= n 0)
+             empty
+             (stream-cons (stream-car s) (stream-take (stream-cdr s) (- n 1))))
+           )
+         (define (stream-ref s n)
+           (if (= n 1)
+             (stream-car s)
+             (stream-ref (stream-cdr s) (- n 1)))
+           )
+         ))
 
 
 (eval G
@@ -468,4 +499,33 @@
          (pretty-print (stream->list (stream-take fib 10)))
          (timing (curry 2 stream-ref fib 20) 10)
          (stream-ref (stream-map (lambda (i) (printf "{~a}\n" i) i) integers) 10)
+         ))
+
+;------------------------------
+(eval G
+      '(begin
+         (define (swap (a by-ref) (b by-ref)) 
+           (let ((t a))
+             (set! a b)
+             (set! b t))
+           )
+         (define (test-swap)
+           (let ((a 1)(b 2))
+             (swap 'a 'b)
+             (printf "after swap: ~a ~a\n" a b))
+           )
+         (define (test-ref-1)
+           (let ((a 1)(b 2))
+             ((lambda ((c by-ref) (d by-ref))
+                ((lambda ((e by-ref)(g by-ref))
+                   (let ((t e))
+                     (set! t (+ t 10))
+                     (pretty-print t)
+                     (swap 'e 'g)))
+                 'c 'd)
+                ) 'a 'b)
+             (printf "after-test-ref: ~a ~a\n" a b))
+           )
+         (test-swap)
+         (test-ref-1)
          ))
