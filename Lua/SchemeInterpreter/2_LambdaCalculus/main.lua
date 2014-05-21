@@ -11,24 +11,28 @@ function S_lookupVar(vm, env, name)
         env = env[vm]
     end
 end
-function S_interpret(vm, env, exp)
-    if type(exp) == 'string' then return S_lookupVar(vm, env, exp) 
-    elseif exp[1] == 'lambda' then
-        return function(...)
-            local newEnv = {[vm]=env}
-            for i = 1, #exp[2] do
-                newEnv[exp[2][i]] = arg[i]
-            end
-            for i = 3, #exp - 1 do
-                S_interpret(vm, newEnv, exp[i])
-            end
-            return S_interpret(vm, newEnv, exp[#exp])
+function S_createLambda(vm, env, argIdx, expArgs, expBody)
+    return function(arg)
+        local newEnv = {[vm]=env, [expArgs[argIdx]]=arg}
+        if argIdx == #expArgs then
+            for i = 3, #expBody - 1 do S_interpret(vm, newEnv, expBody[i]) end
+            return S_interpret(vm, newEnv, expBody[#expBody])
+        else
+            return S_createLambda(vm, newEnv, argIdx + 1, expArgs, expBody)
         end
+    end
+end
+function S_interpret(vm, env, exp)
+    if type(exp) == 'string' then 
+        return S_lookupVar(vm, env, exp) 
+    elseif exp[1] == 'lambda' then
+        return S_createLambda(vm, env, 1, #exp[2] > 0 and exp[2] or {'_'}, exp)
     else 
         local p = S_interpret(vm, env, exp[1])
-        local args = {}
-        for i = 2, #exp do args[i - 1] = S_interpret(vm, env, exp[i]) end
-        return p(unpack(args))
+        for i = 2, math.max(#exp, 2) do 
+            p = p(exp[i] and S_interpret(vm, env, exp[i]) or nil)
+        end
+        return p
     end
 end
 function S_createVM()
