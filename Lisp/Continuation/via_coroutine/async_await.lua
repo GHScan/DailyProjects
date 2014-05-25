@@ -1,3 +1,5 @@
+dofile('fp.lua')
+------------------------------
 function async(f)
     return function(...)
         local task = {}
@@ -17,8 +19,22 @@ function async(f)
             coroutine.yield()
         end
 
-        task._coroutine = coroutine.create(function() f(unpack(fargs)) end)
+        task._coroutine = coroutine.create(function() 
+            task._callback(f(unpack(fargs)))
+        end)
         coroutine.resume(task._coroutine)
+    end
+end
+------------------------------
+function whenAll(tasks, callback)
+    local rest = #tasks
+    for _, task in ipairs(tasks) do
+        task(function(v) 
+            rest = rest - 1
+            if rest == 0 then
+                callback(nil)
+            end
+        end)
     end
 end
 ------------------------------
@@ -44,12 +60,12 @@ function dispatchEvent()
     return event
 end
 function connect(url, port, callback)
-    insertEvent(3 + math.random(10), function() callback({}) end)
+    insertEvent(math.random(5, 10), function() callback({}) end)
 end
 function send(conn, data, callback)
 end
 function receive(conn, callback)
-    insertEvent(2 + math.random(5), function() callback('response: ' .. time()) end)
+    insertEvent(math.random(1, 4), function() callback('response: ' .. time()) end)
 end
 function close(conn)
 end
@@ -69,25 +85,20 @@ local requestUrlAsync = async(function(url, port, task)
     close(conn)
     print(string.format('[%d] %s: close', time(), url))
 
-    task.aret(html)
+    return html
 end)
 ------------------------------
 local requestUrlsSync = async(function(urls, task)
     for _, url in ipairs(urls) do
         task.await(requestUrlAsync, url, 80)
     end
-    task.aret()
 end)
-local requestUrlsAsync = (function(urls, callback)
-    local n = 0
-    for _, url in ipairs(urls) do
-        requestUrlAsync(url, 80, function()
-            n = n + 1
-            if n == #urls then
-                callback()
-            end
-        end)
-    end
+local requestUrlsAsync = async(function(urls, task)
+    task.await(whenAll, {mapa(function(url) 
+        return function(callback)
+            requestUrlAsync(url, 80, callback)
+        end
+    end, unpack(urls))})
 end)
 ------------------------------
 math.randomseed(os.time())

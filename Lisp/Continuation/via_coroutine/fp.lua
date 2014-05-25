@@ -30,7 +30,7 @@ function folda(proc, init, ...)
     return init
 end
 function mapa(proc, ...)
-    for _, v in ipairs(arg) do
+    for i, v in ipairs(arg) do
         arg[i] = proc(v)
     end
     return unpack(arg)

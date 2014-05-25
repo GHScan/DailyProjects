@@ -32,6 +32,18 @@
                   (with-syntax ([await (datum->syntax #'async 'await)])
                                #'(task-constructor (lambda (arg ... await) body ...)))])))
 ;------------------------------
+(define (when-all tasks callback)
+  (let* ([n (length tasks)]
+         [task-callback (lambda (v)
+                          (set! n (- n 1))
+                          (if (zero? n)
+                            (callback empty)
+                            'ok))])
+    (do ([rest tasks (cdr rest)])
+      ((empty? rest))
+      ((car rest) task-callback)))
+  )
+;------------------------------
 (define _now 0)
 (define _events empty)
 (define (time)
@@ -89,17 +101,10 @@
            ((empty? _urls))
            (await request-url (car _urls) 80))
          ))
-(define (request-urls-async urls callback)
-  (let* ([n 0]
-         [request-callback 
-           (lambda (html)
-             (set! n (+ n 1))
-             (if (= n (length urls))
-               (callback true)
-               'ok))])
-    (do ([_urls urls (cdr _urls)])
-      ((empty? _urls))
-      (request-url (car _urls) 80 request-callback)))
+(define request-urls-async
+  (async (urls)
+         (await when-all (map (lambda (url) 
+                                (lambda (callback) (request-url url 80 callback))) urls)))
   )
 ;------------------------------
 (define urls '("www.baidu.com" "www.qq.com" "www.taobao.com" "www.sina.com"))
