@@ -14,10 +14,6 @@ function async(f)
             op(unpack(arg))
             return coroutine.yield()
         end
-        task.aret = function(v)
-            task._callback(v)
-            coroutine.yield()
-        end
 
         task._coroutine = coroutine.create(function() 
             task._callback(f(unpack(fargs)))

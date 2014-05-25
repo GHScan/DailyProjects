@@ -50,8 +50,7 @@
   (set! _events 
     (let insert ([finish (+ d (time))][events _events])
       (cond
-        [(empty? events) (list (cons finish callback))]
-        [(< finish (caar events)) (cons (cons finish callback) events)]
+        [(or (empty? events) (< finish (caar events))) (cons (cons finish callback) events)]
         [else (cons (car events) (insert finish (cdr events)))])))
   )
 ;------------------------------
