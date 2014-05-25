@@ -19,6 +19,16 @@ function bst_infix_traverse(node, f)
     end
 end
 
+function bst_linear_iterator(bst)
+    local a = {}
+    bst_infix_traverse(bst, function(v) a[#a + 1] = v end)
+    local i = 1
+    return function()
+        local r = a[i]
+        i = i + 1
+        return r
+    end
+end
 ------------------------------
 function bst_vcps_traverse(node, k)
     if node then
@@ -32,7 +42,7 @@ function bst_vcps_traverse(node, k)
     end
 end
 
-function bst_iterator(bst)
+function bst_vcps_iterator(bst)
     local vc = bst_vcps_traverse(bst, function(v) return {} end)
     return function()
         if vc[1] then
@@ -42,8 +52,23 @@ function bst_iterator(bst)
         end
     end
 end
+------------------------------
+function bst_coroutine_traverse(node)
+    if node then
+        bst_coroutine_traverse(node[2])
+        coroutine.yield(node[1])
+        bst_coroutine_traverse(node[3])
+    end
+end
+
+function bst_coroutine_iterator(bst)
+    return coroutine.wrap(function()
+        bst_coroutine_traverse(bst)
+    end)
+end
 
 ------------------------------
+-- testing
 local bst = nil
 for i = 1, 10 do
     bst = bst_insert(bst, math.random(30))
@@ -51,6 +76,36 @@ end
 
 bst_infix_traverse(bst, print)
 
-for v in bst_iterator(bst) do
+for v in bst_linear_iterator(bst) do
     print(v)
 end
+for v in bst_vcps_iterator(bst) do
+    print(v)
+end
+for v in bst_coroutine_iterator(bst) do
+    print(v)
+end
+
+------------------------------
+-- benchmark
+function timing(name, loop, f)
+    local start = os.clock()
+    for i = 1, loop do f() end
+    print(name, os.clock() - start)
+end
+
+bst = nil
+for i = 1, 10000 do
+    bst = bst_insert(bst, math.random(20000))
+end
+
+print('benchmark:')
+timing(string.format('\t%20s', 'linear'), 100, function()
+    for _ in bst_linear_iterator(bst) do end
+end)
+timing(string.format('\t%20s', 'coroutine'), 100, function()
+    for _ in bst_coroutine_iterator(bst) do end
+end)
+timing(string.format('\t%20s', 'vcps'), 100, function()
+    for _ in bst_vcps_iterator(bst) do end
+end)
