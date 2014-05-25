@@ -10,7 +10,7 @@
                    (set! main-k k)
                    (if co-k
                      (co-k value)
-                     (begin (apply f (append args (list co)))
+                     (begin (apply f (cons co args))
                             (yield false))))))]
            [yield 
              (lambda (value)
@@ -55,7 +55,7 @@
         [else (cons (car events) (insert finish (cdr events)))])))
   )
 ;------------------------------
-(define (sleep n co)
+(define (sleep co n)
   (insert-event n (lambda () (coroutine-resume co false)))
   (coroutine-yield co false)
   )
@@ -75,24 +75,24 @@
   (set! the-items (append the-items (list item)))
   )
 ;------------------------------
-(define (producer id loop co)
+(define (producer co id loop)
   (if (zero? loop)
     'ok
-    (begin (sleep (random-range 10 20) co)
+    (begin (sleep co (random-range 10 20))
            (let ([item (random-range (* id 10) (* (+ id 1) 10))])
              (produce-item item)
              (printf "[~a][producer-~a] => ~a\n" (time) id item))
-           (producer id (- loop 1) co)))
+           (producer co id (- loop 1))))
   )
-(define (consumer id loop co)
+(define (consumer co id loop)
   (if (zero? loop)
     'ok
     (let ([item (consume-item)])
       (if item
         (begin (printf "[~a][consumer-~a] <= ~a\n" (time) id item)
-               (sleep (random-range 1 10) co))
-        (sleep (random-range 10 30) co))
-      (consumer id (- loop 1) co)))
+               (sleep co (random-range 1 10)))
+        (sleep co (random-range 10 30)))
+      (consumer co id (- loop 1))))
   )
 ;------------------------------
 (map (lambda (i) (coroutine-resume (make-coroutine producer i 10) false)) (range 2))
