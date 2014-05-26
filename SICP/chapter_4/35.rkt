@@ -110,8 +110,8 @@
 ;------------------------------
 ; special form compiler
 (define (compile-quote exp)
- (lambda (env succ fail) (succ (cadr exp) fail))
-)
+  (lambda (env succ fail) (succ (cadr exp) fail))
+  )
 (define (compile-if exp)
   (let ([pred-cexp (compile (cadr exp))]
         [then-cexp (compile (caddr exp))]
@@ -261,6 +261,15 @@
         [else (cons (car args) (flatten-args (cdr args)))])) 
     succ fail)
   )
+(define (script-call/cc args succ fail)
+  (let ([f (car args)])
+    (call-native-or-script-procedure 
+      f 
+      (list (make-script-procedure-with-native-procedure
+              (lambda (args succ2 fail2)
+                (succ (car args) fail2))))
+      succ fail))
+  )
 (define (register-builtin-script-procedures)
   (eval G 
         '(begin
@@ -339,8 +348,11 @@
              (cons 'range range)
              (cons 'identity identity)
              (cons 'apply (make-script-procedure-with-native-procedure script-apply))
+             (cons 'call/cc (make-script-procedure-with-native-procedure script-call/cc))
              (cons 'current-inexact-milliseconds current-inexact-milliseconds)
              (cons 'printf printf)
+             (cons 'pretty-print pretty-print)
+             (cons 'eq? eq?)
              ))
   (register-builtin-script-procedures)
   )
@@ -379,6 +391,18 @@
   (pretty-print 
     (eval G 
           '(eval! '(foldl (curry 3 + 1) 0 (build-list 10 identity)))))
+
+  ; call/cc + amb
+  (eval G 
+        '(let ([main-k false])
+           (let ([state (call/cc 
+                          (lambda (k)
+                            (set! main-k k)
+                            (k (amb 1 2 3 4 5 6))))])
+             (cond
+               [(< state 5) (printf "~a\n" state) (amb)]
+               [else state])))
+        )
   )
 (define (run-benchmark)
   (eval G
@@ -409,6 +433,5 @@
   )
 ;------------------------------
 (setup)
-
 (run-test)
 (run-benchmark)
