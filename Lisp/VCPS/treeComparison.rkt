@@ -2,12 +2,26 @@
 
 ;------------------------------
 ; tree -> list
-(define (tree-equal? t1 t2) 
+(define (tree-equal-list? t1 t2) 
   (define (generate-leaves t)
     (cond
       [(empty? t) empty]
       [(pair? t) (append (generate-leaves (car t)) (generate-leaves (cdr t)))]
       [else (list t)]
+      )
+    )
+  (equal? (generate-leaves t1) (generate-leaves t2))
+  )
+
+;------------------------------
+; tree -> mlist
+(require compatibility/mlist)
+(define (tree-equal-mlist? t1 t2) 
+  (define (generate-leaves t)
+    (cond
+      [(empty? t) empty]
+      [(pair? t) (mappend! (generate-leaves (car t)) (generate-leaves (cdr t)))]
+      [else (mlist t)]
       )
     )
   (equal? (generate-leaves t1) (generate-leaves t2))
@@ -76,11 +90,10 @@
       )
     (let ([vc (traverse t (lambda (_) (cons empty empty)))])
       (lambda ()
-        (if (empty? (car vc))
-          (car vc)
-          (let ([value (car vc)])
-            (set! vc ((cdr vc) (car vc)))
-            value))))
+       (let ([value (car vc)])
+        (if (empty? value)
+         value
+         (begin (set! vc ((cdr vc) (car vc))) value)))))
     )
   (let ([iter1 (generate-leaves t1)][iter2 (generate-leaves t2)])
     (do ([v1 (iter1) (iter1)][v2 (iter2) (iter2)])
@@ -108,7 +121,8 @@
   )
 
 (define cmps (list 
-               tree-equal? 
+               tree-equal-list? 
+               tree-equal-mlist?
                tree-equal-yield?
                tree-equal-stream?
                tree-equal-vcps?
