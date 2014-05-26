@@ -99,7 +99,7 @@
   (let construct ([input input][n (length input)])
     (cond 
       [(zero? n) (cons empty input)]
-      [(= n 1) (cons (list (car input)) (cdr input))]
+      [(= n 1) (cons (car input) (cdr input))]
       [else (let* ([right-n (random n)]
                    [left-n (- n right-n)]
                    [left (construct input left-n)]
