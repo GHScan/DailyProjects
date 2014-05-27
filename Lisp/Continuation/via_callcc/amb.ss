@@ -114,9 +114,9 @@
 (define (a-pythagorean-triple)
   (let* ([k (a-integer-from 1)]
          [j (a-integer-between 1 (- k 1))]
-         [max-i (inexact->exact (sqrt (- (* k k) (* j j))))]
-         [i (a-integer-between 1 max-i)])
-    (assert (= (+ (* i i) (* j j)) (* k k)))
+         [inexact-i (sqrt (- (* k k) (* j j)))]
+         [i (floor inexact-i)])
+    (assert (and (> i 0) (= (exact->inexact i) inexact-i)))
     (list i j k))
   )
 
@@ -128,6 +128,11 @@
       (cons (one-of '(+ - * /)) (gen-ops (- n 1))))
     )
   (define (combine-exp rvalue rexp op num)
+   (cond
+     [(or (eq? op '-) (eq? op '/)) (list op rexp num)]
+     [(<= num rvalue) (list op num rexp)]
+     [else (list op rexp num)]
+    )
     (if (< num rvalue)
       (list op num rexp)
       (list op rexp num))
@@ -169,6 +174,6 @@
 
 ;------------------------------
 ;
-(define rlist (with-amb 1000 main))
+(define rlist (with-amb 100 main))
 (do ([l rlist (cdr l)][set empty (set-insert set (car l))])
   ((empty? l) set))
