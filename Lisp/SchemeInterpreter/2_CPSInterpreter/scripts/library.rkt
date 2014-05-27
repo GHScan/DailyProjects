@@ -29,3 +29,9 @@
         (apply f all-args)
         (apply curry n f all-args))))
   )
+(define (for-each proc l)
+  (if (empty? l)
+    'ok
+    (begin (proc (car l))
+           (for-each proc (cdr l))))
+  )

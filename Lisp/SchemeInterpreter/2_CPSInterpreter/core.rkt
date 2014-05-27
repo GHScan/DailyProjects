@@ -2,6 +2,8 @@
 
 (provide (all-defined-out))
 ;------------------------------
+(define the-void (void))
+;------------------------------
 (define (make-env prev-env)
   (cons (make-hasheq) prev-env)
   )
@@ -98,7 +100,7 @@
              (lambda (env k)
                (value env (lambda (v)
                             (env-define env name v)
-                            (k 'define-ok)))))
+                            (k the-void)))))
            (compile `(define ,(car name) (lambda ,(cdr name) ,@value-list))))
          ]
         [(list 'set! name value)
@@ -106,7 +108,7 @@
            (lambda (env k)
              (value env (lambda (v)
                           (variable-location-write loc env v)
-                          (k 'set-ok)))))
+                          (k the-void)))))
          ]
         [(list 'let (list (list name-list value-list) ...) exp-list ...)
          (compile `((lambda ,name-list ,@exp-list) ,@value-list))
@@ -123,7 +125,7 @@
                     ,@(map (lambda (e) ''undefined) name-list)))
          ]
         [(list 'let name (list (list name-list value-list) ...) exp-list ...)
-         (compile `((lambda () ((define ,name (lambda ,name-list ,@exp-list)) (,name ,@value-list)))))
+         (compile `((lambda () (define ,name (lambda ,name-list ,@exp-list)) (,name ,@value-list))))
          ]
         [(cons 'cond (cons (list pred exp-list ...) rest-list))
          (if (empty? rest-list)
@@ -144,6 +146,14 @@
         [(list 'eval (list 'quote e))
          (lambda (env k)
            (k (eval env e)))
+         ]
+        [(list 'do (list (list name-list init-list update-list) ...) (list pred exit-list ...) do-list ...)
+         (let ([pname (gensym)])
+           (compile `(let ,pname ,(map (lambda (name init) (list name init)) name-list init-list) 
+                       (if ,pred 
+                         (begin the-void ,@exit-list)
+                         (begin ,@do-list 
+                                (,pname ,@update-list))))))
          ]
         [(list p arg-list ...)
          (let ([p (compile p)]
@@ -183,8 +193,13 @@
   )
 (define (script-call/cc args k)
   (let ([p (car args)])
-    (call-native-or-script-procedure p (list k) k))
+    (call-native-or-script-procedure 
+      p 
+      (list (make-script-procedure-with-native-procedure 
+              (lambda (args k2) (if (empty? args) (k the-void) (k (car args)))))) 
+      k))
   )
 
 (builtin-register 'apply (make-script-procedure-with-native-procedure script-apply))
 (builtin-register 'call/cc (make-script-procedure-with-native-procedure script-call/cc))
+(builtin-register 'the-void the-void)
