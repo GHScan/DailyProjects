@@ -10,9 +10,10 @@
   (hash-set! (car env) name value)
   )
 (define (env-lookup-depth env name)
-  (if (hash-has-key? (car env) name)
-    0
-    (+ 1 (env-lookup-depth (cdr env) name)))
+  (cond
+    [(empty? env) (error "Can't find variable: " name)]
+    [(hash-has-key? (car env) name) 0]
+    [else (+ 1 (env-lookup-depth (cdr env) name))])
   )
 (define (env-lookup env depth name)
   (if (zero? depth)
@@ -206,7 +207,7 @@
   (define (and->if values)
     (if (empty? (cdr values))
       (car values)
-      (cons 'if (car values) (and->if (cdr values)) 'false))
+      (list 'if (car values) (and->if (cdr values)) 'false))
     )
   (compile-if (and->if (cdr exp)))
   )
@@ -433,5 +434,36 @@
   )
 ;------------------------------
 (setup)
-(run-test)
-(run-benchmark)
+;(run-test)
+;(run-benchmark)
+;------------------------------
+(eval G
+      '(begin
+         (define (assert b)
+           (if b 'ok (amb))
+           )
+         (define (an-integer-between a b)
+           (assert (<= a b))
+           (amb a (an-integer-between (+ a 1) b))
+           )
+         (define (one-of l)
+           (assert (not (empty? l)))
+           (amb (car l) (one-of (cdr l)))
+           )
+         ))
+
+;------------------------------
+; exercise 35
+
+;(eval G
+;      '(begin
+;         (define (a-pythagorean-triple-between low high)
+;           (let ([i (an-integer-between low high)])
+;             (let ([j (an-integer-between i high)])
+;               (let ([k (an-integer-between j high)])
+;                 (assert (= (+ (* i i) (* j j)) (* k k)))
+;                 (list i j k))))
+;           )
+;         (a-pythagorean-triple-between 1 100)
+;         )
+;      )
