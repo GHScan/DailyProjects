@@ -4,27 +4,69 @@
 ;------------------------------
 (define the-void (void))
 ;------------------------------
-(define (make-env prev-env)
-  (cons (make-hasheq) prev-env)
+(define (find-definitions exps arg-names)
+  (define (flatten-variadic-arg-names names)
+    (cond
+      [(empty? names) empty]
+      [(symbol? names) (list names)]
+      [else (cons (car names) (flatten-variadic-arg-names (cdr names)))])
+    )
+  (list->vector
+    (reverse
+      (let find ([exps exps][names (flatten-variadic-arg-names arg-names)])
+        (cond
+          [(empty? exps) names]
+          [(not (pair? (car exps))) (find (cdr exps) names)]
+          [(eq? 'define (caar exps)) 
+           (let ([name (if (symbol? (cadar exps)) (cadar exps) (caadar exps))])
+             (find (cdr exps) (cons name names)))]
+          [(eq? 'begin (caar exps)) (find (cdr exps) (find (cdar exps) names))]
+          [else (find (cdr exps) names)]))))
   )
-(define (env-define env name value)
-  (hash-set! (car env) name value)
+;------------------------------
+; interface for env:
+;   define              : name value
+;   find-depth-index    : name depth    => (cons depth index)
+;   get                 : depth index
+;   set                 : depth index value
+;------------------------------
+(define (make-dynamic-env pre-env)
+  (let ([table (make-hasheq)])
+    (lambda (m a b c)
+      (cond
+        [(eq? m 'define) (hash-set! table a b)]
+        [(eq? m 'find-depth-index) 
+         (cond
+           [(hash-has-key? table a) (cons b a)]
+           [(empty? pre-env) (error "Can't find variable: " a)]
+           [else (pre-env 'find-depth-index a (add1 b) c)])]
+        [(eq? m 'get) 
+         (if (zero? a)
+           (hash-ref table b 'undefined)
+           (pre-env 'get (sub1 a) b c))]
+        [(eq? m 'set) 
+         (if (zero? a)
+           (hash-set! table b c)
+           (pre-env 'set (sub1 a) b c))])))
   )
-(define (env-get-depth env name)
-  (cond
-    [(empty? env) (error "Invalid access : " name)]
-    [(hash-has-key? (car env) name) 0]
-    [else (+ 1 (env-get-depth (cdr env) name))])
-  )
-(define (env-set env depth name value)
-  (if (zero? depth)
-    (hash-set! (car env) name value)
-    (env-set (cdr env) (sub1 depth) name value))
-  )
-(define (env-get env depth name)
-  (if (zero? depth) 
-    (hash-ref (car env) name false)
-    (env-get (cdr env) (sub1 depth) name))
+(define (make-static-env pre-env name-vec)
+  (let ([value-vec (make-vector (vector-length name-vec))])
+    (lambda (m a b c)
+      (cond
+        [(eq? m 'define) (vector-set! value-vec (vector-memq a name-vec) b)]
+        [(eq? m 'find-depth-index) 
+         (cond
+           [(vector-memq a name-vec) => (lambda (i) (cons b i))]
+           [(empty? pre-env) (error "Can't find variable: " a)]
+           [else (pre-env 'find-depth-index a (add1 b) c)])]
+        [(eq? m 'get) 
+         (if (zero? a)
+           (vector-ref value-vec b)
+           (pre-env 'get (sub1 a) b c))]
+        [(eq? m 'set) 
+         (if (zero? a)
+           (vector-set! value-vec b c)
+           (pre-env 'set (sub1 a) b c))])))
   )
 ;------------------------------
 (define (make-varaible-location name)
@@ -32,29 +74,33 @@
   )
 (define (variable-location-read loc env)
   (if (mcar loc)
-    (env-get env (mcar loc) (mcdr loc))
-    (begin (set-mcar! loc (env-get-depth env (mcdr loc)))
-           (env-get env (mcar loc) (mcdr loc))))
+    (env 'get (mcar loc) (mcdr loc) empty)
+    (begin (let ([depth-index (env 'find-depth-index (mcdr loc) 0 empty)])
+             (set-mcar! loc (car depth-index))
+             (set-mcdr! loc (cdr depth-index)))
+           (env 'get (mcar loc) (mcdr loc) empty)))
   )
 (define (variable-location-write loc env value)
   (if (mcar loc)
-    (env-set env (mcar loc) (mcdr loc) value)
-    (begin (set-mcar! loc (env-get-depth env (mcdr loc)))
-           (env-set env (mcar loc) (mcdr loc) value)))
+    (env 'set (mcar loc) (mcdr loc) value)
+    (begin (let ([depth-index (env 'find-depth-index (mcdr loc) 0 empty)])
+             (set-mcar! loc (car depth-index))
+             (set-mcdr! loc (cdr depth-index)))
+           (env 'set (mcar loc) (mcdr loc) value)))
   )
 ;------------------------------
 (define tag-script-procedure (list 'script-procedure))
 (define (setup-script-procedure-call-env env p-args args)
   (cond
     [(empty? p-args) (if (empty? args) env (error "Argument count mismatch!"))]
-    [(symbol? p-args) (env-define env p-args args) env]
-    [else (env-define env (car p-args) (car args)) 
+    [(symbol? p-args) (env 'define p-args args empty) env]
+    [else (env 'define (car p-args) (car args) empty) 
           (setup-script-procedure-call-env env (cdr p-args) (cdr args))])
   )
-(define (make-script-procedure env p-args p-exps)
+(define (make-script-procedure env p-args p-exps name-vec)
   (cons tag-script-procedure
         (lambda (args k)
-          (p-exps (setup-script-procedure-call-env (make-env env) p-args args) k)))
+          (p-exps (setup-script-procedure-call-env (make-static-env env name-vec) p-args args) k)))
   )
 (define (make-script-procedure-with-native-procedure p)
   (cons tag-script-procedure p)
@@ -100,16 +146,16 @@
                  (cdr rest)))))
          ]
         [(list 'lambda args exp-list ...)
-         (let ([exp-list (compile (cons 'begin exp-list))])
+         (let ([exp-list (compile (cons 'begin exp-list))][name-vec (find-definitions exp-list args)])
            (lambda (env k)
-             (k (make-script-procedure env args exp-list))))
+             (k (make-script-procedure env args exp-list name-vec))))
          ]
         [(list 'define name value-list ...)
          (if (symbol? name)
            (let ([value (compile (car value-list))])
              (lambda (env k)
                (value env (lambda (v)
-                            (env-define env name v)
+                            (env 'define name v empty)
                             (k the-void)))))
            (compile `(define ,(car name) (lambda ,(cdr name) ,@value-list))))
          ]
@@ -187,9 +233,9 @@
   ((compile exp) env identity)
   )
 ;------------------------------
-(define G (make-env empty))
+(define G (make-dynamic-env empty))
 (define (builtin-register name value)
-  (env-define G name value)
+  (G 'define name value empty)
   )
 ;------------------------------
 (define (script-apply args k)
