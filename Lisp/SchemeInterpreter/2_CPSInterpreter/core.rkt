@@ -10,27 +10,37 @@
 (define (env-define env name value)
   (hash-set! (car env) name value)
   )
-(define (env-set env name value)
-  (cond 
-    [(empty? env) (error "invalid set: " name value)]
-    [(hash-has-key? (car env) name) (hash-set! (car env) name value)]
-    [else (env-set (cdr env) name value)])
-  )
-(define (env-get env name)
+(define (env-get-depth env name)
   (cond
-    [(empty? env) (error "invalid get: " name)]
-    [(hash-has-key? (car env) name) (hash-ref (car env) name false)]
-    [else (env-get (cdr env) name)])
+    [(empty? env) (error "Invalid access : " name)]
+    [(hash-has-key? (car env) name) 0]
+    [else (+ 1 (env-get-depth (cdr env) name))])
+  )
+(define (env-set env depth name value)
+  (if (zero? depth)
+    (hash-set! (car env) name value)
+    (env-set (cdr env) (sub1 depth) name value))
+  )
+(define (env-get env depth name)
+  (if (zero? depth) 
+    (hash-ref (car env) name false)
+    (env-get (cdr env) (sub1 depth) name))
   )
 ;------------------------------
 (define (make-varaible-location name)
-  name
+  (mcons false name)
   )
 (define (variable-location-read loc env)
-  (env-get env loc)
+  (if (mcar loc)
+    (env-get env (mcar loc) (mcdr loc))
+    (begin (set-mcar! loc (env-get-depth env (mcdr loc)))
+           (env-get env (mcar loc) (mcdr loc))))
   )
 (define (variable-location-write loc env value)
-  (env-set env loc value)
+  (if (mcar loc)
+    (env-set env (mcar loc) (mcdr loc) value)
+    (begin (set-mcar! loc (env-get-depth env (mcdr loc)))
+           (env-set env (mcar loc) (mcdr loc) value)))
   )
 ;------------------------------
 (define tag-script-procedure (list 'script-procedure))
