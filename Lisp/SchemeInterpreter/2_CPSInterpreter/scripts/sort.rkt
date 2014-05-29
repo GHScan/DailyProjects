@@ -80,7 +80,7 @@
                      (lambda (len) (build-list len (lambda (i) (random len))))
                      (list 1 3 4 5 7 8 9 10 11 15 16 32 33 64 128 254 255 256 257)))
 (define (test f)
-  (for-each (lambda (data) (if (equal? (f data) (sort data <)) 'ok (error "not ordered!" f))) test-datas))
+  (for-each (lambda (data) (if (equal? (f data) (quick-sort-classic data)) 'ok (error "not ordered!" f))) test-datas))
 (for-each test 
           (list 
             quick-sort-classic

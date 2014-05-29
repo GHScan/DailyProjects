@@ -73,7 +73,6 @@
            (env-set env (mcar loc) (mcdr loc) value)))
   )
 ;------------------------------
-(define tag-script-procedure (list 'script-procedure))
 (define (setup-script-procedure-call-env env p-args args)
   (cond
     [(empty? p-args) (if (empty? args) env (error "Argument count mismatch!"))]
@@ -82,20 +81,8 @@
           (setup-script-procedure-call-env env (cdr p-args) (cdr args))])
   )
 (define (make-script-procedure env p-args p-exps name-vec)
-  (cons tag-script-procedure
-        (lambda (args k)
-          (p-exps (setup-script-procedure-call-env (make-static-env env name-vec) p-args args) k)))
-  )
-(define (make-script-procedure-with-native-procedure p)
-  (cons tag-script-procedure p)
-  )
-(define (script-procedure? p)
-  (and (pair? p) (eq? (car p) tag-script-procedure))
-  )
-(define (call-native-or-script-procedure p args k)
-  (if (script-procedure? p)
-    ((cdr p) args k)
-    (k (apply p args)))
+  (lambda (args k)
+    (p-exps (setup-script-procedure-call-env (make-static-env env name-vec) p-args args) k))
   )
 ;------------------------------
 (define (compile exp)
@@ -209,7 +196,7 @@
            (lambda (env k)
              (p env (lambda (p)
                       (arg-list env (lambda (args)
-                                      (call-native-or-script-procedure p args k)))))))
+                                      (p args k)))))))
          ]
         )])
   )
@@ -229,17 +216,17 @@
       [(empty? (cdr args)) (if (list? (car args)) (car args) (list (car args)))]
       [else (cons (car args) (flatten-variadic-args (cdr args)))])
     )
-  (call-native-or-script-procedure (car args) (flatten-variadic-args (cdr args)) k)
+  ((car args) (flatten-variadic-args (cdr args)) k)
   )
 (define (script-call/cc args k)
-  (let ([p (car args)])
-    (call-native-or-script-procedure 
-      p 
-      (list (make-script-procedure-with-native-procedure 
-              (lambda (args k2) (if (empty? args) (k the-void) (k (car args)))))) 
-      k))
+  ((car args)
+   (list (lambda (args k2) (if (empty? args) (k the-void) (k (car args))))) 
+   k)
+  )
+(define (native-procedure->script-procedure p)
+  (lambda (args k) (k (apply p args)))
   )
 
-(builtin-register 'apply (make-script-procedure-with-native-procedure script-apply))
-(builtin-register 'call/cc (make-script-procedure-with-native-procedure script-call/cc))
+(builtin-register 'apply script-apply)
+(builtin-register 'call/cc script-call/cc)
 (builtin-register 'the-void the-void)
