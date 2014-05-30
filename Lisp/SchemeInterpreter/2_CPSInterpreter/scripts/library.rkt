@@ -1,3 +1,5 @@
+; This file can only use fundamental form
+
 (define (build-list n proc)
   (define (iter i result)
     (if (= 0 i)
@@ -17,17 +19,19 @@
     (cons (proc (car l)) (map proc (cdr l))))
   )
 (define (filter pred l)
-  (cond
-    ((null? l) empty)
-    ((pred (car l)) (cons (car l) (filter pred (cdr l))))
-    (else (filter pred (cdr l))))
+  (if (empty? l)
+    empty
+    (if (pred (car l))
+      (cons (car l) (filter pred (cdr l)))
+      (filter pred (cdr l))))
   )
 (define (curry n f . boundArgs)
-  (lambda args 
-    (let ((all-args (append boundArgs args)))
-      (if (>= (length all-args) n)
-        (apply f all-args)
-        (apply curry n f all-args))))
+  (lambda args
+    ((lambda (all-args)
+       (if (>= (length all-args) n)
+         (apply f all-args)
+         (apply curry n f all-args))) 
+     (append boundArgs args)))
   )
 (define (for-each proc l)
   (if (empty? l)

@@ -66,6 +66,7 @@
                              (cons 'drop-right drop-right)
                              (cons 'string-append string-append)
                              (cons 'number->string number->string)
+                             (cons 'gensym gensym)
                              )]
         [native-variables (list
                             (cons 'empty empty)
@@ -79,6 +80,7 @@
 ;------------------------------
 (setup-env)
 (load "scripts/library.rkt")
+(load "scripts/library2.rkt")
 
 (define (do-REPL)
   (let ([data (read)])
