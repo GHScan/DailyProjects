@@ -134,21 +134,24 @@
       [((car transformers) exp) => identity]
       [else (try-transform (cdr transformers))]))
   )
-(define (macro-match exp pattern sk fk)
+(define (macro-make-matcher pattern)
   (cond
-    [(eq? '_ pattern) (sk empty)]
-    [(symbol? pattern) (sk (list (cons pattern exp)))]
-    [(empty? pattern) (if (empty? exp) (sk empty) (fk exp pattern))]
+    [(eq? '_ pattern) (lambda (exp sk fk) (sk empty))]
+    [(symbol? pattern) (lambda (exp sk fk) (sk (list (cons pattern exp))))]
+    [(empty? pattern) (lambda (exp sk fk) (if (empty? exp) (sk empty) (fk pattern exp)))]
     [(pair? pattern) 
-     (if (pair? exp) 
-       (macro-match (car exp) (car pattern)
-                            (lambda (head-pairs) 
-                              (macro-match (cdr exp) (cdr pattern) 
-                                                   (lambda (tail-pairs) 
-                                                     (sk (append head-pairs tail-pairs))) 
-                                                   fk))
-                            fk) 
-       (fk pattern exp))]
+     (let ([head-m (macro-make-matcher (car pattern))][tail-m (macro-make-matcher (cdr pattern))])
+       (lambda (exp sk fk)
+         (if (pair? exp)
+           (head-m (car exp) 
+                   (lambda (head-pairs)
+                     (tail-m (cdr exp) 
+                             (lambda (tail-pairs)
+                               (sk (append head-pairs tail-pairs)))
+                             fk)) 
+                   fk)
+           (fk pattern exp))
+         ))]
     [else (error "Invalid pattern:" pattern)])
   )
 (define (macro-pattern-names pattern)
@@ -162,12 +165,12 @@
 (define (make-transformer env pattern exp-list)
   (let* ([compiled-exp-list (compile (cons 'begin exp-list))]
          [p-args (macro-pattern-names pattern)]
+         [matcher (macro-make-matcher pattern)]
          [p (make-script-procedure env p-args compiled-exp-list (list->vector (find-definitions exp-list p-args)))])
     (lambda (exp)
-      (macro-match exp pattern 
-                           (lambda (pairs)
-                             (p (map cdr pairs) identity)) 
-                           (lambda (exp pattern) false))))
+      (matcher exp (lambda (pairs)
+                     (p (map cdr pairs) identity)) 
+               (lambda (exp pattern) false))))
   )
 ;------------------------------
 (define (eval-quasiquote-single-ret env exp quote-depth)
@@ -205,8 +208,8 @@
     [x (guard (string? x)) (lambda (env k) (k x))]
     [x (guard (number? x)) (lambda (env k) (k x))]
     [x (guard (symbol? x)) 
-     (let ([loc (make-varaible-location x)])
-       (lambda (env k) (k (variable-location-read loc env))))]
+       (let ([loc (make-varaible-location x)])
+         (lambda (env k) (k (variable-location-read loc env))))]
     [('quote e)
      (lambda (env k) (k e))]
     [('quasiquote e)
