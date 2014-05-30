@@ -4,6 +4,40 @@
 ;------------------------------
 (define the-void (void))
 ;------------------------------
+(define-syntax match 
+  (syntax-rules (guard else)
+    [(_ (ve ...) rest-case ...)
+     (let ([v (ve ...)])
+       (match v rest-case ...))]
+    [(_ v) 
+     (error "Can't match " v)]
+    [(_ v (else e ...))
+     (begin e ...)]
+    [(_ v (pat (guard b) e ...) rest-case ...) 
+     (let ([fk (lambda () (match v rest-case ...))])
+       (match-pattern v pat (if b (begin e ...) (fk)) (fk)))]
+    [(_ v (pat e ...) rest-case ...)
+     (let ([fk (lambda () (match v rest-case ...))])
+       (match-pattern v pat (begin e ...) (fk)))]
+    )
+  )
+(define-syntax match-pattern
+  (syntax-rules (quote)
+    [(_ v () sk fk) 
+     (if (empty? v) sk fk)]
+    [(_ v (quote e) sk fk)
+     (if (equal? v (quote e)) sk fk)]
+    [(_ v (x . y) sk fk)
+     (if (pair? v)
+       (match-pattern (car v) x 
+                      (match-pattern (cdr v) y sk fk)
+                      fk)
+       fk)]
+    [(_ v var sk fk)
+     (let ([var v]) sk)]
+    )
+  )
+;------------------------------
 (define (find-definitions exps arg-names)
   (define (flatten-variadic-arg-names names)
     (cond
@@ -89,9 +123,9 @@
   (and (pair? exp) (hash-has-key? the-macros (car exp)))
   )
 (define (macro-register name transformer)
- (if (hash-has-key? the-macros name)
-  (hash-set! the-macros name (cons transformer (hash-ref the-macros name)))
-  (hash-set! the-macros name (list transformer)))
+  (if (hash-has-key? the-macros name)
+    (hash-set! the-macros name (cons transformer (hash-ref the-macros name)))
+    (hash-set! the-macros name (list transformer)))
   )
 (define (macro-transform exp)
   (let try-transform ([transformers (hash-ref the-macros (car exp))])
@@ -100,40 +134,40 @@
       [((car transformers) exp) => identity]
       [else (try-transform (cdr transformers))]))
   )
-(define (match-pattern exp pattern sk fk)
+(define (macro-match exp pattern sk fk)
   (cond
     [(eq? '_ pattern) (sk empty)]
     [(symbol? pattern) (sk (list (cons pattern exp)))]
     [(empty? pattern) (if (empty? exp) (sk empty) (fk exp pattern))]
     [(pair? pattern) 
      (if (pair? exp) 
-       (match-pattern (car exp) (car pattern)
-                      (lambda (head-pairs) 
-                        (match-pattern (cdr exp) (cdr pattern) 
-                                       (lambda (tail-pairs) 
-                                         (sk (append head-pairs tail-pairs))) 
-                                       fk))
-                      fk) 
+       (macro-match (car exp) (car pattern)
+                            (lambda (head-pairs) 
+                              (macro-match (cdr exp) (cdr pattern) 
+                                                   (lambda (tail-pairs) 
+                                                     (sk (append head-pairs tail-pairs))) 
+                                                   fk))
+                            fk) 
        (fk pattern exp))]
     [else (error "Invalid pattern:" pattern)])
   )
-(define (pattern-names pattern)
+(define (macro-pattern-names pattern)
   (cond
     [(eq? '_ pattern) empty]
     [(symbol? pattern) (list pattern)]
     [(empty? pattern) empty]
-    [(pair? pattern) (append (pattern-names (car pattern)) (pattern-names (cdr pattern)))]
+    [(pair? pattern) (append (macro-pattern-names (car pattern)) (macro-pattern-names (cdr pattern)))]
     [else (error "Invalid pattern:" pattern)])
   )
 (define (make-transformer env pattern exp-list)
   (let* ([compiled-exp-list (compile (cons 'begin exp-list))]
-         [p-args (pattern-names pattern)]
+         [p-args (macro-pattern-names pattern)]
          [p (make-script-procedure env p-args compiled-exp-list (list->vector (find-definitions exp-list p-args)))])
     (lambda (exp)
-      (match-pattern exp pattern 
-                     (lambda (pairs)
-                       (p (map cdr pairs) identity)) 
-                     (lambda (exp pattern) false))))
+      (macro-match exp pattern 
+                           (lambda (pairs)
+                             (p (map cdr pairs) identity)) 
+                           (lambda (exp pattern) false))))
   )
 ;------------------------------
 (define (eval-quasiquote-single-ret env exp quote-depth)
@@ -164,20 +198,20 @@
 (define (compile exp)
   (match 
     exp
-    [(list 'defmacro name pattern exp-list ...)
+    [('defmacro name pattern . exp-list)
      (macro-register name (make-transformer G pattern exp-list))
      (lambda (env k) (k the-void))]
-    [(? macro?) (compile (macro-transform exp))]
-    [(? string?) (lambda (env k) (k exp))]
-    [(? number?) (lambda (env k) (k exp))]
-    [(? symbol?) 
-     (let ([loc (make-varaible-location exp)])
+    [x (guard (macro? x)) (compile (macro-transform x))]
+    [x (guard (string? x)) (lambda (env k) (k x))]
+    [x (guard (number? x)) (lambda (env k) (k x))]
+    [x (guard (symbol? x)) 
+     (let ([loc (make-varaible-location x)])
        (lambda (env k) (k (variable-location-read loc env))))]
-    [(list 'quote e)
+    [('quote e)
      (lambda (env k) (k e))]
-    [(list 'quasiquote e)
+    [('quasiquote e)
      (lambda (env k) (k (eval-quasiquote-single-ret env e 1)))]
-    [(list 'if pred then else)
+    [('if pred then else)
      (let ([pred (compile pred)][then (compile then)][else (compile else)])
        (lambda (env k)
          (pred env (lambda (b)
@@ -185,7 +219,7 @@
                        (then env k)
                        (else env k))))))
      ]
-    [(list 'begin exp-list ...)
+    [('begin . exp-list)
      (let ([exp-list (map compile exp-list)])
        (let combine ([first (car exp-list)][rest (cdr exp-list)])
          (if (empty? rest) 
@@ -196,12 +230,12 @@
                             ((car rest) env k))))
              (cdr rest)))))
      ]
-    [(list 'lambda args exp-list ...)
+    [('lambda args . exp-list)
      (let ([exp-list (compile (cons 'begin exp-list))][name-vec (list->vector (find-definitions exp-list args))])
        (lambda (env k)
          (k (make-script-procedure env args exp-list name-vec))))
      ]
-    [(list 'define name value-list ...)
+    [('define name . value-list)
      (if (symbol? name)
        (let ([value (compile (car value-list))])
          (lambda (env k)
@@ -210,18 +244,18 @@
                         (k the-void)))))
        (compile `(define ,(car name) (lambda ,(cdr name) ,@value-list))))
      ]
-    [(list 'set! name value)
+    [('set! name value)
      (let ([loc (make-varaible-location name)][value (compile value)])
        (lambda (env k)
          (value env (lambda (v)
                       (variable-location-write loc env v)
                       (k the-void)))))
      ]
-    [(list 'eval (list 'quote e))
+    [('eval ('quote e))
      (lambda (env k)
        (k (eval env e)))
      ]
-    [(list p arg-list ...)
+    [(p . arg-list)
      (let ([p (compile p)]
            [arg-list 
              (let combine ([arg-list (map compile arg-list)])
