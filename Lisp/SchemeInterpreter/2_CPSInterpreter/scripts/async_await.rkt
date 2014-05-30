@@ -1,5 +1,5 @@
 ;------------------------------
-(define (async f)
+(define (make-task f)
   (lambda args
     (let* ([main-k false]
            [iter-k false]
@@ -22,6 +22,10 @@
           (set! main-k k)
           (callback (apply f (append (drop-right args 1) (list await))))
           (main-k)))))
+  )
+
+(defmacro async (_ args . exp-list)
+  `(make-task (lambda ,(append args (list 'await)) ,@exp-list))
   )
 ;------------------------------
 (define (when-all tasks callback)
@@ -73,31 +77,31 @@
   conn)
 ;------------------------------
 (define request-url 
-  (async (lambda (url port await)
-           (let ([conn (await connect url port)])
-             (printf "[~a]~a: connected\n" (time) url)
-             (send conn "GET / HTTP/1.0")
-             (do ([i 1 (+ 1 i)][tmp (await receive conn) (await receive conn)])
-               ((> i 10))
-               (printf "[~a]~a: receive => ~a\n" (time) url tmp) (send conn tmp))
-             (let ([html (await receive conn)])
-               (printf "[~a]~a: receive html => ~a\n" (time) url html)
-               (close conn)
-               (printf "[~a]~a: close\n" (time) url)
-               html))
-           ))
+  (async (url port)
+         (let ([conn (await connect url port)])
+           (printf "[~a]~a: connected\n" (time) url)
+           (send conn "GET / HTTP/1.0")
+           (do ([i 1 (+ 1 i)][tmp (await receive conn) (await receive conn)])
+             ((> i 10))
+             (printf "[~a]~a: receive => ~a\n" (time) url tmp) (send conn tmp))
+           (let ([html (await receive conn)])
+             (printf "[~a]~a: receive html => ~a\n" (time) url html)
+             (close conn)
+             (printf "[~a]~a: close\n" (time) url)
+             html))
+         )
   )
 (define request-urls-sync 
-  (async (lambda (urls await)
-           (do ([_urls urls (cdr _urls)])
-             ((empty? _urls))
-             (await request-url (car _urls) 80))
-           ))
+  (async (urls)
+         (do ([_urls urls (cdr _urls)])
+           ((empty? _urls))
+           (await request-url (car _urls) 80))
+         )
   )
 (define request-urls-async
-  (async (lambda (urls await)
-           (await when-all (map (lambda (url) 
-                                  (lambda (callback) (request-url url 80 callback))) urls))))
+  (async (urls)
+         (await when-all (map (lambda (url) 
+                                (lambda (callback) (request-url url 80 callback))) urls)))
   )
 ;------------------------------
 (define urls '("www.baidu.com" "www.qq.com" "www.taobao.com" "www.sina.com"))
