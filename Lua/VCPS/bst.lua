@@ -33,9 +33,9 @@ end
 function bst_vcps_traverse(node, k)
     if node then
         return bst_vcps_traverse(node[2], function(left)
-            return {node[1], function(v)
+            return node[1], function(v)
                 return bst_vcps_traverse(node[3], k)
-            end}
+            end
         end)
     else
         return k(nil)
@@ -43,11 +43,11 @@ function bst_vcps_traverse(node, k)
 end
 
 function bst_vcps_iterator(bst)
-    local vc = bst_vcps_traverse(bst, function(v) return {} end)
+    local v, k = bst_vcps_traverse(bst, function(v) return v, nil end)
     return function()
-        if vc[1] then
-            local r = vc[1]
-            vc = vc[2](vc[1])
+        if k then
+            local r = v
+            v, k = k(v)
             return r
         end
     end
