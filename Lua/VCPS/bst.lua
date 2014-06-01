@@ -109,3 +109,17 @@ end)
 timing(string.format('\t%20s', 'vcps'), 100, function()
     for _ in bst_vcps_iterator(bst) do end
 end)
+
+print('benchmark iter-3:')
+timing(string.format('\t%20s', 'linear'), 1000, function()
+    local it = bst_linear_iterator(bst)
+    for i = 1, 10 do it() end
+end)
+timing(string.format('\t%20s', 'coroutine'), 1000, function()
+    local it = bst_coroutine_iterator(bst)
+    for i = 1, 10 do it() end
+end)
+timing(string.format('\t%20s', 'vcps'), 1000, function()
+    local it = bst_vcps_iterator(bst)
+    for i = 1, 10 do it() end
+end)
