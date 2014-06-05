@@ -3,6 +3,10 @@
 (provide (all-defined-out))
 
 ;------------------------------
+(define (divisible? n m)
+  (= 0 (remainder n m))
+  )
+;------------------------------
 ; stream
 (define (stream-merge key . streams)
   (if (empty? (cdr streams))
@@ -31,6 +35,11 @@
                (apply stream-map proc (map stream-rest streams)))
   )
 
+(define (stream-last s)
+  (if (stream-empty? (stream-rest s))
+    (stream-first s)
+    (stream-last (stream-rest s)))
+  )
 ;------------------------------
 ; memoization
 (define (memoize f)
@@ -50,8 +59,8 @@
 (define (prime? n)
   (let iter ([prime-list prime-list][max-i (floor (sqrt n))])
     (if (> (stream-first prime-list) max-i)
-     true
-     (and (not (= 0 (remainder n (stream-first prime-list)))) (iter (stream-rest prime-list) max-i))))
+      true
+      (and (not (= 0 (remainder n (stream-first prime-list)))) (iter (stream-rest prime-list) max-i))))
   )
 
 (define (find-prime-factors n)
@@ -65,6 +74,18 @@
     )
   )
 
+(define (find-prime-factors-pair n)
+  (let iter ([prime-list prime-list][n n][result empty])
+    (let ([prime (stream-first prime-list)])
+      (cond
+        [(= n 1) result]
+        [(> (* prime prime) n) (cons (cons n 1) result)]
+        [(= 0 (remainder n prime)) 
+         (do ([count 1 (+ count 1)][n (quotient n prime) (quotient n prime)])
+           ((not (= 0 (remainder n prime))) (iter (stream-rest prime-list) n (cons (cons prime count) result))))]
+        [else (iter (stream-rest prime-list) n result)]))
+    )
+  )
 ;------------------------------
 ; list compreshension
 (define (flatten-map proc l)
