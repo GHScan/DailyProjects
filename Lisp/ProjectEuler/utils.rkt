@@ -86,6 +86,36 @@
         [else (iter (stream-rest prime-list) n result)]))
     )
   )
+
+(define (divisors n)
+  (let iter ([pairs (find-prime-factors-pair n)])
+    (if (empty? pairs)
+      (list 1)
+      (let ([rest (iter (cdr pairs))])
+        (flatten-map
+          (lambda (i)
+            (let ([multiper (expt (caar pairs) i)])
+              (map (lambda (v) (* v multiper)) rest)))
+          (range (+ 1 (cdar pairs))))))) 
+  )
+
+(define (proper-divisors n)
+  (drop-right (divisors n) 1)
+  )
+
+(define (make-prime-table n)
+  (let ([table (make-vector n true)])
+    (vector-set! table 0 false)
+    (vector-set! table 1 false)
+    (let iter ([i 2])
+      (cond
+        [(>= i n) table]
+        [(not (vector-ref table i)) (iter (+ i 1))]
+        [else 
+          (do ([j (+ i i) (+ j i)])
+            ((>= j n) (iter (+ i 1)))
+            (vector-set! table j false))])))
+  )
 ;------------------------------
 ; list compreshension
 (define (flatten-map proc l)
