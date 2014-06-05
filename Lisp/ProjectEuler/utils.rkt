@@ -6,6 +6,49 @@
 (define (divisible? n m)
   (= 0 (remainder n m))
   )
+
+(define (list->number l)
+  (foldl (lambda (v init) (+ v (* 10 init))) 0 l)
+  )
+
+(define (number->list n)
+  (do ([n n (quotient n 10)][result empty (cons (remainder n 10) result)])
+    ((< n 10) (cons n result)))
+  )
+
+(define (rotate-left l step)
+  (let-values ([(left right) (split-at l (remainder step (length l)))])
+    (append right left))
+  )
+
+(define (uniq-list l)
+  (set->list (list->set l))
+  )
+
+(define (list-intersect l1 l2)
+  (cond
+    [(empty? l1) empty]
+    [(member (car l1) l2) (cons (car l1) (list-intersect (cdr l1) l2))]
+    [else (list-intersect (cdr l1) l2)])
+  )
+
+(define (list-union l1 l2)
+  (cond
+    [(empty? l1) l2]
+    [(not (member (car l1) l2)) (cons (car l1) (list-union (cdr l1) l2))]
+    [else (list-union (cdr l1) l2)])
+  )
+
+(define (list-subtract l1 l2)
+  (cond
+    [(empty? l1) empty]
+    [(not (member (car l1) l2)) (cons (car l1) (list-subtract (cdr l1) l2))]
+    [else (list-subtract (cdr l1) l2)])
+  )
+
+(define (palindrome? l)
+  (equal? l (reverse l))
+  )
 ;------------------------------
 ; stream
 (define (stream-merge key . streams)
