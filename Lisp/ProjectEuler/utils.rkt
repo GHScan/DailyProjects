@@ -3,6 +3,26 @@
 (provide (all-defined-out))
 
 ;------------------------------
+(define (combination l m)
+  (if (zero? m)
+    (list empty)
+    (flatten-map
+      (lambda (i)
+        (let ([v (list-ref l i)][rest (combination (drop l (+ i 1)) (- m 1))])
+          (map (lambda (sub) (cons v sub)) rest)))
+      (range (length l))))
+  )
+
+(define (partial-permuation l m)
+  (if (zero? m)
+    (list empty)
+    (flatten-map 
+      (lambda (v)
+        (let ([rest (partial-permuation (remove v l) (- m 1))])
+          (map (lambda (sub) (cons v sub)) rest)))
+      l))
+  )
+
 (define (divisible? n m)
   (= 0 (remainder n m))
   )
@@ -49,16 +69,42 @@
 (define (palindrome? l)
   (equal? l (reverse l))
   )
+
+(define (group-by l key)
+  (define ordered (sort l (lambda (a b) (< (key a) (key b)))))
+  (let iter ([group (list (car ordered))][rest (cdr ordered)])
+    (cond
+      [(empty? rest) (list group)]
+      [(= (key (car rest)) (key (car group))) (iter (cons (car rest) group) (cdr rest))]
+      [else (cons group (iter (list (car rest)) (cdr rest)))]))
+  )
 ;------------------------------
 ; stream
 (define (stream-merge key . streams)
   (if (empty? (cdr streams))
     (car streams)
-    (let ([a (car streams)][b (apply stream-merge key (cdr streams))])
+    (let iter ([a (car streams)][b (apply stream-merge key (cdr streams))])
       (cond
-        [(= (key (stream-first a)) (key (stream-first b))) (stream-cons (stream-first a) (stream-merge key (stream-rest a) (stream-rest b)))]
-        [(< (key (stream-first a)) (key (stream-first b))) (stream-cons (stream-first a) (stream-merge key (stream-rest a) b))]
-        [else (stream-cons (stream-first b) (stream-merge key a (stream-rest b)))])))
+        [(= (key (stream-first a)) (key (stream-first b))) (stream-cons (stream-first a) (iter (stream-rest a) (stream-rest b)))]
+        [(< (key (stream-first a)) (key (stream-first b))) (stream-cons (stream-first a) (iter (stream-rest a) b))]
+        [else (stream-cons (stream-first b) (iter a (stream-rest b)))])))
+  )
+
+(define (stream-intersect key . streams)
+  (if (> (length streams) 2)
+    (stream-intersect key (car streams) (apply stream-intersect key (cdr streams)))
+    (let iter ([a (car streams)][b (cadr streams)])
+      (cond
+        [(= (key (stream-first a)) (key (stream-first b))) (stream-cons (stream-first a) (iter (stream-rest a) (stream-rest b)))]
+        [(< (key (stream-first a)) (key (stream-first b))) (iter (stream-rest a) b)]
+        [else (iter a (stream-rest b))])))
+  )
+
+(define (stream-subtract key s1 s2)
+  (cond
+    [(= (key (stream-first s1)) (key (stream-first s2))) (stream-subtract key (stream-rest s1) (stream-rest s2))]
+    [(< (key (stream-first s1)) (key (stream-first s2))) (stream-cons (stream-first s1) (stream-subtract key (stream-rest s1) s2))]
+    [else (stream-subtract key s1 (stream-rest s2))])
   )
 
 (define (stream-take s n)
@@ -82,6 +128,23 @@
   (if (stream-empty? (stream-rest s))
     (stream-first s)
     (stream-last (stream-rest s)))
+  )
+
+(define (stream-pairs weight s1 s2)
+  (let ([first1 (stream-first s1)][rest1 (stream-rest s1)]
+        [first2 (stream-first s2)][rest2 (stream-rest s2)])
+    (stream-cons (list first1 first2) 
+                 (stream-merge 
+                   weight
+                   (stream-map (lambda (v) (list first1 v)) rest2)
+                   (stream-pairs weight rest1 rest2))))
+  )
+
+(define (stream-group-by key s)
+  (let iter ([group (list (stream-first s))][s (stream-rest s)])
+    (if (= (key (car group)) (key (stream-first s)))
+      (iter (cons (stream-first s) group) (stream-rest s))
+      (stream-cons group (iter (list (stream-first s)) (stream-rest s)))))
   )
 ;------------------------------
 ; memoization

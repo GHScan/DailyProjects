@@ -2,23 +2,6 @@
 
 (require "utils.rkt")
 
-(define (combination l m)
-  (if (zero? m)
-    (list empty)
-    (flatten-map 
-      (lambda (v)
-        (let ([rest (combination (remove v l) (- m 1))])
-          (map (lambda (sub) (cons v sub)) rest)))
-      l))
-  )
-
-(define (list-subtract l1 l2)
-  (cond
-    [(empty? l1) empty]
-    [(member (car l1) l2) (list-subtract (cdr l1) l2)]
-    [else (cons (car l1) (list-subtract (cdr l1) l2))])
-  )
-
 (define (group l size-list)
   (if (empty? size-list)
     (list empty)
@@ -26,7 +9,7 @@
       (lambda (group1)
         (let ([rest (group (list-subtract l group1) (cdr size-list))])
           (map (lambda (group-rest) (cons group1 group-rest)) rest)))
-      (combination l (car size-list))))
+      (partial-permuation l (car size-list))))
   )
 
 (define (pandigital? groups)
