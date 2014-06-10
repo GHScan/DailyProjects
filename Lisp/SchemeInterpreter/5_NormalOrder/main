@@ -1,0 +1,3 @@
+#! /bin/bash
+
+cat scripts/library.rkt $* | racket main.rkt
