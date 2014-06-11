@@ -44,7 +44,7 @@ public:
     Entry* insert(const char *key, int len, const ValueT &value) {
         assert(get(key, len) == nullptr);
 
-        if ((mSize * 1000 / mBucketMask) > 750) {
+        if (mSize > mBucketMask) {
             rehash();
         }
         ++mSize;
