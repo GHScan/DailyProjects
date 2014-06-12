@@ -3,9 +3,9 @@ test_coverage=0
 use_cpp0x=1
 build_dll=0
 macro_defs=
-include_dirs=
-lib_dirs=
-lib_files=
+include_dirs=/home/scan/Libraries/Crypto++
+lib_dirs=/home/scan/Libraries/Crypto++
+lib_files=cryptopp
 
 .PHONY: 
 

@@ -3,6 +3,8 @@
 
 #include "SchemeSymbol.h"
 
+class SchemeMemoryManager;
+
 class SchemeVM {
 public:
     enum {
@@ -34,6 +36,7 @@ public:
 
 private:
     SchemeSymbolPool *mSymPool;
+    SchemeMemoryManager *mMemMgr;
 };
 
 #endif

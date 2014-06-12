@@ -13,6 +13,9 @@ public:
     bool operator == (const SchemeSymbol &o) const {
         return this == &o;
     }
+    bool operator != (const SchemeSymbol& o) const {
+        return !(*this == o);
+    }
 
     void print(ostream &so) const {
         so << mData;

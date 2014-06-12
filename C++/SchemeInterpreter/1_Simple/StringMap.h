@@ -43,7 +43,6 @@ public:
 
         return nullptr;
     }
-
     Entry* get(const char *key, int len) {
         return (Entry*)((const StringMap*)this)->get(key, len);
     }

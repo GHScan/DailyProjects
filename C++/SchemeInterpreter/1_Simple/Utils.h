@@ -38,4 +38,13 @@ inline int ARRAY_SIZE(T (&a)[N]) {
     return N;
 }
 
+template<typename DerivedT, typename BaseT>
+DerivedT* polymorphic_cast(BaseT *p) {
+#ifdef _DEBUG
+    return dynamic_cast<DerivedT*>(p);
+#else
+    return static_cast<DerivedT*>(p);
+#endif
+}
+
 #endif

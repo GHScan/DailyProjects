@@ -1,7 +1,10 @@
 #include "pch.h"
 #include "SchemeVM.h"
+#include "SchemeMemoryManager.h"
 
 SchemeVM::SchemeVM() {
+    mMemMgr = new SchemeMemoryManager();
+
     mSymPool = new SchemeSymbolPool();
     mSymPool->intern("if", SYM_If);
     mSymPool->intern("begin", SYM_Begin);
@@ -16,4 +19,6 @@ SchemeVM::SchemeVM() {
 
 SchemeVM::~SchemeVM() {
     DELETE(mSymPool);
+
+    DELETE(mMemMgr);
 }

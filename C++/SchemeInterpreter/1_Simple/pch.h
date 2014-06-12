@@ -13,6 +13,8 @@
 #include <algorithm>
 #include <type_traits>
 #include <iterator>
+#include <memory>
+#include <functional>
 using namespace std;
 
 #include "Utils.h"
