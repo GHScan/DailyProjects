@@ -15,7 +15,7 @@ public:
     ~PoolAllocator() {
         for (Chunk *next; mChunkList; mChunkList = next) {
             next = mChunkList->next;
-            ::free(mChunkList);
+            FREE(mChunkList);
         }
     }
 

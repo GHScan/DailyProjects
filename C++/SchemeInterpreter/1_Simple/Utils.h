@@ -15,4 +15,27 @@ inline uint32_t hashRange(IterT begin, IterT end) {
     return seed;
 }
 
+template<typename T>
+inline void FREE(T*& p, typename is_pod<T>::type* =0) {
+    ::free(p);
+    p = nullptr;
+}
+
+template<typename T>
+inline void DELETE(T*& p) {
+    delete p;
+    p = nullptr;
+}
+
+template<typename T>
+inline void DELETE_ARRAY(T*& p) {
+    delete[] p;
+    p = nullptr;
+}
+
+template<typename T, int N>
+inline int ARRAY_SIZE(T (&a)[N]) {
+    return N;
+}
+
 #endif

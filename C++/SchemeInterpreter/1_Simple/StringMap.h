@@ -24,7 +24,14 @@ public:
     StringMap& operator = (const StringMap &o) = delete;
 
     ~StringMap() {
-        ::free(mBuckets);
+        for (int i = 0; i <= mBucketMask; ++i) {
+            for (Node *n = mBuckets[i], *next; n; n = next) {
+                next = n->next;
+                freeNode(n);
+            }
+        }
+
+        FREE(mBuckets);
     }
 
     const Entry* get(const char *key, int len) const {
@@ -82,7 +89,7 @@ private:
             }
         }
 
-        ::free(mBuckets);
+        FREE(mBuckets);
         mBucketMask = newBucketMask;
         mBuckets = newBuckets;
     }
@@ -93,6 +100,10 @@ private:
         new (&n->entry.value) ValueT(v);
         memcpy(n->entry.key, key, len + 1);
         return n;
+    }
+
+    void freeNode(Node *n) {
+        n->entry.value.~ValueT();
     }
 
 private:

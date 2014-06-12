@@ -16,7 +16,7 @@ public:
     ~StackAllocator() {
         for (Chunk *next; mFirstChunk; mFirstChunk = next) {
             next = mFirstChunk->next;
-            ::free(mFirstChunk);
+            FREE(mFirstChunk);
         }
     }
 

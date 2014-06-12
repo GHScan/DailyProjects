@@ -3,7 +3,7 @@
 
 class TaggedPointer {
 public:
-    static const PtrValue TAG_BIT_COUNT = 3;
+    static const int TAG_BIT_COUNT = 3;
     static const PtrValue TAG_MAX = 1 << TAG_BIT_COUNT;
     static const PtrValue TAG_MASK = TAG_MAX - 1;
 
@@ -23,6 +23,7 @@ public:
     void set(PtrValue tag, void* p) {
         assert(((PtrValue)p & TAG_MASK) == 0);
         assert((tag & TAG_MASK) == tag);
+
         mPointer = tag | (PtrValue)p;
     }
 
