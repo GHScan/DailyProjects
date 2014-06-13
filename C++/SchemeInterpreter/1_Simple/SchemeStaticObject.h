@@ -39,25 +39,25 @@ struct SchemeStaticObject {
     }
 
     template<typename T>
-    T* castToPair() {
-        assert(isPair());
-        return static_cast<T*>(static_cast<SchemePair*>(this));
-    }
-    template<typename T>
     const T* castToPair() const {
         assert(isPair());
+
         return static_cast<const T*>(static_cast<const SchemePair*>(this));
+    }
+    template<typename T>
+    T* castToPair() {
+        return const_cast<T*>(const_cast<const SchemeStaticObject*>(this)->castToPair<T>());
     }
 
     template<typename T>
-    T* castToVector() {
-        assert(isVector());
-        return static_cast<T*>(static_cast<SchemeVector*>(this));
-    }
-    template<typename T>
     const T* castToVector() const {
         assert(isVector());
+
         return static_cast<const T*>(static_cast<const SchemeVector*>(this));
+    }
+    template<typename T>
+    T* castToVector() {
+        return const_cast<T*>(const_cast<const SchemeStaticObject*>(this)->castToVector<T>());
     }
 
     bool equal(const SchemeStaticObject &o) const {
@@ -115,12 +115,12 @@ static_assert(sizeof(SchemePair) == sizeof(void*) * 2, "SchemePair is the core s
 struct SchemeVector: public SchemeStaticObject {
     static SchemeVector* create(SchemeMemoryManager *mgr, int size);
 
-    int size() const {
+    int length() const {
         return first.getInteger();
     }
 
     const SchemeRef& ref(int i) const {
-        assert(i >= 0 && i < size());
+        assert(i >= 0 && i < length());
         return (&second)[i];
     }
     SchemeRef& ref(int i) {
@@ -135,6 +135,8 @@ private:
 
 template<int n>
 inline const SchemeRef& sref(const SchemeVector *v) {
+    assert(n < v->length());
+
     return (&v->second)[n];
 }
 template<>

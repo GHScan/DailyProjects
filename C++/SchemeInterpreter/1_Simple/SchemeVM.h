@@ -2,24 +2,12 @@
 #define SCHEME_VM_H
 
 #include "SchemeSymbol.h"
+#include "SchemeRef.h"
 
 class SchemeMemoryManager;
+class SchemeEnv;
 
 class SchemeVM {
-public:
-    enum {
-        SYM_None,
-        SYM_If,
-        SYM_Begin,
-        SYM_Lambda,
-        SYM_Quote,
-        SYM_Quasiquote,
-        SYM_Unquote,
-        SYM_UnquoteSlicing,
-        SYM_Define,
-        SYM_Set,
-    };
-
 public:
     SchemeVM();
     SchemeVM(const SchemeVM &o) = delete;
@@ -34,9 +22,19 @@ public:
         return mSymPool;
     }
 
+    SchemeRef eval(const SchemeRef &exp) {
+        return _eval(mEnvG, exp);
+    }
+
+private:
+    void setupEnvG();
+
+    SchemeRef _eval(SchemeEnv *env, const SchemeRef &exp);
+
 private:
     SchemeSymbolPool *mSymPool;
     SchemeMemoryManager *mMemMgr;
+    SchemeEnv *mEnvG;
 };
 
 #endif

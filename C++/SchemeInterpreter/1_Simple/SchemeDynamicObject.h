@@ -41,6 +41,7 @@ public:
     double number;
 
     static SchemeFloat* create(SchemeMemoryManager *mgr, double n);
+    static SchemeFloat* create(SchemeMemoryManager *mgr, const char *s);
 
     virtual bool equal(const SchemeDynamicObject& o) const override {
         if (auto p = dynamic_cast<const SchemeFloat*>(&o)) {
@@ -75,6 +76,7 @@ public:
     BigInteger number;
 
     static SchemeBigInteger* create(SchemeMemoryManager *mgr, const BigInteger &n);
+    static SchemeBigInteger* create(SchemeMemoryManager *mgr, const char *s);
 
     virtual bool equal(const SchemeDynamicObject& o) const override {
         if (auto p = dynamic_cast<const SchemeBigInteger*>(&o)) {

@@ -5,6 +5,8 @@
 #include "SchemeSymbol.h"
 
 bool SchemeRef::equal(const SchemeRef &o) const {
+    if (this == &o) return true;
+
     int type = getType();
     if (type != o.getType()) return false;
 

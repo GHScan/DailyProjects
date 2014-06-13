@@ -39,6 +39,9 @@ BigInteger::BigInteger(int n): BigInteger(new BigIntegerImpl(n)) {
 BigInteger::BigInteger(double d): BigInteger(doubleToBigInteger(d)) {
 }
 
+BigInteger::BigInteger(const char *s): BigInteger(new BigIntegerImpl(s)) {
+}
+
 int BigInteger::toInt() const {
     int v = mImpl->GetBits(0, 32);
     return mImpl->IsNegative() ? -v : v;

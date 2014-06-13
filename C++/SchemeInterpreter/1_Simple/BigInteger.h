@@ -10,6 +10,7 @@ class BigInteger {
 public:
     BigInteger(int n);
     BigInteger(double d);
+    explicit BigInteger(const char *s);
 
     int toInt() const;
     double toDouble() const;

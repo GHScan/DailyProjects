@@ -97,7 +97,8 @@ private:
         Node *n = static_cast<Node*>(mAllocator.malloc(sizeof(Node) + len, alignof(Node)));
         n->next = next;
         new (&n->entry.value) ValueT(v);
-        memcpy(n->entry.key, key, len + 1);
+        memcpy(n->entry.key, key, len);
+        n->entry.key[len] = 0;
         return n;
     }
 

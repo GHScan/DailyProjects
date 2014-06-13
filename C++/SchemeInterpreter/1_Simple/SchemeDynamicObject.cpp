@@ -2,6 +2,10 @@
 #include "SchemeDynamicObject.h"
 #include "SchemeMemoryManager.h"
 
+SchemeFloat* SchemeFloat::create(SchemeMemoryManager *mgr, const char *s) {
+    return create(mgr, strtod(s, nullptr));
+}
+
 SchemeFloat* SchemeFloat::create(SchemeMemoryManager *mgr, double n) {
     SchemeFloat *p = new SchemeFloat(n);
     mgr->addDynamicObject(p);
@@ -12,6 +16,10 @@ SchemeString* SchemeString::create(SchemeMemoryManager *mgr, const char *s) {
     SchemeString *p = new SchemeString(s);
     mgr->addDynamicObject(p);
     return p;
+}
+
+SchemeBigInteger* SchemeBigInteger::create(SchemeMemoryManager *mgr, const char *s) {
+    return create(mgr, BigInteger(s));
 }
 
 SchemeBigInteger* SchemeBigInteger::create(SchemeMemoryManager *mgr, const BigInteger &n) {

@@ -72,8 +72,19 @@ struct GCContext {
             int refCount = reinterpret_cast<SchemeStaticObject*>(scanned)->getRefCount();
             for (int i = 0; i < refCount; ++i) {
                 SchemeRef *ref = &scanned[i];
-                if (ref->getType() == SchemeRef::TYPE_StaticObject) {
-                    ref->setStaticObject(moveToNewHeap(ref->getStaticObject()));
+                switch (ref->getType()) {
+                    case SchemeRef::TYPE_Integer:
+                    case SchemeRef::TYPE_Symbol:
+                        break;
+                    case SchemeRef::TYPE_StaticObject:
+                        ref->setStaticObject(moveToNewHeap(ref->getStaticObject()));
+                        break;
+                    case SchemeRef::TYPE_DynamicObject:
+                        ref->getDynamicObject()->mark();
+                        break;
+                    default:
+                        assert(0);
+                        break;
                 }
             }
             scanned += refCount;
