@@ -84,7 +84,7 @@ local function array2SExp(t)
     end
 end
 
-function printTable(t)
+local function printTable(t)
     if type(t) == 'table' then
         io.write('(')
         for i, v in ipairs(t) do
@@ -97,7 +97,7 @@ function printTable(t)
     end
 end
 
-function printSExp(e)
+local function printSExp(e)
     printTable(SExp2Array(e))
     print()
 end
