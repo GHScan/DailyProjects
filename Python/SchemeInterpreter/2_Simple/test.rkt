@@ -102,7 +102,6 @@
 (time-it (lambda () (fib 15)))
 (time-it (lambda () (fib-dp 15 0 1)))
 (time-it (lambda () (filter even? (map sqr (range 0 100)))))
-(time-it (lambda () (foldl * 1 (range 1 101))))
 (time-it (lambda () (factorial 100 1)))
 (time-it (lambda () (eval (quote (factorial 100 1)))))
 

@@ -30,11 +30,6 @@ def Sdrop(l, n):
         l = Scdr(l)
         n -= 1
     return l
-def Sfoldl(f, init, l):
-    while l != Sempty:
-        init = f(Scar(l), init)
-        l = Scdr(l)
-    return init
 def Slength(l):
     n = 0
     while l != Sempty:
@@ -165,7 +160,7 @@ G = Env(None,
             'eq':lambda a,b: a==b,
             'cons': Scons, 'car': Scar, 'cdr': Scdr,
             'cadr': Scadr, 'caddr': Scaddr, 'cadddr': Scadddr,
-            'drop': Sdrop, 'append': Sappend, 'length': Slength, 'foldl': Sfoldl,
+            'drop': Sdrop, 'append': Sappend, 'length': Slength, 
             'empty': Sempty, 'empty?': lambda l: l==Sempty,
             'print': printSExp,
             'clock': lambda :time.clock(),
