@@ -67,6 +67,7 @@
                              (cons 'string-append string-append)
                              (cons 'number->string number->string)
                              (cons 'gensym gensym)
+                             (cons 'sqr sqr)
                              )]
         [native-variables (list
                             (cons 'empty empty)

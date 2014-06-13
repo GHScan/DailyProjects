@@ -93,9 +93,9 @@
   )
 
 (define (time-it f)
-  (define start (clock))
+  (define start (current-inexact-milliseconds))
   (f)
-  (print (- (clock) start))
+  (pretty-print (- (current-inexact-milliseconds) start))
   )
 
 ;------------------------------
