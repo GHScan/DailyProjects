@@ -30,7 +30,7 @@ public:
     }
 
     void free(void* p) {
-        Block* b = (Block*)p;
+        Block* b = static_cast<Block*>(p);
         b->next = mFreeList;
         mFreeList = b;
     }
@@ -48,7 +48,7 @@ private:
 
 private:
     void mallocChunk() {
-        Chunk *chunk = (Chunk*)::malloc(mChunkSize);
+        Chunk *chunk = static_cast<Chunk*>(::malloc(mChunkSize));
         chunk->next = mChunkList;
         mChunkList = chunk;
 

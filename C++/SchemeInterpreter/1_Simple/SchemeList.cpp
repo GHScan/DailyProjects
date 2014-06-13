@@ -5,7 +5,7 @@ SchemeList* SchemeList::create(SchemeMemoryManager *mgr, const SchemeRef *begin,
     SchemeList *l = EMPTY;
 
     for (; end > begin; --end) {
-        l = (SchemeList*)SchemePair::cons(mgr, end[-1], SchemeRef(l));
+        l = static_cast<SchemeList*>(SchemePair::cons(mgr, end[-1], l));
     }
 
     return l;
@@ -25,18 +25,18 @@ SchemeList* SchemeList::clone(SchemeMemoryManager *mgr) const {
 
     for (; l != EMPTY; l = l->nextList()) {
         SchemePair *newPair = SchemePair::create(mgr);
-        lastPair->setCdr(SchemeRef(newPair));
+        lastPair->setCdr(newPair);
         lastPair = newPair;
         lastPair->setCar(l->car());
     }
 
-    lastPair->setCdr(SchemeRef(EMPTY));
+    lastPair->setCdr(EMPTY);
 
-    return (SchemeList*)firstPair;
+    return static_cast<SchemeList*>(firstPair);
 }
 
 SchemeList* SchemeList::pushFront(SchemeMemoryManager *mgr, const SchemeRef &v) {
-    return (SchemeList*)SchemePair::cons(mgr, v, SchemeRef(this));
+    return static_cast<SchemeList*>(SchemePair::cons(mgr, v, this));
 }
 
 SchemeList* SchemeList::EMPTY = nullptr;

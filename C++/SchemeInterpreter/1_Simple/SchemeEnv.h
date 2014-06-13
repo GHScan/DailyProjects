@@ -18,7 +18,7 @@ public:
 
     const SchemeRef* lookup(const SchemeSymbol &name) const;
     SchemeRef* lookup(const SchemeSymbol &name) {
-        return (SchemeRef*)((const SchemeEnv*)this)->lookup(name);
+        return const_cast<SchemeRef*>(const_cast<const SchemeEnv*>(this)->lookup(name));
     }
 
     void define(SchemeMemoryManager *mgr, const SchemeSymbol &name, const SchemeRef &v);

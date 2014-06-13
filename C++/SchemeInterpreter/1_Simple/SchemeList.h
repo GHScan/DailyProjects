@@ -16,9 +16,7 @@ public:
     static SchemeList* create(SchemeMemoryManager *mgr, const SchemeRef *begin, const SchemeRef *end);
 
     const SchemeList* nextList() const {
-        SchemePair *p = (SchemePair*)cdr().getStaticObject();
-        assert(p->isPair());
-        return (SchemeList*)p;
+        return cdr().getStaticObject()->castToPair<SchemeList>();
     }
 
     bool empty(const SchemeRef &v) const {
@@ -37,7 +35,7 @@ public:
         return l;
     }
     SchemePair* lastPair() {
-        return (SchemePair*)((const SchemeList*)this)->lastPair();
+        return const_cast<SchemePair*>(const_cast<const SchemeList*>(this)->lastPair());
     }
 
     SchemeList* append(SchemeMemoryManager *mgr, SchemeList *l) const {
@@ -52,7 +50,7 @@ public:
 
     void mappend(SchemeList *l) {
         if (this != EMPTY) {
-            lastPair()->setCdr(SchemeRef(l));
+            lastPair()->setCdr(l);
         }
     }
 
@@ -64,7 +62,7 @@ public:
         return l;
     }
     SchemeList* member(const SchemeRef &v) {
-        return (SchemeList*)((const SchemeList*)this)->member(v);
+        return const_cast<SchemeList*>(const_cast<const SchemeList*>(this)->member(v));
     }
 
     const SchemeList* memv(const SchemeRef &v) const {
@@ -73,7 +71,7 @@ public:
         return l;
     }
     SchemeList* memv(const SchemeRef &v) {
-        return (SchemeList*)((const SchemeList*)this)->memv(v);
+        return const_cast<SchemeList*>(const_cast<const SchemeList*>(this)->memv(v));
     }
 
     const SchemeList* memq(const SchemeRef &v) const {
@@ -82,34 +80,34 @@ public:
         return l;
     }
     SchemeList* memq(const SchemeRef &v) {
-        return (SchemeList*)((const SchemeList*)this)->memq(v);
+        return const_cast<SchemeList*>(const_cast<const SchemeList*>(this)->memq(v));
     }
 
     const SchemePair* assoc(const SchemeRef &k) const {
         const SchemeList *l = this;
-        for (; l != EMPTY && !((SchemePair*)l->car().getStaticObject())->car().equal(k); l = l->nextList());
-        return (SchemePair*)l->car().getStaticObject();
+        for (; l != EMPTY && !l->car().getStaticObject()->castToPair<SchemePair>()->car().equal(k); l = l->nextList());
+        return l->car().getStaticObject()->castToPair<SchemePair>();
     }
     SchemePair* assoc(const SchemeRef &v) {
-        return (SchemePair*)((const SchemeList*)this)->assoc(v);
+        return const_cast<SchemePair*>(const_cast<const SchemeList*>(this)->assoc(v));
     }
 
     const SchemePair* assv(const SchemeRef &k) const {
         const SchemeList *l = this;
-        for (; l != EMPTY && !((SchemePair*)l->car().getStaticObject())->car().eqv(k); l = l->nextList());
-        return (SchemePair*)l->car().getStaticObject();
+        for (; l != EMPTY && !l->car().getStaticObject()->castToPair<SchemePair>()->car().eqv(k); l = l->nextList());
+        return l->car().getStaticObject()->castToPair<SchemePair>();
     }
     SchemePair* assv(const SchemeRef &v) {
-        return (SchemePair*)((const SchemeList*)this)->assv(v);
+        return const_cast<SchemePair*>(const_cast<const SchemeList*>(this)->assv(v));
     }
 
     const SchemePair* assq(const SchemeRef &k) const {
         const SchemeList *l = this;
-        for (; l != EMPTY && !((SchemePair*)l->car().getStaticObject())->car().eq(k); l = l->nextList());
-        return (SchemePair*)l->car().getStaticObject();
+        for (; l != EMPTY && !l->car().getStaticObject()->castToPair<SchemePair>()->car().eq(k); l = l->nextList());
+        return l->car().getStaticObject()->castToPair<SchemePair>();
     }
     SchemePair* assq(const SchemeRef &v) {
-        return (SchemePair*)((const SchemeList*)this)->assq(v);
+        return const_cast<SchemePair*>(const_cast<const SchemeList*>(this)->assq(v));
     }
 
     int length() const {
@@ -129,27 +127,6 @@ public:
         return l->car();
     }
 
-    const SchemeRef& first() const {
-        return car();
-    }
-    SchemeRef& first() {
-        return (SchemeRef&)((const SchemeList*)this)->first();
-    }
-
-    const SchemeRef& second() const {
-        return nextList()->car();
-    }
-    SchemeRef& second() {
-        return (SchemeRef&)((const SchemeList*)this)->second();
-    }
-
-    const SchemeRef& third() const {
-        return nextList()->nextList()->car();
-    }
-    SchemeRef& third() {
-        return (SchemeRef&)((const SchemeList*)this)->third();
-    }
-
     static void installEmptyList(SchemeList *l) {
         EMPTY = l;
     }
@@ -157,4 +134,18 @@ public:
     static SchemeList* EMPTY;
 };
 
+template<int n>
+inline const SchemeRef& sref(const SchemeList *l) {
+    return sref<n - 1>(l->nextList());
+}
+template<>
+inline const SchemeRef& sref<0>(const SchemeList *l) {
+    return l->car();
+}
+
+template<int n>
+inline SchemeRef& sref(SchemeList *l) {
+    return const_cast<SchemeRef&>(sref<n>(const_cast<const SchemeList*>(l)));
+}
+ 
 #endif

@@ -16,17 +16,9 @@ public:
 
     static SchemeFunction* create(SchemeMemoryManager *mgr, SchemeEnv *env, SchemeList *formals, SchemeList *bodyExps);
 
-    SchemeEnv* getEnv() {
-        return (SchemeEnv*)ref(FIELD_Env).getStaticObject();
-    }
-
-    SchemeList* getFormals() {
-        return (SchemeList*)ref(FIELD_Formals).getStaticObject();
-    }
-
-    SchemeList* getBodyExps() {
-        return (SchemeList*)ref(FIELD_BodyExps).getStaticObject();
-    }
+    SchemeEnv* getEnv();
+    SchemeList* getFormals();
+    SchemeList* getBodyExps();
 
 private:
     enum {

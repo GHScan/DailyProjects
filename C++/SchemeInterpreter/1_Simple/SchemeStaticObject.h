@@ -4,6 +4,8 @@
 #include "SchemeRef.h"
 
 class SchemeMemoryManager;
+struct SchemePair;
+struct SchemeVector;
 
 struct SchemeStaticObject {
     enum {
@@ -34,6 +36,28 @@ struct SchemeStaticObject {
     }
     SchemeRef& operator [] (int i) {
         return (SchemeRef&)(*(const SchemeStaticObject*)this)[i];
+    }
+
+    template<typename T>
+    T* castToPair() {
+        assert(isPair());
+        return static_cast<T*>(static_cast<SchemePair*>(this));
+    }
+    template<typename T>
+    const T* castToPair() const {
+        assert(isPair());
+        return static_cast<const T*>(static_cast<const SchemePair*>(this));
+    }
+
+    template<typename T>
+    T* castToVector() {
+        assert(isVector());
+        return static_cast<T*>(static_cast<SchemeVector*>(this));
+    }
+    template<typename T>
+    const T* castToVector() const {
+        assert(isVector());
+        return static_cast<const T*>(static_cast<const SchemeVector*>(this));
     }
 
     bool equal(const SchemeStaticObject &o) const {
@@ -97,12 +121,10 @@ struct SchemeVector: public SchemeStaticObject {
 
     const SchemeRef& ref(int i) const {
         assert(i >= 0 && i < size());
-
         return (&second)[i];
     }
-
-    void set(int i, const SchemeRef &v) {
-        (SchemeRef&)ref(i) = v;
+    SchemeRef& ref(int i) {
+        return (SchemeRef&)((const SchemeVector*)this)->ref(i);
     }
 
 private:
@@ -110,5 +132,19 @@ private:
         first.setInteger(size);
     }
 };
+
+template<int n>
+inline const SchemeRef& sref(const SchemeVector *v) {
+    return (&v->second)[n];
+}
+template<>
+inline const SchemeRef& sref<0>(const SchemeVector *v) {
+    return v->second;
+}
+
+template<int n>
+inline SchemeRef& sref(SchemeVector *v) {
+    return const_cast<SchemeRef&>(sref<n>(const_cast<const SchemeVector*>(v)));
+}
 
 #endif

@@ -41,12 +41,12 @@ public:
 
     template<typename T>
     T* malloc() {
-        return (T*)malloc(sizeof(T), alignof(T));
+        return static_cast<T*>(malloc(sizeof(T), alignof(T)));
     }
 
     template<typename T>
     T* mallocArray(int size) {
-        return (T*)malloc(sizeof(T) * size, alignof(T));
+        return static_cast<T*>(malloc(sizeof(T) * size, alignof(T)));
     }
 
     void reset() {
@@ -63,7 +63,7 @@ private:
 
 private:
     static Chunk* mallocChunk(int payloadSize) {
-        Chunk* p = (Chunk*)::malloc(sizeof(Chunk) - 1 + payloadSize);
+        Chunk* p = static_cast<Chunk*>(::malloc(sizeof(Chunk) - 1 + payloadSize));
         p->next = nullptr;
         p->endPtr = p->data + payloadSize;
         return p;

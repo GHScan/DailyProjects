@@ -5,28 +5,28 @@
 #include "SchemeSymbol.h"
 
 SchemeEnv* SchemeEnv::create(SchemeMemoryManager *mgr, SchemeEnv *prev, SchemeList *formals, SchemeList *actuals) {
-    SchemeEnv *env = (SchemeEnv*)SchemeVector::create(mgr, 3);
-    env->set(FIELD_PrevEnv, SchemeRef(prev));
-    env->set(FIELD_Names, SchemeRef(formals));
-    env->set(FIELD_Values, SchemeRef(actuals));
+    SchemeEnv *env = static_cast<SchemeEnv*>(SchemeVector::create(mgr, 3));
+    sref<FIELD_PrevEnv>(env) = prev;
+    sref<FIELD_Names>(env) = formals;
+    sref<FIELD_Values>(env) = actuals;
     return env;
 }
 
 const SchemeRef* SchemeEnv::lookup(const SchemeSymbol &name) const {
     if (this == nullptr) return nullptr;
 
-    const SchemeList *names = (SchemeList*)ref(FIELD_Names).getStaticObject();
-    const SchemeList *values = (SchemeList*)ref(FIELD_Values).getStaticObject();
+    const SchemeList *names = sref<FIELD_Names>(this).getStaticObject()->castToPair<SchemeList>();
+    const SchemeList *values = sref<FIELD_Values>(this).getStaticObject()->castToPair<SchemeList>();
     for (; names != SchemeList::EMPTY && *names->car().getSymbol() != name; names = names->nextList(), values = values->nextList());
 
     if (names == SchemeList::EMPTY) {
-        return ((SchemeEnv*)ref(FIELD_PrevEnv).getStaticObject())->lookup(name);
+        return sref<FIELD_PrevEnv>(this).getStaticObject()->castToVector<SchemeEnv>()->lookup(name);
     } 
 
     return &values->car();
 }
 
 void SchemeEnv::define(SchemeMemoryManager *mgr, const SchemeSymbol &name, const SchemeRef &v) {
-    set(FIELD_Names, SchemeRef(((SchemeList*)ref(FIELD_Names).getStaticObject())->pushFront(mgr, SchemeRef(&name))));
-    set(FIELD_Values, SchemeRef(((SchemeList*)ref(FIELD_Values).getStaticObject())->pushFront(mgr, v)));
+    sref<FIELD_Names>(this) = sref<FIELD_Names>(this).getStaticObject()->castToPair<SchemeList>()->pushFront(mgr, &name);
+    sref<FIELD_Values>(this) = sref<FIELD_Values>(this).getStaticObject()->castToPair<SchemeList>()->pushFront(mgr, v);
 }

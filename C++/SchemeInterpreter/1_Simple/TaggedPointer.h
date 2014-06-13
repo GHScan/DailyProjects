@@ -31,7 +31,7 @@ public:
     }
 
     void* getPointer() const {
-        return (void*)get<POINTER_MASK>();
+        return reinterpret_cast<void*>(get<POINTER_MASK>());
     }
 
     void setPointer(void *p) {

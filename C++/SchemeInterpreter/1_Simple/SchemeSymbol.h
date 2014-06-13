@@ -49,7 +49,7 @@ public:
             entry = mStrMap.insert(str, len, id);
         }
 
-        return (SchemeSymbol*)entry;
+        return reinterpret_cast<SchemeSymbol*>(entry);
     }
 
     bool isInterned(const char *str) const {

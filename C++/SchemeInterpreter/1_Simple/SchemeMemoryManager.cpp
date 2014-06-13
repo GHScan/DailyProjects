@@ -58,7 +58,7 @@ struct GCContext {
 
         if (obj->second.getType() != SchemeRef::TYPE_StaticObject || !isBelongNewHeap(obj->second.getStaticObject())) {
             int refCount = obj->getRefCount();
-            SchemeStaticObject *newObj = (SchemeStaticObject*)free;
+            SchemeStaticObject *newObj = reinterpret_cast<SchemeStaticObject*>(free);
             free += refCount;
             memcpy(newObj, obj, refCount * sizeof(SchemeRef));
             obj->second.setStaticObject(newObj);
@@ -69,7 +69,7 @@ struct GCContext {
 
     void updateObjectFieldsForNewHeap() {
         for (; scanned < free; ) {
-            int refCount = ((SchemeStaticObject*)scanned)->getRefCount();
+            int refCount = reinterpret_cast<SchemeStaticObject*>(scanned)->getRefCount();
             for (int i = 0; i < refCount; ++i) {
                 SchemeRef *ref = &scanned[i];
                 if (ref->getType() == SchemeRef::TYPE_StaticObject) {
@@ -108,7 +108,7 @@ void SchemeMemoryManager::endGC(GCContext *ctx) {
     // mark and sweep
     mDynamicObjCount = 0;
     for (TaggedPointer *p = &mDynamicObjList; p->getPointer() != nullptr;) {
-        SchemeDynamicObject* obj = (SchemeDynamicObject*)p->getPointer();
+        SchemeDynamicObject* obj = static_cast<SchemeDynamicObject*>(p->getPointer());
         if (obj->isMarked()) {
             obj->unmark();
             p = &obj->next;

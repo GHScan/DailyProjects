@@ -33,19 +33,19 @@ public:
 
     SchemeRef() = default;
 
-    explicit SchemeRef(PtrValue n) {
+    SchemeRef(PtrValue n) {
         setInteger(n);
     }
 
-    explicit SchemeRef(SchemeStaticObject *obj) {
+    SchemeRef(SchemeStaticObject *obj) {
         setStaticObject(obj);
     }
 
-    explicit SchemeRef(SchemeDynamicObject *obj) {
+    SchemeRef(SchemeDynamicObject *obj) {
         setDynamicObject(obj);
     }
 
-    explicit SchemeRef(const SchemeSymbol *sym) {
+    SchemeRef(const SchemeSymbol *sym) {
         setSymbol(sym);
     }
 
@@ -73,33 +73,30 @@ public:
         const SchemeStaticObject *st = (const SchemeStaticObject*)get<POINTER_MASK>();
 
         assert(getType() == TYPE_StaticObject);
-        assert(st != nullptr);
         return st;
     }
     SchemeStaticObject* getStaticObject() {
-        return (SchemeStaticObject*)((const SchemeRef*)this)->getStaticObject();
+        return const_cast<SchemeStaticObject*>(const_cast<const SchemeRef*>(this)->getStaticObject());
     }
 
     const SchemeDynamicObject* getDynamicObject() const {
         const SchemeDynamicObject *dy = (const SchemeDynamicObject*)get<POINTER_MASK>();
 
         assert(getType() == TYPE_DynamicObject);
-        assert(dy != nullptr);
         return dy;
     }
     SchemeDynamicObject* getDynamicObject() {
-        return (SchemeDynamicObject*)((const SchemeRef*)this)->getDynamicObject();
+        return const_cast<SchemeDynamicObject*>(const_cast<const SchemeRef*>(this)->getDynamicObject());
     }
 
     const SchemeSymbol* getSymbol() const {
         const SchemeSymbol* sym = (const SchemeSymbol*)get<POINTER_MASK>();
 
         assert(getType() == TYPE_Symbol);
-        assert(sym != nullptr);
         return sym;
     }
     SchemeSymbol* getSymbol() {
-        return (SchemeSymbol*)((const SchemeRef*)this)->getSymbol();
+        return const_cast<SchemeSymbol*>(const_cast<const SchemeRef*>(this)->getSymbol());
     }
 
     SchemeRef& setInteger(PtrValue v) {
