@@ -72,7 +72,7 @@ class Env(object):
             self.frame[name] = value
         else:
             assert self.preEnv, 'Cant find variable: "%s"' % name
-            self.prevEnv.set(name, value)
+            self.preEnv.set(name, value)
 
 INT = re.compile(r'\d+')
 FLOAT = re.compile(r'\d*\.\d+')
