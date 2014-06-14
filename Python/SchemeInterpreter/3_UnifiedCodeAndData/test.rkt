@@ -26,7 +26,7 @@
   (if (empty? l)
     (k empty)
     (map-cps f (cdr l)
-             (lambda (rest) (k (cons (car l) rest)))))
+             (lambda (rest) (k (cons (f (car l)) rest)))))
   )
 
 (define (build-list n f)
