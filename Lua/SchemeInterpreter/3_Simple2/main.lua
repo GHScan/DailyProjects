@@ -61,10 +61,12 @@ local function S_drop(p, n)
     return p
 end
 local function S_length(p)
+    n = 0
     while p ~= S_empty do
         p = S_cdr(p)
+        n = n + 1
     end
-    return p
+    return n
 end
 
 
