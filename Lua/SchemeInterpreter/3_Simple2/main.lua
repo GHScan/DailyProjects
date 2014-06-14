@@ -114,10 +114,10 @@ local evalSequentially
 
 local function eval(env, exp)
     local expType = type(exp)
-    if expType == 'boolean' or expType == 'number' then
-        return exp
-    elseif expType == 'string' then
+    if expType == 'string' then
         return env[exp]
+    elseif expType ~= 'table' then
+        return exp
     else
         if exp[1] == 'quote' then
             return array2SExp(exp[2])

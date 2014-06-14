@@ -97,10 +97,10 @@ def parse(s):
 
 def eval(env, exp):
     while True:
-        if isinstance(exp, (bool, int, long, float)):
-            return exp
-        elif isinstance(exp, str):
+        if isinstance(exp, str):
             return env.lookup(exp)
+        elif not isinstance(exp, tuple):
+            return exp
         elif Sref(exp, 0) == 'quote':
             return Sref(exp, 1)
         elif Sref(exp, 0) == 'if':

@@ -24,73 +24,79 @@ class Env(object):
             assert self.preEnv, 'Cant find variable: "%s"' % name
             self.prevEnv.set(name, value)
 
-INT = re.compile(r'\d+')
-FLOAT = re.compile(r'\d*\.\d+')
-def parse(s):
+def tokenize(s):
     s = re.sub(r';[^\n]*\n', '', s)
     s = s.replace('(', ' ( ').replace(')', ' ) ')
     s = s.replace('[', ' ( ').replace(']', ' ) ')
-    r = [[]]
-    for token in s.split():
-        if token == '(':
-            r.append([])
-        elif token == ')':
-            l = r.pop()
-            r[-1].append(l)
-        elif INT.match(token):
-            r[-1].append(int(token))
-        elif FLOAT.match(token):
-            r[-1].append(float(token))
-        else:
-            r[-1].append(token)
-    return r[0]
+    return s.split()
+
+def parse(tokens):
+    if not tokens: 
+        return None
+    elif tokens[0] == '(':
+        l = []
+        tokens.pop(0)
+        while tokens[0] != ')':
+            l.append(parse(tokens))
+        tokens.pop(0)
+        return l
+    elif re.match(r'\d+', tokens[0]):
+        return int(tokens.pop(0))
+    elif re.match(r'\d*\.\d+', tokens[0]):
+        return float(tokens.pop(0))
+    else:
+        return tokens.pop(0)
 
 def eval(env, exp):
     while True:
-        if isinstance(exp, (bool, int, long, float)):
-            return exp
-        elif isinstance(exp, str):
+        if isinstance(exp, str):
             return env.lookup(exp)
+        elif not isinstance(exp, list):
+            return exp
         elif exp[0] == 'quote':
-            return exp[1]
+            (_, datum) = exp
+            return datum
         elif exp[0] == 'if':
-            if eval(env, exp[1]):
-                exp = exp[2]
-            else:
-                exp = exp[3]
+            (_, predExp, thenExp, elseExp) = exp
+            exp = thenExp if eval(env, predExp) else elseExp
         elif exp[0] == 'lambda':
-            return (env, exp[1], exp[2:])
+            (_, formals), expList = exp[:2], exp[2:]
+            return (env, formals, expList)
         elif exp[0] == 'begin':
-            for e in exp[1:-1]: eval(env, e)
-            exp = exp[-1]
+            _, expList = exp[0], exp[1:]
+            for e in expList: eval(env, e)
+            exp = expList[-1]
         elif exp[0] == 'cond':
             for i in range(1, len(exp)):
-                if eval(env, exp[i][0]):
+                pred, expList = exp[i][0], exp[i][1:]
+                if eval(env, pred):
+                    for e in expList[:-1]: eval(env, e)
+                    exp = expList[-1]
                     break
-            assert i < len(exp), 'cond shold be end with else: %s' % exp
-            exp = exp[i][1:]
-            for e in exp[:-1]: eval(env, e)
-            exp = exp[-1]
         elif exp[0] == 'define':
             if isinstance(exp[1], str):
-                env.define(exp[1], eval(env, exp[2]))
+                (_, name, value) = exp
+                env.define(name, eval(env, value))
                 return None
             else:
-                env.define(exp[1][0], (env, exp[1][1:], exp[2:]))
+                name, formals, expList = exp[1][0], exp[1][1:], exp[2:]
+                env.define(name, (env, formals, expList))
                 return None
         elif exp[0] == 'set!':
-            env.set(exp[1], eval(env, exp[2]))
+            (_, name, value) = exp
+            env.set(name, eval(env, value))
             return None
         elif exp[0] == 'let':
-            exp = [['lambda', [kv[0] for kv in exp[1]]] + exp[2:]] + [kv[1] for kv in exp[1]]
+            nameList, valueList, expList = [kv[0] for kv in exp[1]], [kv[1] for kv in exp[1]], exp[2:]
+            exp = [['lambda', nameList] + expList] + valueList
         else:
-            f = eval(env, exp[0])
-            actuals = [eval(env, e) for e in exp[1:]]
+            f, actuals = exp[0], exp[1:]
+            f, actuals = eval(env, f), [eval(env, e) for e in actuals]
             if isinstance(f, tuple):
-                env = Env(f[0], dict(zip(f[1], actuals)))
-                exp = f[2]
-                for e in exp[:-1]: eval(env, e)
-                exp = exp[-1]
+                env, formals, expList = f
+                env = Env(env, dict(zip(formals, actuals)))
+                for e in expList[:-1]: eval(env, e)
+                exp = expList[-1]
             else:
                 return f(*actuals)
 
@@ -115,7 +121,9 @@ G = Env(None,
             })
 
 #------------------------------
-for s in parse(sys.stdin.read()):
+tokens = tokenize(sys.stdin.read())
+while True:
+    s = parse(tokens)
+    if not s: break
     v = eval(G, s)
-    if v != None:
-        printSExp(v)
+    if v != None: printSExp(v)
