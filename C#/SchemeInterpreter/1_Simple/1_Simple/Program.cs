@@ -253,68 +253,78 @@ namespace _1_Simple
 
         //=================================================================
 
-        static Procedure MakeScriptProcedure(Env env, List<object> _formals, int formalIdx, List<object> exps, int expIdx) {
-            List<string> formals = _formals.Skip(formalIdx).Select(s=>(string)s).ToList();
-            return actuals => {
-                Env newEnv = new Env(env, formals, actuals);
-                for (int i = expIdx; i < exps.Count - 1; ++i) Eval(newEnv, exps[i]);
-                return Eval(newEnv, exps[exps.Count - 1]);
-            };
+        static Tuple<Env, List<string>, List<object>> MakeScriptProcedure(Env env, List<object> formals, int formalIdx, List<object> exps, int expIdx) {
+            return new Tuple<Env, List<string>, List<object>>(env, formals.Skip(formalIdx).Cast<string>().ToList(), exps.Skip(expIdx).ToList());
         }
 
         static object Eval(Env env, object exp) {
-            if (exp is string) {
-                return env.Lookup((string)exp);
-            } else if (!(exp is List<object>)) {
-                return exp;
-            }
+            while (true) {
+                if (exp is string) {
+                    return env.Lookup((string)exp);
+                } else if (!(exp is List<object>)) {
+                    return exp;
+                }
 
-            List<object> l = (List<object>)exp;
-            switch (l[0] as string) {
-                case "quote":
-                    return ListExpToPairExp(l[1]);
-                case "if":
-                    if ((bool)Eval(env, l[1])) {
-                        return Eval(env, l[2]);
-                    } else {
-                        return Eval(env, l[3]);
-                    }
-                case "lambda":
-                    return MakeScriptProcedure(env, (List<object>)l[1], 0, l, 2);
-                case "begin":
-                    for (int i = 1; i < l.Count - 1; ++i) Eval(env, l[i]);
-                    return Eval(env, l[l.Count - 1]);
-                case "cond":
-                    for (int i = 1; i < l.Count; ++i) {
-                        List<object> caseExps = (List<object>)l[i];
-                        if ((bool)Eval(env, caseExps[0])) {
-                            for (int j = 1; j < caseExps.Count - 1; ++j) Eval(env, caseExps[j]);
-                            return Eval(env, caseExps[caseExps.Count - 1]);
+                List<object> l = (List<object>)exp;
+                switch (l[0] as string) {
+                    case "quote":
+                        return ListExpToPairExp(l[1]);
+                    case "if":
+                        if ((bool)Eval(env, l[1])) {
+                            exp = l[2];
+                        } else {
+                            exp = l[3];
                         }
-                    }
-                    throw new Exception("cond should be end with else!");
-                case "define":
-                    if (l[1] is string) {
-                        env.Define((string)l[1], Eval(env, l[2]));
-                    } else {
-                        env.Define((string)((List<object>)l[1])[0], MakeScriptProcedure(env, (List<object>)l[1], 1, l, 2));
-                    }
-                    return null;
-                case "set!":
-                    env.Set((string)l[1], Eval(env, l[2]));
-                    return null;
-                case "let": {
-                    List<object> nameValues = (List<object>)l[1];
-                    var names = nameValues.Select(a=>((List<object>)a)[0]);
-                    var values = nameValues.Select(a=>((List<object>)a)[1]);
-                    List<object> lambda = new List<object>{"lambda", names.ToList()}.Concat(l.Skip(2)).ToList();
-                    List<object> newExp = new List<object>{lambda}.Concat(values).ToList();
-                    return Eval(env, newExp);
-                    }
-                default: {
-                    var p = (Procedure)Eval(env, l[0]);
-                    return p(l.Skip(1).Select(e=>Eval(env, e)).ToList());
-                    }
+                        break;
+                    case "lambda":
+                        return MakeScriptProcedure(env, (List<object>)l[1], 0, l, 2);
+                    case "begin":
+                        for (int i = 1; i < l.Count - 1; ++i) Eval(env, l[i]);
+                        exp = l[l.Count - 1];
+                        break;
+                    case "cond":
+                        for (int i = 1; i < l.Count; ++i) {
+                            List<object> caseExps = (List<object>)l[i];
+                            if ((bool)Eval(env, caseExps[0])) {
+                                for (int j = 1; j < caseExps.Count - 1; ++j) Eval(env, caseExps[j]);
+                                exp = caseExps[caseExps.Count - 1];
+                                break;
+                            }
+                        }
+                        break;
+                    case "define":
+                        if (l[1] is string) {
+                            env.Define((string)l[1], Eval(env, l[2]));
+                        } else {
+                            env.Define((string)((List<object>)l[1])[0], MakeScriptProcedure(env, (List<object>)l[1], 1, l, 2));
+                        }
+                        return null;
+                    case "set!":
+                        env.Set((string)l[1], Eval(env, l[2]));
+                        return null;
+                    case "let": {
+                            List<object> nameValues = (List<object>)l[1];
+                            var names = nameValues.Select(a => ((List<object>)a)[0]);
+                            var values = nameValues.Select(a => ((List<object>)a)[1]);
+                            List<object> lambda = new List<object> { "lambda", names.ToList() }.Concat(l.Skip(2)).ToList();
+                            List<object> newExp = new List<object> { lambda }.Concat(values).ToList();
+                            exp = newExp;
+                        }
+                        break;
+                    default: {
+                            object p = Eval(env, l[0]);
+                            List<object> actuals = l.Skip(1).Select(e => Eval(env, e)).ToList();
+                            if (p is Procedure) {
+                                return ((Procedure)p)(actuals);
+                            } else {
+                                Tuple<Env, List<string>, List<object>> lambda = (Tuple<Env, List<string>, List<object>>)p;
+                                env = new Env(lambda.Item1, lambda.Item2, actuals);
+                                for (int i = 0; i < lambda.Item3.Count - 1; ++i) Eval(env, lambda.Item3[i]);
+                                exp = lambda.Item3[lambda.Item3.Count - 1];
+                            }
+                        }
+                        break;
+                }
             }
         }
 

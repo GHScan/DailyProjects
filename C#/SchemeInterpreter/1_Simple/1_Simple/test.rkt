@@ -112,4 +112,4 @@
 
 (define random-list (build-list 200 (lambda (i) (random 1000))))
 (time-it (lambda () (sort random-list <)))
-;(time-it (lambda () (sort-cps random-list < identity)))
+(time-it (lambda () (sort-cps random-list < identity)))
