@@ -30,12 +30,14 @@ namespace _5_CompilingByteCode {
             public const int JMP = 9;
             public const int PUSH_SCRIPT_PROCEDURE = 10;
             public const int CALL = 11;
+            public const int TAIL_CALL = 12;
         }
 
         class ASTNodeVisitor_ByteCodeGenerator: IASTNodeVisitor {
             public List<int> ByteCodes { get; private set; }
             public List<object> Literals { get; private set; }
             private List<FreeAddress> mFreeAddresses;
+            private Stack<bool> mTailFlag = new Stack<bool>();
             private int GetLiteralIndex(object value) {
                 int index = Literals.IndexOf(value);
                 if (index == -1) {
@@ -52,7 +54,12 @@ namespace _5_CompilingByteCode {
                 ByteCodes = new List<int>();
                 Literals = new List<object>();
                 mFreeAddresses = node.freeAddresses;
+
+                mTailFlag.Push(true);
                 node.bodyNode.AcceptVisitor(this);
+                mTailFlag.Pop();
+
+                if (mTailFlag.Count > 0) throw new Exception("Logic error!");
             }
             public void Visit(ASTNode_Literal node) {
                 ByteCodes.Add(ByteCodeEnum.PUSH_LITERAL);
@@ -73,7 +80,9 @@ namespace _5_CompilingByteCode {
                 }
             }
             public void Visit(ASTNode_SetVar node) {
+                mTailFlag.Push(false);
                 node.rightNode.AcceptVisitor(this);
+                mTailFlag.Pop();
 
                 if (node.address is LocalAddress) {
                     ByteCodes.Add(ByteCodeEnum.POP_LOCAL);
@@ -92,38 +101,61 @@ namespace _5_CompilingByteCode {
                 ByteCodes.Add(GetLiteralIndex(null));
             }
             public void Visit(ASTNode_If node) {
+                mTailFlag.Push(false);
                 node.predNode.AcceptVisitor(this);
+                mTailFlag.Pop();
 
                 ByteCodes.Add(ByteCodeEnum.CJMP);
                 int cjmpOff = ByteCodes.Count; ByteCodes.Add(0);
 
+                mTailFlag.Push(true);
                 node.elseNode.AcceptVisitor(this);
+                mTailFlag.Pop();
 
                 ByteCodes.Add(ByteCodeEnum.JMP);
                 int jmpOff = ByteCodes.Count; ByteCodes.Add(0);
 
                 ByteCodes[cjmpOff] = ByteCodes.Count;
+
+                mTailFlag.Push(true);
                 node.thenNode.AcceptVisitor(this);
+                mTailFlag.Pop();
 
                 ByteCodes[jmpOff] = ByteCodes.Count;
             }
             public void Visit(ASTNode_Begin node) {
                 for (int i = 0; i < node.nodes.Count - 1; ++i) {
+                    mTailFlag.Push(false);
                     node.nodes[i].AcceptVisitor(this);
+                    mTailFlag.Pop();
+
                     ByteCodes.Add(ByteCodeEnum.POP1);
                 }
+
+                mTailFlag.Push(true);
                 node.nodes.Last().AcceptVisitor(this);
+                mTailFlag.Pop();
             }
             public void Visit(ASTNode_Lambda node) {
                 ByteCodes.Add(ByteCodeEnum.PUSH_SCRIPT_PROCEDURE);
                 ByteCodes.Add(GetLiteralIndex(CompileToByteCode(node)));
             }
             public void Visit(ASTNode_Application node) {
+                mTailFlag.Push(false);
                 node.procedureNode.AcceptVisitor(this);
+                mTailFlag.Pop();
+
                 foreach (var n in node.actualNodes) {
+                    mTailFlag.Push(false);
                     n.AcceptVisitor(this);
+                    mTailFlag.Pop();
                 }
-                ByteCodes.Add(ByteCodeEnum.CALL);
+
+                if (mTailFlag.All(b => b)) {
+                    ByteCodes.Add(ByteCodeEnum.TAIL_CALL);
+                } else {
+                    ByteCodes.Add(ByteCodeEnum.CALL);
+                }
                 ByteCodes.Add(node.actualNodes.Count);
             }
         }
@@ -205,7 +237,7 @@ namespace _5_CompilingByteCode {
                 Label_PeekFrame:
                 while (frames.Count > startFrame) {
                     if (frames.Count > MaxStackFrameCount) throw new Exception("Stack frame overflow: " + MaxStackFrameCount);
-                    if (evalStack.Count > MaxEvalStackDepth) throw new Exception("Eval stack overflow: " + MaxEvalStackDepth);
+                    if (evalStack.Count > MaxEvalStackDepth) throw new Exception("Eval stack overflow: " + MaxEvalStackDepth);                   
 
                     StackFrame frame = frames.Peek();
                     object[] localVaraibles = frame.localEnv.variables;
@@ -276,6 +308,7 @@ namespace _5_CompilingByteCode {
                                 pc += 2;
                             }
                                 break;
+                            case ByteCodeEnum.TAIL_CALL:
                             case ByteCodeEnum.CALL: { 
                                 int actualCount = byteCodes[pc + 1];
                                 object p = evalStack[evalStack.Count - actualCount - 1];
@@ -285,8 +318,11 @@ namespace _5_CompilingByteCode {
                                     evalStack.RemoveRange(evalStack.Count - actualCount, actualCount);
                                     pc += 2;
                                 } else {
-                                    frame.pc = pc + 2;
-                                    if (frame.pc == byteCodes.Length) frames.Pop();
+                                    if (byteCodes[pc] == ByteCodeEnum.TAIL_CALL) {
+                                        frames.Pop();
+                                    } else {
+                                        frame.pc = pc + 2;
+                                    }
 
                                     var scriptProcedure = (ScriptProcedure)p;
                                     Env localEnv = new Env { prevEnv=scriptProcedure.freeEnv, variables=new object[scriptProcedure.meta.localVarCount]};
