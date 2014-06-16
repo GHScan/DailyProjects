@@ -19,31 +19,27 @@ namespace _5_CompilingByteCode {
                 mVariables = new List<object>(localVarCount);
                 for (int i = 0; i < localVarCount; ++i) mVariables.Add(null);
             }
-            static public object GetVar(Env env, object variable) {
-                var local = variable as LocalVariable;
-                if (local != null) return env.mVariables[local.index];
+            static public object GetVar(Env env, object address) {
+                if (address is LocalAddress) return env.mVariables[((LocalAddress)address).index];
 
-                var global = variable as GlobalVariable;
-                if (global != null) return sGlobal.mVariables[global.index];
+                if (address is GlobalAddress) return sGlobal.mVariables[((GlobalAddress)address).index];
 
-                var free = variable as FreeVariable;
+                var free = (FreeAddress)address;
                 for (int i = 0; i < free.envIndex; ++i) env = env.mPrevEnv;
                 return env.mVariables[free.index];
             }
-            static public void SetVar(Env env, object variable, object value) {
-                var local = variable as LocalVariable;
-                if (local != null) {
-                    env.mVariables[local.index] = value;
+            static public void SetVar(Env env, object address, object value) {
+                if (address is LocalAddress) {
+                    env.mVariables[((LocalAddress)address).index] = value;
                     return;
                 }
 
-                var global = variable as GlobalVariable;
-                if (global != null) {
-                    sGlobal.mVariables[global.index] = value;
+                if (address is GlobalAddress) {
+                    sGlobal.mVariables[((GlobalAddress)address).index] = value;
                     return;
                 }
 
-                var free = variable as FreeVariable;
+                var free = (FreeAddress)address;
                 for (int i = 0; i < free.envIndex; ++i) env = env.mPrevEnv;
                 env.mVariables[free.index] = value;
             }
@@ -51,11 +47,11 @@ namespace _5_CompilingByteCode {
             static public void ReserveGlobalVariables(int count) {
                 while (sGlobal.mVariables.Count < count) sGlobal.mVariables.Add(null);
             }
-            static public void DefineBuiltin(GlobalVariable var, object value) {
-                sGlobal.mVariables[var.index] = value;
+            static public void DefineBuiltin(GlobalAddress address, object value) {
+                sGlobal.mVariables[address.index] = value;
             }
-            static public void DefineBuiltin(GlobalVariable var, Procedure value) {
-                DefineBuiltin(var, (object)value);
+            static public void DefineBuiltin(GlobalAddress address, Procedure value) {
+                DefineBuiltin(address, (object)value);
             }
         }
 
@@ -70,11 +66,11 @@ namespace _5_CompilingByteCode {
                 Value = node.value;
             }
             public void Visit(ASTNode_GetVar node) {
-                Value = Env.GetVar(mEnv, node.variable);
+                Value = Env.GetVar(mEnv, node.address);
             }
             public void Visit(ASTNode_SetVar node) {
                 node.rightNode.AcceptVisitor(this);
-                Env.SetVar(mEnv, node.variable, Value);
+                Env.SetVar(mEnv, node.address, Value);
                 Value = null;
             }
             public void Visit(ASTNode_If node) {
@@ -89,7 +85,7 @@ namespace _5_CompilingByteCode {
                 Value = (Procedure)(actuals => {
                     Env newEnv = new Env(mEnv, node.localVarCount);
                     for (int i = 0; i < actuals.Count; ++i) {
-                        Env.SetVar(newEnv, new LocalVariable { index = i }, actuals[i]);
+                        Env.SetVar(newEnv, new LocalAddress { index = i }, actuals[i]);
                     }
                     return new ASTNodeVisitor_Interpreter(newEnv, node.bodyNode).Value;
                 });

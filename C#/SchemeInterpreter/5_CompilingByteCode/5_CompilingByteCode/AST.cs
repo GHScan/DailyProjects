@@ -15,12 +15,12 @@ namespace _5_CompilingByteCode {
     }
 
     class ASTNode_GetVar: IASTNode {
-        public object variable;
+        public object address;
         public void AcceptVisitor(IASTNodeVisitor v) { v.Visit(this); }
     }
 
     class ASTNode_SetVar: IASTNode {
-        public object variable;
+        public object address;
         public IASTNode rightNode;
         public void AcceptVisitor(IASTNodeVisitor v) { v.Visit(this); }
     }
@@ -38,7 +38,7 @@ namespace _5_CompilingByteCode {
     class ASTNode_Lambda: IASTNode {
         public IASTNode bodyNode;
         public int localVarCount;
-        public List<FreeVariable> freeVariables;
+        public List<FreeAddress> freeAddresses;
         public void AcceptVisitor(IASTNodeVisitor v) { v.Visit(this); }
     }
 

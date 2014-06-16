@@ -11,7 +11,7 @@ namespace _5_CompilingByteCode {
             while (true) {
                 object s = Parser.Parse(tokens);
                 if (s == null) break;
-                object v = ASTInterpreter.Instance().Interpret(s);
+                object v = ByteCodeInterpreter.Instance().Interpret(s);
                 if (v != null) {
                     ListProcess.PrintPairExp(v);
                 }

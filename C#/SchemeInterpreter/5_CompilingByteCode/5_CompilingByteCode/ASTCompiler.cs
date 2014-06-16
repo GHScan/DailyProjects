@@ -5,25 +5,29 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace _5_CompilingByteCode {
-    class ASTNodeVisitor_FindFreeVariables: IASTNodeVisitor {
-        public List<FreeVariable> FreeVariables { get; private set; }
-        public ASTNodeVisitor_FindFreeVariables(IASTNode node) {
-            FreeVariables = new List<FreeVariable>();
+    class ASTNodeVisitor_FindFreeAddresses: IASTNodeVisitor {
+        public List<FreeAddress> FreeAddresses { get; private set; }
+        public ASTNodeVisitor_FindFreeAddresses(IASTNode node) {
+            FreeAddresses = new List<FreeAddress>();
             node.AcceptVisitor(this);
         }
         public void Visit(ASTNode_Literal node) {
 
         }
         public void Visit(ASTNode_GetVar node) {
-            var v = node.variable as FreeVariable;
-            if (v != null && FreeVariables.IndexOf(v) == -1) {
-                FreeVariables.Add(v);
+            if (node.address is FreeAddress) {
+                var v = (FreeAddress)node.address;
+                if (FreeAddresses.IndexOf(v) == -1) {
+                    FreeAddresses.Add(v);
+                }
             }
         }
         public void Visit(ASTNode_SetVar node) {
-            var v = node.variable as FreeVariable;
-            if (v != null && FreeVariables.IndexOf(v) == -1) {
-                FreeVariables.Add(v);
+            if (node.address is FreeAddress) {
+                var v = (FreeAddress)node.address;
+                if (FreeAddresses.IndexOf(v) == -1) {
+                    FreeAddresses.Add(v);
+                }
             }
             node.rightNode.AcceptVisitor(this);
         }
@@ -36,7 +40,6 @@ namespace _5_CompilingByteCode {
             foreach (var n in node.nodes) n.AcceptVisitor(this);
         }
         public void Visit(ASTNode_Lambda node) {
-            node.bodyNode.AcceptVisitor(this);
         }
         public void Visit(ASTNode_Application node) {
             node.procedureNode.AcceptVisitor(this);
@@ -47,7 +50,7 @@ namespace _5_CompilingByteCode {
     class ASTCompiler {
         static public IASTNode Compile(SymbolTable symTable, object exp) {
             if (exp is string) {
-                return new ASTNode_GetVar { variable = SymbolTable.Lookup(symTable, (string)exp) };
+                return new ASTNode_GetVar { address = SymbolTable.Lookup(symTable, (string)exp) };
             } else if (exp is INumber) {
                 return new ASTNode_Literal { value = exp };
             }
@@ -78,12 +81,12 @@ namespace _5_CompilingByteCode {
                         return new ASTNode_Lambda {
                             localVarCount = newSymTable.GetLocalSymbolCount(),
                             bodyNode = body,
-                            freeVariables = new ASTNodeVisitor_FindFreeVariables(body).FreeVariables,
+                            freeAddresses = new ASTNodeVisitor_FindFreeAddresses(body).FreeAddresses,
                         };
                     }
                 case "define":
                 case "set!":
-                    return new ASTNode_SetVar { variable = SymbolTable.Lookup(symTable, (string)form[1]), rightNode = Compile(symTable, form[2]) };
+                    return new ASTNode_SetVar { address = SymbolTable.Lookup(symTable, (string)form[1]), rightNode = Compile(symTable, form[2]) };
                 default:
                     return new ASTNode_Application {
                         procedureNode = Compile(symTable, form[0]),

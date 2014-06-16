@@ -47,6 +47,7 @@
     <Compile Include="AST.cs" />
     <Compile Include="ASTCompiler.cs" />
     <Compile Include="ASTInterpreter.cs" />
+    <Compile Include="ByteCodeInterpreter.cs" />
     <Compile Include="Number.cs" />
     <Compile Include="ListProcess.cs" />
     <Compile Include="Parser.cs" />

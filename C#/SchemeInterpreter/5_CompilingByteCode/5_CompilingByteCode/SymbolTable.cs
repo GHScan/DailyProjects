@@ -5,54 +5,54 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace _5_CompilingByteCode {
-    class LocalVariable {
+    struct LocalAddress {
         public int index;
     }
 
-    class FreeVariable {
+    struct FreeAddress {
         public int envIndex;
         public int index;
     }
 
-    class GlobalVariable {
+    struct GlobalAddress {
         public int index;
     }
 
     class SymbolTable {
         static private SymbolTable sGlobal = new SymbolTable(null);
         private SymbolTable mPrevTable;
-        private Dictionary<string, int> mSymLoc = new Dictionary<string, int>();
-        private int mNextLoc = 0;
+        private Dictionary<string, int> mSym2Address = new Dictionary<string, int>();
+        private int mNextAddress = 0;
         public SymbolTable(SymbolTable prevTable) {
             mPrevTable = prevTable;
         }
 
-        public LocalVariable DefineLocalSymbol(string name) {
-            if (mSymLoc.ContainsKey(name)) throw new Exception("Symbol is aready exist: " + name);
-            return new LocalVariable { index = (mSymLoc[name] = mNextLoc++) };
+        public LocalAddress DefineLocalSymbol(string name) {
+            if (mSym2Address.ContainsKey(name)) throw new Exception("Symbol is aready exist: " + name);
+            return new LocalAddress { index = (mSym2Address[name] = mNextAddress++) };
         }
         public int GetLocalSymbolCount() {
-            return mSymLoc.Count;
+            return mSym2Address.Count;
         }
-        static public GlobalVariable DefineOrGetGlobalSymbol(string name) {
+        static public GlobalAddress DefineOrGetGlobalSymbol(string name) {
             int index = 0;
-            if (sGlobal.mSymLoc.ContainsKey(name)) {
-                index = sGlobal.mSymLoc[name];
+            if (sGlobal.mSym2Address.ContainsKey(name)) {
+                index = sGlobal.mSym2Address[name];
             } else {
-                index = sGlobal.mSymLoc[name] = sGlobal.mNextLoc++;
+                index = sGlobal.mSym2Address[name] = sGlobal.mNextAddress++;
             }
-            return new GlobalVariable { index = index };
+            return new GlobalAddress { index = index };
         }
         static public int GetGlobalSymbolCount() {
-            return sGlobal.mSymLoc.Count;
+            return sGlobal.mSym2Address.Count;
         }
         static public object Lookup(SymbolTable table, string name) {
-            if (table != null && table.mSymLoc.ContainsKey(name)) {
-                return new LocalVariable { index = table.mSymLoc[name] };
+            if (table != null && table.mSym2Address.ContainsKey(name)) {
+                return new LocalAddress { index = table.mSym2Address[name] };
             }
 
             int envIndex = 0;
-            while (table != null && !table.mSymLoc.ContainsKey(name)) {
+            while (table != null && !table.mSym2Address.ContainsKey(name)) {
                 table = table.mPrevTable;
                 ++envIndex;
             }
@@ -60,7 +60,7 @@ namespace _5_CompilingByteCode {
             if (table == null) {
                 return DefineOrGetGlobalSymbol(name);
             } else {
-                return new FreeVariable { envIndex = envIndex, index = table.mSymLoc[name] };
+                return new FreeAddress { envIndex = envIndex, index = table.mSym2Address[name] };
             }
         }
     }
