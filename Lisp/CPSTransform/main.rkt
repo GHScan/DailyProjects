@@ -2,18 +2,18 @@
 
 (provide (all-defined-out))
 ;------------------------------
-(define ds-builtins '(
-                      + - * / % quotient remainder expt
-                      = < <= > >= not
-                      add1 sub1 zero? identity sqr sqrt
-                      cons car cdr eq? equal? eqv? empty? null?
-                      drop length append reverse map filter foldl build-list for-each
-                      current-inexact-milliseconds random eval
-                      ))
-(define cps-builtins '(
-                       printf pretty-print print display exit
-                       define set!
-                       ))
+(define pure-builtins '(
+                        + - * / % quotient remainder expt
+                        = < <= > >= not
+                        add1 sub1 zero? identity sqr sqrt
+                        cons car cdr eq? equal? eqv? empty? null?
+                        drop length append reverse map filter foldl build-list for-each sort
+                        current-inexact-milliseconds random eval
+                        ))
+(define side-effect-builtins '(
+                               printf pretty-print print display exit
+                               define set!
+                               ))
 ;------------------------------
 (define (atom? a)
   (not (or (pair? a) (empty? a)))
@@ -37,6 +37,15 @@
            [`(lambda (,x) (,y ,x)) y]
            [`(,exp-list ...) (map remove-alias-k exp-list)])
     )
+  (define (let-k exp k)
+    (let ([exp (remove-alias-k exp)])
+      (match exp
+             [(? symbol? x) (k (lambda (_) _) (lambda (arg) `(,exp ,arg)))]
+             [`(lambda (,y) ,y) (k (lambda (_) _) (lambda (arg) arg))]
+             [else 
+               (let ([v (gensym)])
+                 (k (lambda (r) `(let ([,v ,exp]) ,r)) (lambda (arg) `(,v ,arg))))]))
+    )
   (define (transform e k)
     (match 
       e
@@ -58,27 +67,42 @@
                   [pred-ctx (car ctx-list)][then-ctx (cadr ctx-list)][else-ctx (caddr ctx-list)]
                   [v (gensym)])
               (k (lambda (r)
-                   (let ([branch-k (remove-alias-k `(lambda (,v) ,r))])
-                     (match branch-k
-                            [(? atom? x) (pred-ctx `(if ,pred-v ,(then-ctx `(,x ,then-v)) ,(else-ctx `(,x ,else-v))))]
-                            [`(lambda (,y) ,y) (pred-ctx `(if ,pred-v ,(then-ctx then-v) ,(else-ctx else-v)))]
-                            [else (let ([branch-v (gensym)])
-                                    (pred-ctx `(let ([,branch-v ,branch-k])
-                                                 (if ,pred-v ,(then-ctx `(,branch-v ,then-v)) ,(else-ctx `(,branch-v ,else-v))))))])))
+                   (let-k `(lambda (,v) ,r) 
+                          (lambda (let-ctx let-f)
+                            (pred-ctx (let-ctx `(if ,pred-v ,(then-ctx (let-f then-v)) ,(else-ctx (let-f else-v))))))))
                  v))))]
       [`(begin ,exp-list ...) 
         (transform-list exp-list 
                         (lambda (ctx-list v-list)
                           (k (build-cascaded-ctx ctx-list) (last v-list))))]
+      [`(call/cc ,f-exp)
+        (transform 
+          f-exp
+          (lambda (f-ctx f-v)
+            (let ([v (gensym)][t1 (gensym)][f-arg-arg (gensym)][f-arg-k (gensym)])
+              (k (lambda (r) 
+                   (let-k `(lambda (,v) ,r)
+                          (lambda (let-ctx let-f)
+                            (f-ctx (let-ctx `(,f-v 
+                                               (lambda (,f-arg-arg ,f-arg-k) ,(let-f f-arg-arg)) 
+                                               (lambda (,t1) ,(let-f t1)))))))) 
+                 v))))]
       [`(,exp-list ...) 
         (transform-list exp-list
                         (lambda (ctx-list v-list)
-                          (if (memq (car v-list) ds-builtins)
-                            (k (build-cascaded-ctx ctx-list) v-list)
-                            (let ([v (gensym)])
-                              (k (build-cascaded-ctx 
-                                   (append ctx-list (list (lambda (r) `(,@v-list (lambda (,v) ,r))))))
-                                 v)))))])
+                          (let ([ctx (build-cascaded-ctx ctx-list)])
+                            (cond
+                              [(memq (car v-list) pure-builtins) 
+                               (k ctx v-list)]
+                              [(memq (car v-list) side-effect-builtins) 
+                               (k (lambda (r) 
+                                    (ctx (if (equal? r '(void))
+                                           v-list
+                                           `(begin ,v-list ,r)))) 
+                                  '(void))]
+                              [else 
+                                (let ([v (gensym)])
+                                  (k (lambda (r) (ctx `(,@v-list (lambda (,v) ,r)))) v))]))))])
     )
 
   (remove-alias-k (transform e (lambda (ctx v) (ctx v))))
@@ -90,6 +114,8 @@
     [(? atom? e) e]
     [`(define (,name ,formal-list ...) ,exp-list ...) 
       (expand-library-forms `(define ,name (lambda ,formal-list ,@exp-list)))]
+    [`(define ,(? symbol? name) (,(? (lambda (x) (not (memq x '(lambda quote)))) form) ,exp-list ...))
+      `(begin (define ,name 'undefined) (set! ,name (,form ,@exp-list)))]
     [`(let ,(? symbol? fname) ,name-values ,exp-list ...) 
       (expand-library-forms `((lambda ()
                                 (define ,fname (lambda ,(map car name-values) ,@exp-list))

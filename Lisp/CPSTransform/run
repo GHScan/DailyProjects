@@ -1,0 +1,5 @@
+#! /bin/bash
+
+./main $* | sed -e "s/^'//1" -e "1i#lang racket"   > __tmp.rkt
+racket __tmp.rkt
+rm __tmp.rkt

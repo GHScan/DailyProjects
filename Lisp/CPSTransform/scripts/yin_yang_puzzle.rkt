@@ -1,0 +1,10 @@
+(define n 0)
+(define (putc c)
+  (if (<= n 100)
+    (begin (set! n (+ n 1)) (display c))
+    (exit))
+  )
+
+(let* ((yin ((lambda (cc) (putc "@") cc) (call/cc (lambda (c) c))))   
+       (yang ((lambda (cc) (putc "*") cc) (call/cc (lambda (c) c))))) 
+  (yin yang))

@@ -1,0 +1,22 @@
+x
+(lambda (x) x)
+(lambda (x) (x 1))
+(if (f x) a b)
+(if x (f a) b)
+(lambda (x) (if (f x) a b))
+(lambda (x) (if (if x (f a) b) c d))
+(lambda (x) (if (if x (zero? a) b) c d))
+(lambda (x) (if t (if x (f a) b) c))
+(lambda (x) (if (if t (if x (f a) b) c) e w))
+(lambda (x) (h (if x (f a) b)))
+(lambda (x) ((if x (f g) h) c))
+(((f a) (g b)) ((f c) (g d)))
+
+(lambda (n)
+  ((lambda (fact)
+     ((fact fact) n))
+   (lambda (fact)
+     (lambda (n)
+       (if (zero? n)
+         1
+         (* n ((fact fact) (sub1 n))))))))
