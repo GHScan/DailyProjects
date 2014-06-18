@@ -7,13 +7,18 @@
                         = < <= > >= not
                         add1 sub1 zero? identity sqr sqrt
                         cons car cdr eq? equal? eqv? empty? null?
-                        drop length append reverse map filter foldl build-list for-each sort
+                        drop drop-right length append reverse last
                         current-inexact-milliseconds random eval
                         ))
 (define side-effect-builtins '(
                                printf pretty-print print display exit
                                define set!
                                ))
+(define (cps-of-builtin v)
+  (if (or (memq v pure-builtins) (memq v side-effect-builtins))
+    (string->symbol (string-append (symbol->string v) "&")) 
+    v)
+  )
 ;------------------------------
 (define (atom? a)
   (not (or (pair? a) (empty? a)))
@@ -90,7 +95,8 @@
       [`(,exp-list ...) 
         (transform-list exp-list
                         (lambda (ctx-list v-list)
-                          (let ([ctx (build-cascaded-ctx ctx-list)])
+                          (let ([ctx (build-cascaded-ctx ctx-list)]
+                                [v-list `(,(car v-list) ,@(map cps-of-builtin (cdr v-list)))])
                             (cond
                               [(memq (car v-list) pure-builtins) 
                                (k ctx v-list)]
@@ -149,7 +155,33 @@
       (map expand-library-forms e)])
   )
 ;------------------------------
-(do ([datum (read) (read)])
+(define (find-symbols symbols e)
+  (cond
+    [(memq e symbols) => (compose list car)]
+    [(atom? e) empty]
+    [else (apply append (map (curry find-symbols symbols) e))])
+  )
+(define (make-builtin-tracker)
+  (let* ([cps-to-ds (map (lambda (name) (list (cps-of-builtin name) name))
+                         (append pure-builtins side-effect-builtins))]
+         [cps-list (map car cps-to-ds)]
+         [tracked-cps (list->set empty)]
+         [print-cps 
+           (lambda (cps-ds)
+             (pretty-print `(define ,(car cps-ds) 
+                              (lambda args 
+                                ((last args) (apply ,(cadr cps-ds) (drop-right args 1)))))))])
+    (lambda (exp)
+      (let ([found-cps (list->set (find-symbols cps-list exp))])
+        (set-for-each (set-subtract found-cps tracked-cps) (lambda (name) (print-cps (assq name cps-to-ds))))
+        (set! tracked-cps (set-union found-cps tracked-cps))))
+    )
+  )
+
+(do ([datum (read) (read)][tracker (make-builtin-tracker)])
   ((eof-object? datum))
-  (pretty-print (cps (expand-library-forms datum))))
+  (let ([exp (cps (expand-library-forms datum))])
+    (tracker exp)
+    (pretty-print exp))
+  )
 (flush-output)
