@@ -1,0 +1,5 @@
+#! /bin/bash
+
+currntPath=`pwd`
+
+(cd ../../../Lisp/CPSTransform; ./main ${currntPath}/$* | sed -e "s/^'//1" -e "1i#lang racket") | python main.py

@@ -9,6 +9,11 @@ class Env(object):
     def __init__(self, preEnv, initFrame):
         self.preEnv = preEnv
         self.frame = initFrame
+    def extend(self, formals, actuals):
+        if isinstance(formals, str):
+            return Env(self, {formals:actuals})
+        else:
+            return Env(self, dict(zip(formals, actuals)))
     def lookup(self, name):
         if name in self.frame:
             return self.frame[name]
@@ -25,9 +30,11 @@ class Env(object):
             self.preEnv.set(name, value)
 
 def tokenize(s):
+    s = re.sub(r'^#lang[^\n]*\n', '', s)
     s = re.sub(r';[^\n]*\n', '', s)
     s = s.replace('(', ' ( ').replace(')', ' ) ')
     s = s.replace('[', ' ( ').replace(']', ' ) ')
+    s = s.replace("'", " ' ")
     return s.split()
 
 def parse(tokens):
@@ -40,12 +47,24 @@ def parse(tokens):
             l.append(parse(tokens))
         tokens.pop(0)
         return l
+    elif tokens[0] == "'":
+        tokens.pop(0)
+        return ['quote', parse(tokens)]
     elif re.match(r'\d+', tokens[0]):
         return int(tokens.pop(0))
     elif re.match(r'\d*\.\d+', tokens[0]):
         return float(tokens.pop(0))
     else:
         return tokens.pop(0)
+
+def applyScriptProecdure(f, actuals):
+    if isinstance(f, tuple):
+        env, formals, expList = f
+        env = env.extend(formals, actuals)
+        for e in expList[:-1]: eval(env, e)
+        return eval(env, expList[-1])
+    else:
+        return f(*actuals)
 
 def eval(env, exp):
     while True:
@@ -94,31 +113,35 @@ def eval(env, exp):
             f, actuals = eval(env, f), [eval(env, e) for e in actuals]
             if isinstance(f, tuple):
                 env, formals, expList = f
-                env = Env(env, dict(zip(formals, actuals)))
+                env = env.extend(formals, actuals)
                 for e in expList[:-1]: eval(env, e)
                 exp = expList[-1]
             else:
                 return f(*actuals)
 
-G = Env(None,
-        {
-            '+':lambda a,b: a+b, '-':lambda a,b: a-b, '*':lambda a,b: a*b, '/':lambda a,b: a/b,
-            'quotient':lambda a,b: a//b, 'remainder':lambda a,b: a%b,
-            'sqr': lambda a: a*a, 'sqrt': lambda a: math.sqrt(a),
-            'identity': lambda a: a,
-            'true': True, 'false': False, 'else': True,
-            '=':lambda a,b: a==b, 'not':lambda a: not a,
-            '<':lambda a,b: a<b, '>':lambda a,b: a>b, '<=':lambda a,b: a<=b, '>=':lambda a,b: a>=b,
-            'eq':lambda a,b: a==b,
-            'cons': lambda a,b: [a]+b, 'car': lambda l: l[0], 'cdr': lambda l: l[1:],
-            'cadr': lambda l: l[1], 'caddr': lambda l: l[2], 'cadddr': lambda l: l[3],
-            'drop': lambda l,n: l[n:], 'append': lambda a,b: a+b, 'length': lambda l: len(l), 
-            'empty': [], 'empty?': lambda l: len(l) == 0,
-            'pretty-print': printSExp,
-            'current-inexact-milliseconds': lambda :time.time() * 1000,
-            'random': lambda a: random.randint(0, a),
-            'eval': lambda e: eval(G, e),
-            })
+G = Env(None, {
+    '+':lambda a,b: a+b, '-':lambda a,b: a-b, '*':lambda a,b: a*b, '/':lambda a,b: a/b,
+    'quotient':lambda a,b: a//b, 'remainder':lambda a,b: a%b,
+    'sqr': lambda a: a*a, 'sqrt': lambda a: math.sqrt(a),
+    'identity': lambda a: a,
+    '=':lambda a,b: a==b, 'not':lambda a: not a,
+    '<':lambda a,b: a<b, '>':lambda a,b: a>b, '<=':lambda a,b: a<=b, '>=':lambda a,b: a>=b,
+    'eq':lambda a,b: a==b,
+    'cons': lambda a,b: [a]+b, 'car': lambda l: l[0], 'cdr': lambda l: l[1:],
+    'cadr': lambda l: l[1], 'caddr': lambda l: l[2], 'cadddr': lambda l: l[3],
+    'drop': lambda l,n: l[n:], 'append': lambda a,b: a+b, 'length': lambda l: len(l), 
+    'drop-right': lambda l,n: l[:-n], 'last': lambda l: l[-1],
+    'empty?': lambda l: len(l) == 0,
+    'pretty-print': printSExp, 'apply': applyScriptProecdure,
+    'current-inexact-milliseconds': lambda :time.time() * 1000,
+    'random': lambda a: random.randint(0, a),
+    'eval': lambda e: eval(G, e),
+    'void': lambda : None,
+
+    'true': True, 'false': False, 'else': True,
+    'empty': [],
+    }
+    )
 
 #------------------------------
 tokens = tokenize(sys.stdin.read())
