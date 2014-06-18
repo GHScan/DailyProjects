@@ -1,0 +1,3 @@
+#! /bin/bash
+
+cat $* | sed -s "/^#lang/d" | racket main.rkt
