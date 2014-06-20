@@ -21,6 +21,7 @@ namespace _6_JIT {
             private Dictionary<string, FieldBuilder> mHeapEnvFieldBuilders = new Dictionary<string, FieldBuilder>();
             private LocalBuilder mHeapEnvBuilder;
             private ASTNodeVisitor_JITCompiler mParent;
+            private Stack<bool> mTailCallFlags = new Stack<bool>();
 
             static private string HEAP_ENV_LOCAL_NAME = "____heapEnv";
             static private string PREV_ENV_FIELD_NAME = "____prevEnv";
@@ -70,14 +71,14 @@ namespace _6_JIT {
 
                 var heapLocals = mLambdaNode.childrenFreeAddresses.Where(a=>a.envIndex == 0).Select(a=>a.index).OrderBy(a=>a).ToList();
                 foreach (var index in heapLocals) {
-                    if (index >= mLambdaNode.formalCount) break;
-
                     var fieldBuilder = mHeapEnvTypeBuilder.DefineField(mLambdaNode.locals[index], typeof(object), FieldAttributes.Public);
                     mHeapEnvFieldBuilders[mLambdaNode.locals[index]] = fieldBuilder;
 
-                    JITInterpreter_DS.EmitLoadLocal(mILGenerator, mHeapEnvBuilder);
-                    JITInterpreter_DS.EmitLoadArg(mILGenerator, HasThisArgument(), mArgBuilders[index]);
-                    mILGenerator.Emit(OpCodes.Stfld, fieldBuilder);
+                    if (index < mLambdaNode.formalCount) {
+                        JITInterpreter_DS.EmitLoadLocal(mILGenerator, mHeapEnvBuilder);
+                        JITInterpreter_DS.EmitLoadArg(mILGenerator, HasThisArgument(), mArgBuilders[index]);
+                        mILGenerator.Emit(OpCodes.Stfld, fieldBuilder);
+                    }
                 }
             }
 
@@ -164,7 +165,9 @@ namespace _6_JIT {
                 DeclareLocals();
                 EmitInitHeapEnv();
 
+                mTailCallFlags.Push(true);
                 mLambdaNode.bodyNode.AcceptVisitor(this);
+                mTailCallFlags.Pop();
 
                 mILGenerator.Emit(OpCodes.Ret);
                 mHeapEnvTypeBuilder.CreateType();
@@ -184,15 +187,27 @@ namespace _6_JIT {
             public void Visit(ASTNode_SetVar node) {
                 if (node.address is GlobalAddress) {
                     JITInterpreter_DS.Instance().BeginEmitPopGlobal(mILGenerator, (GlobalAddress)node.address);
+
+                    mTailCallFlags.Push(false);
                     node.rightNode.AcceptVisitor(this);
+                    mTailCallFlags.Pop();
+
                     JITInterpreter_DS.Instance().EndEmitPopGlobal(mILGenerator, (GlobalAddress)node.address);
                 } else if (node.address is LocalAddress) {
                     BeginEmitPopLocal((LocalAddress)node.address);
+
+                    mTailCallFlags.Push(false);
                     node.rightNode.AcceptVisitor(this);
+                    mTailCallFlags.Pop();
+
                     EndEmitPopLocal((LocalAddress)node.address);
                 } else {
                     var context = BeginEmitPopFree((FreeAddress)node.address);
+
+                    mTailCallFlags.Push(false);
                     node.rightNode.AcceptVisitor(this);
+                    mTailCallFlags.Pop();
+
                     EndEmitPopFree((FreeAddress)node.address, context);
                 }
                 mILGenerator.Emit(OpCodes.Ldnull);
@@ -201,25 +216,35 @@ namespace _6_JIT {
                 Label thenLabel = mILGenerator.DefineLabel();
                 Label endLabel = mILGenerator.DefineLabel();
 
+                mTailCallFlags.Push(false);
                 node.predNode.AcceptVisitor(this);
+                mTailCallFlags.Pop();
                 mILGenerator.Emit(OpCodes.Unbox_Any, typeof(bool));
                 mILGenerator.Emit(OpCodes.Brtrue, thenLabel);
 
+                mTailCallFlags.Push(true);
                 node.elseNode.AcceptVisitor(this);
+                mTailCallFlags.Pop();
                 mILGenerator.Emit(OpCodes.Br, endLabel);
 
                 mILGenerator.MarkLabel(thenLabel);
+                mTailCallFlags.Push(true);
                 node.thenNode.AcceptVisitor(this);
+                mTailCallFlags.Pop();
 
                 mILGenerator.MarkLabel(endLabel);
             }
             public void Visit(ASTNode_Begin node) {
                 foreach (var n in node.nodes.Take(node.nodes.Count - 1)) {
+                    mTailCallFlags.Push(false);
                     n.AcceptVisitor(this);
+                    mTailCallFlags.Pop();
                     mILGenerator.Emit(OpCodes.Pop);
                 }
-                // TODO: tail call optimization
+
+                mTailCallFlags.Push(true);
                 node.nodes.Last().AcceptVisitor(this);
+                mTailCallFlags.Pop();
             }
             public void Visit(ASTNode_Lambda node) {
                 var methodBuilder = new ASTNodeVisitor_JITCompiler(this, mHeapEnvTypeBuilder, node).MethodBuilder;
@@ -239,10 +264,25 @@ namespace _6_JIT {
             }
             public void Visit(ASTNode_Application node) {
                 var delegateType = JITInterpreter_DS.Instance().GetDelegateType(node.actualNodes.Count);
+
+                mTailCallFlags.Push(false);
                 node.procedureNode.AcceptVisitor(this);
+                mTailCallFlags.Pop();
+
                 mILGenerator.Emit(OpCodes.Castclass, delegateType);
-                foreach (var n in node.actualNodes) n.AcceptVisitor(this);
-                mILGenerator.Emit(OpCodes.Callvirt, delegateType.GetMethod("Invoke"));
+                foreach (var n in node.actualNodes) {
+                    mTailCallFlags.Push(false);
+                    n.AcceptVisitor(this);
+                    mTailCallFlags.Pop();
+                }
+
+                if (mTailCallFlags.All(b => b)) {
+                    mILGenerator.Emit(OpCodes.Tailcall);
+                    mILGenerator.Emit(OpCodes.Callvirt, delegateType.GetMethod("Invoke"));
+                    mILGenerator.Emit(OpCodes.Ret);
+                } else {
+                    mILGenerator.Emit(OpCodes.Callvirt, delegateType.GetMethod("Invoke"));
+                }
             }
         }
 
@@ -304,6 +344,7 @@ namespace _6_JIT {
                         return ListProcess.ListToPair(l);
                         })},
                 {"empty?", (Func<object, object>)(a=>a==null)},
+                {"void", (Func<object>)(()=>null)},
 
                 {"pretty-print", (Func<object, object>)(a=>{
                         ListProcess.PrintPairExp(a);
@@ -365,7 +406,7 @@ namespace _6_JIT {
             if (i == 0) generator.Emit(OpCodes.Ldc_I4_0);
             else if (i == 1) generator.Emit(OpCodes.Ldc_I4_1);
             else if (i == -1) generator.Emit(OpCodes.Ldc_I4_M1);
-            else if (i <= byte.MaxValue && i >= byte.MinValue) generator.Emit(OpCodes.Ldc_I4_S, (byte)i);
+            else if (i <= SByte.MaxValue && i >= SByte.MinValue) generator.Emit(OpCodes.Ldc_I4_S, (SByte)i);
             else generator.Emit(OpCodes.Ldc_I4, i);
         }
         public static void EmitLoadLocal(ILGenerator generator, LocalBuilder builder) {
@@ -373,7 +414,7 @@ namespace _6_JIT {
             else if (builder.LocalIndex == 1) generator.Emit(OpCodes.Ldloc_1);
             else if (builder.LocalIndex == 2) generator.Emit(OpCodes.Ldloc_2);
             else if (builder.LocalIndex == 3) generator.Emit(OpCodes.Ldloc_3);
-            else if (builder.LocalIndex >= byte.MinValue && builder.LocalIndex <= byte.MaxValue) generator.Emit(OpCodes.Ldloc_S, (byte)builder.LocalIndex);
+            else if (builder.LocalIndex <= SByte.MaxValue) generator.Emit(OpCodes.Ldloc_S, (SByte)builder.LocalIndex);
             else generator.Emit(OpCodes.Ldloc, builder.LocalIndex);
         }
         public static void EmitStoreLocal(ILGenerator generator, LocalBuilder builder) {
@@ -381,7 +422,7 @@ namespace _6_JIT {
             else if (builder.LocalIndex == 1) generator.Emit(OpCodes.Stloc_1);
             else if (builder.LocalIndex == 2) generator.Emit(OpCodes.Stloc_2);
             else if (builder.LocalIndex == 3) generator.Emit(OpCodes.Stloc_3);
-            else if (builder.LocalIndex >= byte.MinValue && builder.LocalIndex <= byte.MaxValue) generator.Emit(OpCodes.Stloc_S, (byte)builder.LocalIndex);
+            else if (builder.LocalIndex <= SByte.MaxValue) generator.Emit(OpCodes.Stloc_S, (SByte)builder.LocalIndex);
             else generator.Emit(OpCodes.Stloc, builder.LocalIndex);
         }
         public static void EmitLoadThis(ILGenerator generator) {
@@ -393,12 +434,12 @@ namespace _6_JIT {
             else if (index == 1) generator.Emit(OpCodes.Ldarg_1);
             else if (index == 2) generator.Emit(OpCodes.Ldarg_2);
             else if (index == 3) generator.Emit(OpCodes.Ldarg_3);
-            else if (index <= byte.MaxValue) generator.Emit(OpCodes.Ldarg_S, (byte)index);
+            else if (index <= SByte.MaxValue) generator.Emit(OpCodes.Ldarg_S, (SByte)index);
             else generator.Emit(OpCodes.Ldarg, index);
         }
         public static void EmitStoreArg(ILGenerator generator, bool hasThis, ParameterBuilder builder) {
             int index = hasThis ? builder.Position : builder.Position - 1;
-            if (index <= byte.MaxValue) generator.Emit(OpCodes.Starg_S, (byte)index);
+            if (index <= SByte.MaxValue) generator.Emit(OpCodes.Starg_S, (SByte)index);
             else generator.Emit(OpCodes.Starg, index);
         }
 
@@ -466,7 +507,7 @@ namespace _6_JIT {
                 formalCount=0, locals=new List<string>(),
             };
 
-            var fileName = "___test.exe";
+            var fileName = GenernateUniqueString("testFile.exe");
             var assemblyBuilder = AppDomain.CurrentDomain.DefineDynamicAssembly(
                 new AssemblyName(GenernateUniqueString("assemly")), AssemblyBuilderAccess.RunAndSave);
             var moduleBuilder = assemblyBuilder.DefineDynamicModule(GenernateUniqueString("module"), fileName, HasSymbolInfo());
@@ -476,7 +517,7 @@ namespace _6_JIT {
 
             var type = envTypeBuilder.CreateType();
             assemblyBuilder.SetEntryPoint(methodBuilder, PEFileKinds.ConsoleApplication);
-            // assemblyBuilder.Save(fileName);
+            //assemblyBuilder.Save(fileName);
 
             return ((Func<object>)type.GetMethod(methodBuilder.Name).CreateDelegate(typeof(Func<object>)))();
         }
