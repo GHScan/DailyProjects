@@ -31,6 +31,13 @@ namespace _6_JIT {
             return r;
         }
 
+        static public Pair ConcatListAndPairToNewPair(List<object> l, Pair p) {
+            for (int i = l.Count - 1; i >= 0; --i) {
+                p = new Pair { Car = l[i], Cdr = p };
+            }
+            return p;
+        }
+
         static public object PairExpToListExp(object exp) {
             if (exp is Pair) {
                 return PairToList((Pair)exp);

@@ -11,7 +11,8 @@ namespace _6_JIT {
             while (true) {
                 object s = Parser.Parse(tokens);
                 if (s == null) break;
-                object v = JITInterpreter_DS.Instance().Interpret(s);
+                object v = JITInterpreter_DS2.Instance().Interpret(s);
+                // object v = JITInterpreter_DS.Instance().Interpret(s);
                 // object v = ASTInterpreter.Instance().Interpret(s);
                 if (v != null) {
                     ListProcess.PrintPairExp(v);

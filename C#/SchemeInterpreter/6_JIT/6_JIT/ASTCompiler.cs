@@ -37,7 +37,7 @@ namespace _6_JIT {
         }
         public void Visit(ASTNode_Lambda node) {
             ChildrenFreeAddresses.UnionWith(node.GetFreeAddresses().Select(
-                address => new FreeAddress { envIndex=address.envIndex -1, index=address.index}));
+                address => address.GetOuterAddress()));
         }
         public void Visit(ASTNode_Application node) {
             node.procedureNode.AcceptVisitor(this);

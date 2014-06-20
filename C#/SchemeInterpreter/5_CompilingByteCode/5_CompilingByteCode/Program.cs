@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace _5_CompilingByteCode {
     class Program {
         static void Main(string[] args) {
-            ByteCodeInterpreter.Instance().SetMaxStackDepth(1000, 300);
+            // ByteCodeInterpreter.Instance().SetMaxStackDepth(1000, 300);
 
             var tokens = Parser.Tokenize(new System.IO.StreamReader("../../test.rkt").ReadToEnd());
             while (true) {

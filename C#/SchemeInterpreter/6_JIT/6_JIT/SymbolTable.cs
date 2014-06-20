@@ -12,6 +12,13 @@ namespace _6_JIT {
     struct FreeAddress {
         public int envIndex;
         public int index;
+        public override string ToString() {
+            return string.Format("(FreeAddress_{0}_{1})", envIndex, index);
+        }
+        public FreeAddress GetOuterAddress() {
+            if (envIndex == 0) throw new Exception("Invalid operation");
+            return new FreeAddress{envIndex=envIndex - 1, index=index};
+        }
     }
 
     struct GlobalAddress {

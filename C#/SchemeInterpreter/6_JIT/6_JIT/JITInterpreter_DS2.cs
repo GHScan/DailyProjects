@@ -8,150 +8,151 @@ using System.Reflection;
 using System.Reflection.Emit;
 
 namespace _6_JIT {
-    public class JITInterpreter_DS {
+    public class JITInterpreter_DS2 {
 
+        public class SharedValue {
+            public object value;
+            public SharedValue(object _value) {
+                value = _value;
+            }
+        }
+        
         class ASTNodeVisitor_JITCompiler: IASTNodeVisitor {
+            public Dictionary<FreeAddress, FieldBuilder> FieldBuilders { get; private set; }
+            public TypeBuilder TypeBuilder { get; private set; }
             public MethodBuilder MethodBuilder { get; private set; }
-            private TypeBuilder mEnvTypeBuilder;
+            public ConstructorBuilder ConstructorBuilder { get; private set; }
             private ASTNode_Lambda mLambdaNode;
-            private TypeBuilder mHeapEnvTypeBuilder;
             private ILGenerator mILGenerator;
-            private List<ParameterBuilder> mArgBuilders = new List<ParameterBuilder>();
-            private List<LocalBuilder> mLocalBuilders = new List<LocalBuilder>();
-            private Dictionary<string, FieldBuilder> mHeapEnvFieldBuilders = new Dictionary<string, FieldBuilder>();
-            private LocalBuilder mHeapEnvBuilder;
-            private ASTNodeVisitor_JITCompiler mParent;
-            private Stack<bool> mTailCallFlags = new Stack<bool>();
+            private List<object> mLocalBuilders = new List<object>();
+            private Stack<bool> mTaillCallFlags = new Stack<bool>();
 
-            static private string HEAP_ENV_LOCAL_NAME = "____heapEnv";
-            static private string PREV_ENV_FIELD_NAME = "____prevEnv";
 
-            private bool HasThisArgument() {
+            public bool HasThisArgument() {
                 return mLambdaNode.HasFreeVaraible();
             }
             
-            private void DeclareArguments() {
-                int argIndex = 1;
-                for (int i = 0; i < mLambdaNode.formalCount; ++i) {
-                    mArgBuilders.Add(MethodBuilder.DefineParameter(argIndex++, ParameterAttributes.In, mLambdaNode.locals[i]));
-                }
-            }
             private void DeclareLocals() {
-                for (var i = mLambdaNode.formalCount; i < mLambdaNode.locals.Count; ++i) {
-                    var localBuilder = mILGenerator.DeclareLocal(typeof(object));
-                    if (JITInterpreter_DS.Instance().HasSymbolInfo()) {
-                        localBuilder.SetLocalSymInfo(mLambdaNode.locals[i]);
+                var formalBuilders = new List<ParameterBuilder>();
+                for (int i = 0; i < mLambdaNode.formalCount; ++i) {
+                    formalBuilders.Add(MethodBuilder.DefineParameter(i + 1, ParameterAttributes.In, mLambdaNode.locals[i]));
+                }
+
+                var heapLocals = mLambdaNode.childrenFreeAddresses.Where(a=>a.envIndex==0).Select(a=>a.index).OrderBy(a=>a).ToList();
+
+                for (int i = 0; i < mLambdaNode.formalCount; ++i) {
+                    if (heapLocals.IndexOf(i) == -1) {
+                        mLocalBuilders.Add(formalBuilders[i]);
+                    } else {
+                        var localBuilder = mILGenerator.DeclareLocal(typeof(SharedValue));
+                        if (JITInterpreter_DS2.Instance().HasSymbolInfo()) {
+                            localBuilder.SetLocalSymInfo("_" + mLambdaNode.locals[i]);
+                        }
+                        mLocalBuilders.Add(localBuilder);
+
+                        JITInterpreter_DS2.EmitLoadArg(mILGenerator, HasThisArgument(), formalBuilders[i]);
+                        mILGenerator.Emit(OpCodes.Newobj, typeof(SharedValue).GetConstructor(new Type[]{typeof(object)}));
+                        JITInterpreter_DS2.EmitStoreLocal(mILGenerator, localBuilder);
                     }
-                    mLocalBuilders.Add(localBuilder);
-                }
-            }
-
-            private bool HasHeapEnv() {
-                return mLambdaNode.childrenFreeAddresses.Count > 0;
-            }
-            private void EmitInitHeapEnv() {
-                if (!HasHeapEnv()) return;
-
-                mHeapEnvBuilder = mILGenerator.DeclareLocal(mHeapEnvTypeBuilder);
-                if (JITInterpreter_DS.Instance().HasSymbolInfo()) {
-                    mHeapEnvBuilder.SetLocalSymInfo(HEAP_ENV_LOCAL_NAME);
                 }
 
-                var constructor = mHeapEnvTypeBuilder.DefineDefaultConstructor(MethodAttributes.Public);
-                mILGenerator.Emit(OpCodes.Newobj, constructor);
-                EmitStoreLocal(mILGenerator, mHeapEnvBuilder);
+                for (int i = mLambdaNode.formalCount; i < mLambdaNode.locals.Count; ++i) {
+                    if (heapLocals.IndexOf(i) == -1) {
+                        var localBuilder = mILGenerator.DeclareLocal(typeof(object));
+                        if (JITInterpreter_DS2.Instance().HasSymbolInfo()) {
+                            localBuilder.SetLocalSymInfo("_" + mLambdaNode.locals[i]);
+                        }
+                        mLocalBuilders.Add(localBuilder);
+                    } else {
+                        var localBuilder = mILGenerator.DeclareLocal(typeof(SharedValue));
+                        if (JITInterpreter_DS2.Instance().HasSymbolInfo()) {
+                            localBuilder.SetLocalSymInfo("_" + mLambdaNode.locals[i]);
+                        }
+                        mLocalBuilders.Add(localBuilder);
 
-                if (mLambdaNode.childrenFreeAddresses.Where(v => v.envIndex > 0).GetEnumerator().MoveNext()) {
-                    var fieldBuilder = mHeapEnvTypeBuilder.DefineField(PREV_ENV_FIELD_NAME, mEnvTypeBuilder, FieldAttributes.Public);
-                    mHeapEnvFieldBuilders[PREV_ENV_FIELD_NAME] = fieldBuilder;
-                    JITInterpreter_DS.EmitLoadLocal(mILGenerator, mHeapEnvBuilder);
-                    JITInterpreter_DS.EmitLoadThis(mILGenerator);
-                    mILGenerator.Emit(OpCodes.Stfld, fieldBuilder);
-                }
-
-                var heapLocals = mLambdaNode.childrenFreeAddresses.Where(a=>a.envIndex == 0).Select(a=>a.index).OrderBy(a=>a).ToList();
-                foreach (var index in heapLocals) {
-                    var fieldBuilder = mHeapEnvTypeBuilder.DefineField(mLambdaNode.locals[index], typeof(object), FieldAttributes.Public);
-                    mHeapEnvFieldBuilders[mLambdaNode.locals[index]] = fieldBuilder;
-
-                    if (index < mLambdaNode.formalCount) {
-                        JITInterpreter_DS.EmitLoadLocal(mILGenerator, mHeapEnvBuilder);
-                        JITInterpreter_DS.EmitLoadArg(mILGenerator, HasThisArgument(), mArgBuilders[index]);
-                        mILGenerator.Emit(OpCodes.Stfld, fieldBuilder);
+                        mILGenerator.Emit(OpCodes.Ldnull);
+                        mILGenerator.Emit(OpCodes.Newobj, typeof(SharedValue).GetConstructor(new Type[] { typeof(object) }));
+                        JITInterpreter_DS2.EmitStoreLocal(mILGenerator, localBuilder);
                     }
                 }
             }
 
 
             private void EmitLoadLocal(LocalAddress address) {
-                string localName = mLambdaNode.locals[address.index];
-                if (mHeapEnvFieldBuilders.ContainsKey(localName)) {
-                    JITInterpreter_DS.EmitLoadLocal(mILGenerator, mHeapEnvBuilder);
-                    mILGenerator.Emit(OpCodes.Ldfld, mHeapEnvFieldBuilders[localName]);
-                } else if (address.index < mLambdaNode.formalCount) {
-                    JITInterpreter_DS.EmitLoadArg(mILGenerator, HasThisArgument(), mArgBuilders[address.index]);
-                } else {
-                    JITInterpreter_DS.EmitLoadLocal(mILGenerator, mLocalBuilders[address.index - mLambdaNode.formalCount]);
-                }
+               var builder = mLocalBuilders[address.index];
+               if (builder is ParameterBuilder) {
+                   JITInterpreter_DS2.EmitLoadArg(mILGenerator, HasThisArgument(), builder as ParameterBuilder);
+               } else {
+                   LocalBuilder localBuilder = builder as LocalBuilder;
+                   if (localBuilder.LocalType == typeof(object)) {
+                       JITInterpreter_DS2.EmitLoadLocal(mILGenerator, localBuilder);
+                   } else {
+                       JITInterpreter_DS2.EmitLoadLocal(mILGenerator, localBuilder);
+                       mILGenerator.Emit(OpCodes.Ldfld, typeof(SharedValue).GetField("value"));
+                   }
+               }
             }
             private void BeginEmitPopLocal(LocalAddress address) {
-                string localName = mLambdaNode.locals[address.index];
-                if (mHeapEnvFieldBuilders.ContainsKey(localName)) {
-                    JITInterpreter_DS.EmitLoadLocal(mILGenerator, mHeapEnvBuilder);
-                } else if (address.index < mLambdaNode.formalCount) {
+                var builder = mLocalBuilders[address.index];
+                if (builder is ParameterBuilder) {
                     //
                 } else {
-                    //
+                    LocalBuilder localBuilder = builder as LocalBuilder;
+                    if (localBuilder.LocalType == typeof(object)) {
+                        //
+                    } else {
+                        JITInterpreter_DS2.EmitLoadLocal(mILGenerator, localBuilder);
+                    }
                 }
             }
             private void EndEmitPopLocal(LocalAddress address) {
-                string localName = mLambdaNode.locals[address.index];
-                if (mHeapEnvFieldBuilders.ContainsKey(localName)) {
-                    mILGenerator.Emit(OpCodes.Stfld, mHeapEnvFieldBuilders[localName]);
-                } else if (address.index < mLambdaNode.formalCount) {
-                    JITInterpreter_DS.EmitStoreArg(mILGenerator, HasThisArgument(), mArgBuilders[address.index]);
+                var builder = mLocalBuilders[address.index];
+                if (builder is ParameterBuilder) {
+                    JITInterpreter_DS2.EmitStoreArg(mILGenerator, HasThisArgument(), builder as ParameterBuilder);
                 } else {
-                    JITInterpreter_DS.EmitStoreLocal(mILGenerator, mLocalBuilders[address.index - mLambdaNode.formalCount]);
+                    LocalBuilder localBuilder = builder as LocalBuilder;
+                    if (localBuilder.LocalType == typeof(object)) {
+                        JITInterpreter_DS2.EmitStoreLocal(mILGenerator, localBuilder);
+                    } else {
+                        mILGenerator.Emit(OpCodes.Stfld, typeof(SharedValue).GetField("value"));
+                    }
                 }
             }
 
-            private FieldBuilder EmitLoadFreeEnv(FreeAddress address) {
-                JITInterpreter_DS.EmitLoadThis(mILGenerator);
-                ASTNodeVisitor_JITCompiler visitor = mParent;
-                for (int i = 1; i < address.envIndex; ++i) {
-                    mILGenerator.Emit(OpCodes.Ldfld, visitor.mHeapEnvFieldBuilders[PREV_ENV_FIELD_NAME]);
-                    visitor = visitor.mParent;
-                }
-                return visitor.mHeapEnvFieldBuilders[visitor.mLambdaNode.locals[address.index]];
-            }
             private void EmitLoadFree(FreeAddress address) {
-                var field = EmitLoadFreeEnv(address);
-                mILGenerator.Emit(OpCodes.Ldfld, field);
+                JITInterpreter_DS2.EmitLoadThis(mILGenerator);
+                mILGenerator.Emit(OpCodes.Ldfld, FieldBuilders[address]);
+                mILGenerator.Emit(OpCodes.Ldfld, typeof(SharedValue).GetField("value"));
             }
-            private FieldBuilder BeginEmitPopFree(FreeAddress address) {
-                return EmitLoadFreeEnv(address);
+            private void BeginEmitPopFree(FreeAddress address) {
+                JITInterpreter_DS2.EmitLoadThis(mILGenerator);
+                mILGenerator.Emit(OpCodes.Ldfld, FieldBuilders[address]);
             }
-            private void EndEmitPopFree(FreeAddress address, FieldBuilder field) {
-                mILGenerator.Emit(OpCodes.Stfld, field);
+            private void EndEmitPopFree(FreeAddress address) {
+                mILGenerator.Emit(OpCodes.Stfld, typeof(SharedValue).GetField("value"));
             }
 
-            public ASTNodeVisitor_JITCompiler(ASTNodeVisitor_JITCompiler parent, TypeBuilder envTypeBuilder, ASTNode_Lambda node) {
-                mParent = parent;
-                mEnvTypeBuilder = envTypeBuilder;
+            public ASTNodeVisitor_JITCompiler(TypeBuilder parentTypeBuilder, ASTNode_Lambda node) {
                 mLambdaNode = node;
+                TypeBuilder = parentTypeBuilder.DefineNestedType(JITInterpreter_DS2.Instance().GenernateUniqueString("closure"), TypeAttributes.NestedPublic);
 
-                mHeapEnvTypeBuilder = envTypeBuilder.DefineNestedType(JITInterpreter_DS.Instance().GenernateUniqueString("nested_class"));
+                ConstructorBuilder = TypeBuilder.DefineDefaultConstructor(MethodAttributes.Public);
+
+                FieldBuilders = new Dictionary<FreeAddress, FieldBuilder>();
+                foreach (var address in mLambdaNode.GetFreeAddresses()) {
+                    FieldBuilders[address] = TypeBuilder.DefineField(address.ToString(), typeof(SharedValue), FieldAttributes.Public);
+                }
 
                 if (HasThisArgument()) {
-                    MethodBuilder = envTypeBuilder.DefineMethod(
-                        JITInterpreter_DS.Instance().GenernateUniqueString("method"),
+                    MethodBuilder = TypeBuilder.DefineMethod(
+                        "Invoke",
                         MethodAttributes.Public,
                         CallingConventions.HasThis,
                         typeof(object),
                         Enumerable.Repeat(typeof(object), mLambdaNode.formalCount).ToArray());
                 } else {
-                    MethodBuilder = envTypeBuilder.DefineMethod(
-                        JITInterpreter_DS.Instance().GenernateUniqueString("static_method"),
+                    MethodBuilder = TypeBuilder.DefineMethod(
+                        "Invoke",
                         MethodAttributes.Static | MethodAttributes.Public,
                         CallingConventions.Standard,
                         typeof(object),
@@ -161,23 +162,22 @@ namespace _6_JIT {
 
                 mILGenerator = MethodBuilder.GetILGenerator();
 
-                DeclareArguments();
                 DeclareLocals();
-                EmitInitHeapEnv();
 
-                mTailCallFlags.Push(true);
+                mTaillCallFlags.Push(true);
                 mLambdaNode.bodyNode.AcceptVisitor(this);
-                mTailCallFlags.Pop();
+                mTaillCallFlags.Pop();
 
                 mILGenerator.Emit(OpCodes.Ret);
-                mHeapEnvTypeBuilder.CreateType();
+
+                TypeBuilder.CreateType();
             }
             public void Visit(ASTNode_Literal node) {
-                JITInterpreter_DS.Instance().EmitLoadLiteral(mILGenerator, node.value);
+                JITInterpreter_DS2.Instance().EmitLoadLiteral(mILGenerator, node.value);
             }
             public void Visit(ASTNode_GetVar node) {
                 if (node.address is GlobalAddress) {
-                    JITInterpreter_DS.Instance().EmitLoadGlobal(mILGenerator, (GlobalAddress)node.address);
+                    JITInterpreter_DS2.Instance().EmitLoadGlobal(mILGenerator, (GlobalAddress)node.address);
                 } else if (node.address is LocalAddress) {
                     EmitLoadLocal((LocalAddress)node.address);
                 } else {
@@ -186,29 +186,29 @@ namespace _6_JIT {
             }
             public void Visit(ASTNode_SetVar node) {
                 if (node.address is GlobalAddress) {
-                    JITInterpreter_DS.Instance().BeginEmitPopGlobal(mILGenerator, (GlobalAddress)node.address);
+                    JITInterpreter_DS2.Instance().BeginEmitPopGlobal(mILGenerator, (GlobalAddress)node.address);
 
-                    mTailCallFlags.Push(false);
+                    mTaillCallFlags.Push(false);
                     node.rightNode.AcceptVisitor(this);
-                    mTailCallFlags.Pop();
+                    mTaillCallFlags.Pop();
 
-                    JITInterpreter_DS.Instance().EndEmitPopGlobal(mILGenerator, (GlobalAddress)node.address);
+                    JITInterpreter_DS2.Instance().EndEmitPopGlobal(mILGenerator, (GlobalAddress)node.address);
                 } else if (node.address is LocalAddress) {
                     BeginEmitPopLocal((LocalAddress)node.address);
 
-                    mTailCallFlags.Push(false);
+                    mTaillCallFlags.Push(false);
                     node.rightNode.AcceptVisitor(this);
-                    mTailCallFlags.Pop();
+                    mTaillCallFlags.Pop();
 
                     EndEmitPopLocal((LocalAddress)node.address);
                 } else {
-                    var context = BeginEmitPopFree((FreeAddress)node.address);
+                    BeginEmitPopFree((FreeAddress)node.address);
 
-                    mTailCallFlags.Push(false);
+                    mTaillCallFlags.Push(false);
                     node.rightNode.AcceptVisitor(this);
-                    mTailCallFlags.Pop();
+                    mTaillCallFlags.Pop();
 
-                    EndEmitPopFree((FreeAddress)node.address, context);
+                    EndEmitPopFree((FreeAddress)node.address);
                 }
                 mILGenerator.Emit(OpCodes.Ldnull);
             }
@@ -216,67 +216,83 @@ namespace _6_JIT {
                 Label thenLabel = mILGenerator.DefineLabel();
                 Label endLabel = mILGenerator.DefineLabel();
 
-                mTailCallFlags.Push(false);
+                mTaillCallFlags.Push(false);
                 node.predNode.AcceptVisitor(this);
-                mTailCallFlags.Pop();
+                mTaillCallFlags.Pop();
+
                 mILGenerator.Emit(OpCodes.Unbox_Any, typeof(bool));
                 mILGenerator.Emit(OpCodes.Brtrue, thenLabel);
 
-                mTailCallFlags.Push(true);
+                mTaillCallFlags.Push(true);
                 node.elseNode.AcceptVisitor(this);
-                mTailCallFlags.Pop();
+                mTaillCallFlags.Pop();
+
                 mILGenerator.Emit(OpCodes.Br, endLabel);
 
                 mILGenerator.MarkLabel(thenLabel);
-                mTailCallFlags.Push(true);
+
+                mTaillCallFlags.Push(true);
                 node.thenNode.AcceptVisitor(this);
-                mTailCallFlags.Pop();
+                mTaillCallFlags.Pop();
 
                 mILGenerator.MarkLabel(endLabel);
             }
             public void Visit(ASTNode_Begin node) {
                 foreach (var n in node.nodes.Take(node.nodes.Count - 1)) {
-                    mTailCallFlags.Push(false);
+                    mTaillCallFlags.Push(false);
                     n.AcceptVisitor(this);
-                    mTailCallFlags.Pop();
+                    mTaillCallFlags.Pop();
+
                     mILGenerator.Emit(OpCodes.Pop);
                 }
 
-                mTailCallFlags.Push(true);
+                mTaillCallFlags.Push(true);
                 node.nodes.Last().AcceptVisitor(this);
-                mTailCallFlags.Pop();
+                mTaillCallFlags.Pop();
             }
             public void Visit(ASTNode_Lambda node) {
-                var methodBuilder = new ASTNodeVisitor_JITCompiler(this, mHeapEnvTypeBuilder, node).MethodBuilder;
-                if (methodBuilder.IsStatic) {
+                var childCompiler = new ASTNodeVisitor_JITCompiler(TypeBuilder, node);
+                if (childCompiler.MethodBuilder.IsStatic) {
                     mILGenerator.Emit(OpCodes.Ldnull);
-                    mILGenerator.Emit(OpCodes.Ldftn, methodBuilder);
+                    mILGenerator.Emit(OpCodes.Ldftn, childCompiler.MethodBuilder);
                     mILGenerator.Emit(OpCodes.Newobj, 
-                        JITInterpreter_DS.Instance().GetDelegateType(node.formalCount).
+                        JITInterpreter_DS2.Instance().GetDelegateType(node.formalCount).
                         GetConstructor(new Type[] { typeof(object), typeof(IntPtr) }));
                 } else {
-                    JITInterpreter_DS.EmitLoadLocal(mILGenerator, mHeapEnvBuilder);
-                    mILGenerator.Emit(OpCodes.Ldftn, methodBuilder);
+                    mILGenerator.Emit(OpCodes.Newobj, childCompiler.ConstructorBuilder);
+
+                    foreach (var address in node.GetFreeAddresses()) {
+                        mILGenerator.Emit(OpCodes.Dup);
+                        if (address.envIndex == 1) {
+                            JITInterpreter_DS2.EmitLoadLocal(mILGenerator, (LocalBuilder)mLocalBuilders[address.index]);
+                        } else {
+                            JITInterpreter_DS2.EmitLoadThis(mILGenerator);
+                            mILGenerator.Emit(OpCodes.Ldfld, FieldBuilders[address.GetOuterAddress()]);
+                        }
+                        mILGenerator.Emit(OpCodes.Stfld, childCompiler.FieldBuilders[address]);
+                    }
+
+                    mILGenerator.Emit(OpCodes.Ldftn, childCompiler.MethodBuilder);
                     mILGenerator.Emit(OpCodes.Newobj, 
-                        JITInterpreter_DS.Instance().GetDelegateType(node.formalCount)
+                        JITInterpreter_DS2.Instance().GetDelegateType(node.formalCount)
                         .GetConstructor(new Type[] { typeof(object), typeof(IntPtr) }));
                 }
             }
             public void Visit(ASTNode_Application node) {
-                var delegateType = JITInterpreter_DS.Instance().GetDelegateType(node.actualNodes.Count);
+                var delegateType = JITInterpreter_DS2.Instance().GetDelegateType(node.actualNodes.Count);
 
-                mTailCallFlags.Push(false);
+                mTaillCallFlags.Push(false);
                 node.procedureNode.AcceptVisitor(this);
-                mTailCallFlags.Pop();
+                mTaillCallFlags.Pop();
 
                 mILGenerator.Emit(OpCodes.Castclass, delegateType);
                 foreach (var n in node.actualNodes) {
-                    mTailCallFlags.Push(false);
+                    mTaillCallFlags.Push(false);
                     n.AcceptVisitor(this);
-                    mTailCallFlags.Pop();
+                    mTaillCallFlags.Pop();
                 }
 
-                if (mTailCallFlags.All(b => b)) {
+                if (mTaillCallFlags.All(b => b)) {
                     mILGenerator.Emit(OpCodes.Tailcall);
                     mILGenerator.Emit(OpCodes.Callvirt, delegateType.GetMethod("Invoke"));
                     mILGenerator.Emit(OpCodes.Ret);
@@ -286,16 +302,16 @@ namespace _6_JIT {
             }
         }
 
-        private static JITInterpreter_DS sInstance;
-        public static JITInterpreter_DS Instance() {
-            if (sInstance == null) sInstance = new JITInterpreter_DS();
+        private static JITInterpreter_DS2 sInstance;
+        public static JITInterpreter_DS2 Instance() {
+            if (sInstance == null) sInstance = new JITInterpreter_DS2();
             return sInstance;
         }
 
         private long mTimerFreq = 0;
         private long mTimerStart = 0;
         private Random mRandom = new Random();
-        private JITInterpreter_DS() {
+        private JITInterpreter_DS2() {
             Utils.QueryPerformanceCounter(out mTimerStart);
             Utils.QueryPerformanceFrequency(out mTimerFreq);
 
@@ -465,7 +481,7 @@ namespace _6_JIT {
                 generator.Emit(OpCodes.Call, typeof(Number).GetMethod("Create", new Type[]{typeof(int)}));
             } else {
                 int index = GetLiteralIndedx(literal);
-                generator.Emit(OpCodes.Ldsfld, typeof(JITInterpreter_DS).GetField("mLiterals"));
+                generator.Emit(OpCodes.Ldsfld, typeof(JITInterpreter_DS2).GetField("mLiterals"));
                 EmitLoadInt(generator, index);
                 generator.Emit(OpCodes.Callvirt, typeof(List<object>).GetMethod("get_Item"));
             }
@@ -473,12 +489,12 @@ namespace _6_JIT {
 
         public static List<object> mGlobalVariables = new List<object>();
         private void EmitLoadGlobal(ILGenerator generator, GlobalAddress address) {
-            generator.Emit(OpCodes.Ldsfld, typeof(JITInterpreter_DS).GetField("mGlobalVariables"));
+            generator.Emit(OpCodes.Ldsfld, typeof(JITInterpreter_DS2).GetField("mGlobalVariables"));
             EmitLoadInt(generator, address.index);
             generator.Emit(OpCodes.Callvirt, typeof(List<object>).GetMethod("get_Item"));
         }
         private void BeginEmitPopGlobal(ILGenerator generator, GlobalAddress address) {
-            generator.Emit(OpCodes.Ldsfld, typeof(JITInterpreter_DS).GetField("mGlobalVariables"));
+            generator.Emit(OpCodes.Ldsfld, typeof(JITInterpreter_DS2).GetField("mGlobalVariables"));
             EmitLoadInt(generator, address.index);
         }
         private void EndEmitPopGlobal(ILGenerator generator, GlobalAddress address) {
@@ -510,15 +526,16 @@ namespace _6_JIT {
             var assemblyBuilder = AppDomain.CurrentDomain.DefineDynamicAssembly(
                 new AssemblyName(GenernateUniqueString("assemly")), AssemblyBuilderAccess.RunAndSave);
             var moduleBuilder = assemblyBuilder.DefineDynamicModule(GenernateUniqueString("module"), fileName, HasSymbolInfo());
-            var envTypeBuilder = moduleBuilder.DefineType(GenernateUniqueString("class"));
 
-            var methodBuilder = new ASTNodeVisitor_JITCompiler(null, envTypeBuilder, lambdaNode).MethodBuilder;
+            var mainTypeBuilder = moduleBuilder.DefineType(GenernateUniqueString("class"));
+            var compiler = new ASTNodeVisitor_JITCompiler(mainTypeBuilder, lambdaNode);
+            var type = mainTypeBuilder.CreateType();
 
-            var type = envTypeBuilder.CreateType();
-            assemblyBuilder.SetEntryPoint(methodBuilder, PEFileKinds.ConsoleApplication);
+            assemblyBuilder.SetEntryPoint(compiler.MethodBuilder, PEFileKinds.ConsoleApplication);
             // assemblyBuilder.Save(fileName);
 
-            return ((Func<object>)type.GetMethod(methodBuilder.Name).CreateDelegate(typeof(Func<object>)))();
+            return ((Func<object>)type.GetNestedType(compiler.TypeBuilder.Name).GetMethod(compiler.MethodBuilder.Name)
+                .CreateDelegate(typeof(Func<object>)))();
         }
     }
 }

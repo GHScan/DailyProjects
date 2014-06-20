@@ -110,6 +110,6 @@
 (time-it (lambda () (factorial 100 1)))
 (time-it (lambda () (eval (quote (factorial 100 1)))))
 
-(define random-list (build-list 200 (lambda (i) (random 1000000))))
-(time-it (lambda () (sort random-list <)))
+(define random-list (build-list 100000 (lambda (i) (random 1000000))))
+;(time-it (lambda () (sort random-list <)))
 (time-it (lambda () (sort-cps random-list < identity)))

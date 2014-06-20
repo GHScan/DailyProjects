@@ -48,6 +48,7 @@
     <Compile Include="ASTCompiler.cs" />
     <Compile Include="ASTInterpreter.cs" />
     <Compile Include="JITInterpreter_DS.cs" />
+    <Compile Include="JITInterpreter_DS2.cs" />
     <Compile Include="ListProcess.cs" />
     <Compile Include="Number.cs" />
     <Compile Include="Parser.cs" />
