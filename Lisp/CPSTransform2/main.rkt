@@ -23,6 +23,9 @@
 (define (atom? a)
   (not (or (pair? a) (empty? a)))
   )
+(define (not-pair? a)
+  (not (pair? a))
+  )
 ;------------------------------
 (define (cps e)
   (define (transform-list exp-list k)
@@ -94,7 +97,7 @@
 (define (expand-library-forms e)
   (match 
     e
-    [(? atom? e) e]
+    [(? not-pair? e) e]
     [`(define (,name ,formal-list ...) ,exp-list ...) 
       (expand-library-forms `(define ,name (lambda ,formal-list ,@exp-list)))]
     [`(define ,(? symbol? name) (,(? (lambda (x) (not (memq x '(lambda quote)))) form) ,exp-list ...))
@@ -129,14 +132,14 @@
                               (let ([v (gensym)])
                                 `(let ([,v ,(car exp-list)]) (if ,v ,v (or ,@(cdr exp-list)))))))]
     [else 
-      (map expand-library-forms e)])
+      (cons (expand-library-forms (car e)) (expand-library-forms (cdr e)))])
   )
 ;------------------------------
 (define (find-symbols symbols e)
   (cond
     [(memq e symbols) => (compose list car)]
-    [(atom? e) empty]
-    [else (apply append (map (curry find-symbols symbols) e))])
+    [(not-pair? e) empty]
+    [else (append (find-symbols symbols (car e)) (find-symbols symbols (cdr e)))])
   )
 (define (make-builtin-tracker)
   (let* ([cps-to-ds (map (lambda (name) (list (cps-of-builtin name) name))
