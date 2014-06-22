@@ -9,6 +9,7 @@ struct ScmPairList {
     static void append(ScmObjectManager *mgr, ScmObject **ret, ScmObject **argEnd);
     static void length(ScmObjectManager *mgr, ScmObject **ret, ScmObject **argEnd);
     static void last(ScmObjectManager *mgr, ScmObject **ret, ScmObject **argEnd);
+    static void toVectorList(ScmObjectManager *mgr, ScmObject **ret, ScmObject **argEnd);
 };
 
 #endif

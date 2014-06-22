@@ -150,6 +150,9 @@ private:
     ScmString(const string &_str): 
         ScmObject(TYPE), str(_str) {
     }
+    ScmString(string &&_str): 
+        ScmObject(TYPE), str(forward<string>(_str)) {
+    }
 };
 
 struct ScmPair: public ScmObject {
@@ -159,8 +162,8 @@ struct ScmPair: public ScmObject {
     ScmObject *cdr;
 
     void markChildren(queue<ScmObject*>* objs) {
-        if (car->mark()) objs->push(car);
-        if (cdr->mark()) objs->push(cdr);
+        if (car && car->mark()) objs->push(car);
+        if (cdr && cdr->mark()) objs->push(cdr);
     }
 
     uint32_t _getHashCode() const {
@@ -195,7 +198,7 @@ struct ScmVector: public ScmObject {
 
     void markChildren(queue<ScmObject*>* objs) {
         for (auto obj : mVec) {
-            if (obj->mark()) objs->push(obj);
+            if (obj && obj->mark()) objs->push(obj);
         }
     }
 
@@ -258,18 +261,20 @@ private:
 struct ScmDictionary: public ScmObject {
     static const ScmObjType TYPE = SOT_Dictionary;
 
-    const unordered_map<ScmObject*, ScmObject*>& getImmutableDict() const {
+    typedef unordered_map<ScmObject*, ScmObject*, ScmObjectHash, ScmObjectEqual> Dict;
+
+    const Dict& getImmutableDict() const {
         return mDict;
     }
 
-    unordered_map<ScmObject*, ScmObject*>& getImmutableDict() {
+    Dict& getMutableDict() {
         return mDict;
     }
 
     void markChildren(queue<ScmObject*>* objs) {
         for (auto &kv : mDict) {
             if (kv.first->mark()) objs->push(kv.first);
-            if (kv.second->mark()) objs->push(kv.second);
+            if (kv.second && kv.second->mark()) objs->push(kv.second);
         }
     }
 
@@ -301,7 +306,7 @@ struct ScmDictionary: public ScmObject {
     }
 
 private:
-    unordered_map<ScmObject*, ScmObject*> mDict;
+    Dict mDict;
     mutable uint32_t mHashCode;
 
 private:
@@ -318,8 +323,50 @@ struct ScmEnv: public ScmObject {
     ScmEnv *prevEnv;
     ScmDictionary* dict;
 
+    ScmObject* lookup(ScmSymbol *sym) const {
+        const ScmEnv *env = this;
+        while (env != nullptr) {
+            auto& dict = env->dict->getImmutableDict();
+            auto iter = dict.find(sym);
+            if (iter != dict.end()) {
+                return iter->second;
+            }
+            env = env->prevEnv;
+        }
+
+        cerr << "Can't find variable: ";
+        sym->writeToStream(cerr);
+        cerr << endl;
+
+        ASSERT(0);
+        return nullptr;
+    }
+
+    void set(ScmSymbol *sym, ScmObject *v) const {
+        const ScmEnv *env = this;
+        while (env != nullptr) {
+            auto& dict = env->dict->getMutableDict();
+            auto iter = dict.find(sym);
+            if (iter != dict.end()) {
+                iter->second = v;
+                return;
+            }
+            env = env->prevEnv;
+        }
+
+        cerr << "Can't find variable: ";
+        sym->writeToStream(cerr);
+        cerr << endl;
+
+        ASSERT(0);
+    }
+
+    void define(ScmSymbol *sym, ScmObject *v) {
+        dict->getMutableDict()[sym] = v;
+    }
+
     void markChildren(queue<ScmObject*>* objs) {
-        if (prevEnv->mark()) objs->push(prevEnv);
+        if (prevEnv && prevEnv->mark()) objs->push(prevEnv);
         if (dict->mark()) objs->push(dict);
     }
 
@@ -346,14 +393,14 @@ private:
 struct ScmScriptFunction: public ScmObject {
     static const ScmObjType TYPE = SOT_ScriptFunction;
 
+    ScmEnv *env;
     ScmVector *formals;
     ScmObject *body;
-    ScmEnv *env;
 
     void markChildren(queue<ScmObject*>* objs) {
         if (formals->mark()) objs->push(formals);
         if (body->mark()) objs->push(body);
-        if (env->mark()) objs->push(env);
+        if (env && env->mark()) objs->push(env);
     }
 
     uint32_t _getHashCode() const {
@@ -373,8 +420,8 @@ struct ScmScriptFunction: public ScmObject {
 private:
     friend class ScmObjectManager;
 
-    ScmScriptFunction(ScmVector *_formals, ScmObject *_body) :
-        ScmObject(TYPE), formals(_formals), body(_body) {
+    ScmScriptFunction(ScmEnv *_env, ScmVector *_formals, ScmObject *_body) :
+        ScmObject(TYPE), env(_env), formals(_formals), body(_body) {
     }
 };
 
@@ -384,11 +431,12 @@ struct ScmCFunction: public ScmObject {
     CFunction func;
 
     uint32_t _getHashCode() const {
-        return hash<CFunction>()(func);
+        // TODO: It's weird
+        return hash<const ScmCFunction*>()(this);
     }
 
     bool _equal(const ScmCFunction *o) const {
-        return func == o->func;
+        return this == o;
     }
 
     void _writeToStream(ostream &so) const {

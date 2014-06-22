@@ -76,6 +76,18 @@ protected:
     }
 };
 
-typedef void (*CFunction)(ScmObjectManager *mgr, ScmObject **ret, ScmObject **argEnd);
+struct ScmObjectHash {
+    uint32_t operator () (const ScmObject *o) const {
+        return o->getHashCode();
+    }
+};
+
+struct ScmObjectEqual {
+    bool operator () (const ScmObject *l, const ScmObject *r) const {
+        return l->equal(r);
+    }
+};
+
+typedef function<void(ScmObjectManager *mgr, ScmObject **ret, ScmObject **argEnd)> CFunction;
 
 #endif

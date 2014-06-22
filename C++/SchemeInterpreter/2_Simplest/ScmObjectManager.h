@@ -3,7 +3,6 @@
 
 #include "ScmObject.h"
 
-struct GCContext;
 struct ScmSymbol;
 
 class ScmObjectManager {
@@ -16,7 +15,7 @@ public:
     template<typename ObjT, typename SlotT, typename ...ArgT>
     ObjT* create(SlotT**slot, ArgT&& ...args) {
 
-        if (mObjCount >= mObjThreshold) {
+        if (++mObjCount >= mObjThreshold) {
             performFullGC();
         }
 

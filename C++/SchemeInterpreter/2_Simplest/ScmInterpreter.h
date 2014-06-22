@@ -12,6 +12,7 @@ public:
     ScmInterpreter& operator = (const ScmInterpreter&) = delete;
 
 private:
+    class ScmInterpreterImpl *mImpl;
 };
 
 #endif

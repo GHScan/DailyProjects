@@ -132,13 +132,13 @@ void performLogic(ScmObjectManager *mgr, ScmObject **ret, ScmObject **argEnd) {
     if (a->type == b->type) { 
         switch (a->type) {
             case SOT_Int:
-                mgr->create<ScmInt>(ret, IntOp::invoke(a->staticCast<ScmInt>()->number, a->staticCast<ScmInt>()->number));
+                mgr->create<ScmInt>(ret, IntOp::invoke(a->staticCast<ScmInt>()->number, b->staticCast<ScmInt>()->number));
                 break;
             case SOT_BigInt:
-                mgr->create<ScmInt>(ret, BigIntOp::invoke(a->staticCast<ScmBigInt>()->number, a->staticCast<ScmBigInt>()->number));
+                mgr->create<ScmInt>(ret, BigIntOp::invoke(a->staticCast<ScmBigInt>()->number, b->staticCast<ScmBigInt>()->number));
                 break;
             case SOT_Double:
-                mgr->create<ScmInt>(ret, DoubleOp::invoke(a->staticCast<ScmDouble>()->number, a->staticCast<ScmDouble>()->number));
+                mgr->create<ScmInt>(ret, DoubleOp::invoke(a->staticCast<ScmDouble>()->number, b->staticCast<ScmDouble>()->number));
                 break;
             default:
                 ASSERT(0);
@@ -316,4 +316,8 @@ void ScmNumeric::sqrt(ScmObjectManager *mgr, ScmObject **ret, ScmObject **argEnd
             ASSERT(0);
             break;
     }
+}
+
+void ScmNumeric::_not(ScmObjectManager *mgr, ScmObject **ret, ScmObject **argEnd) {
+    mgr->create<ScmInt>(ret, !ret[1]->staticCast<ScmInt>()->number);
 }

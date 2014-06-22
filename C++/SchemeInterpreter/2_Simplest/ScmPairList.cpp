@@ -48,3 +48,20 @@ void ScmPairList::last(ScmObjectManager *mgr, ScmObject **ret, ScmObject **argEn
 
     ret[0] = l;
 }
+
+static void pairList2VectorList(ScmObjectManager *mgr, ScmObject **to, ScmObject **from) {
+    if (auto pair = from[0]->dynamicCast<ScmPair>()) {
+        auto vec = mgr->create<ScmVector>(to);
+
+        while (pair != ScmObject::EMPTY) {
+            pairList2VectorList(mgr, vec->alloc(), &pair->car);
+            pair = pair->cdr->staticCast<ScmPair>();
+        }
+    } else {
+        to[0] = from[0];
+    }
+}
+
+void ScmPairList::toVectorList(ScmObjectManager *mgr, ScmObject **ret, ScmObject **argEnd) {
+    pairList2VectorList(mgr, ret, ret + 1);
+}

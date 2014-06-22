@@ -19,11 +19,15 @@ static void tokenize(vector<const char*> &tokens, string &s) {
     re_COMMENT.GlobalReplace("", &s);
     pcrecpp::RE("\\[").GlobalReplace("(", &s);
     pcrecpp::RE("\\]").GlobalReplace(")", &s);
-    pcrecpp::RE("(").GlobalReplace(" ( ", &s);
-    pcrecpp::RE(")").GlobalReplace(" ( ", &s);
+    pcrecpp::RE("\\(").GlobalReplace(" ( ", &s);
+    pcrecpp::RE("\\)").GlobalReplace(" ) ", &s);
 
     for (char *p = (char*)s.c_str(); ; p = nullptr) {
-        tokens.push_back(strtok(p, " "));
+        if (auto token = strtok(p, " \r\n\t")) {
+            tokens.push_back(token);
+        } else {
+            break;
+        }
     }
 }
 
@@ -66,11 +70,15 @@ static void reverseParse(ScmObjectManager *mgr, ScmObject **ret, vector<const ch
 
 void ScmVectorList::parse(ScmObjectManager *mgr, ScmObject **ret, ScmObject **argEnd) {
     string s = ret[1]->staticCast<ScmString>()->str;
+
     vector<const char*> tokens;
     tokenize(tokens, s);
-
     reverse(tokens.begin(), tokens.end());
-    reverseParse(mgr, ret, tokens);
+
+    ScmVector *vec = mgr->create<ScmVector>(ret);
+    while (!tokens.empty()) {
+        reverseParse(mgr, vec->alloc(), tokens);
+    }
 }
 
 static void vectorList2PairList(ScmObjectManager *mgr, ScmObject **to, ScmObject **from) {

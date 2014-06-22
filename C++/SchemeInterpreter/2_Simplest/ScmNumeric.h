@@ -18,6 +18,7 @@ struct ScmNumeric {
     static void greaterEqual(ScmObjectManager *mgr, ScmObject **ret, ScmObject **argEnd);
     static void sqr(ScmObjectManager *mgr, ScmObject **ret, ScmObject **argEnd);
     static void sqrt(ScmObjectManager *mgr, ScmObject **ret, ScmObject **argEnd);
+    static void _not(ScmObjectManager *mgr, ScmObject **ret, ScmObject **argEnd);
 };
 
 #endif

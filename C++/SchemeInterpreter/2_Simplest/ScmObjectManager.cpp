@@ -3,9 +3,10 @@
 #include "ScmTypes.h"
 
 ScmObjectManager::ScmObjectManager(): 
-    mFirstObj(nullptr), mObjCount(0), mObjThreshold(64) {
+    mFirstObj(nullptr), mObjCount(0), mObjThreshold(16) {
 
-    create<ScmPair>(&ScmObject::EMPTY, nullptr, nullptr);
+    auto empty = create<ScmPair>(&ScmObject::EMPTY, nullptr, nullptr);
+    empty->car = empty->cdr = empty;
 }
 
 ScmObjectManager::~ScmObjectManager() {
@@ -35,7 +36,7 @@ void ScmObjectManager::setRootCollector(function<void(ScmObjectManager*)> rootCo
 }
 
 void ScmObjectManager::mark(ScmObject *obj) {
-    if (obj->mark()) {
+    if (obj != nullptr && obj->mark()) {
         mMarkedObjs.push(obj);
     }
 }

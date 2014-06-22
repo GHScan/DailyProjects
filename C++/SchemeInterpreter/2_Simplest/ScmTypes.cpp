@@ -34,16 +34,22 @@ ScmBigInt::BigInt ScmDouble::toBigInt() const {
 }
 
 void ScmPair::_writeToStream(ostream &so) const {
+    if (this == EMPTY) {
+        so << "()";
+        return;
+    }
+
     const ScmPair *pair = this;
 
     so << '(';
     pair->car->writeToStream(so);
 
     for (const ScmPair *nextPair = pair->cdr->dynamicCast<ScmPair>();
-            nextPair != nullptr;
-            pair = nextPair) {
+            nextPair != nullptr && nextPair != EMPTY;
+            nextPair = pair->cdr->dynamicCast<ScmPair>()) {
+        pair = nextPair;
         so << ' ';
-        nextPair->car->writeToStream(so);
+        pair->car->writeToStream(so);
     }
 
     if (pair->cdr != EMPTY) {

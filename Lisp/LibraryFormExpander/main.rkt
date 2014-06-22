@@ -7,8 +7,9 @@
     [(? (lambda (x) (not (pair? x)))) e]
     [`(define (,name ,formal-list ...) ,exp-list ...) 
       (expand-library-forms `(define ,name (lambda ,formal-list ,@exp-list)))]
-    [`(define ,(? symbol? name) (,(? (lambda (x) (not (memq x '(lambda quote)))) form) ,exp-list ...))
-      `(begin (define ,name 'undefined) (set! ,name (,form ,@exp-list)))]
+    [`(lambda ,formals ,exp-list ...)
+      `(lambda ,formals 
+         ,(expand-library-forms (if (= 1 (length exp-list)) (car exp-list) (cons 'begin exp-list))))]
     [`(let ,(? symbol? fname) ,name-values ,exp-list ...) 
       (expand-library-forms `((lambda ()
                                 (define ,fname (lambda ,(map car name-values) ,@exp-list))
