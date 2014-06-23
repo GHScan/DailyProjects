@@ -14,6 +14,7 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <iterator>
+#include <memory>
 #include <algorithm>
 using namespace std;
 

@@ -3,8 +3,7 @@
 
 #include "TaggedPointer.h"
 #include "SObject.h"
-
-class SSymbol;
+#include "SSymbol.h"
 
 enum SValueType {
     SVT_Undefined,
@@ -33,7 +32,10 @@ public:
         int tag = get<TAG_MASK>();
 
         ASSERT(tag != TV_Undefined);
-        return tag < TV_Object ? tag : (tag == TV_Object ? getObject()->getType() : getExternalObject()->getType());
+        return tag < TV_Object ? tag : 
+            (tag == TV_Object ? 
+             getObject()->getType() : 
+             getExternalObject()->getType());
     }
 
 public:
@@ -67,7 +69,7 @@ public:
 
     int getInt() const {
         ASSERT(get<TAG_MASK>() == TV_Int);
-        return get<INT_MASK>();
+        return get<INT_MASK>() >> TAG_BIT_COUNT;
     }
 
     void setInt(int i) {
@@ -93,6 +95,52 @@ public:
 
     bool operator != (const SValue &o) const {
         return !(*this == o);
+    }
+
+    bool equal(const SValue &o) const {
+        if (mPointer == o.mPointer) return true;
+        int tag = get<TAG_MASK>();
+        if (tag != o.get<TAG_MASK>()) return false;
+
+        return tag < TV_Object ? false : 
+            (tag == TV_Object ? 
+             getObject()->equal(*o.getObject()) : 
+             getExternalObject()->equal(*o.getExternalObject()));
+    }
+
+    ostream& writeToStream(ostream &so) const {
+        switch (get<TAG_MASK>()) {
+            case TV_Undefined:
+                so << "undefined";
+                break;
+            case TV_Reserved: {
+                if (*this == EMPTY) so << "()";
+                else if (*this == VOID);
+                else ASSERT(0);
+              }
+                break;
+            case TV_Bool: {
+                if (*this == TRUE) so << "true";
+                else if (*this == FALSE) so << "false";
+                else ASSERT(0);
+              }
+                break;
+            case TV_Int: {
+                so << getInt();
+             }
+                break;
+            case TV_Symbol: {
+                so << getSymbol()->c_str();
+            }
+                break;
+            case TV_Object:
+                getObject()->writeToStream(so);
+                break;
+            case TV_ExternalObject:
+                getExternalObject()->writeToStream(so);
+                break;
+        }
+        return so;
     }
 
 public:

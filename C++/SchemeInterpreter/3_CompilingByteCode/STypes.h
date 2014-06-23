@@ -19,6 +19,14 @@ struct SDouble: public SObject {
 
     double number;
 
+    bool _equal(const SDouble &o) const {
+        return fabs(number - o.number) < 0.0001;
+    }
+
+    ostream& _writeToStream(ostream& so) const {
+        return so << number;
+    }
+
 private:
     friend class SObjectManager;
 
@@ -36,6 +44,14 @@ struct SString: public SObject {
     }
 
     char str[1];
+
+    bool _equal(const SString &o) const {
+        return strcmp(str, o.str) == 0;
+    }
+
+    ostream& _writeToStream(ostream& so) const {
+        return so << '"' << escapeString(str, "\"") << '"';
+    }
 
 private:
     friend class SObjectManager;
@@ -56,6 +72,12 @@ struct SPair: public SObject {
 
     SValue car;
     SValue cdr;
+
+    bool _equal(const SPair &o) const {
+        return car.equal(o.car) && cdr.equal(o.cdr);
+    }
+
+    ostream& _writeToStream(ostream& so) const;
 
 private:
     friend class SObjectManager;
@@ -87,6 +109,14 @@ struct SEnv: public SObject {
         ASSERT(index >= 0 && index < localCount);
 
         locals[index] = v;
+    }
+
+    bool _equal(const SEnv &o) const {
+        return this == &o;
+    }
+
+    ostream& _writeToStream(ostream& so) const {
+        return so << format("{env:%p}", this);
     }
 
 private:
@@ -121,6 +151,14 @@ struct SScriptFunction: public SObject {
         *freeVars[freeIndex] = v;
     }
 
+    bool _equal(const SScriptFunction &o) const {
+        return this == &o;
+    }
+
+    ostream& _writeToStream(ostream& so) const {
+        return so << format("{scriptFunction:%p}", this);
+    }
+
 private:
     friend class SObjectManager;
 
@@ -146,6 +184,14 @@ struct SCFunction: public SExternalObject {
 
     CFunction func;
 
+    bool _equal(const SCFunction& o) const {
+        return this == &o;
+    }
+
+    ostream& _writeToStream(ostream& so) const {
+        return so << format("{cFunction:%p}", this);
+    }
+
 private:
     friend class SObjectManager;
 
@@ -161,6 +207,14 @@ struct SBigInt: public SExternalObject {
     typedef CryptoPP::word Word;
 
     BigInt number;
+
+    bool _equal(const SBigInt& o) const {
+        return number == o.number;
+    }
+
+    ostream& _writeToStream(ostream& so) const {
+        return so << number;
+    }
 
 private:
     friend class SObjectManager;

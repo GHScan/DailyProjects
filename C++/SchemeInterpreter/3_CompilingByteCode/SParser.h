@@ -4,6 +4,6 @@
 class SObjectManager;
 class SValue;
 
-static void parse(SObjectManager *mgr, SValue *r, const string &s);
+static void parse(SObjectManager *mgr, SValue *ret, const string &s);
 
 #endif

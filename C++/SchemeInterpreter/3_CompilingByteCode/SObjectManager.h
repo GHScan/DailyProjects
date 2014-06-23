@@ -13,61 +13,61 @@ public:
     SObjectManager(const SObjectManager&) = delete;
     SObjectManager& operator = (const SObjectManager&) = delete;
 
-    bool createBool(SValue *r, bool b) {
-        *r = b ? SValue::TRUE : SValue::FALSE;
+    bool createBool(SValue *ret, bool b) {
+        *ret = b ? SValue::TRUE : SValue::FALSE;
         return b;
     }
 
-    int createInt(SValue *r, int i) {
-        r->setInt(i);
+    int createInt(SValue *ret, int i) {
+        ret->setInt(i);
         return i;
     }
 
-    SSymbol* createSymbol(SValue *r, const char *s) {
+    SSymbol* createSymbol(SValue *ret, const char *s) {
         auto sym = mSymbolMgr->getSymbol(s);
-        r->setSymbol(sym);
+        ret->setSymbol(sym);
         return sym;
     }
 
-    SDouble* createDouble(SValue *r, double d) {
-        return createObject<SDouble>(r, d);
+    SDouble* createDouble(SValue *ret, double d) {
+        return createObject<SDouble>(ret, d);
     }
 
-    SString* createString(SValue *r, const char *s) {
-        return createObject<SString>(r, s);
+    SString* createString(SValue *ret, const char *s) {
+        return createObject<SString>(ret, s);
     }
 
-    SPair* createPair(SValue *r, SValue car, SValue cdr) {
-        return createObject<SPair>(r, car, cdr);
+    SPair* createPair(SValue *ret, SValue car, SValue cdr) {
+        return createObject<SPair>(ret, car, cdr);
     }
 
-    SEnv* createEnv(SValue *r, SEnv *prevEnv, int localCount) {
-        return createObject<SEnv>(r, prevEnv, localCount);
+    SEnv* createEnv(SValue *ret, SEnv *prevEnv, int localCount) {
+        return createObject<SEnv>(ret, prevEnv, localCount);
     }
 
-    SScriptFunction* createScriptFunction(SValue *r, SScriptFunctionProto *proto, SEnv *env) {
-        return createObject<SScriptFunction>(r, proto, env);
+    SScriptFunction* createScriptFunction(SValue *ret, SScriptFunctionProto *proto, SEnv *env) {
+        return createObject<SScriptFunction>(ret, proto, env);
     }
 
-    SCFunction* createCFunction(SValue *r, CFunction f) {
-        return createExternalObject<SCFunction>(r, f);
+    SCFunction* createCFunction(SValue *ret, CFunction f) {
+        return createExternalObject<SCFunction>(ret, f);
     }
 
-    SBigInt* createBigInt(SValue *r, const SBigInt::BigInt &n) {
-        return createExternalObject<SBigInt>(r, n);
+    SBigInt* createBigInt(SValue *ret, const SBigInt::BigInt &n) {
+        return createExternalObject<SBigInt>(ret, n);
     }
 
 private:
     template<typename DerivedT, typename ...ArgT>
-    DerivedT* createExternalObject(SValue *r, ArgT&& ...args) {
+    DerivedT* createExternalObject(SValue *ret, ArgT&& ...args) {
         if (mExternalObjCount >= mExternalObjThreshold) {
             performFullGC();
-            return createExternalObject<DerivedT>(r, forward<ArgT>(args)...);
+            return createExternalObject<DerivedT>(ret, forward<ArgT>(args)...);
         }
         ++mExternalObjCount;
 
         auto p = new DerivedT(forward<ArgT>(args)...);
-        r->setExternalObject(p);
+        ret->setExternalObject(p);
 
         p->next = mFirstExternalObj;
         mFirstExternalObj = p;
@@ -76,17 +76,17 @@ private:
     }
 
     template<typename DerivedT, typename ...ArgT>
-    DerivedT* createObject(SValue *r, ArgT&& ...args) {
+    DerivedT* createObject(SValue *ret, ArgT&& ...args) {
         int requireBytes = DerivedT::estimateAlignedSize(forward<ArgT>(args)...) * SObject::ALIGNMENT;
 
         if (mFreeOfWorkingHeap + requireBytes > (int)mWorkingHeap.size()) {
             performFullGC();
-            return createObject<DerivedT>(r, forward<ArgT>(args)...);
+            return createObject<DerivedT>(ret, forward<ArgT>(args)...);
         }
 
         DerivedT *p = new (&mWorkingHeap[mFreeOfWorkingHeap]) DerivedT(forward<ArgT>(args)...);
         mFreeOfWorkingHeap += requireBytes;
-        r->setObject(p);
+        ret->setObject(p);
 
         return p;
     }

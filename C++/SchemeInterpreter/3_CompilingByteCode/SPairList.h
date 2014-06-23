@@ -7,12 +7,12 @@
 namespace PairHelp {
 
 template<int n>
-SValue& get(SPair *pair) {
+inline SValue& get(SPair *pair) {
     return get<n - 1>(pair->cdr.getObject()->staticCast<SPair>());
 }
 
 template<>
-SValue& get<0>(SPair *pair) {
+inline SValue& get<0>(SPair *pair) {
     return pair->car;
 }
 

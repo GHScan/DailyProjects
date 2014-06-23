@@ -30,12 +30,12 @@ static void tokenize(vector<const char*> &tokens, string &s) {
     }
 }
 
-static void parseBackward(SObjectManager *mgr, SValue *r, vector<const char *> &tokens) {
+static void parseBackward(SObjectManager *mgr, SValue *ret, vector<const char *> &tokens) {
     auto token = tokens.back();
     tokens.pop_back();
 
     if (strcmp(token, "(") == 0) {
-        SPairListBuilder builder(mgr, r);
+        SPairListBuilder builder(mgr, ret);
 
         while (strcmp(tokens.back(), ")")) {
             parseBackward(mgr, builder.push(), tokens);
@@ -43,38 +43,38 @@ static void parseBackward(SObjectManager *mgr, SValue *r, vector<const char *> &
         tokens.pop_back();
 
     } else if (strcmp(token, "'") == 0) {
-        SPairListBuilder builder(mgr, r);
+        SPairListBuilder builder(mgr, ret);
         mgr->createSymbol(builder.push(), "quote");
         parseBackward(mgr, builder.push(), tokens);
 
     } else if (re_DOUBLE.FullMatch(token)) {
-        mgr->createDouble(r, strtod(token, nullptr));
+        mgr->createDouble(ret, strtod(token, nullptr));
 
     } else if (re_INT.FullMatch(token)) {
         long l = strtol(token, nullptr, 10);
 
         if (errno != ERANGE && l >= SValue::_INT_MIN && l <= SValue::_INT_MAX) {
-            mgr->createInt(r, (int)l);
+            mgr->createInt(ret, (int)l);
         } else {
-            mgr->createBigInt(r, SBigInt::BigInt(token));
+            mgr->createBigInt(ret, SBigInt::BigInt(token));
         }
 
     } else if (re_STRING.FullMatch(token)) {
         string s = token;
-        mgr->createString(r, unescapeString(s.substr(1, s.size() - 2)).c_str());
+        mgr->createString(ret, unescapeString(s.substr(1, s.size() - 2)).c_str());
 
     } else {
-        mgr->createSymbol(r, token);
+        mgr->createSymbol(ret, token);
     }
 }
 
-void parse(SObjectManager *mgr, SValue *r, const string &_s) {
+void parse(SObjectManager *mgr, SValue *ret, const string &_s) {
     string s(_s);
     vector<const char *> tokens;
     tokenize(tokens, s);
     reverse(tokens.begin(), tokens.end());
 
-    SPairListBuilder builder(mgr, r);
+    SPairListBuilder builder(mgr, ret);
     while (!tokens.empty()) {
         parseBackward(mgr, builder.push(), tokens);
     }

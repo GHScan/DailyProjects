@@ -12,10 +12,10 @@ public:
     static const PtrValue POINTER_MASK = ((1L << POINTER_BIT_COUNT) - 1) << TAG_BIT_COUNT;
 
 public:
-    static const PtrValue ULONG_MAX = (1L << POINTER_BIT_COUNT) - 1;
-    static const PtrValue ULONG_MIN = 0;
-    static const PtrValue LONG_MAX = ULONG_MAX / 2;
-    static const PtrValue LONG_MIN = -(ULONG_MAX / 2 + 1);
+    static const PtrValue _ULONG_MAX = (1L << POINTER_BIT_COUNT) - 1;
+    static const PtrValue _ULONG_MIN = 0;
+    static const PtrValue _LONG_MAX = _ULONG_MAX / 2;
+    static const PtrValue _LONG_MIN = -(_ULONG_MAX / 2 + 1);
 
 public:
     template<PtrValue MASK>

@@ -47,16 +47,16 @@ static void updateField(SObjectManager *mgr, SValue *field) {
         case SVT_Symbol:
             break;
 
-        case SVT_Double:
-        case SVT_String:
-        case SVT_Pair:
-        case SVT_Env:
-        case SVT_ScriptFunction:
+        case SDouble::TYPE:
+        case SString::TYPE:
+        case SPair::TYPE:
+        case SEnv::TYPE:
+        case SScriptFunction::TYPE:
             field->setObject(mgr->mark(field->getObject()));
             break;
 
-        case SVT_CFunction:
-        case SVT_BigInt:
+        case SCFunction::TYPE:
+        case SBigInt::TYPE:
             mgr->mark(field->getExternalObject());
             break;
 

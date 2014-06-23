@@ -36,6 +36,22 @@ public:
         return static_cast<DerivedT*>(this);
     }
 
+    template<typename DerivedT>
+    const DerivedT* staticCast() const {
+        ASSERT(getType() == DerivedT::TYPE);
+        return static_cast<const DerivedT*>(this);
+    }
+
+    template<typename DerivedT>
+    DerivedT* dynamicCast() {
+        return getType() == DerivedT::TYPE ? static_cast<DerivedT*>(this) : nullptr;
+    }
+
+    template<typename DerivedT>
+    const DerivedT* dynamicCast() const {
+        return getType() == DerivedT::TYPE ? static_cast<const DerivedT*>(this) : nullptr;
+    }
+
     SObject(const SObject&) = delete;
     SObject& operator = (const SObject&) = delete;
 
@@ -47,6 +63,10 @@ public:
     SObject(int type, int alignedSize):
         mType(type), mRedirected(0), mAlignedSize(alignedSize) {
     }
+
+    bool equal(const SObject &o) const;
+
+    ostream& writeToStream(ostream &so) const;
 
 private:
     uint32_t mType : 5;
@@ -80,10 +100,31 @@ public:
         return static_cast<DerivedT*>(this);
     }
 
+    template<typename DerivedT>
+    const DerivedT* staticCast() const {
+        ASSERT(getType() == DerivedT::TYPE);
+        return static_cast<const DerivedT*>(this);
+    }
+
+    template<typename DerivedT>
+    DerivedT* dynamicCast() {
+        return getType() == DerivedT::TYPE ? static_cast<DerivedT*>(this) : nullptr;
+    }
+
+    template<typename DerivedT>
+    const DerivedT* dynamicCast() const {
+        return getType() == DerivedT::TYPE ? static_cast<const DerivedT*>(this) : nullptr;
+    }
+
     SExternalObject(const SExternalObject&) = delete;
     SExternalObject& operator = (const SExternalObject&) = delete;
 
     SExternalObject *next;
+
+    bool equal(const SExternalObject &o) const;
+
+    ostream& writeToStream(ostream &so) const;
+
 protected:
     explicit SExternalObject(int type): 
         next(nullptr), mMarked(0), mType(type) {
