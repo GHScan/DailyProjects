@@ -42,12 +42,14 @@ private:
 SInterpreterImpl::SInterpreterImpl(): 
     mObjMgr(nullptr), mEvalStack(nullptr), mFrameStack(nullptr), mGSymTable(nullptr) {
 
-    // TODO
-    mObjMgr = new SObjectManager(32, 16);
+    mObjMgr = new SObjectManager(8 * 1024 * 1024, 1024);
     mFrameStack = new SFrameStack();
-    // TODO
-    mEvalStack = new SEvalStack(32);
+    mEvalStack = new SEvalStack(64 * 1024);
     mGSymTable = new SymbolTable(nullptr);
+
+    mGlobals.reserve(1024);
+    mLiterals.reserve(1024);
+    mProtos.reserve(256);
 
     mObjMgr->installGCRootCollector([this](SObjectManager *mgr){
         if (mEvalStack != nullptr) {
@@ -198,7 +200,7 @@ void SInterpreterImpl::setupBuiltin() {
         auto iter = list.begin(), next = list.begin(), end = list.end();
         ++next;
         for (; next != end; iter = next, ++next);
-        stack->top(-2).setObject(iter.getPair());
+        stack->top(-2) = iter.getPair()->car;
     });
 
     defineBuiltin("empty?", [](SObjectManager *mgr, SEvalStack *stack, int actualCount){

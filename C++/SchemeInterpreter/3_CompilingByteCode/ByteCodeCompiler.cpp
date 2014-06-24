@@ -14,7 +14,9 @@ public:
         mProto->formalCount = lambda->formalCount;
         mProto->locals = lambda->locals;
 
+        mTailFlags.push_back(true);
         lambda->body->acceptVisitor(this);
+        mTailFlags.pop_back();
 
         mProtos->push_back(mProto);
     }
@@ -24,14 +26,21 @@ public:
     }
 
     virtual void visit(ASTNode_If *node) {
+        mTailFlags.push_back(false);
         node->predNode->acceptVisitor(this);
+        mTailFlags.pop_back();
+
         int jmp2Then = preEmit<ByteCode_TrueJmp>();
 
+        mTailFlags.push_back(true);
         node->elseNode->acceptVisitor(this);
+        mTailFlags.pop_back();
         int jmp2End = preEmit<ByteCode_Jmp>();
 
         postEmit(jmp2Then, ByteCode_TrueJmp(currentBytesOff()));
+        mTailFlags.push_back(true);
         node->thenNode->acceptVisitor(this);
+        mTailFlags.pop_back();
 
         postEmit(jmp2End, ByteCode_Jmp(currentBytesOff()));
     }
@@ -44,11 +53,16 @@ public:
 
     virtual void visit(ASTNode_Begin *node) {
         for (int i = 0; i < (int)node->nodes.size() - 1; ++i) {
+            mTailFlags.push_back(false);
             node->nodes[i]->acceptVisitor(this);
+            mTailFlags.pop_back();
+
             emit(ByteCode_Pop());
         }
 
+        mTailFlags.push_back(true);
         node->nodes.back()->acceptVisitor(this);
+        mTailFlags.pop_back();
     }
 
     virtual void visit(ASTNode_GetVar *node) {
@@ -64,7 +78,9 @@ public:
     }
 
     virtual void visit(ASTNode_SetVar *node) {
+        mTailFlags.push_back(false);
         node->rightNode->acceptVisitor(this);
+        mTailFlags.pop_back();
 
         if (node->address.isLocal()) {
             emit(ByteCode_StoreLocal(node->address.getVarIndex()));
@@ -80,9 +96,18 @@ public:
     }
 
     virtual void visit(ASTNode_Application *node) {
+        mTailFlags.push_back(false);
         node->func->acceptVisitor(this);
+        mTailFlags.pop_back();
+
         for (auto n : node->actuals) {
+            mTailFlags.push_back(false);
             n->acceptVisitor(this);
+            mTailFlags.pop_back();
+        }
+
+        if (all_of(mTailFlags.begin(), mTailFlags.end(), [](bool b){ return b;})) {
+            emit(ByteCode_Tail());
         }
 
         emit(ByteCode_Call((int)node->actuals.size()));
@@ -126,6 +151,7 @@ private:
 private:
     SScriptFunctionProtoPtr mProto;
     vector<SScriptFunctionProtoPtr> *mProtos;
+    vector<bool> mTailFlags;
 };
 
 void compileToByteCode(

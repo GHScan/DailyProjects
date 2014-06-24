@@ -68,8 +68,6 @@ void SObjectManager::mark(SValue *v) {
 }
 
 void SObjectManager::performFullGC() {
-    // printf("before GC: workingHeap:%d, externalObj=%d\n", mFreeOfWorkingHeap, mExternalObjCount);
-
     mFreeHeap.resize(max((int)mFreeHeap.size(), mFreeOfWorkingHeap * 2));
     ASSERT(mFreeOfFreeHeap == 0);
 
@@ -172,6 +170,4 @@ void SObjectManager::performFullGC() {
     mFreeOfFreeHeap = 0;
 
     mExternalObjThreshold = max(mExternalObjThreshold, mExternalObjCount * 2);
-
-    // printf("after GC: workingHeap:%d, externalObj=%d\n", mFreeOfWorkingHeap, mExternalObjCount);
 }

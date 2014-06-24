@@ -113,6 +113,10 @@ Label_PeekFrame:
                         f.getExternalObject()->staticCast<SCFunction>()->func(objMgr, estack, actualCount);
                         estack->pop(actualCount);
 
+                        if (frame == nullptr) {
+                            goto Label_PeekFrame;
+                        }
+
                     } else {
                         if (frame != nullptr) {
                             frame->pc = pc;

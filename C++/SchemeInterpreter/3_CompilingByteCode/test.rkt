@@ -76,6 +76,7 @@
 (time-it (lambda () (filter even? (map sqr (range 0 100)))))
 (time-it (lambda () (factorial 100 1)))
 (time-it (lambda () (eval '(factorial 100 1))))
-(define random-list (build-list 200 (lambda (i) (random 1000))))
+;(define random-list (build-list 10000 (lambda (i) (random 1000000))))
+(define random-list (build-list-cps 10000 (lambda (i) (random 1000000)) identity))
 (time-it (lambda () (sort random-list <)))
 (time-it (lambda () (sort-cps random-list < identity)))
