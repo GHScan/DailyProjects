@@ -14,13 +14,6 @@ public:
     SEvalStack(const SEvalStack&) = delete;
     SEvalStack& operator = (const SEvalStack&) = delete;
 
-    SValue* alloc() {
-        if (mSize + 1 > mCapacity) growCapacity();
-        ASSERT(mSize + 1 <= mCapacity);
-
-        return mBasePtr + mSize++;
-    }
-
     void push(SValue v) {
         if (mSize + 1 > mCapacity) growCapacity();
         ASSERT(mSize + 1 <= mCapacity);

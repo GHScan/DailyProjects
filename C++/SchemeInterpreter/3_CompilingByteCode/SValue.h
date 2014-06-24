@@ -31,7 +31,6 @@ public:
     int getType() const {
         int tag = get<TAG_MASK>();
 
-        ASSERT(tag != TV_Undefined);
         return tag < TV_Object ? tag : 
             (tag == TV_Object ? 
              getObject()->getType() : 
@@ -164,15 +163,23 @@ public:
         setSymbol(sym);
     }
 
-private:
-    explicit SValue(bool b) {
-        set<TAG_MASK>(TV_Bool);
-        set<INT_MASK>((b ? 1 : 0) << TAG_BIT_COUNT);
+    explicit SValue(SObject *obj) {
+        setObject(obj);
     }
 
+    explicit SValue(SExternalObject *obj) {
+        setExternalObject(obj);
+    }
+
+private:
     SValue(int tag, int value) {
         set<TAG_MASK>(tag);
         set<POINTER_MASK>(value << TAG_BIT_COUNT);
+    }
+
+    explicit SValue(bool b) {
+        set<TAG_MASK>(TV_Bool);
+        set<INT_MASK>((b ? 1 : 0) << TAG_BIT_COUNT);
     }
 
 public:

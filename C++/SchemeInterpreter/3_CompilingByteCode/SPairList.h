@@ -20,41 +20,51 @@ inline SValue& get<0>(SPair *pair) {
 
 class SPairListBuilder {
 public:
-    SPairListBuilder(SObjectManager *mgr, SValue *r):
-        mMgr(mgr), mLast(r) {
-        *mLast = SValue::EMPTY;
+    SPairListBuilder(SObjectManager *mgr):
+        mMgr(mgr), mList(SValue::EMPTY), mLastPair(nullptr) {
     }
 
-    SValue* alloc() {
-        auto newPair = mMgr->createPair(mLast, SValue::EMPTY, SValue::EMPTY);
-        mLast = &newPair->cdr;
-        return &newPair->car;
+    SValue getList() {
+        return mList.value;
     }
 
-    void push(SValue v) {
-        auto newPair = mMgr->createPair(mLast, v, SValue::EMPTY);
-        mLast = &newPair->cdr;
+    SPairListBuilder& push(SValue v) {
+        auto newPair = mMgr->createPair(ScopedValue<SValue>(v));
+        if (mList.value == SValue::EMPTY) {
+            mList.value.setObject(newPair);
+            mLastPair.value = newPair;
+        } else {
+            mLastPair.value->staticCast<SPair>()->cdr.setObject(newPair);
+            mLastPair.value = newPair;
+        }
+        return *this;
     }
 
     void concat(SValue v) {
-        *mLast = v;
-        mLast = nullptr;
+        if (mList.value == SValue::EMPTY) mList.value = v;
+        else {
+            mLastPair.value->staticCast<SPair>()->cdr = v;
+        }
     }
+
+    static void* operator new (size_t) = delete;
+    static void operator delete (void*) = delete;
 
 private:
     SObjectManager *mMgr;
-    SValue *mLast;
+    ScopedValue<SValue> mList;
+    ScopedValue<SObject*> mLastPair;
 };
 
 class SPairListAccessor {
 public:
     class Iterator: public iterator<forward_iterator_tag, SValue> {
     public:
-        Iterator(): mPair(nullptr) {
+        Iterator(): mPair(SValue::EMPTY) {
         }
 
         Iterator& operator ++ () {
-            mPair = mPair->cdr == SValue::EMPTY ? nullptr : mPair->cdr.getObject()->staticCast<SPair>();
+            mPair.value = getPair()->cdr;
             return *this;
         }
 
@@ -65,49 +75,52 @@ public:
         }
 
         SValue& operator * () {
-            return mPair->car;
+            return getPair()->car;
         }
 
         bool operator == (const Iterator &o) const {
-            return mPair == o.mPair;
+            return mPair.value == o.mPair.value;
         }
         bool operator != (const Iterator &o) const {
             return !(*this == o);
         }
 
         SPair* getPair() {
-            return mPair;
+            return mPair.value.getObject()->staticCast<SPair>();
         }
 
     private:
         friend class SPairListAccessor;
 
-        explicit Iterator(SPair *pair): mPair(pair) {
+        explicit Iterator(SValue pair): mPair(pair) {
         }
     private:
-        SPair *mPair;
+        ScopedValue<SValue> mPair;
     };
 
 public:
-    explicit SPairListAccessor(SPair *first):
+    explicit SPairListAccessor(SValue first):
         mFirst(first) {
     }
 
     template<int n>
     SValue& ref() {
-        return PairHelp::get<n>(mFirst);
+        return PairHelp::get<n>(mFirst.value.getObject()->staticCast<SPair>());
     }
 
     Iterator begin() {
-        return Iterator(mFirst);
+        return Iterator(mFirst.value);
     }
 
     Iterator end() {
         return Iterator();
     }
 
+    static void* operator new (size_t) = delete;
+    static void operator delete (void*) = delete;
+
 private:
-    SPair *mFirst;
+    ScopedValue<SValue> mFirst;
 };
 
 #endif

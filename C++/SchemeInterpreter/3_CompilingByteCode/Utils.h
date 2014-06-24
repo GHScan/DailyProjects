@@ -83,4 +83,6 @@ inline T signBit(T v) {
     return v & (T(1) << (sizeof(T) * 8 - 1));
 }
 
+#include "ScopedValue.h"
+
 #endif

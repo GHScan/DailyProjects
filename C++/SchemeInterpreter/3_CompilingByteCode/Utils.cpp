@@ -11,10 +11,9 @@ string format(const char *fmt, ...) {
     while (vsnprintf((char*)s_buffer.c_str(), s_buffer.size(), fmt, args) >= (int)s_buffer.size()) {
         s_buffer.resize(s_buffer.size() * 3 / 2);
     }
-    s_buffer.resize(strlen(s_buffer.c_str()));
 
     va_end(args);
-    return s_buffer;
+    return string(s_buffer.c_str(), strlen(s_buffer.c_str()));
 }
 
 string escapeString(const string &s, const char *specialChars) {

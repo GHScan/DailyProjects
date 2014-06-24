@@ -14,14 +14,15 @@ static void setupFrame(
     auto frame = fstack->allocFrame();
     frame->func = estack->top(-actualCount - 1).getObject()->staticCast<SScriptFunction>();
     auto proto = frame->func->proto;
-    {
-        SValue v;
-        frame->localEnv = objMgr->createEnv(&v, frame->func->env, (int)proto->locals.size());
-    }
+    int localCount = (int)proto->locals.size();
+    frame->localEnv = objMgr->createEnv(ScopedValue<SObject*>(frame->func->env), localCount);
 
     ASSERT(actualCount == proto->formalCount && "Argument count mistmatch");
     for (int i = 0; i < actualCount; ++i) {
         frame->localEnv->setLocal(i, estack->top(-actualCount + i));
+    }
+    for (int i = actualCount; i < localCount; ++i) {
+        frame->localEnv->setLocal(i, SValue());
     }
 
     estack->pop(actualCount + 1);
@@ -82,7 +83,10 @@ Label_PeekFrame:
                     pc += sizeof(ByteCode_StoreFree);
                     break;
                 case ByteCode_LoadLambda::CODE:
-                    objMgr->createScriptFunction(estack->alloc(), pProtos[static_cast<ByteCode_LoadLambda*>((void*)&bytes[pc])->protoIndex].get(), frame->localEnv);
+                    estack->push(SValue(
+                                objMgr->createScriptFunction(
+                                    pProtos[static_cast<ByteCode_LoadLambda*>((void*)&bytes[pc])->protoIndex].get(), 
+                                    ScopedValue<SObject*>(frame->localEnv))));
                     pc += sizeof(ByteCode_LoadLambda);
                     break;
                 case ByteCode_Jmp::CODE:

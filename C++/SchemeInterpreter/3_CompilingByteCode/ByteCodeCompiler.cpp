@@ -75,6 +75,8 @@ public:
             ASSERT(node->address.isGlobal());
             emit(ByteCode_StoreGlobal(node->address.getVarIndex()));
         }
+
+        emit(ByteCode_LoadLiteral(0));
     }
 
     virtual void visit(ASTNode_Application *node) {

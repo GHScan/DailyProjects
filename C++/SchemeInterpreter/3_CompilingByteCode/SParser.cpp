@@ -30,52 +30,57 @@ static void tokenize(vector<const char*> &tokens, string &s) {
     }
 }
 
-static void parseBackward(SObjectManager *mgr, SValue *ret, vector<const char *> &tokens) {
+static SValue parseBackward(SObjectManager *mgr, vector<const char *> &tokens) {
     auto token = tokens.back();
     tokens.pop_back();
 
     if (strcmp(token, "(") == 0) {
-        SPairListBuilder builder(mgr, ret);
+        SPairListBuilder builder(mgr);
 
         while (strcmp(tokens.back(), ")")) {
-            parseBackward(mgr, builder.alloc(), tokens);
+            builder.push(parseBackward(mgr, tokens));
         }
         tokens.pop_back();
 
+        return builder.getList();
+
     } else if (strcmp(token, "'") == 0) {
-        SPairListBuilder builder(mgr, ret);
-        mgr->createSymbol(builder.alloc(), "quote");
-        parseBackward(mgr, builder.alloc(), tokens);
+        SPairListBuilder builder(mgr);
+        builder
+            .push(SValue(mgr->createSymbol("quote")))
+            .push(parseBackward(mgr, tokens));
+        return builder.getList();
 
     } else if (re_DOUBLE.FullMatch(token)) {
-        mgr->createDouble(ret, strtod(token, nullptr));
+        return SValue(mgr->createDouble(strtod(token, nullptr)));
 
     } else if (re_INT.FullMatch(token)) {
         long l = strtol(token, nullptr, 10);
 
         if (errno != ERANGE && l >= SValue::_INT_MIN && l <= SValue::_INT_MAX) {
-            mgr->createInt(ret, (int)l);
+            return SValue((int)l);
         } else {
-            mgr->createBigInt(ret, SBigInt::BigInt(token));
+            return SValue(mgr->createBigInt(SBigInt::BigInt(token)));
         }
 
     } else if (re_STRING.FullMatch(token)) {
         string s = token;
-        mgr->createString(ret, unescapeString(s.substr(1, s.size() - 2)).c_str());
+        return SValue(mgr->createString(unescapeString(s.substr(1, s.size() - 2)).c_str()));
 
     } else {
-        mgr->createSymbol(ret, token);
+        return SValue(mgr->createSymbol(token));
     }
 }
 
-void parse(SObjectManager *mgr, SValue *ret, const string &source) {
+SValue parse(SObjectManager *mgr, const string &source) {
     string s(source);
     vector<const char *> tokens;
     tokenize(tokens, s);
     reverse(tokens.begin(), tokens.end());
 
-    SPairListBuilder builder(mgr, ret);
+    SPairListBuilder builder(mgr);
     while (!tokens.empty()) {
-        parseBackward(mgr, builder.alloc(), tokens);
+        builder.push(parseBackward(mgr, tokens));
     }
+    return builder.getList();
 }

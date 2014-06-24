@@ -65,7 +65,12 @@ private:
 
 struct SPair: public SObject {
     static const int TYPE = SVT_Pair;
-    static int estimateAlignedSize(SValue car, SValue cdr) {
+    static int estimateAlignedSize(const ScopedValue<SValue> &car, const ScopedValue<SValue> &cdr) {
+        ASSERT(ALIGNMENT >= alignof(SPair));
+
+        return objectSizeToAlignedSize(sizeof(SPair));
+    }
+    static int estimateAlignedSize(const ScopedValue<SValue> &car) {
         ASSERT(ALIGNMENT >= alignof(SPair));
 
         return objectSizeToAlignedSize(sizeof(SPair));
@@ -83,14 +88,18 @@ struct SPair: public SObject {
 private:
     friend class SObjectManager;
 
-    explicit SPair(SValue _car, SValue _cdr): 
-        SObject(TYPE, estimateAlignedSize(_car, _cdr)), car(_car), cdr(_cdr) {
+    explicit SPair(const ScopedValue<SValue> &_car, const ScopedValue<SValue> &_cdr): 
+        SObject(TYPE, estimateAlignedSize(_car, _cdr)), car(_car.value), cdr(_cdr.value) {
+    }
+
+    explicit SPair(const ScopedValue<SValue> &_car): 
+        SObject(TYPE, estimateAlignedSize(_car)), car(_car.value), cdr(SValue::EMPTY) {
     }
 };
 
 struct SEnv: public SObject {
     static const int TYPE = SVT_Env;
-    static int estimateAlignedSize(SEnv *prevEnv, int localCount) {
+    static int estimateAlignedSize(const ScopedValue<SObject*> &prevEnv, int localCount) {
         ASSERT(ALIGNMENT >= alignof(SEnv));
 
         return objectSizeToAlignedSize(sizeof(SEnv) + (localCount - 1) * sizeof(SValue));
@@ -123,14 +132,16 @@ struct SEnv: public SObject {
 private:
     friend class SObjectManager;
 
-    explicit SEnv(SEnv *_prevEnv, int _localCount): 
-        SObject(TYPE, estimateAlignedSize(_prevEnv, localCount)), prevEnv(_prevEnv), localCount(_localCount) {
+    explicit SEnv(const ScopedValue<SObject*> &_prevEnv, int _localCount): 
+        SObject(TYPE, estimateAlignedSize(_prevEnv, _localCount)), 
+        prevEnv(_prevEnv.value ? _prevEnv.value->staticCast<SEnv>() : nullptr), 
+        localCount(_localCount) {
     }
 };
 
 struct SScriptFunction: public SObject {
     static const int TYPE = SVT_ScriptFunction;
-    static int estimateAlignedSize(SScriptFunctionProto *proto, SEnv *env) {
+    static int estimateAlignedSize(SScriptFunctionProto *proto, const ScopedValue<SObject*> &env) {
         ASSERT(ALIGNMENT >= alignof(SScriptFunction));
 
         return objectSizeToAlignedSize(sizeof(SScriptFunction) + ((int)proto->freeAddresses.size() - 1) * sizeof(freeVars[0]));
@@ -172,11 +183,11 @@ private:
             int envIndex = address.getEnvIndex();
             int index = address.getVarIndex();
 
-            SEnv *env = env;
-            for (int i = 1; i < envIndex; ++i) env = env->prevEnv;
-            ASSERT(index >= 0 && index < env->localCount);
+            SEnv *curEnv = env;
+            for (int i = 1; i < envIndex; ++i) curEnv = curEnv->prevEnv;
+            ASSERT(index >= 0 && index < curEnv->localCount);
 
-            freeVars[i] = &env->locals[index];
+            freeVars[i++] = &curEnv->locals[index];
         }
 
         freeVarsReady = true;
@@ -184,8 +195,10 @@ private:
 
     friend class SObjectManager;
 
-    explicit SScriptFunction(SScriptFunctionProto *_proto, SEnv *_env): 
-        SObject(TYPE, estimateAlignedSize(_proto, _env)), proto(_proto), env(_env), freeVarsReady(false) {
+    explicit SScriptFunction(SScriptFunctionProto *_proto, const ScopedValue<SObject*> &_env): 
+        SObject(TYPE, estimateAlignedSize(_proto, _env)), 
+        proto(_proto), 
+        env(_env.value ? _env.value->staticCast<SEnv>() : nullptr), freeVarsReady(false) {
     }
 };
 

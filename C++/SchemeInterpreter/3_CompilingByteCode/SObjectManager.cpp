@@ -41,6 +41,7 @@ void SObjectManager::mark(SExternalObject *obj) {
 
 void SObjectManager::mark(SValue *v) {
     switch (v->getType()) {
+        case SVT_Undefined:
         case SVT_Reserved:
         case SVT_Bool: 
         case SVT_Int:
@@ -67,10 +68,18 @@ void SObjectManager::mark(SValue *v) {
 }
 
 void SObjectManager::performFullGC() {
+    // printf("before GC: workingHeap:%d, externalObj=%d\n", mFreeOfWorkingHeap, mExternalObjCount);
+
     mFreeHeap.resize(max((int)mFreeHeap.size(), mFreeOfWorkingHeap * 2));
     ASSERT(mFreeOfFreeHeap == 0);
 
-    mGCRootCollector(this);
+    for (auto p = ScopedValue<SValue>::getFirst(); p != nullptr; p = p->getNext()) mark(&p->value);
+    for (auto p = ScopedValue<SObject*>::getFirst(); p != nullptr; p = p->getNext()) p->value = getForwardedObject(p->value);
+    for (auto p = ScopedValue<SExternalObject*>::getFirst(); p != nullptr; p = p->getNext()) mark(p->value);
+
+    if (mGCRootCollector != nullptr) {
+        mGCRootCollector(this);
+    }
 
     int scannedFree = 0;
     while (scannedFree < mFreeOfFreeHeap || !mMarkedExternalObjs.empty()) {
@@ -163,4 +172,6 @@ void SObjectManager::performFullGC() {
     mFreeOfFreeHeap = 0;
 
     mExternalObjThreshold = max(mExternalObjThreshold, mExternalObjCount * 2);
+
+    // printf("after GC: workingHeap:%d, externalObj=%d\n", mFreeOfWorkingHeap, mExternalObjCount);
 }

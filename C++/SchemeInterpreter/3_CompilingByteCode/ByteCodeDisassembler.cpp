@@ -43,7 +43,7 @@ void disassembleByteCode(
 
     const uint8_t *bytes = &proto->bytes[0];
     for (int i = 0; i < (int)proto->bytes.size();) {
-        writeTab(so, indent + 1); so << format("%3d ", i);
+        writeTab(so, indent + 1); so << format("%-3d ", i);
 
         switch (bytes[i]) {
             case ByteCode_LoadLiteral::CODE:
@@ -82,11 +82,12 @@ void disassembleByteCode(
                 i += sizeof(ByteCode_StoreFree);
                 break;
             case ByteCode_LoadLambda::CODE:
-                so << "loadLambda ";
+                so << "loadLambda:{\n";
                 {
                     auto subProto = protos[static_cast<const ByteCode_LoadLambda*>((void*)&bytes[i])->protoIndex].get();
-                    disassembleByteCode(so, subProto, gSymTable, protos, literals, indent + 1);
+                    disassembleByteCode(so, subProto, gSymTable, protos, literals, indent + 2);
                 }
+                writeTab(so, indent + 2); so << '}';
                 i += sizeof(ByteCode_LoadLambda);
                 break;
             case ByteCode_Jmp::CODE:

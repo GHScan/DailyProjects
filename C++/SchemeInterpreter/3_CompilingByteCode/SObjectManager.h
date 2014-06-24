@@ -13,61 +13,53 @@ public:
     SObjectManager(const SObjectManager&) = delete;
     SObjectManager& operator = (const SObjectManager&) = delete;
 
-    bool createBool(SValue *ret, bool b) {
-        *ret = b ? SValue::TRUE : SValue::FALSE;
-        return b;
-    }
-
-    int createInt(SValue *ret, int i) {
-        ret->setInt(i);
-        return i;
-    }
-
-    SSymbol* createSymbol(SValue *ret, const char *s) {
+    SSymbol* createSymbol(const char *s) {
         auto sym = mSymbolMgr->getSymbol(s);
-        ret->setSymbol(sym);
         return sym;
     }
 
-    SDouble* createDouble(SValue *ret, double d) {
-        return createObject<SDouble>(ret, d);
+    SDouble* createDouble(double d) {
+        return createObject<SDouble>(d);
     }
 
-    SString* createString(SValue *ret, const char *s) {
-        return createObject<SString>(ret, s);
+    SString* createString(const char *s) {
+        return createObject<SString>(s);
     }
 
-    SPair* createPair(SValue *ret, SValue car, SValue cdr) {
-        return createObject<SPair>(ret, car, cdr);
+    SPair* createPair(const ScopedValue<SValue> &car, const ScopedValue<SValue> &cdr) {
+        return createObject<SPair>(car, cdr);
     }
 
-    SEnv* createEnv(SValue *ret, SEnv *prevEnv, int localCount) {
-        return createObject<SEnv>(ret, prevEnv, localCount);
+    SPair* createPair(const ScopedValue<SValue> &car) {
+        return createObject<SPair>(car);
     }
 
-    SScriptFunction* createScriptFunction(SValue *ret, SScriptFunctionProto *proto, SEnv *env) {
-        return createObject<SScriptFunction>(ret, proto, env);
+    SEnv* createEnv(const ScopedValue<SObject*> &prevEnv, int localCount) {
+        return createObject<SEnv>(prevEnv, localCount);
     }
 
-    SCFunction* createCFunction(SValue *ret, CFunction f) {
-        return createExternalObject<SCFunction>(ret, f);
+    SScriptFunction* createScriptFunction(SScriptFunctionProto *proto, const ScopedValue<SObject*> &env) {
+        return createObject<SScriptFunction>(proto, env);
     }
 
-    SBigInt* createBigInt(SValue *ret, const SBigInt::BigInt &n) {
-        return createExternalObject<SBigInt>(ret, n);
+    SCFunction* createCFunction(CFunction f) {
+        return createExternalObject<SCFunction>(f);
+    }
+
+    SBigInt* createBigInt(const SBigInt::BigInt &n) {
+        return createExternalObject<SBigInt>(n);
     }
 
 private:
     template<typename DerivedT, typename ...ArgT>
-    DerivedT* createExternalObject(SValue *ret, ArgT&& ...args) {
+    DerivedT* createExternalObject(ArgT&& ...args) {
         if (mExternalObjCount >= mExternalObjThreshold) {
             performFullGC();
-            return createExternalObject<DerivedT>(ret, forward<ArgT>(args)...);
+            return createExternalObject<DerivedT>(forward<ArgT>(args)...);
         }
         ++mExternalObjCount;
 
         auto p = new DerivedT(forward<ArgT>(args)...);
-        ret->setExternalObject(p);
 
         p->next = mFirstExternalObj;
         mFirstExternalObj = p;
@@ -76,17 +68,16 @@ private:
     }
 
     template<typename DerivedT, typename ...ArgT>
-    DerivedT* createObject(SValue *ret, ArgT&& ...args) {
+    DerivedT* createObject(ArgT&& ...args) {
         int requireBytes = DerivedT::estimateAlignedSize(forward<ArgT>(args)...) * SObject::ALIGNMENT;
 
         if (mFreeOfWorkingHeap + requireBytes > (int)mWorkingHeap.size()) {
             performFullGC();
-            return createObject<DerivedT>(ret, forward<ArgT>(args)...);
+            return createObject<DerivedT>(forward<ArgT>(args)...);
         }
 
         DerivedT *p = new (&mWorkingHeap[mFreeOfWorkingHeap]) DerivedT(forward<ArgT>(args)...);
         mFreeOfWorkingHeap += requireBytes;
-        ret->setObject(p);
 
         return p;
     }

@@ -14,7 +14,7 @@ static int getLiteralIndex(vector<SValue> *literals, SValue exp) {
 static void findInternalDefines(SymbolTable *symTable, SValue exp) {
     if (exp.getType() != SPair::TYPE) return;
 
-    SPairListAccessor list(exp.getObject()->staticCast<SPair>());
+    SPairListAccessor list(exp);
     int formID = list.ref<0>().getType() == SVT_Symbol ? list.ref<0>().getSymbol()->getID() : -1;
     switch (formID) {
         case SSymbol::ID_Define:
@@ -40,7 +40,7 @@ ASTNodePtr compileToAST(SymbolTable *symTable, vector<SValue> *literals, SValue 
         return make_shared<ASTNode_Literal>(getLiteralIndex(literals, exp));
     }
 
-    SPairListAccessor list(exp.getObject()->staticCast<SPair>());
+    SPairListAccessor list(exp);
     int formID = list.ref<0>().getType() == SVT_Symbol ? list.ref<0>().getSymbol()->getID() : -1;
     switch (formID) {
         case SSymbol::ID_Quote:
@@ -66,7 +66,7 @@ ASTNodePtr compileToAST(SymbolTable *symTable, vector<SValue> *literals, SValue 
             SymbolTable newSymTable(symTable);
 
             {
-                SPairListAccessor list2(list.ref<1>().getObject()->staticCast<SPair>());
+                SPairListAccessor list2(list.ref<1>());
                 for (auto sym : list2) {
                     newSymTable.define(sym.getSymbol()->c_str());
                 }
