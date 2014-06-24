@@ -1,9 +1,9 @@
 #include "pch.h"
 #include "SObjectManager.h"
 
-SObjectManager::SObjectManager(): 
-    mExternalObjCount(0), mExternalObjThreshold(32), mFirstExternalObj(nullptr), 
-    mWorkingHeap(128, 0), mFreeHeap(128, 0), mFreeOfWorkingHeap(0), mFreeOfFreeHeap(0),
+SObjectManager::SObjectManager(int initObjHeapSize, int initExternalObjThreshold): 
+    mExternalObjCount(0), mExternalObjThreshold(initExternalObjThreshold), mFirstExternalObj(nullptr), 
+    mWorkingHeap(initObjHeapSize, 0), mFreeHeap(initObjHeapSize, 0), mFreeOfWorkingHeap(0), mFreeOfFreeHeap(0),
     mSymbolMgr(nullptr) {
     mSymbolMgr = new SSymbolManager();
 }
@@ -14,10 +14,10 @@ SObjectManager::~SObjectManager() {
     performFullGC();
 }
 
-SObject* SObjectManager::mark(SObject *obj) {
+SObject* SObjectManager::getForwardedObject(SObject *obj) {
     if (obj == nullptr) return nullptr;
-    if (obj->isRedirected()) {
-        return static_cast<SObject*>(obj->getRedirectedPtr());
+    if (obj->isForwarded()) {
+        return static_cast<SObject*>(obj->getForwardedPtr());
     }
 
     int bytes = obj->getAlignedSize() * SObject::ALIGNMENT;
@@ -26,7 +26,7 @@ SObject* SObjectManager::mark(SObject *obj) {
 
     void *newAddress = &mFreeHeap[mFreeOfFreeHeap];
     memcpy(newAddress, obj, bytes);
-    obj->redirect(newAddress);
+    obj->forward(newAddress);
 
     mFreeOfFreeHeap += bytes;
 
@@ -39,8 +39,8 @@ void SObjectManager::mark(SExternalObject *obj) {
     }
 }
 
-static void updateField(SObjectManager *mgr, SValue *field) {
-    switch (field->getType()) {
+void SObjectManager::mark(SValue *v) {
+    switch (v->getType()) {
         case SVT_Reserved:
         case SVT_Bool: 
         case SVT_Int:
@@ -52,12 +52,12 @@ static void updateField(SObjectManager *mgr, SValue *field) {
         case SPair::TYPE:
         case SEnv::TYPE:
         case SScriptFunction::TYPE:
-            field->setObject(mgr->mark(field->getObject()));
+            v->setObject(getForwardedObject(v->getObject()));
             break;
 
         case SCFunction::TYPE:
         case SBigInt::TYPE:
-            mgr->mark(field->getExternalObject());
+            mark(v->getExternalObject());
             break;
 
         default:
@@ -100,21 +100,26 @@ void SObjectManager::performFullGC() {
                     break;
                 case SPair::TYPE: {
                     SPair *pair = obj->staticCast<SPair>();
-                    updateField(this, &pair->car);
-                    updateField(this, &pair->cdr);
+                    mark(&pair->car);
+                    mark(&pair->cdr);
                   }
                     break;
                 case SEnv::TYPE: {
                     SEnv *env = obj->staticCast<SEnv>();
-                    env->prevEnv = mark(env->prevEnv)->staticCast<SEnv>();
+                    if (env->prevEnv != nullptr) {
+                        mark(&env->prevEnv);
+                    }
                     for (int i = 0; i < env->localCount; ++i) {
-                        updateField(this, &env->locals[i]);
+                        mark(&env->locals[i]);
                     }
                  }
                     break;
                 case SScriptFunction::TYPE: {
                     SScriptFunction *func = obj->staticCast<SScriptFunction>();
-                    func->env = mark(func->env)->staticCast<SEnv>();
+                    if (func->env != nullptr) {
+                        mark(&func->env);
+                    }
+                    func->freeVarsReady = false;
                     }
                     break;
                 default:

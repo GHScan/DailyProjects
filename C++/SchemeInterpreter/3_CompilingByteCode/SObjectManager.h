@@ -7,7 +7,7 @@
 
 class SObjectManager {
 public:
-    SObjectManager();
+    SObjectManager(int initObjHeapSize, int initExternalObjThreshold);
     ~SObjectManager();
 
     SObjectManager(const SObjectManager&) = delete;
@@ -96,10 +96,21 @@ public:
         mGCRootCollector = f;
     }
 
-    SObject* mark(SObject *obj);
+    void mark(SValue *v);
+
     void mark(SExternalObject *obj);
 
+    template<typename DerivedT>
+    void mark(DerivedT **obj, typename enable_if<is_base_of<SObject, DerivedT>::value, void>::type* =0) {
+        if (*obj) {
+            *obj = getForwardedObject(static_cast<SObject*>(*obj))->staticCast<DerivedT>();
+        }
+    }
+
     void performFullGC();
+
+private:
+    SObject* getForwardedObject(SObject *obj);
 
 private:
     int mExternalObjCount;

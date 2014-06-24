@@ -38,14 +38,14 @@ static void parseBackward(SObjectManager *mgr, SValue *ret, vector<const char *>
         SPairListBuilder builder(mgr, ret);
 
         while (strcmp(tokens.back(), ")")) {
-            parseBackward(mgr, builder.push(), tokens);
+            parseBackward(mgr, builder.alloc(), tokens);
         }
         tokens.pop_back();
 
     } else if (strcmp(token, "'") == 0) {
         SPairListBuilder builder(mgr, ret);
-        mgr->createSymbol(builder.push(), "quote");
-        parseBackward(mgr, builder.push(), tokens);
+        mgr->createSymbol(builder.alloc(), "quote");
+        parseBackward(mgr, builder.alloc(), tokens);
 
     } else if (re_DOUBLE.FullMatch(token)) {
         mgr->createDouble(ret, strtod(token, nullptr));
@@ -68,14 +68,14 @@ static void parseBackward(SObjectManager *mgr, SValue *ret, vector<const char *>
     }
 }
 
-void parse(SObjectManager *mgr, SValue *ret, const string &_s) {
-    string s(_s);
+void parse(SObjectManager *mgr, SValue *ret, const string &source) {
+    string s(source);
     vector<const char *> tokens;
     tokenize(tokens, s);
     reverse(tokens.begin(), tokens.end());
 
     SPairListBuilder builder(mgr, ret);
     while (!tokens.empty()) {
-        parseBackward(mgr, builder.push(), tokens);
+        parseBackward(mgr, builder.alloc(), tokens);
     }
 }

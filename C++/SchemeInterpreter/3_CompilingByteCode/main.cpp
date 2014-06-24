@@ -9,6 +9,8 @@
 #include "STypes.h"
 #include "SymbolTable.h"
 #include "AST.h"
+#include "ByteCodeDefinition.h"
+#include "SNumeric.h"
 
 int main() {
 }

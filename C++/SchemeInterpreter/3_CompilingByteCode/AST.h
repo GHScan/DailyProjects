@@ -7,7 +7,6 @@ struct ASTNode_Literal;
 struct ASTNode_If;
 struct ASTNode_Lambda;
 struct ASTNode_Begin;
-struct ASTNode_Define;
 struct ASTNode_GetVar;
 struct ASTNode_SetVar;
 struct ASTNode_Application;
@@ -18,7 +17,6 @@ struct IASTVisitor {
     virtual void visit(ASTNode_If *node) = 0;
     virtual void visit(ASTNode_Lambda *node) = 0;
     virtual void visit(ASTNode_Begin *node) = 0;
-    virtual void visit(ASTNode_Define *node) = 0;
     virtual void visit(ASTNode_GetVar *node) = 0;
     virtual void visit(ASTNode_SetVar *node) = 0;
     virtual void visit(ASTNode_Application *node) = 0;
@@ -52,15 +50,16 @@ struct ASTNode_If: public IASTNode {
 };
 
 struct ASTNode_Lambda: public IASTNode {
-    vector<string> formals;
+    int formalCount;
+    vector<string> locals;
     ASTNodePtr body;
 
-    ASTNode_Lambda(const vector<string> &_formals, ASTNodePtr _body):
-        formals(_formals), body(_body) {
+    ASTNode_Lambda(int _formalCount, const vector<string> &_locals, ASTNodePtr _body):
+        formalCount(_formalCount), locals(_locals), body(_body) {
     }
 
-    ASTNode_Lambda(vector<string> &&_formals, ASTNodePtr _body):
-        formals(_formals), body(_body) {
+    ASTNode_Lambda(int _formalCount, vector<string> &&_locals, ASTNodePtr _body):
+        formalCount(_formalCount), locals(_locals), body(_body) {
     }
 
     virtual void acceptVisitor(IASTVisitor *v) { v->visit(this); }
@@ -68,17 +67,6 @@ struct ASTNode_Lambda: public IASTNode {
 
 struct ASTNode_Begin: public IASTNode {
     vector<ASTNodePtr> nodes;
-
-    virtual void acceptVisitor(IASTVisitor *v) { v->visit(this); }
-};
-
-struct ASTNode_Define: public IASTNode {
-    string name;
-    ASTNodePtr rightNode;
-
-    ASTNode_Define(const string &_name, ASTNodePtr _right):
-        name(_name), rightNode(_right) {
-    }
 
     virtual void acceptVisitor(IASTVisitor *v) { v->visit(this); }
 };

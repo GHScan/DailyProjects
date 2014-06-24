@@ -17,16 +17,16 @@ public:
         return mAlignedSize;
     }
 
-    bool isRedirected() const {
-        return mRedirected == 1;
+    bool isForwarded() const {
+        return mForwarded == 1;
     }
 
-    void* getRedirectedPtr() {
+    void* getForwardedPtr() {
         return *reinterpret_cast<void**>(&this[1]);
     }
 
-    void redirect(void *p) {
-        mRedirected = 1;
+    void forward(void *p) {
+        mForwarded = 1;
         *reinterpret_cast<void**>(&this[1]) = p;
     }
 
@@ -61,7 +61,7 @@ public:
     }
 
     SObject(int type, int alignedSize):
-        mType(type), mRedirected(0), mAlignedSize(alignedSize) {
+        mType(type), mForwarded(0), mAlignedSize(alignedSize) {
     }
 
     bool equal(const SObject &o) const;
@@ -70,7 +70,7 @@ public:
 
 private:
     uint32_t mType : 5;
-    uint32_t mRedirected : 1;
+    uint32_t mForwarded : 1;
     uint32_t mAlignedSize : 26;
 };
 

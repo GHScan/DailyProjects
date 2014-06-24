@@ -153,7 +153,7 @@ public:
     static SValue VOID;
 
     SValue() {
-        set<TAG_MASK>(TV_Undefined);
+        mPointer = 0;
     }
 
     explicit SValue(int i) {
@@ -175,7 +175,7 @@ private:
         set<POINTER_MASK>(value << TAG_BIT_COUNT);
     }
 
-private:
+public:
     enum TagValue {
         TV_Undefined,
         TV_Reserved,
@@ -187,6 +187,8 @@ private:
     };
 };
 
-typedef function<void(SValue *ret, SValue *arg, SValue *argEnd)> CFunction;
+class SObjectManager;
+class SEvalStack;
+typedef function<void(SObjectManager *mgr, SEvalStack *stack, int actualCount)> CFunction;
 
 #endif

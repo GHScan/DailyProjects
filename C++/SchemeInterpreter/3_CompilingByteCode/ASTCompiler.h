@@ -6,6 +6,6 @@
 
 class SymbolTable;
 
-ASTNodePtr compileToAST(SymbolTable *symTable, vector<SValue> &literals, SValue exp);
+ASTNodePtr compileToAST(SymbolTable *symTable, vector<SValue> *literals, SValue exp);
 
 #endif

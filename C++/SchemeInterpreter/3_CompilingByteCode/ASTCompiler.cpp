@@ -3,20 +3,40 @@
 #include "STypes.h"
 #include "SPairList.h"
 
-static int getLiteralIndex(vector<SValue> &literals, SValue exp) {
-    auto iter = find_if(literals.begin(), literals.end(), [exp](SValue lit){ return lit.equal(exp); });
-    if (iter == literals.end()) {
-        iter = literals.insert(literals.end(), exp);
+static int getLiteralIndex(vector<SValue> *literals, SValue exp) {
+    auto iter = find_if(literals->begin(), literals->end(), [exp](SValue lit){ return lit.equal(exp); });
+    if (iter == literals->end()) {
+        iter = literals->insert(literals->end(), exp);
     }
-    return iter - literals.begin();
+    return iter - literals->begin();
 }
 
-ASTNodePtr compileToAST(SymbolTable *symTable, vector<SValue> &literals, SValue exp) {
+static void findInternalDefines(SymbolTable *symTable, SValue exp) {
+    if (exp.getType() != SPair::TYPE) return;
+
+    SPairListAccessor list(exp.getObject()->staticCast<SPair>());
+    int formID = list.ref<0>().getType() == SVT_Symbol ? list.ref<0>().getSymbol()->getID() : -1;
+    switch (formID) {
+        case SSymbol::ID_Define:
+            symTable->define(list.ref<1>().getSymbol()->c_str());
+            break;
+        case SSymbol::ID_Begin: {
+                for (auto iter = list.begin(), end = list.end(); ++iter != end;) {
+                    findInternalDefines(symTable, *iter);
+                }
+            }
+            break;
+        default:
+            break;
+    }
+}
+
+ASTNodePtr compileToAST(SymbolTable *symTable, vector<SValue> *literals, SValue exp) {
     int type = exp.getType();
     if (type == SVT_Symbol) {
         return make_shared<ASTNode_GetVar>(symTable->lookup(exp.getSymbol()->c_str()));
 
-    } else if (type != SVT_Pair) {
+    } else if (type != SPair::TYPE) {
         return make_shared<ASTNode_Literal>(getLiteralIndex(literals, exp));
     }
 
@@ -42,21 +62,27 @@ ASTNodePtr compileToAST(SymbolTable *symTable, vector<SValue> &literals, SValue 
         }
 
         case SSymbol::ID_Lambda: {
-            vector<string> formals;
+
+            SymbolTable newSymTable(symTable);
+
             {
                 SPairListAccessor list2(list.ref<1>().getObject()->staticCast<SPair>());
                 for (auto sym : list2) {
-                    formals.push_back(sym.getSymbol()->c_str());
+                    newSymTable.define(sym.getSymbol()->c_str());
                 }
             }
+            int formalCount = newSymTable.getSymbolCount();
 
-            SymbolTable newSymbTable(symTable);
-            return make_shared<ASTNode_Lambda>(move(formals), 
-                    compileToAST(&newSymbTable, literals, list.ref<2>()));
+            findInternalDefines(&newSymTable, list.ref<2>());
+
+            ASTNodePtr body = compileToAST(&newSymTable, literals, list.ref<2>());
+
+            return make_shared<ASTNode_Lambda>(formalCount, newSymTable.getSymbols(), body);
          }
 
         case SSymbol::ID_Define: {
-            return make_shared<ASTNode_Define>(list.ref<1>().getSymbol()->c_str(), 
+            return make_shared<ASTNode_SetVar>(
+                    symTable->lookup(list.ref<1>().getSymbol()->c_str()), 
                     compileToAST(symTable, literals, list.ref<2>()));
          }
 

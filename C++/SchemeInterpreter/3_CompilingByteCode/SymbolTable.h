@@ -35,6 +35,14 @@ public:
         return mVarIndex;
     }
 
+    bool operator == (const VarAddress &o) const {
+        return mEnvIndex == o.mEnvIndex && mVarIndex == o.mVarIndex;
+    }
+
+    bool operator != (const VarAddress &o) const {
+        return !(*this == o);
+    }
+
 private:
     VarAddress(int envIndex, int varIndex):
         mEnvIndex(envIndex), mVarIndex(varIndex) {
@@ -84,10 +92,29 @@ public:
         }
     }
 
+    vector<string> getSymbols() const {
+        vector<string> symbols(getSymbolCount());
+        for (auto &kv : mName2Index) {
+            symbols[kv.second] = kv.first;
+        }
+        return symbols;
+    }
+
+    int getSymbolCount() const {
+        return mNextIndex;
+    }
+
+    string getSymbolByIndex(int index) const {
+        for (auto &kv : mName2Index) {
+            if (kv.second == index) return kv.first;
+        }
+        return "@unknown";
+    }
+
 private:
     SymbolTable *mParent;
-    unordered_map<string, int> mName2Index;
     int mNextIndex;
+    unordered_map<string, int> mName2Index;
 };
 
 #endif

@@ -27,6 +27,7 @@ struct SDouble: public SObject {
         return so << number;
     }
 
+    CryptoPP::Integer toBigInt() const;
 private:
     friend class SObjectManager;
 
@@ -137,16 +138,19 @@ struct SScriptFunction: public SObject {
 
     SScriptFunctionProto *proto;
     SEnv *env;
+    bool freeVarsReady;
     SValue *freeVars[1];
 
     SValue getFree(int freeIndex) const {
         ASSERT(freeIndex >= 0 && freeIndex < (int)proto->freeAddresses.size());
+        const_cast<SScriptFunction*>(this)->checkFreeVarsReady();
 
         return *freeVars[freeIndex];
     }
 
     void setFree(int freeIndex, SValue v) {
         ASSERT(freeIndex >= 0 && freeIndex < (int)proto->freeAddresses.size());
+        checkFreeVarsReady();
 
         *freeVars[freeIndex] = v;
     }
@@ -160,13 +164,11 @@ struct SScriptFunction: public SObject {
     }
 
 private:
-    friend class SObjectManager;
-
-    explicit SScriptFunction(SScriptFunctionProto *_proto, SEnv *_env): 
-        SObject(TYPE, estimateAlignedSize(_proto, _env)), proto(_proto), env(_env) {
+    void checkFreeVarsReady() {
+        if (freeVarsReady) return;
         
         int i = 0;
-        for (auto address : _proto->freeAddresses) {
+        for (auto address : proto->freeAddresses) {
             int envIndex = address.getEnvIndex();
             int index = address.getVarIndex();
 
@@ -176,6 +178,14 @@ private:
 
             freeVars[i] = &env->locals[index];
         }
+
+        freeVarsReady = true;
+    }
+
+    friend class SObjectManager;
+
+    explicit SScriptFunction(SScriptFunctionProto *_proto, SEnv *_env): 
+        SObject(TYPE, estimateAlignedSize(_proto, _env)), proto(_proto), env(_env), freeVarsReady(false) {
     }
 };
 
@@ -205,6 +215,7 @@ struct SBigInt: public SExternalObject {
 
     typedef CryptoPP::Integer BigInt;
     typedef CryptoPP::word Word;
+    static const int WORD_BIT_COUNT = sizeof(Word) * 8;
 
     BigInt number;
 
@@ -216,6 +227,7 @@ struct SBigInt: public SExternalObject {
         return so << number;
     }
 
+    double toDouble() const;
 private:
     friend class SObjectManager;
 

@@ -25,10 +25,20 @@ public:
         *mLast = SValue::EMPTY;
     }
 
-    SValue* push() {
+    SValue* alloc() {
         auto newPair = mMgr->createPair(mLast, SValue::EMPTY, SValue::EMPTY);
         mLast = &newPair->cdr;
         return &newPair->car;
+    }
+
+    void push(SValue v) {
+        auto newPair = mMgr->createPair(mLast, v, SValue::EMPTY);
+        mLast = &newPair->cdr;
+    }
+
+    void concat(SValue v) {
+        *mLast = v;
+        mLast = nullptr;
     }
 
 private:
@@ -63,6 +73,10 @@ public:
         }
         bool operator != (const Iterator &o) const {
             return !(*this == o);
+        }
+
+        SPair* getPair() {
+            return mPair;
         }
 
     private:

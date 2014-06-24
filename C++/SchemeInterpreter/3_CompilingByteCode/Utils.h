@@ -72,4 +72,15 @@ inline T roundUp(T v) {
     return (v + ALIGNMENT - 1) / ALIGNMENT * ALIGNMENT;
 }
 
+template<typename IntT>
+inline void checkedAssign(IntT *p, long long v) {
+    ASSERT(v >= numeric_limits<IntT>::min() && v <= numeric_limits<IntT>::max());
+    *p = (IntT)v;
+}
+
+template<typename T>
+inline T signBit(T v) {
+    return v & (T(1) << (sizeof(T) * 8 - 1));
+}
+
 #endif
