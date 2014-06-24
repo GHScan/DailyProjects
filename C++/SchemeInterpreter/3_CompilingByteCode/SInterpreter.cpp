@@ -244,6 +244,7 @@ void SInterpreterImpl::interpret(istream &si) {
         }
 
         mEvalStack->pop();
+        mObjMgr->performFullGC();
     }
     mEvalStack->pop();
 }
