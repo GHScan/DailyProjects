@@ -68,6 +68,9 @@ public:
 private:
     struct Node {
         Node *next;
+#ifndef __x86_64__
+        char padding[4];
+#endif
         Entry entry;
     };
 
@@ -94,7 +97,9 @@ private:
     }
 
     Node* mallocNode(const char *key, int len, const ValueT &v, Node *next) {
-        Node *n = static_cast<Node*>(mAllocator.malloc(sizeof(Node) + len, alignof(Node)));
+        Node *n = static_cast<Node*>(mAllocator.malloc(sizeof(Node) + len, PTR_ALIGNMENT));
+        ASSERT(alignof(Node) <= PTR_ALIGNMENT);
+
         n->next = next;
         new (&n->entry.value) ValueT(v);
         memcpy(n->entry.key, key, len);
