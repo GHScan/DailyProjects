@@ -24,6 +24,14 @@ ifeq ($(build_type),debug)
 link_flags += -INCREMENTAL
 else
 link_flags += -INCREMENTAL:NO -OPT:REF -OPT:ICF -LTCG
+
+ifeq ($(profile_guide_optimization_step),1)
+link_flags+=-LTCG:PGINSTRUMENT
+endif
+ifeq ($(profile_guide_optimization_step),2)
+link_flags+=-LTCG:PGOPTIMIZE
+endif
+
 endif
 
 ifeq ($(build_dll),1)

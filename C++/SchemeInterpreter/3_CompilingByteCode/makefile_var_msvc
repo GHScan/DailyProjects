@@ -1,4 +1,6 @@
 do_profiling=0
+# 0=disable; 1=link PE with profiling info; 2=link optmized PE
+profile_guide_optimization_step=0
 test_coverage=0
 use_cpp0x=1
 build_dll=0
