@@ -16,8 +16,10 @@
 #include <iterator>
 #include <memory>
 #include <algorithm>
+#include <functional>
 using namespace std;
 
+#include "Config.h"
 #include "Utils.h"
 
 #endif

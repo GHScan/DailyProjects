@@ -216,7 +216,7 @@ void SInterpreterImpl::setupBuiltin() {
         stack->top(-1) = SValue(mgr->createDouble(clock() * 1000.0 / CLOCKS_PER_SEC));
     });
     defineBuiltin("random", [](SObjectManager *mgr, SEvalStack *stack, int actualCount){
-        stack->top(-2) = SValue(::rand() % stack->top(-1).getInt());
+        stack->top(-2) = SValue((::rand() * RAND_MAX + ::rand()) % stack->top(-1).getInt());
     });
     defineBuiltin("eval", [this](SObjectManager *mgr, SEvalStack *stack, int actualCount){
         eval();

@@ -41,7 +41,7 @@ struct SString: public SObject {
     static int estimateAlignedSize(const char *str) {
         static_assert(ALIGNMENT >= alignof(SString), "");
 
-        return objectSizeToAlignedSize(sizeof(SString) + strlen(str));
+        return objectSizeToAlignedSize(int(sizeof(SString) + strlen(str)));
     }
 
     char str[1];
@@ -66,12 +66,12 @@ private:
 struct SPair: public SObject {
     static const int TYPE = SVT_Pair;
     static int estimateAlignedSize(const ScopedValue<SValue> &car, const ScopedValue<SValue> &cdr) {
-        ASSERT(ALIGNMENT >= alignof(SPair));
+        static_assert(ALIGNMENT >= alignof(SPair), "");
 
         return objectSizeToAlignedSize(sizeof(SPair));
     }
     static int estimateAlignedSize(const ScopedValue<SValue> &car) {
-        ASSERT(ALIGNMENT >= alignof(SPair));
+        static_assert(ALIGNMENT >= alignof(SPair), "");
 
         return objectSizeToAlignedSize(sizeof(SPair));
     }
@@ -100,7 +100,7 @@ private:
 struct SEnv: public SObject {
     static const int TYPE = SVT_Env;
     static int estimateAlignedSize(const ScopedValue<SObject*> &prevEnv, int localCount) {
-        ASSERT(ALIGNMENT >= alignof(SEnv));
+        static_assert(ALIGNMENT >= alignof(SEnv), "");
 
         return objectSizeToAlignedSize(sizeof(SEnv) + (localCount - 1) * sizeof(SValue));
     }
@@ -142,9 +142,9 @@ private:
 struct SScriptFunction: public SObject {
     static const int TYPE = SVT_ScriptFunction;
     static int estimateAlignedSize(SScriptFunctionProto *proto, const ScopedValue<SObject*> &env) {
-        ASSERT(ALIGNMENT >= alignof(SScriptFunction));
+        static_assert(ALIGNMENT >= alignof(SScriptFunction), "");
 
-        return objectSizeToAlignedSize(sizeof(SScriptFunction) + ((int)proto->freeAddresses.size() - 1) * sizeof(freeVars[0]));
+        return objectSizeToAlignedSize(sizeof(SScriptFunction) + ((int)proto->freeAddresses.size() - 1) * sizeof(SValue*));
     }
 
     SScriptFunctionProto *proto;
@@ -178,7 +178,7 @@ private:
     void checkFreeVarsReady() {
         if (freeVarsReady) return;
         
-        int i = 0;
+        int freeIndex = 0;
         for (auto address : proto->freeAddresses) {
             int envIndex = address.getEnvIndex();
             int index = address.getVarIndex();
@@ -187,7 +187,7 @@ private:
             for (int i = 1; i < envIndex; ++i) curEnv = curEnv->prevEnv;
             ASSERT(index >= 0 && index < curEnv->localCount);
 
-            freeVars[i++] = &curEnv->locals[index];
+            freeVars[freeIndex++] = &curEnv->locals[index];
         }
 
         freeVarsReady = true;

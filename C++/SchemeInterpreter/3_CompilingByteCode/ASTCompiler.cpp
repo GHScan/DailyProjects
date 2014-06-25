@@ -8,7 +8,7 @@ static int getLiteralIndex(vector<SValue> *literals, SValue exp) {
     if (iter == literals->end()) {
         iter = literals->insert(literals->end(), exp);
     }
-    return iter - literals->begin();
+    return int(iter - literals->begin());
 }
 
 static void findInternalDefines(SymbolTable *symTable, SValue exp) {

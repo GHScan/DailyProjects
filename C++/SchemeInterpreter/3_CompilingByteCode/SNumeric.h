@@ -66,7 +66,7 @@ inline SValue performArithmetic(SObjectManager *mgr, SValue a, SValue b) {
                     return SValue(mgr->createDouble(DoubleOp::invoke(a.getInt(), b.getObject()->staticCast<SDouble>()->number)));
                 default:
                     ASSERT(0);
-                    break;
+                    return SValue::FALSE;
             }
           }
             break;
@@ -80,7 +80,7 @@ inline SValue performArithmetic(SObjectManager *mgr, SValue a, SValue b) {
                     return SValue(mgr->createDouble(DoubleOp::invoke(a.getExternalObject()->staticCast<SBigInt>()->toDouble(), b.getObject()->staticCast<SDouble>()->number)));
                 default:
                     ASSERT(0);
-                    break;
+                    return SValue::FALSE;
             }
          }
             break;
@@ -94,13 +94,13 @@ inline SValue performArithmetic(SObjectManager *mgr, SValue a, SValue b) {
                     return SValue(mgr->createDouble(DoubleOp::invoke(a.getObject()->staticCast<SDouble>()->number, b.getObject()->staticCast<SDouble>()->number)));
                 default:
                     ASSERT(0);
-                    break;
+                    return SValue::FALSE;
             }
          }
             break;
         default:
             ASSERT(0);
-            break;
+            return SValue::FALSE;
     }
 }
 
@@ -121,7 +121,7 @@ inline SValue performLogic(SObjectManager *mgr, SValue a, SValue b) {
                 return DoubleOp::invoke(a.getObject()->staticCast<SDouble>()->number, b.getObject()->staticCast<SDouble>()->number) ? SValue::TRUE : SValue::FALSE;
             default:
                 ASSERT(0);
-                break;
+                return SValue::FALSE;
         }
     } else {
         return SValue::FALSE;
@@ -180,7 +180,7 @@ public:
             bool overflow = r < SValue::_INT_MIN || r > SValue::_INT_MAX;
 
             if (overflow) {
-                return SValue(mgr->createBigInt(SBigInt::BigInt(ai) + bi));
+                return SValue(mgr->createBigInt(SBigInt::BigInt(int(ai)) + int(bi)));
             } else {
                 return SValue((int)r);
             }
@@ -197,7 +197,7 @@ public:
             bool overflow = r < SValue::_INT_MIN || r > SValue::_INT_MAX;
 
             if (overflow) {
-                return SValue(mgr->createBigInt(SBigInt::BigInt(ai) + bi));
+                return SValue(mgr->createBigInt(SBigInt::BigInt(int(ai)) + int(bi)));
             } else {
                 return SValue((int)r);
             }
@@ -230,7 +230,7 @@ public:
             bool overflow = r < SValue::_INT_MIN || r > SValue::_INT_MAX;
 
             if (overflow) {
-                return SValue(mgr->createBigInt(SBigInt::BigInt(ai) + bi));
+                return SValue(mgr->createBigInt(SBigInt::BigInt(int(ai)) + int(bi)));
             } else {
                 return SValue((int)r);
             }

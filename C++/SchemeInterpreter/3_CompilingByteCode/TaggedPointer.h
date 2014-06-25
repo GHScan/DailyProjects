@@ -31,11 +31,11 @@ public:
     }
 
     void* getPointer() const {
-        return reinterpret_cast<void*>(get<POINTER_MASK>());
+        return force_cast<void*>(get<POINTER_MASK>());
     }
 
     void setPointer(void *p) {
-        set<POINTER_MASK>((PtrValue)p);
+        set<POINTER_MASK>(force_cast<PtrValue>(p));
     }
 
 protected:

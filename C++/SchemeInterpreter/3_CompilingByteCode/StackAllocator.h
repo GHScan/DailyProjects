@@ -25,7 +25,7 @@ public:
         assert((alignment & (alignment - 1)) == 0);
 
         int alignmentMask = alignment - 1;
-        mCurrPtr += (alignment - ((PtrValue)mCurrPtr & alignmentMask)) & alignmentMask;
+        mCurrPtr += (alignment - (force_cast<PtrValue>(mCurrPtr) & alignmentMask)) & alignmentMask;
 
         if (mCurrChunk->endPtr - mCurrPtr < size) {
             preparingNextChunk(size + alignment);
@@ -35,7 +35,7 @@ public:
         void *p = mCurrPtr;
         mCurrPtr += size;
 
-        assert(((PtrValue)p & alignmentMask) == 0);
+        assert((force_cast<PtrValue>(p) & alignmentMask) == 0);
         return p;
     }
 

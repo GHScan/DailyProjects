@@ -64,6 +64,7 @@ private:
         p->next = mFirstExternalObj;
         mFirstExternalObj = p;
 
+        ASSERT(force_cast<PtrValue>(p) % PTR_ALIGNMENT == 0);
         return p;
     }
 
@@ -79,6 +80,7 @@ private:
         DerivedT *p = new (&mWorkingHeap[mFreeOfWorkingHeap]) DerivedT(forward<ArgT>(args)...);
         mFreeOfWorkingHeap += requireBytes;
 
+        ASSERT(force_cast<PtrValue>(p) % PTR_ALIGNMENT == 0);
         return p;
     }
 

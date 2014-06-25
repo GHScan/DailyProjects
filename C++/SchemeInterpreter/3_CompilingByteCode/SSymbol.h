@@ -41,7 +41,7 @@ public:
     SSymbolManager();
 
     SSymbol* getSymbol(const char *str, int id = SSymbol::ID_Default) {
-        int len = strlen(str);
+        int len = (int)strlen(str);
 
         auto entry = mMap.get(str, len);
         if (entry == nullptr) {

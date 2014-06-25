@@ -1,7 +1,12 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-typedef long PtrValue;
+#ifdef BIT_64
+typedef int64_t PtrValue;
+#else
+typedef int32_t PtrValue;
+#endif
+
 static_assert(sizeof(PtrValue) == sizeof(void*), "PtrValue should be big engough to store a pointer!");
 static const int PTR_ALIGNMENT = 8;
 static const int LOG_PTR_ALIGNMENT = 3;
@@ -15,7 +20,7 @@ public:
     explicit AssertFailedException(const string &what): mWhat(what) {
     }
 
-    const char* what() const noexcept {
+    const char* what() const throw() {
         return mWhat.c_str();
     }
 
@@ -39,7 +44,7 @@ inline uint32_t hashRange(IterT begin, IterT end) {
 
     uint32_t h = hashMerge(0, 0);
     for (; begin != end; ++begin) {
-        h = hashMerge(h, hashf(*begin));
+        h = hashMerge(h, uint32_t(hashf(*begin)));
     }
     return h;
 }
@@ -81,6 +86,30 @@ inline void checkedAssign(IntT *p, long long v) {
 template<typename T>
 inline T signBit(T v) {
     return v & (T(1) << (sizeof(T) * 8 - 1));
+}
+
+template<typename DestT, typename SrcT>
+inline DestT force_cast(SrcT v) {
+    static_assert(sizeof(DestT) == sizeof(SrcT), "");
+
+    union { SrcT src; DestT dest;} o = {v};
+    return o.dest;
+}
+
+template<typename DestT, typename SrcT>
+inline DestT narrowing_cast(SrcT v) {
+    static_assert(sizeof(DestT) < sizeof(SrcT), "");
+
+    union { SrcT src; DestT dest;} o = {v};
+    return o.dest;
+}
+
+template<typename DestT, typename SrcT>
+inline DestT widening_cast(SrcT v) {
+    static_assert(sizeof(DestT) > sizeof(SrcT), "");
+
+    union { SrcT src; DestT dest;} o = {v};
+    return o.dest;
 }
 
 #include "ScopedValue.h"
