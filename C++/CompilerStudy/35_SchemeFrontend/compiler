@@ -1,0 +1,3 @@
+#! /bin/bash
+
+cat $* | racket compiler.rkt | sed -e "s/^'//1"
