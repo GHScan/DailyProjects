@@ -155,10 +155,13 @@
   )
 
 ;------------------------------
+(define load-instructions '(loadk loadvar loadfunc loadclass))
+
+;------------------------------
 (define (optimize-pass-remove-duplicate-pop codes)
   (cond
     [(or (empty? codes) (empty? (cdr codes))) codes]
-    [(and (memq (caar codes) '(loadk loadvar loadfunc)) (eq? (caadr codes) 'pop)) 
+    [(and (memq (caar codes) load-instructions) (eq? (caadr codes) 'pop)) 
      (optimize-pass-remove-duplicate-pop (cddr codes))]
     [else (cons (car codes) (optimize-pass-remove-duplicate-pop (cdr codes)))])
   )
