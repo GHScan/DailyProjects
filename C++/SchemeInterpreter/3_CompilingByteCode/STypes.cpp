@@ -13,7 +13,7 @@ ostream& SPair::_writeToStream(ostream& so) const {
     }
 
     if (pair->cdr != SValue::EMPTY) {
-        so << " * ";
+        so << " . ";
         pair->cdr.writeToStream(so);
     }
 

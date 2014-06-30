@@ -3,13 +3,13 @@
          (define (length)
            (sqrt (sqr-length)))
          (define (sqr-length)
-           (+ (* x x) (* y y) (* z z)))
+           (+ (+ (* x x) (* y y)) (* z z)))
          )
   )
 
 (define (Vec-sqr-length v)
-  (+ (* (field v x) (field v x))
-     (* (field v y) (field v y))
+  (+ (+ (* (field v x) (field v x))
+        (* (field v y) (field v y)))
      (* (field v z) (field v z)))
   )
 
@@ -18,7 +18,7 @@
     (sqrt (sqr-length))
     )
   (define (sqr-length)
-    (+ (* x x) (* y y) (* z z))
+    (+ (+ (* x x) (* y y)) (* z z))
     )
   (lambda (m)
     (cond
@@ -31,8 +31,8 @@
   )
 
 (define (Vec2-sqr-length v)
-  (+ (* (v 'x) (v 'x))
-     (* (v 'y) (v 'y))
+  (+ (+ (* (v 'x) (v 'x))
+        (* (v 'y) (v 'y)))
      (* (v 'z) (v 'z)))
   )
 

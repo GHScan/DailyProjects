@@ -112,9 +112,6 @@ void SObjectManager::performFullGC() {
         }
     }
 
-    uint64_t before = mMemPool.getMemorySize();
-    clock_t start = clock();
-
     SObject **pp = &mFirstObj;
     while (*pp != nullptr) {
         auto p = *pp;
@@ -147,7 +144,5 @@ void SObjectManager::performFullGC() {
         }
     }
 
-    printf("gc: before=%d,after=%d,time=%f\n", before, mMemPool.getMemorySize(), (clock() - start) * 1.0 / CLOCKS_PER_SEC);
-
-    mGCThreshold = max(mMemPool.getMemorySize() * 2, mGCThreshold);
+    mGCThreshold = max(mMemPool.getMemorySize() * 8, mGCThreshold);
 }

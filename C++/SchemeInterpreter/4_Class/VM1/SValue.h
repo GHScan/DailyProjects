@@ -23,6 +23,7 @@ struct SValue {
     static SValue TRUE;
     static SValue FALSE;
     static SValue EMPTY;
+    static SValue VOID;
 
     int getType() const {
         return mType;
@@ -55,7 +56,10 @@ struct SValue {
         return static_cast<const T*>(mObj);
     }
 
-    SValue(): mType(SVT_Reserved) {}
+    SValue() {
+        // inorder to declare a var length array, you can do nothing here!
+        // mType = SVT_Reserved;
+    }
 
     SValue(double number): mNumber(number), mType(SVT_Number) {
     }
@@ -94,20 +98,27 @@ struct SValue {
                 return mStr == o.mStr;
             case SVT_Symbol:
                 return mSymbol == o.mSymbol;
-            default:
+            case SVT_Pair:
+            case SVT_Env:
+            case SVT_Func:
+            case SVT_NativeFunc:
+            case SVT_Class:
                 return mObj == o.mObj ? true : mObj->equal(o.mObj);
+            default:
+                ASSERT(0);
+                return false;
         }
     }
 
     void writeToStream(ostream &so) const {
-        if (*this == EMPTY) {
-            so << "()";
-            return;
-        }
-
         switch (mType) {
             case SVT_Reserved:
-                ASSERT(0);
+                if (*this == EMPTY) {
+                    so << "()";
+                } else if (*this == VOID) {
+                } else {
+                    ASSERT(0);
+                }
                 break;
             case SVT_Bool:
                 so << (mBool ? "true" : "false");
@@ -121,8 +132,15 @@ struct SValue {
             case SVT_Symbol:
                 so << mSymbol->c_str();
                 break;
-            default:
+            case SVT_Pair:
+            case SVT_Env:
+            case SVT_Func:
+            case SVT_NativeFunc:
+            case SVT_Class:
                 mObj->writeToStream(so);
+                break;
+            default:
+                ASSERT(0);
                 break;
         }
     }

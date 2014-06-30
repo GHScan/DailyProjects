@@ -3,13 +3,6 @@
     r
     (factorial (- n 1) (* r n)))
   )
-(factorial 10 1)
-
-(define (factorial n r)
-  (if (= 1 n)
-    r
-    (factorial (- n 1) (* r n)))
-  )
 
 (define (range first limit)
   (if (= first limit)

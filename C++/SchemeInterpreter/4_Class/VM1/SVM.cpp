@@ -7,11 +7,12 @@
 #include "SExpression.h"
 #include "Atom.h"
 #include "SAssembler.h"
+#include "SDisassembler.h"
 #include "SInterpreter.h"
 
 static void setupConstants(SExpression e, vector<SValue> &constants, SObjectManager *mgr) {
     for (auto n = e.getNode()->ref(1).getNode(); n != nullptr; n = n->next) {
-        constants.push_back(SValue());
+        constants.push_back(SValue::EMPTY);
 
         auto v = n->value.getNode()->ref(1);
         if (auto p = v.getInt()) {
@@ -35,7 +36,7 @@ static void setupGlobals(SExpression e, vector<SValue> &globals, SObjectManager 
         names.push_back(n->value.getNode()->ref(1).getSymbol());
     }
 
-    globals.resize(names.size());
+    globals.resize(names.size(), SValue::EMPTY);
 
     pair<const char*, SValue> builtinVars[] = {
         {"true", SValue::TRUE},
@@ -57,11 +58,11 @@ static void setupGlobals(SExpression e, vector<SValue> &globals, SObjectManager 
         {"/", [](SObjectManager *mgr, SValue *ret){ mgr->createNumber(ret, ret[1].getNumber() / ret[2].getNumber()); }},
         {"quotient", [](SObjectManager *mgr, SValue *ret){ mgr->createNumber(ret, floor(ret[1].getNumber() / ret[2].getNumber())); }},
         {"remainder", [](SObjectManager *mgr, SValue *ret){ mgr->createNumber(ret, fmod(ret[1].getNumber(), ret[2].getNumber())); }},
-        {"=", [](SObjectManager *mgr, SValue *ret){ mgr->createNumber(ret, ret[1].getNumber() == ret[2].getNumber()); }},
-        {"<", [](SObjectManager *mgr, SValue *ret){ mgr->createNumber(ret, ret[1].getNumber() < ret[2].getNumber()); }},
-        {"<=", [](SObjectManager *mgr, SValue *ret){ mgr->createNumber(ret, ret[1].getNumber() <= ret[2].getNumber()); }},
-        {">", [](SObjectManager *mgr, SValue *ret){ mgr->createNumber(ret, ret[1].getNumber() > ret[2].getNumber()); }},
-        {">=", [](SObjectManager *mgr, SValue *ret){ mgr->createNumber(ret, ret[1].getNumber() >= ret[2].getNumber()); }},
+        {"=", [](SObjectManager *mgr, SValue *ret){ mgr->createBool(ret, ret[1].getNumber() == ret[2].getNumber()); }},
+        {"<", [](SObjectManager *mgr, SValue *ret){ mgr->createBool(ret, ret[1].getNumber() < ret[2].getNumber()); }},
+        {"<=", [](SObjectManager *mgr, SValue *ret){ mgr->createBool(ret, ret[1].getNumber() <= ret[2].getNumber()); }},
+        {">", [](SObjectManager *mgr, SValue *ret){ mgr->createBool(ret, ret[1].getNumber() > ret[2].getNumber()); }},
+        {">=", [](SObjectManager *mgr, SValue *ret){ mgr->createBool(ret, ret[1].getNumber() >= ret[2].getNumber()); }},
         {"sqr", [](SObjectManager *mgr, SValue *ret){ mgr->createNumber(ret, ret[1].getNumber() * ret[1].getNumber()); }},
         {"sqrt", [](SObjectManager *mgr, SValue *ret){ mgr->createNumber(ret, ::sqrt(ret[1].getNumber())); }},
         {"identity", [](SObjectManager *mgr, SValue *ret){ ret[0] = ret[1]; }},
@@ -103,6 +104,7 @@ static void setupGlobals(SExpression e, vector<SValue> &globals, SObjectManager 
         {"pretty-print", [](SObjectManager *mgr, SValue *ret){
             ret[1].writeToStream(cout);
             cout << endl;
+            ret[0] = SValue::VOID;
         }},
         {"current-inexact-milliseconds", [](SObjectManager *mgr, SValue *ret){
             *ret = SValue(clock() * 1000.0 / CLOCKS_PER_SEC);
@@ -119,13 +121,19 @@ static void setupGlobals(SExpression e, vector<SValue> &globals, SObjectManager 
     }
 }
 
-static void setupFuncs(SExpression e, vector<SFuncProto*> &protos, SAssembler *assembler, StackAllocator *alloc) {
+static void setupFuncs(SExpression e, vector<SFuncProto*> &protos, SAssembler *assembler, bool disasm, StackAllocator *alloc) {
     vector<uint8_t> codes;
 
     for (auto f = e.getNode()->ref(1).getNode(); f != nullptr; f = f->next) {
         codes.clear();
 
         assembler->assemble(codes, f->value.getNode()->ref(1));
+
+        if (disasm) {
+            cout << format("func %d:\n", (int)protos.size());
+            SDisassembler::disassemble(cout, 1, &codes[0], (int)codes.size());
+            cout << endl;
+        }
 
         auto fproto = alloc->malloc<SFuncProto>();
 
@@ -146,16 +154,16 @@ static void setupClasses(SExpression e, vector<SClassProto*> &protos, vector<SFu
         fields.clear();
         methods.clear();
 
-        auto content = c->ref(1).getNode();
+        auto content = c->value.getNode()->ref(1).getNode();
         for (auto field = content->ref(0).getNode()->ref(1).getNode(); field != nullptr; field = field->next) {
-            fields.push_back(SClassProto::FieldInfo{field->ref(1).getSymbol()});
+            fields.push_back(SClassProto::FieldInfo{field->value.getNode()->ref(1).getSymbol()});
         }
         for (auto methodName = content->ref(1).getNode()->ref(1).getNode(), methodIndex = content->ref(2).getNode()->ref(1).getNode();
                 methodName != nullptr;
                 methodName = methodName->next, methodIndex = methodIndex->next) {
             methods.push_back(SClassProto::MethodInfo{
-                    methodName->value.getSymbol(), 
-                    fprotos[atoi(methodIndex->value.getInt()->c_str())],
+                    methodName->value.getNode()->ref(1).getSymbol(), 
+                    fprotos[atoi(methodIndex->value.getNode()->ref(1).getInt()->c_str())],
             });
         }
 
@@ -179,16 +187,16 @@ static void setupClasses(SExpression e, vector<SClassProto*> &protos, vector<SFu
     }
 }
 
-extern SExpression parseFile(const char *fname, StackAllocator *allocator);
+extern SExpression parseFile(FILE *file, StackAllocator *allocator);
 
-SVM::SVM(const char *fname): 
+SVM::SVM(FILE *file, bool disasm, int initGCThreshold): 
     mAssembler(nullptr), mObjMgr(nullptr), mProtoAlloc(nullptr), mMainFuncProto(nullptr) {
 
     new AtomPool;
 
     mAssembler = new SAssembler(mConstants);
 
-    mObjMgr = new SObjectManager(32);
+    mObjMgr = new SObjectManager(initGCThreshold);
     mObjMgr->installRootCollector([this](SObjectManager *mgr){
         for (auto v : mEvalStack) mgr->mark(v);
         for (auto v : mFrameStack) {
@@ -202,11 +210,11 @@ SVM::SVM(const char *fname):
     mProtoAlloc = new StackAllocator();
 
     StackAllocator parserAlloc;
-    auto n = parseFile(fname, &parserAlloc).getNode();
+    auto n = parseFile(file, &parserAlloc).getNode();
 
     setupConstants(n->ref(1), mConstants, mObjMgr);
     setupGlobals(n->ref(2), mGlobals, mObjMgr);
-    setupFuncs(n->ref(4), mFuncProtos, mAssembler, mProtoAlloc);
+    setupFuncs(n->ref(4), mFuncProtos, mAssembler, disasm, mProtoAlloc);
     setupClasses(n->ref(3), mClassProtos, mFuncProtos, mProtoAlloc);
 
     mMainFuncProto = mFuncProtos[atoi(n->ref(0).getNode()->ref(1).getInt()->c_str())];
@@ -225,7 +233,7 @@ SVM::~SVM() {
 }
 
 void SVM::run() {
-    mEvalStack.push_back(SValue());
+    mEvalStack.push_back(SValue::EMPTY);
     mObjMgr->createObject<SFunc>(&mEvalStack.back(), nullptr, mMainFuncProto);
 
     SInterpreter::call(0, mEvalStack, mFrameStack, mObjMgr, mConstants, mGlobals, mFuncProtos, mClassProtos);

@@ -14,7 +14,7 @@ private:
     const vector<SValue> &mConstants;
     vector<pair<int, int>> mFrees;
     vector<pair<Atom*, int>> mLabels;
-    vector<pair<Atom*, uint16_t*>> mLabelRefs;
+    vector<pair<Atom*, int>> mLabelRefs;
 };
 
 #endif

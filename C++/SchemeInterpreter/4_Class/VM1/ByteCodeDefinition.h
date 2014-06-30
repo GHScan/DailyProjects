@@ -251,7 +251,7 @@ struct ByteCode<BCE_Jmp> {
     uint8_t code;
     uint16_t target;
 
-    explicit ByteCode(): code(BCE_Jmp) {
+    explicit ByteCode(): code(BCE_Jmp), target(0) {
     }
 
     uint16_t* getTargetPtr() {
@@ -264,7 +264,7 @@ struct ByteCode<BCE_TrueJmp> {
     uint8_t code;
     uint16_t target;
 
-    explicit ByteCode(): code(BCE_TrueJmp) {
+    explicit ByteCode(): code(BCE_TrueJmp), target(0) {
     }
 
     uint16_t* getTargetPtr() {

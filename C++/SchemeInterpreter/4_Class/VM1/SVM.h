@@ -19,7 +19,7 @@ struct StackFrame {
 
 class SVM {
 public:
-    SVM(const char *fname);
+    SVM(FILE *file, bool disasm, int initGCThreshold);
     ~SVM();
 
     SVM(const SVM&);

@@ -158,10 +158,10 @@ void SAssembler::assemble(vector<uint8_t> &codes, SExpression e) {
                 mLabels.push_back(make_pair(lcode->ref(1).getSymbol(), (int)codes.size()));
                 break;
             case SID_Jmp:
-                mLabelRefs.push_back(make_pair(lcode->ref(1).getSymbol(), emit(codes, ByteCode<BCE_Jmp>())->getTargetPtr()));
+                mLabelRefs.push_back(make_pair(lcode->ref(1).getSymbol(), (uint8_t*)emit(codes, ByteCode<BCE_Jmp>())->getTargetPtr() - &codes[0]));
                 break;
             case SID_TJmp:
-                mLabelRefs.push_back(make_pair(lcode->ref(1).getSymbol(), emit(codes, ByteCode<BCE_TrueJmp>())->getTargetPtr()));
+                mLabelRefs.push_back(make_pair(lcode->ref(1).getSymbol(), (uint8_t*)emit(codes, ByteCode<BCE_TrueJmp>())->getTargetPtr() - &codes[0]));
                 break;
             case SID_Tail:
                 emit(codes, ByteCode<BCE_Tail>());
@@ -189,6 +189,6 @@ void SAssembler::assemble(vector<uint8_t> &codes, SExpression e) {
 
     for (auto ref : mLabelRefs) {
         auto iter = lower_bound(mLabels.begin(), mLabels.end(), make_pair(ref.first, 0), comparer);
-        checkedAssign(ref.second, iter->second);
+        checkedAssign((uint16_t*)&codes[ref.second], iter->second);
     }
 }

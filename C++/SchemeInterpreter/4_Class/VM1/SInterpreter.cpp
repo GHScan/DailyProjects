@@ -136,7 +136,7 @@ Label_PeekFrame:
                  }
                     break;
                 case BCE_LoadFunc:
-                    evalStack.push_back(SValue());
+                    evalStack.push_back(SValue::EMPTY);
                     objMgr->createObject<SFunc>(&evalStack.back(), localEnv, fprotos[reinterpret_cast<ByteCode<BCE_LoadFunc>*>(&codes[pc])->findex]);
                     pc += sizeof(ByteCode<BCE_LoadFunc>);
                     break;
@@ -166,14 +166,15 @@ Label_PeekFrame:
                         int actualCount = reinterpret_cast<ByteCode<BCE_Call>*>(&codes[pc])->actualCount;
                         pc += sizeof(ByteCode<BCE_Call>);
 
+                        if (frame != nullptr) {
+                            frame->pc = pc;
+                        }
+
                         auto pfunc = evalStack.begin() + (evalStack.size() - actualCount - 1);
                         switch (pfunc->getType()) {
                             case SVT_Func: {
                                 setupFrame(actualCount, evalStack, frameStack, objMgr);
 
-                                if (frame != nullptr) {
-                                    frame->pc = pc;
-                                }
                                 goto Label_PeekFrame;
                                }
                                 break;
@@ -208,7 +209,7 @@ Label_PeekFrame:
                    }
                     break;
                 case BCE_LoadClass:
-                    evalStack.push_back(SValue());
+                    evalStack.push_back(SValue::EMPTY);
                     objMgr->createObject<SClass>(&evalStack.back(), localEnv, cprotos[reinterpret_cast<ByteCode<BCE_LoadClass>*>(&codes[pc])->cindex]);
                     pc += sizeof(ByteCode<BCE_LoadClass>);
                     break;
@@ -221,7 +222,7 @@ Label_PeekFrame:
                     break;
                 case BCE_LoadCachedMethod: {
                     auto ins = reinterpret_cast<ByteCode<BCE_LoadCachedMethod>*>(&codes[pc]);
-                    evalStack.push_back(SValue());
+                    evalStack.push_back(SValue::EMPTY);
                     objMgr->createObject<SFunc>(&evalStack.back(), localEnv->getUpEnv(ins->cachedObjIndex), ins->cachedFunc);
                     pc += sizeof(ByteCode<BCE_LoadCachedMethod>);
                    }

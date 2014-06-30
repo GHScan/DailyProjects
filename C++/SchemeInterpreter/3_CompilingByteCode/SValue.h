@@ -152,7 +152,8 @@ public:
     static SValue VOID;
 
     SValue() {
-        mPointer = 0;
+        // inorder to declare a var length array like SValue[1], and enable length 0, there must be a default constructor and do nothing inside it
+        // mPointer = 0;
     }
 
     explicit SValue(int i) {

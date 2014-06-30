@@ -58,16 +58,13 @@ SExpression_List
 
 %%
 
-SExpression parseFile(const char *fname, StackAllocator *allocator) {
+SExpression parseFile(FILE *file, StackAllocator *allocator) {
     g_allocator = allocator;
 
-    FILE *f = fopen(fname, "r");
-    ASSERT(f);
+    ASSERT(file);
 
-    yyrestart(f);
+    yyrestart(file);
     yyparse();
-
-    fclose(f);
 
     g_allocator = nullptr;
 

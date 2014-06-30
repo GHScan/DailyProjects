@@ -81,7 +81,7 @@ private:
                 next = n->next;
 
                 char* key = n->entry.key;
-                uint32_t hash = hashRange(key, key + ::strlen(key) + 1);
+                uint32_t hash = hashRange(key, key + ::strlen(key));
                 Node **p = &newBuckets[hash & newBucketMask];
                 n->next = *p;
                 *p = n;

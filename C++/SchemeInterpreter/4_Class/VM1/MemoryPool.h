@@ -9,10 +9,10 @@ class MemoryPool {
 public:
     MemoryPool(): mMemSize(0) {
         for (int i = 0; i < ARRAY_SIZE(mAllocs0); ++i) {
-            mAllocs0[i] = new PoolAllocator((i + 1) * STEP_0, 4 * 1024);
+            mAllocs0[i] = new PoolAllocator((i + 1) * STEP_0, 16 * 1024);
         }
         for (int i = 0; i < ARRAY_SIZE(mAllocs1); ++i) {
-            mAllocs1[i] = new PoolAllocator((i + 1) * STEP_1 + FENCE_0, 4 * 1024);
+            mAllocs1[i] = new PoolAllocator((i + 1) * STEP_1 + FENCE_0, 16 * 1024);
         }
     }
 
