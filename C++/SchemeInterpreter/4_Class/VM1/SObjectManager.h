@@ -18,7 +18,7 @@ public:
     }
 
     void createNumber(SValue *ret, double number) {
-        ret->setNumber(number);
+        *ret = SValue(number);
     }
 
     void createString(SValue *ret, Atom* atom) {
@@ -36,7 +36,7 @@ public:
         }
 
         auto p = new (mMemPool.malloc(T::estimateSize(forward<ArgT>(args)...), alignof(T))) T(forward<ArgT>(args)...);
-        ret->setObject(p);
+        *ret = SValue(p);
 
         p->next = mFirstObj;
         mFirstObj = p;

@@ -57,9 +57,7 @@ struct SValue {
 
     SValue(): mType(SVT_Reserved) {}
 
-    void setNumber(double number) {
-        mType = SVT_Number;
-        mNumber = number;
+    SValue(double number): mNumber(number), mType(SVT_Number) {
     }
 
     void setString(Atom *atom) {
@@ -72,9 +70,7 @@ struct SValue {
         mSymbol = atom;
     }
 
-    void setObject(SObject *obj) {
-        mType = obj->getType();
-        mObj = obj;
+    SValue(SObject *obj): mObj(obj), mType(obj->getType()) {
     }
 
     bool operator == (SValue o) const {
@@ -110,6 +106,9 @@ struct SValue {
         }
 
         switch (mType) {
+            case SVT_Reserved:
+                ASSERT(0);
+                break;
             case SVT_Bool:
                 so << (mBool ? "true" : "false");
                 break;

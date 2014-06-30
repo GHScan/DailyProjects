@@ -3,5 +3,6 @@
 #include "SVM.h"
 
 int main() {
-    SVM vm("../1.rkt");
+    SVM vm("test.rkt");
+    vm.run();
 }

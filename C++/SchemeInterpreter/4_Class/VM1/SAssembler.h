@@ -8,7 +8,7 @@ class SAssembler {
 public:
     SAssembler(const vector<SValue> &constants);
 
-    void assemble(vector<uint8_t> &bytes, SExpression e);
+    void assemble(vector<uint8_t> &codes, SExpression e);
 
 private:
     const vector<SValue> &mConstants;

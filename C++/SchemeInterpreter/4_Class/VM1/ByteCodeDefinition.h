@@ -291,11 +291,26 @@ struct ByteCode<BCE_Call> {
 };
 
 template<>
+struct ByteCode<BCE_LoadCachedMethod> {
+    uint8_t code;
+    uint8_t cachedObjIndex;
+    SFuncProto *cachedFunc;
+
+    ByteCode() = delete;
+
+    void updateCache(int oi, SFuncProto *f) {
+        code = BCE_LoadCachedMethod;
+        checkedAssign(&cachedObjIndex, oi);
+        cachedFunc = f;
+    }
+};
+
+template<>
 struct ByteCode<BCE_LoadMethod> {
     uint8_t code;
     uint8_t envIndex;
     uint8_t index;
-    uint8_t reversed;
+    uint8_t reserved[sizeof(SFuncProto*) - sizeof(uint8_t)];
 
     explicit ByteCode(int ei, int i): code(BCE_LoadMethod) {
         checkedAssign(&envIndex, ei);
@@ -303,20 +318,6 @@ struct ByteCode<BCE_LoadMethod> {
     }
 };
 
-template<>
-struct ByteCode<BCE_LoadCachedMethod> {
-    uint8_t code;
-    uint8_t objIndex;
-    uint16_t findex;
-
-    ByteCode() = delete;
-
-    void updateCache(int oi, int i) {
-        code = BCE_LoadCachedMethod;
-        checkedAssign(&objIndex, oi);
-        checkedAssign(&findex, i);
-    }
-};
 static_assert(sizeof(ByteCode<BCE_LoadMethod>) == sizeof(ByteCode<BCE_LoadCachedMethod>), "");
 
 template<>

@@ -82,15 +82,6 @@ private:
     friend class SObjectManager;
 };
 
-template<int i>
-inline SEnv* getUpEnv(SEnv *env) {
-    return getUpEnv<i - 1>(env->prevEnv);
-}
-template<>
-inline SEnv* getUpEnv<0>(SEnv *env) {
-    return env;
-}
-
 struct SFunc: public SObject {
     static const int TYPE = SVT_Func;
 
@@ -151,7 +142,7 @@ private:
 struct SClass: public SObject {
     static const int TYPE = SVT_Class;
 
-    static int estimateSize(SEnv *_prevEnv, SClassProto *_proto) {
+    static int estimateSize(SEnv *_env, SClassProto *_proto) {
         return sizeof(SClass);
     }
 
@@ -159,8 +150,12 @@ struct SClass: public SObject {
         return sizeof(SClass);
     }
 
-    SEnv *prevEnv;
+    SEnv *env;
     SClassProto *proto;
+
+    SEnv* asEnv() {
+        return reinterpret_cast<SEnv*>(this);
+    }
 
     bool _equal(const SClass *o) const {
         return this == o;
@@ -171,7 +166,7 @@ struct SClass: public SObject {
     }
 
 private:
-    SClass(SEnv *_prevEnv, SClassProto *_proto): SObject(TYPE), prevEnv(_prevEnv), proto(_proto) {
+    SClass(SEnv *_env, SClassProto *_proto): SObject(TYPE), env(_env), proto(_proto) {
     }
 
     friend class SObjectManager;

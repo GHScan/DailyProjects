@@ -29,14 +29,13 @@ static void setupConstants(SExpression e, vector<SValue> &constants, SObjectMana
 }
 
 static void setupGlobals(SExpression e, vector<SValue> &globals, SObjectManager *mgr) {
-    unordered_map<Atom*, int> name2Index;
+    vector<Atom*> names;
 
     for (auto n = e.getNode()->ref(1).getNode(); n != nullptr; n = n->next) {
-        int index = (int)name2Index.size();
-        name2Index[n->value.getNode()->ref(1).getSymbol()] = index;
+        names.push_back(n->value.getNode()->ref(1).getSymbol());
     }
 
-    globals.resize(name2Index.size());
+    globals.resize(names.size());
 
     pair<const char*, SValue> builtinVars[] = {
         {"true", SValue::TRUE},
@@ -45,7 +44,10 @@ static void setupGlobals(SExpression e, vector<SValue> &globals, SObjectManager 
         {"empty", SValue::EMPTY},
     };
     for (auto kv : builtinVars) {
-        globals[name2Index[AtomPool::instance()->intern(kv.first)]] = kv.second;
+        auto iter = find(names.begin(), names.end(), AtomPool::instance()->intern(kv.first));
+        if (iter != names.end()) {
+            globals[iter - names.begin()] = kv.second;
+        }
     }
 
     pair<const char*, NativeFuncT> builtinFuncs[] = {
@@ -76,13 +78,13 @@ static void setupGlobals(SExpression e, vector<SValue> &globals, SObjectManager 
             SPair *p = ret[1].getObject<SPair>();
             double n = ret[2].getNumber();
             for (; n > 0; --n) p = p->cdr.getObject<SPair>();
-            ret->setObject(p);
+            *ret = SValue(p);
          }},
         {"length", [](SObjectManager *mgr, SValue *ret){
             SValue l = ret[1];
             double n = 0;
             for (; l != SValue::EMPTY; l = l.getObject<SPair>()->cdr, ++n);
-            ret->setNumber(n);
+            *ret = SValue(n);
         }},
         {"last", [](SObjectManager *mgr, SValue *ret){
             SPair *p = ret[1].getObject<SPair>();
@@ -103,31 +105,36 @@ static void setupGlobals(SExpression e, vector<SValue> &globals, SObjectManager 
             cout << endl;
         }},
         {"current-inexact-milliseconds", [](SObjectManager *mgr, SValue *ret){
-            ret->setNumber(clock() * 1000.0 / CLOCKS_PER_SEC);
+            *ret = SValue(clock() * 1000.0 / CLOCKS_PER_SEC);
         }},
         {"random", [](SObjectManager *mgr, SValue *ret){
-            ret->setNumber(fmod(::rand() * RAND_MAX + ::rand(), ret[1].getNumber()));
+            *ret = SValue(fmod(::rand() * RAND_MAX + ::rand(), ret[1].getNumber()));
         }},
     };
     for (auto kv : builtinFuncs) {
-        mgr->createObject<SNativeFunc>(&globals[name2Index[AtomPool::instance()->intern(kv.first)]], kv.second);
+        auto iter = find(names.begin(), names.end(), AtomPool::instance()->intern(kv.first));
+        if (iter != names.end()) {
+            mgr->createObject<SNativeFunc>(&globals[iter - names.begin()], kv.second);
+        }
     }
 }
 
 static void setupFuncs(SExpression e, vector<SFuncProto*> &protos, SAssembler *assembler, StackAllocator *alloc) {
-    vector<uint8_t> bytes;
+    vector<uint8_t> codes;
 
     for (auto f = e.getNode()->ref(1).getNode(); f != nullptr; f = f->next) {
-        bytes.clear();
+        codes.clear();
 
-        assembler->assemble(bytes, f->ref(1));
+        assembler->assemble(codes, f->value.getNode()->ref(1));
 
         auto fproto = alloc->malloc<SFuncProto>();
 
-        ASSERT(!bytes.empty());
-        fproto->codeSize = (int)bytes.size();
-        fproto->codes = alloc->mallocArray<uint8_t>(bytes.size());
-        memcpy(fproto->codes, &bytes[0], bytes.size());
+        ASSERT(!codes.empty());
+        fproto->codeSize = (int)codes.size();
+        fproto->codes = alloc->mallocArray<uint8_t>(codes.size());
+        memcpy(fproto->codes, &codes[0], codes.size());
+
+        protos.push_back(fproto);
     }
 }
 
@@ -206,6 +213,10 @@ SVM::SVM(const char *fname):
 }
 
 SVM::~SVM() {
+    ASSERT(mEvalStack.empty() && mFrameStack.empty());
+    mConstants.clear();
+    mGlobals.clear();
+
     DELETE(mProtoAlloc);
     DELETE(mObjMgr);
     DELETE(mAssembler);
@@ -216,5 +227,12 @@ SVM::~SVM() {
 void SVM::run() {
     mEvalStack.push_back(SValue());
     mObjMgr->createObject<SFunc>(&mEvalStack.back(), nullptr, mMainFuncProto);
+
     SInterpreter::call(0, mEvalStack, mFrameStack, mObjMgr, mConstants, mGlobals, mFuncProtos, mClassProtos);
+
+    mEvalStack.back().writeToStream(cout);
+    cout << endl;
+    mEvalStack.pop_back();
+
+    ASSERT(mEvalStack.empty() && mFrameStack.empty());
 }

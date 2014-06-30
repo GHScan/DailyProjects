@@ -9,6 +9,6 @@
 #define alignof __alignof
 #endif
 
-// #define USE_TCMALLOC
+#define USE_TCMALLOC
 
 #endif

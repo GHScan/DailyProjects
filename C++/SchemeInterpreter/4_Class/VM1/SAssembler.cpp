@@ -52,13 +52,13 @@ SAssembler::SAssembler(const vector<SValue> &constants):
 }
 
 template<typename T>
-static T* emit(vector<uint8_t> &bytes, T v) {
-    int off = (int)bytes.size();
-    bytes.insert(bytes.end(), (uint8_t*)&v, (uint8_t*)&v + sizeof(v));
-    return (T*)&bytes[off];
+static T* emit(vector<uint8_t> &codes, T v) {
+    int off = (int)codes.size();
+    codes.insert(codes.end(), (uint8_t*)&v, (uint8_t*)&v + sizeof(v));
+    return (T*)&codes[off];
 }
 
-void SAssembler::assemble(vector<uint8_t> &bytes, SExpression e) {
+void SAssembler::assemble(vector<uint8_t> &codes, SExpression e) {
     mFrees.clear();
     mLabels.clear();
     mLabelRefs.clear();
@@ -78,12 +78,12 @@ void SAssembler::assemble(vector<uint8_t> &bytes, SExpression e) {
                 if (v.getType() == SVT_Number) {
                     double n = v.getNumber();
                     if (floor(n) == n && n >= numeric_limits<int>::min() && n <= numeric_limits<int>::max()) {
-                        emit(bytes, ByteCode<BCE_LoadInt>(int(n)));
+                        emit(codes, ByteCode<BCE_LoadInt>(int(n)));
                     } else {
-                        emit(bytes, ByteCode<BCE_LoadDouble>(n));
+                        emit(codes, ByteCode<BCE_LoadDouble>(n));
                     }
                 } else {
-                    emit(bytes, ByteCode<BCE_LoadConstant>(kindex));
+                    emit(codes, ByteCode<BCE_LoadConstant>(kindex));
                 }
             }
                 break;
@@ -91,27 +91,27 @@ void SAssembler::assemble(vector<uint8_t> &bytes, SExpression e) {
                 auto var = lcode->ref(1).getNode();
                 switch (var->ref(0).getSymbol()->getID()) {
                     case SID_Local:
-                        emit(bytes, ByteCode<BCE_LoadLocal>(atoi(var->ref(1).getInt()->c_str())));
+                        emit(codes, ByteCode<BCE_LoadLocal>(atoi(var->ref(1).getInt()->c_str())));
                         break;
                     case SID_Global:
-                        emit(bytes, ByteCode<BCE_LoadGlobal>(atoi(var->ref(1).getInt()->c_str())));
+                        emit(codes, ByteCode<BCE_LoadGlobal>(atoi(var->ref(1).getInt()->c_str())));
                         break;
                     case SID_Free: {
                          auto free = mFrees[atoi(var->ref(1).getInt()->c_str())];
                          if (free.first == 1) {
-                             emit(bytes, ByteCode<BCE_LoadFree1>(free.second));
+                             emit(codes, ByteCode<BCE_LoadFree1>(free.second));
                          } else if (free.first == 2) {
-                             emit(bytes, ByteCode<BCE_LoadFree2>(free.second));
+                             emit(codes, ByteCode<BCE_LoadFree2>(free.second));
                          } else if (free.first == 3) {
-                             emit(bytes, ByteCode<BCE_LoadFree3>(free.second));
+                             emit(codes, ByteCode<BCE_LoadFree3>(free.second));
                          } else {
-                             emit(bytes, ByteCode<BCE_LoadFree>(free.first, free.second));
+                             emit(codes, ByteCode<BCE_LoadFree>(free.first, free.second));
                          }
                        }
                         break;
                     case SID_FreeMethod: {
                          auto free = mFrees[atoi(var->ref(1).getInt()->c_str())];
-                         emit(bytes, ByteCode<BCE_LoadMethod>(free.first, free.second));
+                         emit(codes, ByteCode<BCE_LoadMethod>(free.first, free.second));
                      }
                         break;
                     default:
@@ -124,21 +124,21 @@ void SAssembler::assemble(vector<uint8_t> &bytes, SExpression e) {
                 auto var = lcode->ref(1).getNode();
                 switch (var->ref(0).getSymbol()->getID()) {
                     case SID_Local:
-                        emit(bytes, ByteCode<BCE_StoreLocal>(atoi(var->ref(1).getInt()->c_str())));
+                        emit(codes, ByteCode<BCE_StoreLocal>(atoi(var->ref(1).getInt()->c_str())));
                         break;
                     case SID_Global:
-                        emit(bytes, ByteCode<BCE_StoreGlobal>(atoi(var->ref(1).getInt()->c_str())));
+                        emit(codes, ByteCode<BCE_StoreGlobal>(atoi(var->ref(1).getInt()->c_str())));
                         break;
                     case SID_Free: {
                          auto free = mFrees[atoi(var->ref(1).getInt()->c_str())];
                          if (free.first == 1) {
-                             emit(bytes, ByteCode<BCE_StoreFree1>(free.second));
+                             emit(codes, ByteCode<BCE_StoreFree1>(free.second));
                          } else if (free.first == 2) {
-                             emit(bytes, ByteCode<BCE_StoreFree2>(free.second));
+                             emit(codes, ByteCode<BCE_StoreFree2>(free.second));
                          } else if (free.first == 3) {
-                             emit(bytes, ByteCode<BCE_StoreFree3>(free.second));
+                             emit(codes, ByteCode<BCE_StoreFree3>(free.second));
                          } else {
-                             emit(bytes, ByteCode<BCE_StoreFree>(free.first, free.second));
+                             emit(codes, ByteCode<BCE_StoreFree>(free.first, free.second));
                          }
                        }
                         break;
@@ -149,34 +149,34 @@ void SAssembler::assemble(vector<uint8_t> &bytes, SExpression e) {
                }
                 break;
             case SID_LoadFunc: 
-                emit(bytes, ByteCode<BCE_LoadFunc>(atoi(lcode->ref(1).getInt()->c_str())));
+                emit(codes, ByteCode<BCE_LoadFunc>(atoi(lcode->ref(1).getInt()->c_str())));
                 break;
             case SID_Pop:
-                emit(bytes, ByteCode<BCE_Pop>());
+                emit(codes, ByteCode<BCE_Pop>());
                 break;
             case SID_Label:
-                mLabels.push_back(make_pair(lcode->ref(1).getSymbol(), (int)bytes.size()));
+                mLabels.push_back(make_pair(lcode->ref(1).getSymbol(), (int)codes.size()));
                 break;
             case SID_Jmp:
-                mLabelRefs.push_back(make_pair(lcode->ref(1).getSymbol(), emit(bytes, ByteCode<BCE_Jmp>())->getTargetPtr()));
+                mLabelRefs.push_back(make_pair(lcode->ref(1).getSymbol(), emit(codes, ByteCode<BCE_Jmp>())->getTargetPtr()));
                 break;
             case SID_TJmp:
-                mLabelRefs.push_back(make_pair(lcode->ref(1).getSymbol(), emit(bytes, ByteCode<BCE_TrueJmp>())->getTargetPtr()));
+                mLabelRefs.push_back(make_pair(lcode->ref(1).getSymbol(), emit(codes, ByteCode<BCE_TrueJmp>())->getTargetPtr()));
                 break;
             case SID_Tail:
-                emit(bytes, ByteCode<BCE_Tail>());
+                emit(codes, ByteCode<BCE_Tail>());
                 break;
             case SID_Call:
-                emit(bytes, ByteCode<BCE_Call>(atoi(lcode->ref(1).getInt()->c_str())));
+                emit(codes, ByteCode<BCE_Call>(atoi(lcode->ref(1).getInt()->c_str())));
                 break;
             case SID_LoadClass:
-                emit(bytes, ByteCode<BCE_LoadClass>(atoi(lcode->ref(1).getInt()->c_str())));
+                emit(codes, ByteCode<BCE_LoadClass>(atoi(lcode->ref(1).getInt()->c_str())));
                 break;
             case SID_GetField:
-                emit(bytes, ByteCode<BCE_GetField>(atoi(lcode->ref(1).getNode()->ref(1).getInt()->c_str())));
+                emit(codes, ByteCode<BCE_GetField>(atoi(lcode->ref(1).getNode()->ref(1).getInt()->c_str())));
                 break;
             case SID_GetMethod:
-                emit(bytes, ByteCode<BCE_GetMethod>(atoi(lcode->ref(1).getNode()->ref(1).getInt()->c_str())));
+                emit(codes, ByteCode<BCE_GetMethod>(atoi(lcode->ref(1).getNode()->ref(1).getInt()->c_str())));
                 break;
             default:
                 ASSERT(0);
