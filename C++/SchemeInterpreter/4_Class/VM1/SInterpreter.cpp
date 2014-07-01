@@ -85,6 +85,18 @@ Label_PeekFrame:
                     evalStack->push(localEnv->getValue(reinterpret_cast<ByteCode<BCE_LoadLocal>*>(&codes[pc])->lindex));
                     pc += sizeof(ByteCode<BCE_LoadLocal>);
                     break;
+                case BCE_LoadLocal0:
+                    evalStack->push(localEnv->getValue(0));
+                    pc += sizeof(ByteCode<BCE_LoadLocal0>);
+                    break;
+                case BCE_LoadLocal1:
+                    evalStack->push(localEnv->getValue(1));
+                    pc += sizeof(ByteCode<BCE_LoadLocal1>);
+                    break;
+                case BCE_LoadLocal2:
+                    evalStack->push(localEnv->getValue(2));
+                    pc += sizeof(ByteCode<BCE_LoadLocal2>);
+                    break;
                 case BCE_StoreLocal:
                     localEnv->setValue(reinterpret_cast<ByteCode<BCE_StoreLocal>*>(&codes[pc])->lindex, evalStack->pop());
                     pc += sizeof(ByteCode<BCE_StoreLocal>);

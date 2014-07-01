@@ -92,8 +92,15 @@ void SAssembler::assemble(vector<uint8_t> &codes, SExpression e) {
             case SID_LoadVar: {
                 auto var = lcode->ref(1).getNode();
                 switch (var->ref(0).getSymbol()->getID()) {
-                    case SID_Local:
-                        emit(codes, ByteCode<BCE_LoadLocal>(atoi(var->ref(1).getInt()->c_str())));
+                    case SID_Local: {
+                            int lindex = atoi(var->ref(1).getInt()->c_str());
+                            switch (lindex) {
+                                case 0: emit(codes, ByteCode<BCE_LoadLocal0>()); break;
+                                case 1: emit(codes, ByteCode<BCE_LoadLocal1>()); break;
+                                case 2: emit(codes, ByteCode<BCE_LoadLocal2>()); break;
+                                default: emit(codes, ByteCode<BCE_LoadLocal>(lindex)); break;
+                            }
+                        }
                         break;
                     case SID_Global:
                         emit(codes, ByteCode<BCE_LoadGlobal>(atoi(var->ref(1).getInt()->c_str())));

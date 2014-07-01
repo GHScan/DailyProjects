@@ -25,6 +25,15 @@ uint8_t* SDisassembler::disassembleIns(ostream &so, uint8_t *ins) {
         case BCE_LoadLocal:
             so << format("loadl %d", reinterpret_cast<ByteCode<BCE_LoadLocal>*>(ins)->lindex);
             return ins + sizeof(ByteCode<BCE_LoadLocal>);
+        case BCE_LoadLocal0:
+            so << "loadl0";
+            return ins + sizeof(ByteCode<BCE_LoadLocal0>);
+        case BCE_LoadLocal1:
+            so << "loadl1";
+            return ins + sizeof(ByteCode<BCE_LoadLocal1>);
+        case BCE_LoadLocal2:
+            so << "loadl2";
+            return ins + sizeof(ByteCode<BCE_LoadLocal2>);
         case BCE_StoreLocal:
             so << format("storel %d", reinterpret_cast<ByteCode<BCE_StoreLocal>*>(ins)->lindex);
             return ins + sizeof(ByteCode<BCE_StoreLocal>);

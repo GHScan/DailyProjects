@@ -14,6 +14,9 @@ enum ByteCodeEnum {
     BCE_StoreGlobal,
 
     BCE_LoadLocal,
+    BCE_LoadLocal0,
+    BCE_LoadLocal1,
+    BCE_LoadLocal2,
     BCE_StoreLocal,
 
     BCE_LoadFree,
@@ -141,6 +144,13 @@ struct ByteCode<BCE_LoadLocal> {
         checkedAssign(&lindex, i);
     }
 };
+
+template<>
+struct ByteCode<BCE_LoadLocal0> { uint8_t code; explicit ByteCode(): code(BCE_LoadLocal0) { } };
+template<>
+struct ByteCode<BCE_LoadLocal1> { uint8_t code; explicit ByteCode(): code(BCE_LoadLocal1) { } };
+template<>
+struct ByteCode<BCE_LoadLocal2> { uint8_t code; explicit ByteCode(): code(BCE_LoadLocal2) { } };
 
 template<>
 struct ByteCode<BCE_StoreLocal> {
