@@ -160,6 +160,82 @@ Label_PeekFrame:
                     }
                   }
                     break;
+                case BCE_FalseJmp: {
+                    if (evalStack->pop() == SValue::FALSE) {
+                        pc = reinterpret_cast<ByteCode<BCE_FalseJmp>*>(&codes[pc])->target;
+                    } else {
+                        pc += sizeof(ByteCode<BCE_FalseJmp>);
+                    }
+                  }
+                    break;
+                case BCE_Num_EqualJmp: {
+                    bool b = evalStack->top<-2>().getNumber() == evalStack->top<-1>().getNumber();
+                    evalStack->popn(2);
+                    if (b) {
+                        pc = reinterpret_cast<ByteCode<BCE_Num_EqualJmp>*>(&codes[pc])->target;
+                    } else {
+                        pc += sizeof(ByteCode<BCE_Num_EqualJmp>);
+                    }
+                  }
+                    break;
+                case BCE_Num_LessJmp: {
+                    bool b = evalStack->top<-2>().getNumber() < evalStack->top<-1>().getNumber();
+                    evalStack->popn(2);
+                    if (b) {
+                        pc = reinterpret_cast<ByteCode<BCE_Num_LessJmp>*>(&codes[pc])->target;
+                    } else {
+                        pc += sizeof(ByteCode<BCE_Num_LessJmp>);
+                    }
+                  }
+                    break;
+                case BCE_Num_LessEqJmp: {
+                    bool b = evalStack->top<-2>().getNumber() <= evalStack->top<-1>().getNumber();
+                    evalStack->popn(2);
+                    if (b) {
+                        pc = reinterpret_cast<ByteCode<BCE_Num_LessEqJmp>*>(&codes[pc])->target;
+                    } else {
+                        pc += sizeof(ByteCode<BCE_Num_LessEqJmp>);
+                    }
+                  }
+                    break;
+                case BCE_Num_GreaterJmp: {
+                    bool b = evalStack->top<-2>().getNumber() > evalStack->top<-1>().getNumber();
+                    evalStack->popn(2);
+                    if (b) {
+                        pc = reinterpret_cast<ByteCode<BCE_Num_GreaterJmp>*>(&codes[pc])->target;
+                    } else {
+                        pc += sizeof(ByteCode<BCE_Num_GreaterJmp>);
+                    }
+                  }
+                    break;
+                case BCE_Num_GreaterEqJmp: {
+                    bool b = evalStack->top<-2>().getNumber() >= evalStack->top<-1>().getNumber();
+                    evalStack->popn(2);
+                    if (b) {
+                        pc = reinterpret_cast<ByteCode<BCE_Num_GreaterEqJmp>*>(&codes[pc])->target;
+                    } else {
+                        pc += sizeof(ByteCode<BCE_Num_GreaterEqJmp>);
+                    }
+                  }
+                    break;
+                case BCE_EqJmp: {
+                    bool b = evalStack->top<-2>() == evalStack->top<-1>();
+                    evalStack->popn(2);
+                    if (b) {
+                        pc = reinterpret_cast<ByteCode<BCE_EqJmp>*>(&codes[pc])->target;
+                    } else {
+                        pc += sizeof(ByteCode<BCE_EqJmp>);
+                    }
+                  }
+                    break;
+                case BCE_EmptyJmp: {
+                    if (evalStack->pop() == SValue::EMPTY) {
+                        pc = reinterpret_cast<ByteCode<BCE_EmptyJmp>*>(&codes[pc])->target;
+                    } else {
+                        pc += sizeof(ByteCode<BCE_EmptyJmp>);
+                    }
+                  }
+                    break;
                 case BCE_Tail:
                     frameStack.pop_back();
                     frame = nullptr;

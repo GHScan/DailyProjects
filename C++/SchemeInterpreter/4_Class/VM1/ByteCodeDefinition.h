@@ -34,6 +34,14 @@ enum ByteCodeEnum {
 
     BCE_Jmp,
     BCE_TrueJmp,
+    BCE_FalseJmp,
+    BCE_Num_EqualJmp,
+    BCE_Num_LessJmp,
+    BCE_Num_LessEqJmp,
+    BCE_Num_GreaterJmp,
+    BCE_Num_GreaterEqJmp,
+    BCE_EqJmp,
+    BCE_EmptyJmp,
 
     BCE_Tail,
 
@@ -298,6 +306,63 @@ struct ByteCode<BCE_TrueJmp> {
     uint16_t* getTargetPtr() {
         return &target;
     }
+};
+
+template<>
+struct ByteCode<BCE_FalseJmp> {
+    uint8_t code;
+    uint16_t target;
+    explicit ByteCode(): code(BCE_FalseJmp), target(0) { }
+    uint16_t* getTargetPtr() { return &target; }
+};
+template<>
+struct ByteCode<BCE_Num_EqualJmp> {
+    uint8_t code;
+    uint16_t target;
+    explicit ByteCode(): code(BCE_Num_EqualJmp), target(0) { }
+    uint16_t* getTargetPtr() { return &target; }
+};
+template<>
+struct ByteCode<BCE_Num_LessJmp> {
+    uint8_t code;
+    uint16_t target;
+    explicit ByteCode(): code(BCE_Num_LessJmp), target(0) { }
+    uint16_t* getTargetPtr() { return &target; }
+};
+template<>
+struct ByteCode<BCE_Num_LessEqJmp> {
+    uint8_t code;
+    uint16_t target;
+    explicit ByteCode(): code(BCE_Num_LessEqJmp), target(0) { }
+    uint16_t* getTargetPtr() { return &target; }
+};
+template<>
+struct ByteCode<BCE_Num_GreaterJmp> {
+    uint8_t code;
+    uint16_t target;
+    explicit ByteCode(): code(BCE_Num_GreaterJmp), target(0) { }
+    uint16_t* getTargetPtr() { return &target; }
+};
+template<>
+struct ByteCode<BCE_Num_GreaterEqJmp> {
+    uint8_t code;
+    uint16_t target;
+    explicit ByteCode(): code(BCE_Num_GreaterEqJmp), target(0) { }
+    uint16_t* getTargetPtr() { return &target; }
+};
+template<>
+struct ByteCode<BCE_EqJmp> {
+    uint8_t code;
+    uint16_t target;
+    explicit ByteCode(): code(BCE_EqJmp), target(0) { }
+    uint16_t* getTargetPtr() { return &target; }
+};
+template<>
+struct ByteCode<BCE_EmptyJmp> {
+    uint8_t code;
+    uint16_t target;
+    explicit ByteCode(): code(BCE_EmptyJmp), target(0) { }
+    uint16_t* getTargetPtr() { return &target; }
 };
 
 template<>

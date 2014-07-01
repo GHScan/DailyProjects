@@ -150,6 +150,11 @@
         (interpret (cdr eval-stack) (cdr codes) labels frees env)]
       [`(jmp ,label)
         (interpret eval-stack (cdr (assq label labels)) labels frees env)]
+      [`(opjmp ,label ,op ,actual-count)
+        (let ([v (apply (cdr (assq op builtins)) (reverse (take eval-stack actual-count)))])
+          (if v
+            (interpret (drop eval-stack actual-count) (cdr (assq label labels)) labels frees env)
+            (interpret (drop eval-stack actual-count) (cdr codes) labels frees env)))]
       [`(tjmp ,label)
         (if (car eval-stack)
           (interpret (cdr eval-stack) (cdr (assq label labels)) labels frees env)

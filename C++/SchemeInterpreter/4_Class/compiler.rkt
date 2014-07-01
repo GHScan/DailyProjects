@@ -192,12 +192,12 @@
                 (if entry
                   (iter size (max size max-size) (cdr entry) (remq entry labels))
                   (max size max-size)))]
-            [`(tjmp ,l-name) 
-            (let ([entry (assq l-name labels)])
-             (if entry
-               (max (iter (sub1 size) (max size max-size) (cdr (assq l-name labels)) (remq entry labels))
-                    (iter (sub1 size) (max size max-size) (cdr codes) labels))
-               (iter (sub1 size) (max size max-size) (cdr codes) labels)))]
+            [`(,(? (lambda (x) (memq x '(opjmp tjmp)))) ,l-name ,others ...) 
+              (let ([entry (assq l-name labels)])
+                (if entry
+                  (max (iter (sub1 size) (max size max-size) (cdr (assq l-name labels)) (remq entry labels))
+                       (iter (sub1 size) (max size max-size) (cdr codes) labels))
+                  (iter (sub1 size) (max size max-size) (cdr codes) labels)))]
             [`(tail) (iter size (max size max-size) (cdr codes) labels)]
             [`(call ,actual-count) (iter (- size actual-count) (max size max-size) (cdr codes) labels)]
             [`(loadclass ,cindex) (iter (add1 size) (max size max-size) (cdr codes) labels)]
@@ -239,6 +239,15 @@
      (error "invalid exp:" x)]
     [`(quote ,(? symbol? x))
       `((loadk ,(the-constants 'get-or-add x)))]
+    [`(if (,(? (lambda (x) (memq x inline-procedure)) op) ,actuals ...) ,then-exp ,else-exp)
+      (let ([label-then (gensym)][label-end (gensym)])
+        `(,@(flatten-map (curry eval sym-table false) actuals)
+           (opjmp ,label-then ,op ,(length actuals))
+           ,@(eval sym-table tail else-exp)
+           (jmp ,label-end)
+           (label ,label-then)
+           ,@(eval sym-table tail then-exp)
+           (label ,label-end)))]
     [`(if ,pred-exp ,then-exp ,else-exp)
       (let ([label-then (gensym)][label-end (gensym)])
         `(,@(eval sym-table false pred-exp)

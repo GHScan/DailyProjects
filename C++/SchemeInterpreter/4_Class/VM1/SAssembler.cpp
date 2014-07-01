@@ -13,6 +13,7 @@ enum SymbolID {
     SID_Pop,
     SID_Jmp,
     SID_TJmp,
+    SID_OpJmp,
     SID_Tail,
     SID_Call,
     SID_LoadClass,
@@ -40,6 +41,7 @@ SAssembler::SAssembler(const vector<SValue> &constants):
     AtomPool::instance()->intern("pop", SID_Pop);
     AtomPool::instance()->intern("jmp", SID_Jmp);
     AtomPool::instance()->intern("tjmp", SID_TJmp);
+    AtomPool::instance()->intern("opjmp", SID_OpJmp);
     AtomPool::instance()->intern("tail", SID_Tail);
     AtomPool::instance()->intern("call", SID_Call);
     AtomPool::instance()->intern("loadclass", SID_LoadClass);
@@ -171,6 +173,28 @@ void SAssembler::assemble(vector<uint8_t> &codes, SExpression e) {
                 break;
             case SID_TJmp:
                 mLabelRefs.push_back(make_pair(lcode->ref(1).getSymbol(), (uint8_t*)emit(codes, ByteCode<BCE_TrueJmp>())->getTargetPtr() - &codes[0]));
+                break;
+            case SID_OpJmp: {
+                    if (strcmp(lcode->ref(2).getSymbol()->c_str(), "not") == 0) {
+                        mLabelRefs.push_back(make_pair(lcode->ref(1).getSymbol(), (uint8_t*)emit(codes, ByteCode<BCE_FalseJmp>())->getTargetPtr() - &codes[0]));
+                    } else if (strcmp(lcode->ref(2).getSymbol()->c_str(), "=") == 0) {
+                        mLabelRefs.push_back(make_pair(lcode->ref(1).getSymbol(), (uint8_t*)emit(codes, ByteCode<BCE_Num_EqualJmp>())->getTargetPtr() - &codes[0]));
+                    } else if (strcmp(lcode->ref(2).getSymbol()->c_str(), "<") == 0) {
+                        mLabelRefs.push_back(make_pair(lcode->ref(1).getSymbol(), (uint8_t*)emit(codes, ByteCode<BCE_Num_LessJmp>())->getTargetPtr() - &codes[0]));
+                    } else if (strcmp(lcode->ref(2).getSymbol()->c_str(), "<=") == 0) {
+                        mLabelRefs.push_back(make_pair(lcode->ref(1).getSymbol(), (uint8_t*)emit(codes, ByteCode<BCE_Num_LessEqJmp>())->getTargetPtr() - &codes[0]));
+                    } else if (strcmp(lcode->ref(2).getSymbol()->c_str(), ">") == 0) {
+                        mLabelRefs.push_back(make_pair(lcode->ref(1).getSymbol(), (uint8_t*)emit(codes, ByteCode<BCE_Num_GreaterJmp>())->getTargetPtr() - &codes[0]));
+                    } else if (strcmp(lcode->ref(2).getSymbol()->c_str(), ">=") == 0) {
+                        mLabelRefs.push_back(make_pair(lcode->ref(1).getSymbol(), (uint8_t*)emit(codes, ByteCode<BCE_Num_GreaterEqJmp>())->getTargetPtr() - &codes[0]));
+                    } else if (strcmp(lcode->ref(2).getSymbol()->c_str(), "eq?") == 0) {
+                        mLabelRefs.push_back(make_pair(lcode->ref(1).getSymbol(), (uint8_t*)emit(codes, ByteCode<BCE_EqJmp>())->getTargetPtr() - &codes[0]));
+                    } else if (strcmp(lcode->ref(2).getSymbol()->c_str(), "empty?") == 0) {
+                        mLabelRefs.push_back(make_pair(lcode->ref(1).getSymbol(), (uint8_t*)emit(codes, ByteCode<BCE_EmptyJmp>())->getTargetPtr() - &codes[0]));
+                    } else {
+                        ASSERT(0);
+                    }
+                }
                 break;
             case SID_Tail:
                 emit(codes, ByteCode<BCE_Tail>());

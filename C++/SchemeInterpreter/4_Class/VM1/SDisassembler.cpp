@@ -77,6 +77,30 @@ uint8_t* SDisassembler::disassembleIns(ostream &so, uint8_t *ins) {
         case BCE_TrueJmp:
             so << format("tjmp %d", reinterpret_cast<ByteCode<BCE_TrueJmp>*>(ins)->target);
             return ins + sizeof(ByteCode<BCE_TrueJmp>);
+        case BCE_FalseJmp:
+            so << format("fjmp %d", reinterpret_cast<ByteCode<BCE_FalseJmp>*>(ins)->target);
+            return ins + sizeof(ByteCode<BCE_FalseJmp>);
+        case BCE_Num_EqualJmp:
+            so << format("= jmp %d", reinterpret_cast<ByteCode<BCE_Num_EqualJmp>*>(ins)->target);
+            return ins + sizeof(ByteCode<BCE_Num_EqualJmp>);
+        case BCE_Num_LessJmp:
+            so << format("< jmp %d", reinterpret_cast<ByteCode<BCE_Num_LessJmp>*>(ins)->target);
+            return ins + sizeof(ByteCode<BCE_Num_LessJmp>);
+        case BCE_Num_LessEqJmp:
+            so << format("<= jmp %d", reinterpret_cast<ByteCode<BCE_Num_LessEqJmp>*>(ins)->target);
+            return ins + sizeof(ByteCode<BCE_Num_LessEqJmp>);
+        case BCE_Num_GreaterJmp:
+            so << format("> jmp %d", reinterpret_cast<ByteCode<BCE_Num_GreaterJmp>*>(ins)->target);
+            return ins + sizeof(ByteCode<BCE_Num_GreaterJmp>);
+        case BCE_Num_GreaterEqJmp:
+            so << format(">= jmp %d", reinterpret_cast<ByteCode<BCE_Num_GreaterEqJmp>*>(ins)->target);
+            return ins + sizeof(ByteCode<BCE_Num_GreaterEqJmp>);
+        case BCE_EqJmp:
+            so << format("eq? jmp %d", reinterpret_cast<ByteCode<BCE_EqJmp>*>(ins)->target);
+            return ins + sizeof(ByteCode<BCE_EqJmp>);
+        case BCE_EmptyJmp:
+            so << format("empty? jmp %d", reinterpret_cast<ByteCode<BCE_EmptyJmp>*>(ins)->target);
+            return ins + sizeof(ByteCode<BCE_EmptyJmp>);
         case BCE_Tail:
             so << format("tail");
             return ins + sizeof(ByteCode<BCE_Tail>);
