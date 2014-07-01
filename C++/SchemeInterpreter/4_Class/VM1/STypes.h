@@ -7,6 +7,15 @@
 struct SFuncProto;
 struct SClassProto;
 
+inline void writeBarrier(SObject *obj, SValue v) {
+    if (v.isObject()) {
+        auto p = v.getObject();
+        if (obj->getAge() > p->getAge()) {
+            SObject::sYoungContainer.push_back(obj);
+        }
+    }
+}
+
 struct SPair: public SObject {
     static const int TYPE = SVT_Pair;
 
@@ -18,18 +27,36 @@ struct SPair: public SObject {
         return sizeof(SPair);
     }
 
-    SValue car;
-    SValue cdr;
-
     bool _equal(const SPair *o) const {
-        return car.equal(o->car) && cdr.equal(o->cdr);
+        return mCar.equal(o->mCar) && mCdr.equal(o->mCdr);
+    }
+
+    SValue getCar() {
+        return mCar;
+    }
+
+    SValue getCdr() {
+        return mCdr;
+    }
+
+    void setCar(SValue v) {
+        writeBarrier(this, v);
+        mCar = v;
+    }
+
+    void setCdr(SValue v) {
+        writeBarrier(this, v);
+        mCdr = v;
     }
 
     void _writeToStream(ostream &so) const;
 
 private:
-    SPair(SValue _car, SValue _cdr): SObject(TYPE), car(_car), cdr(_cdr) {
+    SPair(SValue _car, SValue _cdr): SObject(TYPE), mCar(_car), mCdr(_cdr) {
     }
+
+    SValue mCar;
+    SValue mCdr;
 
     friend class SObjectManager;
 };
@@ -56,6 +83,7 @@ struct SEnv: public SObject {
 
     void setValue(int i, SValue v) {
         ASSERT(i >= 0 && i < vCount);
+        writeBarrier(this, v);
         values[i] = v;
     }
 

@@ -12,25 +12,20 @@ static void setupFrame(
         vector<StackFrame> &frameStack,
         SObjectManager *objMgr) {
 
-    frameStack.push_back(StackFrame{nullptr, nullptr, 0});
+    frameStack.push_back(StackFrame{nullptr, nullptr, 0, 0});
     auto frame = &frameStack.back();
 
-    auto pfunc = evalStack.begin() + (evalStack.size() - actualCount - 1);
-
-    frame->func = pfunc->getObject<SFunc>();
+    frame->retOff = evalStack.size() - actualCount - 1;
+    frame->func = evalStack[frame->retOff].getObject<SFunc>();
     {
         SValue v;
         frame->localEnv = objMgr->createObject<SEnv>(&v, frame->func->env, actualCount);
     }
-
-    {
-        auto iter = pfunc;
-        for (int i = 0; i < actualCount; ++i) {
-            frame->localEnv->setValue(i, *++iter);
-        }
+    for (int i = 0; i < actualCount; ++i) {
+        frame->localEnv->setValue(i, evalStack[frame->retOff + 1 + i]);
     }
 
-    evalStack.erase(pfunc, evalStack.end());
+    evalStack.erase(evalStack.begin() + frame->retOff, evalStack.end());
 }
 
 void SInterpreter::call(

@@ -31,15 +31,23 @@ public:
 
     template<typename T, typename ...ArgT>
     T* createObject(SValue *ret, ArgT && ...args) {
-        if (mMemPool.getMemorySize() > mGCThreshold) {
-            performFullGC();
+        for (int i = GEN_N - 1; i >= 0; --i) {
+            if (mGens[i].size > mGens[i].threshold) {
+                performGC(i);
+                break;
+            }
         }
 
-        auto p = new (mMemPool.malloc(T::estimateSize(forward<ArgT>(args)...), alignof(T))) T(forward<ArgT>(args)...);
+        auto youngGen = &mGens[0];
+
+        int size = T::estimateSize(forward<ArgT>(args)...);
+        youngGen->size += size;
+
+        auto p = new (mMemPool.malloc(size, alignof(T))) T(forward<ArgT>(args)...);
         *ret = SValue(p);
 
-        p->next = mFirstObj;
-        mFirstObj = p;
+        p->next = youngGen->firstObj;
+        youngGen->firstObj = p;
 
         return p;
     }
@@ -61,15 +69,28 @@ public:
 
     void mark(SValue v);
     void mark(SObject *obj);
+    bool isOldGenForGC(SObject *obj);
 
-    void performFullGC();
+    void performGC(int gen);
+
+private:
+    struct GenerationInfo {
+        SObject *firstObj;
+        uint64_t size;
+        uint64_t threshold;
+        uint64_t initThreshold;
+    };
+
+    static const int GEN_N = 4;
+    static const int AGE_2_GEN[SObject::MAX_AGE + 1];
+    static const int GEN_2_AGE[GEN_N];
 
 private:
     MemoryPool mMemPool;
     function<void(SObjectManager*)> mRootCollector;
-    SObject *mFirstObj;
-    uint64_t mGCThreshold;
-    queue<SObject*> mMarkedObjs;
+    vector<SObject*> mMarkedObjs;
+    int mGCAge;
+    GenerationInfo mGens[GEN_N];
 };
 
 #endif

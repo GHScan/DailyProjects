@@ -3,18 +3,18 @@
 
 void SPair::_writeToStream(ostream &so) const {
     so << '(';
-    car.writeToStream(so);
+    mCar.writeToStream(so);
 
     const SPair *p = this;
-    while (p->cdr.getType() == SVT_Pair) {
-        p = p->cdr.getObject<SPair>();
+    while (p->mCdr.getType() == SVT_Pair) {
+        p = p->mCdr.getObject<SPair>();
         so << ' ';
-        p->car.writeToStream(so);
+        p->mCar.writeToStream(so);
     }
 
-    if (p->cdr != SValue::EMPTY) {
+    if (p->mCdr != SValue::EMPTY) {
         so << " . ";
-        p->cdr.writeToStream(so);
+        p->mCdr.writeToStream(so);
     }
 
     so << ')';

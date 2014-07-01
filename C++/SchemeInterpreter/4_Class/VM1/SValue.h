@@ -44,6 +44,11 @@ struct SValue {
         return mSymbol;
     }
 
+    SObject* getObject() {
+        ASSERT(isObject());
+        return mObj;
+    }
+
     template<typename T>
     T* getObject() {
         ASSERT(mType == T::TYPE && mObj->getType() == T::TYPE);
@@ -61,7 +66,7 @@ struct SValue {
         // mType = SVT_Reserved;
     }
 
-    SValue(double number): mNumber(number), mType(SVT_Number) {
+    explicit SValue(double number): mNumber(number), mType(SVT_Number) {
     }
 
     void setString(Atom *atom) {
@@ -74,7 +79,11 @@ struct SValue {
         mSymbol = atom;
     }
 
-    SValue(SObject *obj): mObj(obj), mType(obj->getType()) {
+    explicit SValue(SObject *obj): mObj(obj), mType(obj->getType()) {
+    }
+
+    bool isObject() const {
+        return mType >= SVT_Pair;
     }
 
     bool operator == (SValue o) const {
@@ -146,7 +155,7 @@ struct SValue {
     }
 
 private:
-    SValue(bool _b): mBool(_b), mType(SVT_Bool) {
+    explicit SValue(bool _b): mBool(_b), mType(SVT_Bool) {
     }
 
     static SValue createReserved(int v) {

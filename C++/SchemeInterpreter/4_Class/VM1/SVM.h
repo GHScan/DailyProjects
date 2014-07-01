@@ -15,6 +15,7 @@ struct StackFrame {
     SEnv *localEnv;
     SFunc *func;
     int pc;
+    int retOff;
 };
 
 class SVM {

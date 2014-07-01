@@ -29,6 +29,7 @@ static void setupConstants(SExpression e, vector<SValue> &constants, SObjectMana
     }
 }
 
+double g_clocks = 0;
 static void setupGlobals(SExpression e, vector<SValue> &globals, SObjectManager *mgr) {
     vector<Atom*> names;
 
@@ -73,32 +74,40 @@ static void setupGlobals(SExpression e, vector<SValue> &globals, SObjectManager 
         {"empty?", [](SObjectManager *mgr, SValue *ret){ mgr->createBool(ret, ret[1] == SValue::EMPTY); }},
 
         {"cons", [](SObjectManager *mgr, SValue *ret){ mgr->createObject<SPair>(ret, ret[1], ret[2]); }},
-        {"car", [](SObjectManager *mgr, SValue *ret){ ret[0] = ret[1].getObject<SPair>()->car; }},
-        {"cdr", [](SObjectManager *mgr, SValue *ret){ ret[0] = ret[1].getObject<SPair>()->cdr; }},
+        {"car", [](SObjectManager *mgr, SValue *ret){ ret[0] = ret[1].getObject<SPair>()->getCar(); }},
+        {"cdr", [](SObjectManager *mgr, SValue *ret){ ret[0] = ret[1].getObject<SPair>()->getCdr(); }},
         {"drop", [](SObjectManager *mgr, SValue *ret){
             SPair *p = ret[1].getObject<SPair>();
             double n = ret[2].getNumber();
-            for (; n > 0; --n) p = p->cdr.getObject<SPair>();
+            for (; n > 0; --n) p = p->getCdr().getObject<SPair>();
             *ret = SValue(p);
          }},
         {"length", [](SObjectManager *mgr, SValue *ret){
             SValue l = ret[1];
             double n = 0;
-            for (; l != SValue::EMPTY; l = l.getObject<SPair>()->cdr, ++n);
+            for (; l != SValue::EMPTY; l = l.getObject<SPair>()->getCdr(), ++n);
             *ret = SValue(n);
         }},
         {"last", [](SObjectManager *mgr, SValue *ret){
             SPair *p = ret[1].getObject<SPair>();
-            for (; p->cdr != SValue::EMPTY; p = p->cdr.getObject<SPair>());
-            ret[0] = p->car;
+            for (; p->getCdr() != SValue::EMPTY; p = p->getCdr().getObject<SPair>());
+            ret[0] = p->getCar();
          }},
         {"append", [](SObjectManager *mgr, SValue *ret){
-            SValue src = ret[1];
-            SValue* dest = ret;
-            for (; src != SValue::EMPTY; src = src.getObject<SPair>()->cdr) {
-                dest = &mgr->createObject<SPair>(dest, src.getObject<SPair>()->car, SValue::EMPTY)->cdr;
+            if (ret[1] == SValue::EMPTY) {
+                ret[0] = ret[2];
+            } else {
+                auto srcPair = ret[1].getObject<SPair>();
+                auto newPair = mgr->createObject<SPair>(ret, srcPair->getCar(), SValue::EMPTY);
+                SValue v;
+                while (srcPair->getCdr() != SValue::EMPTY) {
+                    srcPair = srcPair->getCdr().getObject<SPair>();
+                    auto p = mgr->createObject<SPair>(&v, srcPair->getCar(), SValue::EMPTY);
+                    newPair->setCdr(v);
+                    newPair = p;
+                }
+                newPair->setCdr(ret[2]);
             }
-            *dest = ret[2];
         }},
 
         {"pretty-print", [](SObjectManager *mgr, SValue *ret){
@@ -198,11 +207,22 @@ SVM::SVM(FILE *file, bool disasm, int initGCThreshold):
 
     mObjMgr = new SObjectManager(initGCThreshold);
     mObjMgr->installRootCollector([this](SObjectManager *mgr){
-        for (auto v : mEvalStack) mgr->mark(v);
-        for (auto v : mFrameStack) {
-            mgr->mark(v.localEnv);
-            mgr->mark(v.func);
+        int youngOff = 0;
+
+        for (auto riter = mFrameStack.rbegin(); riter != mFrameStack.rend(); ++riter) {
+            if (mgr->isOldGenForGC(riter->localEnv)) {
+                youngOff = riter->retOff;
+                break;
+            }
+
+            mgr->mark(riter->localEnv);
+            mgr->mark(riter->func);
         }
+
+        for (auto iter = mEvalStack.begin() + youngOff; iter != mEvalStack.end(); ++iter) {
+            mgr->mark(*iter);
+        }
+
         for (auto v : mConstants) mgr->mark(v);
         for (auto v : mGlobals) mgr->mark(v);
     });

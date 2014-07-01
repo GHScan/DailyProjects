@@ -2,6 +2,8 @@
 #include "SObject.h"
 #include "STypes.h"
 
+vector<SObject*> SObject::sYoungContainer;
+
 bool SObject::equal(const SObject *o) const {
     switch (mType) {
         case SVT_Pair:
