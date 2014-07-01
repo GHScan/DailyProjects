@@ -5,7 +5,7 @@ include makefile_var
 build_type = debug
 
 cxx = cl
-cxx_flags += -nologo -W3 -Wp64 -DWIN32 -D_CONSOLE -EHsc -fp:precise -GR -Zc:wchar_t -Zc:forScope -Gd -TP -analyze
+cxx_flags += -nologo -W3 -Wp64 -DWIN32 -D_CONSOLE -EHsc -fp:precise -GR -Zc:wchar_t -Zc:forScope -Gd -TP
 cxx_flags += $(foreach i,$(include_dirs),-I"$(subst ?, ,$(i))")
 cxx_flags += $(foreach i,$(macro_defs),-D$(i))
 ifeq ($(build_type),debug)
