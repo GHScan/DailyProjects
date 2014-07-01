@@ -11,4 +11,6 @@
 
 // #define USE_TCMALLOC
 
+#define DEBUG_ONLY_ASSERT
+
 #endif

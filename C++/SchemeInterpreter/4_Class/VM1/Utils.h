@@ -35,7 +35,11 @@ private:
 #ifndef NDEBUG
 #define ASSERT      assert
 #else
+#ifdef DEBUG_ONLY_ASSERT
+#define ASSERT(b)   
+#else
 #define ASSERT(b)   if (b); else throw AssertFailedException(FILE_LINE #b)
+#endif
 #endif
 
 inline uint32_t hashMerge(uint32_t seed, uint32_t h) {
