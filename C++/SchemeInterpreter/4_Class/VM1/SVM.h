@@ -10,6 +10,7 @@ struct SClassProto;
 class SObjectManager;
 class StackAllocator;
 class SAssembler;
+class SEvalStack;
 
 struct StackFrame {
     SEnv *localEnv;
@@ -20,7 +21,7 @@ struct StackFrame {
 
 class SVM {
 public:
-    SVM(FILE *file, bool disasm, int initGCThreshold);
+    SVM(FILE *file, bool disasm);
     ~SVM();
 
     SVM(const SVM&);
@@ -31,7 +32,7 @@ public:
 private:
     SAssembler *mAssembler;
     SObjectManager *mObjMgr;
-    vector<SValue> mEvalStack;
+    SEvalStack *mEvalStack;
     vector<StackFrame> mFrameStack;
     vector<SValue> mConstants;
     vector<SValue> mGlobals;

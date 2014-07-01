@@ -28,10 +28,14 @@ private:
     string mWhat;
 };
 
-#ifdef _DEBUG
+#define _TO_STRING(e) #e
+#define TO_STRING(e) _TO_STRING(e)
+#define FILE_LINE __FILE__ "(" TO_STRING(__LINE__) "): "
+
+#ifndef NDEBUG
 #define ASSERT      assert
 #else
-#define ASSERT(b)   if (b); else throw AssertFailedException(#b)
+#define ASSERT(b)   if (b); else throw AssertFailedException(FILE_LINE #b)
 #endif
 
 inline uint32_t hashMerge(uint32_t seed, uint32_t h) {

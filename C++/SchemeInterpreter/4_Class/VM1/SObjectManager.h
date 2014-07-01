@@ -10,7 +10,7 @@ struct SClassProto;
 
 class SObjectManager {
 public:
-    SObjectManager(int initGCThreshold);
+    SObjectManager();
     ~SObjectManager();
 
     void createBool(SValue *ret, bool b) {

@@ -9,7 +9,7 @@ const int SObjectManager::GEN_2_AGE[GEN_N] = {
     0, 1, 4, 8,
 };
 
-SObjectManager::SObjectManager(int initGCThreshold): 
+SObjectManager::SObjectManager(): 
     mGCAge(0) {
 
     for (int i = 0; i <= SObject::MAX_AGE; ++i) {

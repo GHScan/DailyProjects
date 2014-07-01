@@ -2,6 +2,7 @@
 #define SPROTO_H
 
 struct SFuncProto {
+    int evalStackSize;
     int codeSize;
     uint8_t *codes;
 };

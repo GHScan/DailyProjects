@@ -65,12 +65,12 @@ void SAssembler::assemble(vector<uint8_t> &codes, SExpression e) {
     mLabels.clear();
     mLabelRefs.clear();
 
-    for (auto free = e.getNode()->ref(1).getNode()->ref(1).getNode(); free != nullptr; free = free->next) {
+    for (auto free = e.getNode()->ref(2).getNode()->ref(1).getNode(); free != nullptr; free = free->next) {
         auto p = free->value.getNode()->ref(1).getNode();
         mFrees.push_back(make_pair(atoi(p->ref(0).getInt()->c_str()), atoi(p->ref(1).getInt()->c_str())));
     }
 
-    for (auto code = e.getNode()->ref(2).getNode()->ref(1).getNode(); code != nullptr; code = code->next) {
+    for (auto code = e.getNode()->ref(3).getNode()->ref(1).getNode(); code != nullptr; code = code->next) {
         auto lcode = code->value.getNode();
 
         switch (lcode->ref(0).getSymbol()->getID()) {

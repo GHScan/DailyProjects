@@ -1,5 +1,6 @@
 #lang racket
 
+(require "utils.rkt")
 ;------------------------------
 (define (flatten-map f l)
   (apply append (map f l))
@@ -171,13 +172,47 @@
   (let ([pass-list (list optimize-pass-remove-duplicate-pop)])
     (foldl (lambda (pass codes) (pass codes)) codes pass-list))
   )
+;------------------------------
+(define (calc-eval-stack-size codes)
+  (build-label-map 
+    codes
+    (lambda (labels codes)
+      (let iter ([size 0][max-size 0][codes codes][labels labels])
+        (if (empty? codes)
+          (max size max-size)
+          (match 
+            (car codes)
+            [`(loadk ,index) (iter (add1 size) (max size max-size) (cdr codes) labels)]
+            [`(loadvar ,var) (iter (add1 size) (max size max-size) (cdr codes) labels)]
+            [`(loadfunc ,findex) (iter (add1 size) (max size max-size) (cdr codes) labels)]
+            [`(storevar ,var) (iter (sub1 size) (max size max-size) (cdr codes) labels)]
+            [`(pop) (iter (sub1 size) (max size max-size) (cdr codes) labels)]
+            [`(jmp ,l-name) 
+              (let ([entry (assq l-name labels)])
+                (if entry
+                  (iter size (max size max-size) (cdr entry) (remq entry labels))
+                  (max size max-size)))]
+            [`(tjmp ,l-name) 
+            (let ([entry (assq l-name labels)])
+             (if entry
+               (max (iter (sub1 size) (max size max-size) (cdr (assq l-name labels)) (remq entry labels))
+                    (iter (sub1 size) (max size max-size) (cdr codes) labels))
+               (iter (sub1 size) (max size max-size) (cdr codes) labels)))]
+            [`(tail) (iter size (max size max-size) (cdr codes) labels)]
+            [`(call ,actual-count) (iter (- size actual-count) (max size max-size) (cdr codes) labels)]
+            [`(loadclass ,cindex) (iter (add1 size) (max size max-size) (cdr codes) labels)]
+            [`(getfield ,field) (iter size (max size max-size) (cdr codes) labels)]
+            [`(getmethod ,method) (iter size (max size max-size) (cdr codes) labels)]
+            [`(inline-op ,op ,actual-count) (iter (- size (sub1 actual-count)) (max size max-size) (cdr codes) labels)]
+            [else (error "invalid")])))))
+  )
 
 ;------------------------------
 (define (make-func sym-table codes)
-  (let ([codes (optimize codes)])
-    `((symbols ,(sym-table 'symbols))
-      (frees ,(sym-table 'frees))
-      (codes ,codes)))
+  `((eval-stack-size ,(calc-eval-stack-size codes))
+    (symbols ,(sym-table 'symbols))
+    (frees ,(sym-table 'frees))
+    (codes ,(optimize codes)))
   )
 
 (define (make-class method-sym-table field-sym-table func-table)

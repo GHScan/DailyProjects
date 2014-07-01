@@ -9,6 +9,7 @@
 #include "SAssembler.h"
 #include "SDisassembler.h"
 #include "SInterpreter.h"
+#include "SStack.h"
 
 static void setupConstants(SExpression e, vector<SValue> &constants, SObjectManager *mgr) {
     for (auto n = e.getNode()->ref(1).getNode(); n != nullptr; n = n->next) {
@@ -147,6 +148,7 @@ static void setupFuncs(SExpression e, vector<SFuncProto*> &protos, SAssembler *a
         auto fproto = alloc->malloc<SFuncProto>();
 
         ASSERT(!codes.empty());
+        fproto->evalStackSize = atoi(f->value.getNode()->ref(1).getNode()->ref(0).getNode()->ref(1).getInt()->c_str());
         fproto->codeSize = (int)codes.size();
         fproto->codes = alloc->mallocArray<uint8_t>(codes.size());
         memcpy(fproto->codes, &codes[0], codes.size());
@@ -198,14 +200,16 @@ static void setupClasses(SExpression e, vector<SClassProto*> &protos, vector<SFu
 
 extern SExpression parseFile(FILE *file, StackAllocator *allocator);
 
-SVM::SVM(FILE *file, bool disasm, int initGCThreshold): 
+SVM::SVM(FILE *file, bool disasm): 
     mAssembler(nullptr), mObjMgr(nullptr), mProtoAlloc(nullptr), mMainFuncProto(nullptr) {
 
     new AtomPool;
 
     mAssembler = new SAssembler(mConstants);
 
-    mObjMgr = new SObjectManager(initGCThreshold);
+    mEvalStack = new SEvalStack(4 * 1024);
+
+    mObjMgr = new SObjectManager();
     mObjMgr->installRootCollector([this](SObjectManager *mgr){
         int youngOff = 0;
 
@@ -219,8 +223,10 @@ SVM::SVM(FILE *file, bool disasm, int initGCThreshold):
             mgr->mark(riter->func);
         }
 
-        for (auto iter = mEvalStack.begin() + youngOff; iter != mEvalStack.end(); ++iter) {
-            mgr->mark(*iter);
+        if (mEvalStack != nullptr) {
+            for (auto iter = mEvalStack->begin() + youngOff; iter != mEvalStack->end(); ++iter) {
+                mgr->mark(*iter);
+            }
         }
 
         for (auto v : mConstants) mgr->mark(v);
@@ -241,26 +247,27 @@ SVM::SVM(FILE *file, bool disasm, int initGCThreshold):
 }
 
 SVM::~SVM() {
-    ASSERT(mEvalStack.empty() && mFrameStack.empty());
+    ASSERT(mEvalStack->empty() && mFrameStack.empty());
     mConstants.clear();
     mGlobals.clear();
 
     DELETE(mProtoAlloc);
     DELETE(mObjMgr);
+    DELETE(mEvalStack);
     DELETE(mAssembler);
 
     delete AtomPool::instance();
 }
 
 void SVM::run() {
-    mEvalStack.push_back(SValue::EMPTY);
-    mObjMgr->createObject<SFunc>(&mEvalStack.back(), nullptr, mMainFuncProto);
+    mEvalStack->push(SValue::EMPTY);
+    mObjMgr->createObject<SFunc>(&mEvalStack->top<-1>(), nullptr, mMainFuncProto);
 
     SInterpreter::call(0, mEvalStack, mFrameStack, mObjMgr, mConstants, mGlobals, mFuncProtos, mClassProtos);
 
-    mEvalStack.back().writeToStream(cout);
+    mEvalStack->top<-1>().writeToStream(cout);
     cout << endl;
-    mEvalStack.pop_back();
+    mEvalStack->pop();
 
-    ASSERT(mEvalStack.empty() && mFrameStack.empty());
+    ASSERT(mEvalStack->empty() && mFrameStack.empty());
 }

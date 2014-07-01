@@ -3,6 +3,7 @@
 
 #include "SValue.h"
 
+class SEvalStack;
 struct StackFrame;
 struct SFuncProto;
 struct SClassProto;
@@ -11,7 +12,7 @@ struct SInterpreter {
 
     static void call(
             int actualCount,
-            vector<SValue> &evalStack,
+            SEvalStack *evalStack,
             vector<StackFrame> &frameStack,
             SObjectManager *objMgr,
             vector<SValue> &constants,

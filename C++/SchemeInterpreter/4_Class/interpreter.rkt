@@ -1,30 +1,19 @@
 #lang racket
 
+(require "utils.rkt")
+;------------------------------
 (define the-constants empty)
 (define the-globals empty)
 (define the-funcs empty)
 (define the-classes empty)
 (define the-global-map empty)
 (define the-main-func empty)
-
 ;------------------------------
-(define (build-label-map codes k)
-  (cond
-    [(empty? codes) (k empty empty)]
-    [(eq? 'label (caar codes)) 
-     (build-label-map (cdr codes) 
-                      (lambda (labels new-codes)
-                        (k (cons (cons (cadar codes) new-codes) labels) new-codes)))]
-    [else 
-      (build-label-map (cdr codes)
-                       (lambda (labels new-codes)
-                         (k labels (cons (car codes) new-codes))))])
-  )
-
 (define (build-func source)
   (match 
     source
-    [`((symbols ,symbols)
+    [`((eval-stack-size ,eval-stack-size)
+       (symbols ,symbols)
        (frees ,frees)
        (codes ,codes))
       (build-label-map 

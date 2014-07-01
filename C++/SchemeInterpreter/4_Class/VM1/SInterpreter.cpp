@@ -5,32 +5,33 @@
 #include "SObjectManager.h"
 #include "ByteCodeDefinition.h"
 #include "SProto.h"
+#include "SStack.h"
 
 static void setupFrame(
         int actualCount,
-        vector<SValue> &evalStack,
+        SEvalStack *evalStack,
         vector<StackFrame> &frameStack,
         SObjectManager *objMgr) {
 
     frameStack.push_back(StackFrame{nullptr, nullptr, 0, 0});
     auto frame = &frameStack.back();
 
-    frame->retOff = evalStack.size() - actualCount - 1;
-    frame->func = evalStack[frame->retOff].getObject<SFunc>();
+    frame->retOff = evalStack->size() - actualCount - 1;
+    frame->func = (*evalStack)[frame->retOff].getObject<SFunc>();
     {
         SValue v;
         frame->localEnv = objMgr->createObject<SEnv>(&v, frame->func->env, actualCount);
     }
     for (int i = 0; i < actualCount; ++i) {
-        frame->localEnv->setValue(i, evalStack[frame->retOff + 1 + i]);
+        frame->localEnv->setValue(i, (*evalStack)[frame->retOff + 1 + i]);
     }
 
-    evalStack.erase(evalStack.begin() + frame->retOff, evalStack.end());
+    evalStack->popn(actualCount + 1);
 }
 
 void SInterpreter::call(
         int actualCount,
-        vector<SValue> &evalStack,
+        SEvalStack *evalStack,
         vector<StackFrame> &frameStack,
         SObjectManager *objMgr,
         vector<SValue> &constants,
@@ -46,106 +47,101 @@ Label_PeekFrame:
     while ((int)frameStack.size() >= frameOff) {
         auto frame = &frameStack.back();
 
+        auto fproto = frame->func->proto;
         int pc = frame->pc;
-        uint8_t *codes = frame->func->proto->codes;
-        int maxPc = frame->func->proto->codeSize;
+        uint8_t *codes = fproto->codes;
+        int maxPc = fproto->codeSize;
         SEnv *localEnv = frame->localEnv;
+
+        evalStack->reserve(frame->retOff + fproto->evalStackSize);
 
         while (pc < maxPc) {
             switch (codes[pc]) {
                 case BCE_LoadBool:
-                    evalStack.push_back(reinterpret_cast<ByteCode<BCE_LoadBool>*>(&codes[pc])->value == 1 ? SValue::TRUE : SValue::FALSE);
+                    evalStack->push(reinterpret_cast<ByteCode<BCE_LoadBool>*>(&codes[pc])->value == 1 ? SValue::TRUE : SValue::FALSE);
                     pc += sizeof(ByteCode<BCE_LoadBool>);
                     break;
                 case BCE_LoadInt:
-                    evalStack.push_back(SValue((double)reinterpret_cast<ByteCode<BCE_LoadInt>*>(&codes[pc])->value));
+                    evalStack->push(SValue((double)reinterpret_cast<ByteCode<BCE_LoadInt>*>(&codes[pc])->value));
                     pc += sizeof(ByteCode<BCE_LoadInt>);
                     break;
                 case BCE_LoadDouble:
-                    evalStack.push_back(SValue(reinterpret_cast<ByteCode<BCE_LoadDouble>*>(&codes[pc])->value));
+                    evalStack->push(SValue(reinterpret_cast<ByteCode<BCE_LoadDouble>*>(&codes[pc])->value));
                     pc += sizeof(ByteCode<BCE_LoadDouble>);
                     break;
                 case BCE_LoadConstant:
-                    evalStack.push_back(constants[reinterpret_cast<ByteCode<BCE_LoadConstant>*>(&codes[pc])->kindex]);
+                    evalStack->push(constants[reinterpret_cast<ByteCode<BCE_LoadConstant>*>(&codes[pc])->kindex]);
                     pc += sizeof(ByteCode<BCE_LoadConstant>);
                     break;
                 case BCE_LoadGlobal:
-                    evalStack.push_back(globals[reinterpret_cast<ByteCode<BCE_LoadGlobal>*>(&codes[pc])->gindex]);
+                    evalStack->push(globals[reinterpret_cast<ByteCode<BCE_LoadGlobal>*>(&codes[pc])->gindex]);
                     pc += sizeof(ByteCode<BCE_LoadGlobal>);
                     break;
                 case BCE_StoreGlobal:
-                    globals[reinterpret_cast<ByteCode<BCE_StoreGlobal>*>(&codes[pc])->gindex] = evalStack.back();
-                    evalStack.pop_back();
+                    globals[reinterpret_cast<ByteCode<BCE_StoreGlobal>*>(&codes[pc])->gindex] = evalStack->pop();
                     pc += sizeof(ByteCode<BCE_StoreGlobal>);
                     break;
                 case BCE_LoadLocal:
-                    evalStack.push_back(localEnv->getValue(reinterpret_cast<ByteCode<BCE_LoadLocal>*>(&codes[pc])->lindex));
+                    evalStack->push(localEnv->getValue(reinterpret_cast<ByteCode<BCE_LoadLocal>*>(&codes[pc])->lindex));
                     pc += sizeof(ByteCode<BCE_LoadLocal>);
                     break;
                 case BCE_StoreLocal:
-                    localEnv->setValue(reinterpret_cast<ByteCode<BCE_StoreLocal>*>(&codes[pc])->lindex, evalStack.back());
-                    evalStack.pop_back();
+                    localEnv->setValue(reinterpret_cast<ByteCode<BCE_StoreLocal>*>(&codes[pc])->lindex, evalStack->pop());
                     pc += sizeof(ByteCode<BCE_StoreLocal>);
                     break;
                 case BCE_LoadFree: {
                     auto ins = reinterpret_cast<ByteCode<BCE_LoadFree>*>(&codes[pc]);
-                    evalStack.push_back(localEnv->getUpEnv(ins->envIndex)->getValue(ins->index));
+                    evalStack->push(localEnv->getUpEnv(ins->envIndex)->getValue(ins->index));
                     pc += sizeof(ByteCode<BCE_LoadFree>);
                    }
                     break;
                 case BCE_LoadFree1:
-                    evalStack.push_back(localEnv->prevEnv->getValue(reinterpret_cast<ByteCode<BCE_LoadFree1>*>(&codes[pc])->index));
+                    evalStack->push(localEnv->prevEnv->getValue(reinterpret_cast<ByteCode<BCE_LoadFree1>*>(&codes[pc])->index));
                     pc += sizeof(ByteCode<BCE_LoadFree1>);
                     break;
                 case BCE_LoadFree2:
-                    evalStack.push_back(localEnv->prevEnv->prevEnv->getValue(reinterpret_cast<ByteCode<BCE_LoadFree2>*>(&codes[pc])->index));
+                    evalStack->push(localEnv->prevEnv->prevEnv->getValue(reinterpret_cast<ByteCode<BCE_LoadFree2>*>(&codes[pc])->index));
                     pc += sizeof(ByteCode<BCE_LoadFree2>);
                     break;
                 case BCE_LoadFree3:
-                    evalStack.push_back(localEnv->prevEnv->prevEnv->prevEnv->getValue(reinterpret_cast<ByteCode<BCE_LoadFree3>*>(&codes[pc])->index));
+                    evalStack->push(localEnv->prevEnv->prevEnv->prevEnv->getValue(reinterpret_cast<ByteCode<BCE_LoadFree3>*>(&codes[pc])->index));
                     pc += sizeof(ByteCode<BCE_LoadFree3>);
                     break;
                 case BCE_StoreFree: {
                     auto ins = reinterpret_cast<ByteCode<BCE_StoreFree>*>(&codes[pc]);
-                    localEnv->getUpEnv(ins->envIndex)->setValue(ins->index, evalStack.back());
-                    evalStack.pop_back();
+                    localEnv->getUpEnv(ins->envIndex)->setValue(ins->index, evalStack->pop());
                     pc += sizeof(ByteCode<BCE_StoreFree>);
                 }
                     break;
                 case BCE_StoreFree1: {
-                    localEnv->prevEnv->setValue(reinterpret_cast<ByteCode<BCE_StoreFree1>*>(&codes[pc])->index, evalStack.back());
-                    evalStack.pop_back();
+                    localEnv->prevEnv->setValue(reinterpret_cast<ByteCode<BCE_StoreFree1>*>(&codes[pc])->index, evalStack->pop());
                     pc += sizeof(ByteCode<BCE_StoreFree1>);
                  }
                     break;
                 case BCE_StoreFree2: {
-                    localEnv->prevEnv->prevEnv->setValue(reinterpret_cast<ByteCode<BCE_StoreFree2>*>(&codes[pc])->index, evalStack.back());
-                    evalStack.pop_back();
+                    localEnv->prevEnv->prevEnv->setValue(reinterpret_cast<ByteCode<BCE_StoreFree2>*>(&codes[pc])->index, evalStack->pop());
                     pc += sizeof(ByteCode<BCE_StoreFree2>);
                  }
                     break;
                 case BCE_StoreFree3: {
-                    localEnv->prevEnv->prevEnv->prevEnv->setValue(reinterpret_cast<ByteCode<BCE_StoreFree3>*>(&codes[pc])->index, evalStack.back());
-                    evalStack.pop_back();
+                    localEnv->prevEnv->prevEnv->prevEnv->setValue(reinterpret_cast<ByteCode<BCE_StoreFree3>*>(&codes[pc])->index, evalStack->pop());
                     pc += sizeof(ByteCode<BCE_StoreFree3>);
                  }
                     break;
                 case BCE_LoadFunc:
-                    evalStack.push_back(SValue::EMPTY);
-                    objMgr->createObject<SFunc>(&evalStack.back(), localEnv, fprotos[reinterpret_cast<ByteCode<BCE_LoadFunc>*>(&codes[pc])->findex]);
+                    evalStack->push(SValue::EMPTY);
+                    objMgr->createObject<SFunc>(&evalStack->top<-1>(), localEnv, fprotos[reinterpret_cast<ByteCode<BCE_LoadFunc>*>(&codes[pc])->findex]);
                     pc += sizeof(ByteCode<BCE_LoadFunc>);
                     break;
                 case BCE_Pop:
-                    evalStack.pop_back();
+                    evalStack->pop();
                     pc += sizeof(ByteCode<BCE_Pop>);
                     break;
                 case BCE_Jmp:
                     pc = reinterpret_cast<ByteCode<BCE_Jmp>*>(&codes[pc])->target;
                     break;
                 case BCE_TrueJmp: {
-                    bool b = evalStack.back() == SValue::TRUE;
-                    evalStack.pop_back();
-                    if (b) {
+                    if (evalStack->pop() == SValue::TRUE) {
                         pc = reinterpret_cast<ByteCode<BCE_TrueJmp>*>(&codes[pc])->target;
                     } else {
                         pc += sizeof(ByteCode<BCE_TrueJmp>);
@@ -165,7 +161,7 @@ Label_PeekFrame:
                             frame->pc = pc;
                         }
 
-                        auto pfunc = evalStack.begin() + (evalStack.size() - actualCount - 1);
+                        auto pfunc = evalStack->begin() + (evalStack->size() - actualCount - 1);
                         switch (pfunc->getType()) {
                             case SVT_Func: {
                                 setupFrame(actualCount, evalStack, frameStack, objMgr);
@@ -175,7 +171,7 @@ Label_PeekFrame:
                                 break;
                             case SVT_NativeFunc: {
                                 pfunc->getObject<SNativeFunc>()->func(objMgr, &*pfunc);
-                                evalStack.erase(++pfunc, evalStack.end());
+                                evalStack->popn(actualCount);
                              }
                                 break;
                             case SVT_Class: {
@@ -190,7 +186,7 @@ Label_PeekFrame:
                                     }
                                 }
 
-                                evalStack.erase(++pfunc, evalStack.end());
+                                evalStack->popn(actualCount);
                             }
                                 break;
                             default:
@@ -204,8 +200,8 @@ Label_PeekFrame:
                    }
                     break;
                 case BCE_LoadClass:
-                    evalStack.push_back(SValue::EMPTY);
-                    objMgr->createObject<SClass>(&evalStack.back(), localEnv, cprotos[reinterpret_cast<ByteCode<BCE_LoadClass>*>(&codes[pc])->cindex]);
+                    evalStack->push(SValue::EMPTY);
+                    objMgr->createObject<SClass>(&evalStack->top<-1>(), localEnv, cprotos[reinterpret_cast<ByteCode<BCE_LoadClass>*>(&codes[pc])->cindex]);
                     pc += sizeof(ByteCode<BCE_LoadClass>);
                     break;
                 case BCE_LoadMethod: {
@@ -217,14 +213,14 @@ Label_PeekFrame:
                     break;
                 case BCE_LoadCachedMethod: {
                     auto ins = reinterpret_cast<ByteCode<BCE_LoadCachedMethod>*>(&codes[pc]);
-                    evalStack.push_back(SValue::EMPTY);
-                    objMgr->createObject<SFunc>(&evalStack.back(), localEnv->getUpEnv(ins->cachedObjIndex), ins->cachedFunc);
+                    evalStack->push(SValue::EMPTY);
+                    objMgr->createObject<SFunc>(&evalStack->top<-1>(), localEnv->getUpEnv(ins->cachedObjIndex), ins->cachedFunc);
                     pc += sizeof(ByteCode<BCE_LoadCachedMethod>);
                    }
                     break;
                 case BCE_GetField: {
                     auto ins = reinterpret_cast<ByteCode<BCE_GetField>*>(&codes[pc]);
-                    auto cproto = reinterpret_cast<SClass*>(evalStack.back().getObject<SEnv>()->prevEnv)->proto;
+                    auto cproto = reinterpret_cast<SClass*>(evalStack->top<-1>().getObject<SEnv>()->prevEnv)->proto;
 
                     auto name = constants[ins->kindex].getSymbol();
                     int index = 0;
@@ -238,9 +234,9 @@ Label_PeekFrame:
                     break;
                 case BCE_GetCachedField: {
                     auto ins = reinterpret_cast<ByteCode<BCE_GetCachedField>*>(&codes[pc]);
-                    auto obj = evalStack.back().getObject<SEnv>();
+                    auto obj = evalStack->top<-1>().getObject<SEnv>();
                     if (reinterpret_cast<SClass*>(obj->prevEnv)->proto == ins->cachedClass) {
-                        evalStack.back() = obj->getValue(ins->cachedIndex);
+                        evalStack->top<-1>() = obj->getValue(ins->cachedIndex);
                         pc += sizeof(ByteCode<BCE_GetCachedField>);
                     } else {
                         ins->discardCache();
@@ -249,7 +245,7 @@ Label_PeekFrame:
                     break;
                 case BCE_GetMethod: {
                     auto ins = reinterpret_cast<ByteCode<BCE_GetMethod>*>(&codes[pc]);
-                    auto cproto = reinterpret_cast<SClass*>(evalStack.back().getObject<SEnv>()->prevEnv)->proto;
+                    auto cproto = reinterpret_cast<SClass*>(evalStack->top<-1>().getObject<SEnv>()->prevEnv)->proto;
 
                     auto name = constants[ins->kindex].getSymbol();
                     SFuncProto *fproto = nullptr;
@@ -266,110 +262,123 @@ Label_PeekFrame:
                     break;
                 case BCE_GetCachedMethod: {
                     auto ins = reinterpret_cast<ByteCode<BCE_GetCachedMethod>*>(&codes[pc]);
-                    auto obj = evalStack.back().getObject<SEnv>();
+                    auto obj = evalStack->top<-1>().getObject<SEnv>();
                     if (reinterpret_cast<SClass*>(obj->prevEnv)->proto == ins->cachedClass) {
-                        objMgr->createObject<SFunc>(&evalStack.back(), obj, ins->cachedFunc);
+                        objMgr->createObject<SFunc>(&evalStack->top<-1>(), obj, ins->cachedFunc);
                         pc += sizeof(ByteCode<BCE_GetCachedMethod>);
                     } else {
                         ins->discardCache();
                     }
                   }
                     break;
-                case BCE_Inline_Add:
-                    (&evalStack.back())[-1] = SValue((&evalStack.back())[-1].getNumber() + evalStack.back().getNumber());
-                    evalStack.pop_back();
-                    if (frame == nullptr) goto Label_PeekFrame;
-                    pc += sizeof(ByteCode<BCE_Inline_Add>);
+                case BCE_Inline_Add: {
+                        evalStack->top<-2>() = SValue(evalStack->top<-2>().getNumber() + evalStack->top<-1>().getNumber());
+                        evalStack->pop();
+                        if (frame == nullptr) goto Label_PeekFrame;
+                        pc += sizeof(ByteCode<BCE_Inline_Add>);
+                     }
                     break;
-                case BCE_Inline_Sub:
-                    (&evalStack.back())[-1] = SValue((&evalStack.back())[-1].getNumber() - evalStack.back().getNumber());
-                    evalStack.pop_back();
-                    if (frame == nullptr) goto Label_PeekFrame;
-                    pc += sizeof(ByteCode<BCE_Inline_Sub>);
+                case BCE_Inline_Sub: {
+                        evalStack->top<-2>() = SValue(evalStack->top<-2>().getNumber() - evalStack->top<-1>().getNumber());
+                        evalStack->pop();
+                        if (frame == nullptr) goto Label_PeekFrame;
+                        pc += sizeof(ByteCode<BCE_Inline_Sub>);
+                     }
                     break;
-                case BCE_Inline_Mul:
-                    (&evalStack.back())[-1] = SValue((&evalStack.back())[-1].getNumber() * evalStack.back().getNumber());
-                    evalStack.pop_back();
-                    if (frame == nullptr) goto Label_PeekFrame;
-                    pc += sizeof(ByteCode<BCE_Inline_Mul>);
+                case BCE_Inline_Mul: {
+                        evalStack->top<-2>() = SValue(evalStack->top<-2>().getNumber() * evalStack->top<-1>().getNumber());
+                        evalStack->pop();
+                        if (frame == nullptr) goto Label_PeekFrame;
+                        pc += sizeof(ByteCode<BCE_Inline_Mul>);
+                     }
                     break;
-                case BCE_Inline_Div:
-                    (&evalStack.back())[-1] = SValue((&evalStack.back())[-1].getNumber() / evalStack.back().getNumber());
-                    evalStack.pop_back();
-                    if (frame == nullptr) goto Label_PeekFrame;
-                    pc += sizeof(ByteCode<BCE_Inline_Div>);
+                case BCE_Inline_Div: {
+                        evalStack->top<-2>() = SValue(evalStack->top<-2>().getNumber() / evalStack->top<-1>().getNumber());
+                        evalStack->pop();
+                        if (frame == nullptr) goto Label_PeekFrame;
+                        pc += sizeof(ByteCode<BCE_Inline_Div>);
+                         }
                     break;
-                case BCE_Inline_Quotient:
-                    (&evalStack.back())[-1] = SValue(floor((&evalStack.back())[-1].getNumber() / evalStack.back().getNumber()));
-                    evalStack.pop_back();
-                    if (frame == nullptr) goto Label_PeekFrame;
-                    pc += sizeof(ByteCode<BCE_Inline_Quotient>);
+                case BCE_Inline_Quotient: {
+                        evalStack->top<-2>() = SValue(floor(evalStack->top<-2>().getNumber() / evalStack->top<-1>().getNumber()));
+                        evalStack->pop();
+                        if (frame == nullptr) goto Label_PeekFrame;
+                        pc += sizeof(ByteCode<BCE_Inline_Quotient>);
+                          }
                     break;
-                case BCE_Inline_Mod:
-                    (&evalStack.back())[-1] = SValue(fmod((&evalStack.back())[-1].getNumber(), evalStack.back().getNumber()));
-                    evalStack.pop_back();
-                    if (frame == nullptr) goto Label_PeekFrame;
-                    pc += sizeof(ByteCode<BCE_Inline_Mod>);
+                case BCE_Inline_Mod: {
+                        evalStack->top<-2>() = SValue(fmod(evalStack->top<-2>().getNumber(), evalStack->top<-1>().getNumber()));
+                        evalStack->pop();
+                        if (frame == nullptr) goto Label_PeekFrame;
+                        pc += sizeof(ByteCode<BCE_Inline_Mod>);
+                     }
                     break;
-                case BCE_Inline_Num_Equal:
-                    (&evalStack.back())[-1] = (&evalStack.back())[-1].getNumber() == evalStack.back().getNumber() ? SValue::TRUE : SValue::FALSE;
-                    evalStack.pop_back();
-                    if (frame == nullptr) goto Label_PeekFrame;
-                    pc += sizeof(ByteCode<BCE_Inline_Num_Equal>);
+                case BCE_Inline_Num_Equal: {
+                        evalStack->top<-2>() = evalStack->top<-2>().getNumber() == evalStack->top<-1>().getNumber() ? SValue::TRUE : SValue::FALSE;
+                        evalStack->pop();
+                        if (frame == nullptr) goto Label_PeekFrame;
+                        pc += sizeof(ByteCode<BCE_Inline_Num_Equal>);
+                           }
                     break;
-                case BCE_Inline_Num_Less:
-                    (&evalStack.back())[-1] = (&evalStack.back())[-1].getNumber() < evalStack.back().getNumber() ? SValue::TRUE : SValue::FALSE;
-                    evalStack.pop_back();
-                    if (frame == nullptr) goto Label_PeekFrame;
-                    pc += sizeof(ByteCode<BCE_Inline_Num_Less>);
+                case BCE_Inline_Num_Less: {
+                        evalStack->top<-2>() = evalStack->top<-2>().getNumber() < evalStack->top<-1>().getNumber() ? SValue::TRUE : SValue::FALSE;
+                        evalStack->pop();
+                        if (frame == nullptr) goto Label_PeekFrame;
+                        pc += sizeof(ByteCode<BCE_Inline_Num_Less>);
+                          }
                     break;
-                case BCE_Inline_Num_LessEq:
-                    (&evalStack.back())[-1] = (&evalStack.back())[-1].getNumber() <= evalStack.back().getNumber() ? SValue::TRUE : SValue::FALSE;
-                    evalStack.pop_back();
-                    if (frame == nullptr) goto Label_PeekFrame;
-                    pc += sizeof(ByteCode<BCE_Inline_Num_LessEq>);
+                case BCE_Inline_Num_LessEq: {
+                        evalStack->top<-2>() = evalStack->top<-2>().getNumber() <= evalStack->top<-1>().getNumber() ? SValue::TRUE : SValue::FALSE;
+                        evalStack->pop();
+                        if (frame == nullptr) goto Label_PeekFrame;
+                        pc += sizeof(ByteCode<BCE_Inline_Num_LessEq>);
+                            }
                     break;
-                case BCE_Inline_Num_Greater:
-                    (&evalStack.back())[-1] = (&evalStack.back())[-1].getNumber() > evalStack.back().getNumber() ? SValue::TRUE : SValue::FALSE;
-                    evalStack.pop_back();
-                    if (frame == nullptr) goto Label_PeekFrame;
-                    pc += sizeof(ByteCode<BCE_Inline_Num_Greater>);
+                case BCE_Inline_Num_Greater: {
+                        evalStack->top<-2>() = evalStack->top<-2>().getNumber() > evalStack->top<-1>().getNumber() ? SValue::TRUE : SValue::FALSE;
+                        evalStack->pop();
+                        if (frame == nullptr) goto Label_PeekFrame;
+                        pc += sizeof(ByteCode<BCE_Inline_Num_Greater>);
+                             }
                     break;
-                case BCE_Inline_Num_GreaterEq:
-                    (&evalStack.back())[-1] = (&evalStack.back())[-1].getNumber() >= evalStack.back().getNumber() ? SValue::TRUE : SValue::FALSE;
-                    evalStack.pop_back();
-                    if (frame == nullptr) goto Label_PeekFrame;
-                    pc += sizeof(ByteCode<BCE_Inline_Num_GreaterEq>);
+                case BCE_Inline_Num_GreaterEq: {
+                        evalStack->top<-2>() = evalStack->top<-2>().getNumber() >= evalStack->top<-1>().getNumber() ? SValue::TRUE : SValue::FALSE;
+                        evalStack->pop();
+                        if (frame == nullptr) goto Label_PeekFrame;
+                        pc += sizeof(ByteCode<BCE_Inline_Num_GreaterEq>);
+                           }
                     break;
                 case BCE_Inline_Not:
-                    evalStack.back() = evalStack.back() == SValue::FALSE ? SValue::TRUE : SValue::FALSE;
+                    evalStack->top<-1>() = evalStack->top<-1>() == SValue::FALSE ? SValue::TRUE : SValue::FALSE;
                     if (frame == nullptr) goto Label_PeekFrame;
                     pc += sizeof(ByteCode<BCE_Inline_Not>);
                     break;
-                case BCE_Inline_Eq:
-                    (&evalStack.back())[-1] = (&evalStack.back())[-1] == evalStack.back() ? SValue::TRUE : SValue::FALSE;
-                    evalStack.pop_back();
-                    if (frame == nullptr) goto Label_PeekFrame;
-                    pc += sizeof(ByteCode<BCE_Inline_Eq>);
+                case BCE_Inline_Eq: {
+                        evalStack->top<-2>() = evalStack->top<-2>() == evalStack->top<-1>() ? SValue::TRUE : SValue::FALSE;
+                        evalStack->pop();
+                        if (frame == nullptr) goto Label_PeekFrame;
+                        pc += sizeof(ByteCode<BCE_Inline_Eq>);
+                    }
                     break;
                 case BCE_Inline_Empty:
-                    evalStack.back() = evalStack.back() == SValue::EMPTY ? SValue::TRUE : SValue::FALSE;
+                    evalStack->top<-1>() = evalStack->top<-1>() == SValue::EMPTY ? SValue::TRUE : SValue::FALSE;
                     if (frame == nullptr) goto Label_PeekFrame;
                     pc += sizeof(ByteCode<BCE_Inline_Empty>);
                     break;
-                case BCE_Inline_Cons:
-                    objMgr->createObject<SPair>(&evalStack.back() - 1,  (&evalStack.back())[-1], evalStack.back());
-                    evalStack.pop_back();
+                case BCE_Inline_Cons: {
+                    objMgr->createObject<SPair>(&evalStack->top<-2>(), evalStack->top<-2>(), evalStack->top<-1>());
+                    evalStack->pop();
                     if (frame == nullptr) goto Label_PeekFrame;
                     pc += sizeof(ByteCode<BCE_Inline_Cons>);
+                      }
                     break;
                 case BCE_Inline_Car:
-                    evalStack.back() = evalStack.back().getObject<SPair>()->getCar();
+                    evalStack->top<-1>() = evalStack->top<-1>().getObject<SPair>()->getCar();
                     if (frame == nullptr) goto Label_PeekFrame;
                     pc += sizeof(ByteCode<BCE_Inline_Car>);
                     break;
                 case BCE_Inline_Cdr:
-                    evalStack.back() = evalStack.back().getObject<SPair>()->getCdr();
+                    evalStack->top<-1>() = evalStack->top<-1>().getObject<SPair>()->getCdr();
                     if (frame == nullptr) goto Label_PeekFrame;
                     pc += sizeof(ByteCode<BCE_Inline_Cdr>);
                     break;
