@@ -9,4 +9,6 @@
 #define alignof __alignof
 #endif
 
+#define DEBUG_ONLY_ASSERT
+
 #endif
