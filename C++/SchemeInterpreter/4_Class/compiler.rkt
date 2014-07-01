@@ -156,6 +156,7 @@
 
 ;------------------------------
 (define load-instructions '(loadk loadvar loadfunc loadclass))
+(define inline-procedure '(+ - * / quotient remainder = < <= > >= not cons car cdr eq? empty?))
 
 ;------------------------------
 (define (optimize-pass-remove-duplicate-pop codes)
@@ -250,10 +251,14 @@
       `((jmp ,label-id) 
         (loadk ,(the-constants 'get-or-add 0)))]
     [`(,op ,actuals ...)
-      `(,@(eval sym-table false op)
-         ,@(flatten-map (curry eval sym-table false) actuals)
-         ,@(if tail '((tail)) empty)
-         (call ,(length actuals)))])
+      (if (memq op inline-procedure)
+        `(,@(flatten-map (curry eval sym-table false) actuals)
+           ,@(if tail '((tail)) empty)
+           (inline-op ,op ,(length actuals)))
+        `(,@(eval sym-table false op)
+           ,@(flatten-map (curry eval sym-table false) actuals)
+           ,@(if tail '((tail)) empty)
+           (call ,(length actuals))))])
   )
 
 ;------------------------------

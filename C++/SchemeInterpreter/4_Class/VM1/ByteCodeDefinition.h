@@ -47,6 +47,24 @@ enum ByteCodeEnum {
 
     BCE_GetMethod,
     BCE_GetCachedMethod,
+
+    BCE_Inline_Add,
+    BCE_Inline_Sub,
+    BCE_Inline_Mul,
+    BCE_Inline_Div,
+    BCE_Inline_Quotient,
+    BCE_Inline_Mod,
+    BCE_Inline_Num_Equal,
+    BCE_Inline_Num_Less,
+    BCE_Inline_Num_LessEq,
+    BCE_Inline_Num_Greater,
+    BCE_Inline_Num_GreaterEq,
+    BCE_Inline_Not,
+    BCE_Inline_Eq,
+    BCE_Inline_Empty,
+    BCE_Inline_Cons,
+    BCE_Inline_Car,
+    BCE_Inline_Cdr,
 };
 
 #pragma pack(push, 1)
@@ -383,6 +401,41 @@ struct ByteCode<BCE_GetCachedMethod> {
     }
 };
 static_assert(sizeof(ByteCode<BCE_GetMethod>) == sizeof(ByteCode<BCE_GetCachedMethod>), "");
+
+template<>
+struct ByteCode<BCE_Inline_Add> { uint8_t code; ByteCode(): code(BCE_Inline_Add) {} };
+template<>
+struct ByteCode<BCE_Inline_Sub> { uint8_t code; ByteCode(): code(BCE_Inline_Sub) {} };
+template<>
+struct ByteCode<BCE_Inline_Mul> { uint8_t code; ByteCode(): code(BCE_Inline_Mul) {} };
+template<>
+struct ByteCode<BCE_Inline_Div> { uint8_t code; ByteCode(): code(BCE_Inline_Div) {} };
+template<>
+struct ByteCode<BCE_Inline_Quotient> { uint8_t code; ByteCode(): code(BCE_Inline_Quotient) {} };
+template<>
+struct ByteCode<BCE_Inline_Mod> { uint8_t code; ByteCode(): code(BCE_Inline_Mod) {} };
+template<>
+struct ByteCode<BCE_Inline_Num_Equal> { uint8_t code; ByteCode(): code(BCE_Inline_Num_Equal) {} };
+template<>
+struct ByteCode<BCE_Inline_Num_Less> { uint8_t code; ByteCode(): code(BCE_Inline_Num_Less) {} };
+template<>
+struct ByteCode<BCE_Inline_Num_LessEq> { uint8_t code; ByteCode(): code(BCE_Inline_Num_LessEq) {} };
+template<>
+struct ByteCode<BCE_Inline_Num_Greater> { uint8_t code; ByteCode(): code(BCE_Inline_Num_Greater) {} };
+template<>
+struct ByteCode<BCE_Inline_Num_GreaterEq> { uint8_t code; ByteCode(): code(BCE_Inline_Num_GreaterEq) {} };
+template<>
+struct ByteCode<BCE_Inline_Not> { uint8_t code; ByteCode(): code(BCE_Inline_Not) {} };
+template<>
+struct ByteCode<BCE_Inline_Eq> { uint8_t code; ByteCode(): code(BCE_Inline_Eq) {} };
+template<>
+struct ByteCode<BCE_Inline_Empty> { uint8_t code; ByteCode(): code(BCE_Inline_Empty) {} };
+template<>
+struct ByteCode<BCE_Inline_Cons> { uint8_t code; ByteCode(): code(BCE_Inline_Cons) {} };
+template<>
+struct ByteCode<BCE_Inline_Car> { uint8_t code; ByteCode(): code(BCE_Inline_Car) {} };
+template<>
+struct ByteCode<BCE_Inline_Cdr> { uint8_t code; ByteCode(): code(BCE_Inline_Cdr) {} };
 
 #pragma pack(pop)
 

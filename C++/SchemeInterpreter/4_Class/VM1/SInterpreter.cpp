@@ -275,6 +275,104 @@ Label_PeekFrame:
                     }
                   }
                     break;
+                case BCE_Inline_Add:
+                    (&evalStack.back())[-1] = SValue((&evalStack.back())[-1].getNumber() + evalStack.back().getNumber());
+                    evalStack.pop_back();
+                    if (frame == nullptr) goto Label_PeekFrame;
+                    pc += sizeof(ByteCode<BCE_Inline_Add>);
+                    break;
+                case BCE_Inline_Sub:
+                    (&evalStack.back())[-1] = SValue((&evalStack.back())[-1].getNumber() - evalStack.back().getNumber());
+                    evalStack.pop_back();
+                    if (frame == nullptr) goto Label_PeekFrame;
+                    pc += sizeof(ByteCode<BCE_Inline_Sub>);
+                    break;
+                case BCE_Inline_Mul:
+                    (&evalStack.back())[-1] = SValue((&evalStack.back())[-1].getNumber() * evalStack.back().getNumber());
+                    evalStack.pop_back();
+                    if (frame == nullptr) goto Label_PeekFrame;
+                    pc += sizeof(ByteCode<BCE_Inline_Mul>);
+                    break;
+                case BCE_Inline_Div:
+                    (&evalStack.back())[-1] = SValue((&evalStack.back())[-1].getNumber() / evalStack.back().getNumber());
+                    evalStack.pop_back();
+                    if (frame == nullptr) goto Label_PeekFrame;
+                    pc += sizeof(ByteCode<BCE_Inline_Div>);
+                    break;
+                case BCE_Inline_Quotient:
+                    (&evalStack.back())[-1] = SValue(floor((&evalStack.back())[-1].getNumber() / evalStack.back().getNumber()));
+                    evalStack.pop_back();
+                    if (frame == nullptr) goto Label_PeekFrame;
+                    pc += sizeof(ByteCode<BCE_Inline_Quotient>);
+                    break;
+                case BCE_Inline_Mod:
+                    (&evalStack.back())[-1] = SValue(fmod((&evalStack.back())[-1].getNumber(), evalStack.back().getNumber()));
+                    evalStack.pop_back();
+                    if (frame == nullptr) goto Label_PeekFrame;
+                    pc += sizeof(ByteCode<BCE_Inline_Mod>);
+                    break;
+                case BCE_Inline_Num_Equal:
+                    (&evalStack.back())[-1] = (&evalStack.back())[-1].getNumber() == evalStack.back().getNumber() ? SValue::TRUE : SValue::FALSE;
+                    evalStack.pop_back();
+                    if (frame == nullptr) goto Label_PeekFrame;
+                    pc += sizeof(ByteCode<BCE_Inline_Num_Equal>);
+                    break;
+                case BCE_Inline_Num_Less:
+                    (&evalStack.back())[-1] = (&evalStack.back())[-1].getNumber() < evalStack.back().getNumber() ? SValue::TRUE : SValue::FALSE;
+                    evalStack.pop_back();
+                    if (frame == nullptr) goto Label_PeekFrame;
+                    pc += sizeof(ByteCode<BCE_Inline_Num_Less>);
+                    break;
+                case BCE_Inline_Num_LessEq:
+                    (&evalStack.back())[-1] = (&evalStack.back())[-1].getNumber() <= evalStack.back().getNumber() ? SValue::TRUE : SValue::FALSE;
+                    evalStack.pop_back();
+                    if (frame == nullptr) goto Label_PeekFrame;
+                    pc += sizeof(ByteCode<BCE_Inline_Num_LessEq>);
+                    break;
+                case BCE_Inline_Num_Greater:
+                    (&evalStack.back())[-1] = (&evalStack.back())[-1].getNumber() > evalStack.back().getNumber() ? SValue::TRUE : SValue::FALSE;
+                    evalStack.pop_back();
+                    if (frame == nullptr) goto Label_PeekFrame;
+                    pc += sizeof(ByteCode<BCE_Inline_Num_Greater>);
+                    break;
+                case BCE_Inline_Num_GreaterEq:
+                    (&evalStack.back())[-1] = (&evalStack.back())[-1].getNumber() >= evalStack.back().getNumber() ? SValue::TRUE : SValue::FALSE;
+                    evalStack.pop_back();
+                    if (frame == nullptr) goto Label_PeekFrame;
+                    pc += sizeof(ByteCode<BCE_Inline_Num_GreaterEq>);
+                    break;
+                case BCE_Inline_Not:
+                    evalStack.back() = evalStack.back() == SValue::FALSE ? SValue::TRUE : SValue::FALSE;
+                    if (frame == nullptr) goto Label_PeekFrame;
+                    pc += sizeof(ByteCode<BCE_Inline_Not>);
+                    break;
+                case BCE_Inline_Eq:
+                    (&evalStack.back())[-1] = (&evalStack.back())[-1] == evalStack.back() ? SValue::TRUE : SValue::FALSE;
+                    evalStack.pop_back();
+                    if (frame == nullptr) goto Label_PeekFrame;
+                    pc += sizeof(ByteCode<BCE_Inline_Eq>);
+                    break;
+                case BCE_Inline_Empty:
+                    evalStack.back() = evalStack.back() == SValue::EMPTY ? SValue::TRUE : SValue::FALSE;
+                    if (frame == nullptr) goto Label_PeekFrame;
+                    pc += sizeof(ByteCode<BCE_Inline_Empty>);
+                    break;
+                case BCE_Inline_Cons:
+                    objMgr->createObject<SPair>(&evalStack.back() - 1,  (&evalStack.back())[-1], evalStack.back());
+                    evalStack.pop_back();
+                    if (frame == nullptr) goto Label_PeekFrame;
+                    pc += sizeof(ByteCode<BCE_Inline_Cons>);
+                    break;
+                case BCE_Inline_Car:
+                    evalStack.back() = evalStack.back().getObject<SPair>()->getCar();
+                    if (frame == nullptr) goto Label_PeekFrame;
+                    pc += sizeof(ByteCode<BCE_Inline_Car>);
+                    break;
+                case BCE_Inline_Cdr:
+                    evalStack.back() = evalStack.back().getObject<SPair>()->getCdr();
+                    if (frame == nullptr) goto Label_PeekFrame;
+                    pc += sizeof(ByteCode<BCE_Inline_Cdr>);
+                    break;
                 default:
                     ASSERT(0);
                     break;

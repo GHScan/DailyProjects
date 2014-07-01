@@ -23,6 +23,7 @@ enum SymbolID {
     SID_Global,
     SID_Free,
     SID_FreeMethod,
+    SID_InlineOp,
 };
 
 }
@@ -49,6 +50,7 @@ SAssembler::SAssembler(const vector<SValue> &constants):
     AtomPool::instance()->intern("free", SID_Free);
     AtomPool::instance()->intern("free-method", SID_FreeMethod);
     AtomPool::instance()->intern("label", SID_Label);
+    AtomPool::instance()->intern("inline-op", SID_InlineOp);
 }
 
 template<typename T>
@@ -177,6 +179,46 @@ void SAssembler::assemble(vector<uint8_t> &codes, SExpression e) {
                 break;
             case SID_GetMethod:
                 emit(codes, ByteCode<BCE_GetMethod>(atoi(lcode->ref(1).getNode()->ref(1).getInt()->c_str())));
+                break;
+            case SID_InlineOp: {
+                if (strcmp(lcode->ref(1).getSymbol()->c_str(), "+") == 0) {
+                    emit(codes, ByteCode<BCE_Inline_Add>());
+                } else if (strcmp(lcode->ref(1).getSymbol()->c_str(), "-") == 0) {
+                    emit(codes, ByteCode<BCE_Inline_Sub>());
+                } else if (strcmp(lcode->ref(1).getSymbol()->c_str(), "*") == 0) {
+                    emit(codes, ByteCode<BCE_Inline_Mul>());
+                } else if (strcmp(lcode->ref(1).getSymbol()->c_str(), "/") == 0) {
+                    emit(codes, ByteCode<BCE_Inline_Div>());
+                } else if (strcmp(lcode->ref(1).getSymbol()->c_str(), "quotient") == 0) {
+                    emit(codes, ByteCode<BCE_Inline_Quotient>());
+                } else if (strcmp(lcode->ref(1).getSymbol()->c_str(), "remainder") == 0) {
+                    emit(codes, ByteCode<BCE_Inline_Mod>());
+                } else if (strcmp(lcode->ref(1).getSymbol()->c_str(), "=") == 0) {
+                    emit(codes, ByteCode<BCE_Inline_Num_Equal>());
+                } else if (strcmp(lcode->ref(1).getSymbol()->c_str(), "<") == 0) {
+                    emit(codes, ByteCode<BCE_Inline_Num_Less>());
+                } else if (strcmp(lcode->ref(1).getSymbol()->c_str(), "<=") == 0) {
+                    emit(codes, ByteCode<BCE_Inline_Num_LessEq>());
+                } else if (strcmp(lcode->ref(1).getSymbol()->c_str(), ">") == 0) {
+                    emit(codes, ByteCode<BCE_Inline_Num_Greater>());
+                } else if (strcmp(lcode->ref(1).getSymbol()->c_str(), ">=") == 0) {
+                    emit(codes, ByteCode<BCE_Inline_Num_GreaterEq>());
+                } else if (strcmp(lcode->ref(1).getSymbol()->c_str(), "not") == 0) {
+                    emit(codes, ByteCode<BCE_Inline_Not>());
+                } else if (strcmp(lcode->ref(1).getSymbol()->c_str(), "cons") == 0) {
+                    emit(codes, ByteCode<BCE_Inline_Cons>());
+                } else if (strcmp(lcode->ref(1).getSymbol()->c_str(), "car") == 0) {
+                    emit(codes, ByteCode<BCE_Inline_Car>());
+                } else if (strcmp(lcode->ref(1).getSymbol()->c_str(), "cdr") == 0) {
+                    emit(codes, ByteCode<BCE_Inline_Cdr>());
+                } else if (strcmp(lcode->ref(1).getSymbol()->c_str(), "eq?") == 0) {
+                    emit(codes, ByteCode<BCE_Inline_Eq>());
+                } else if (strcmp(lcode->ref(1).getSymbol()->c_str(), "empty?") == 0) {
+                    emit(codes, ByteCode<BCE_Inline_Empty>());
+                } else {
+                    ASSERT(0);
+                }
+               }
                 break;
             default:
                 ASSERT(0);

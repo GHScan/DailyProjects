@@ -97,6 +97,57 @@ uint8_t* SDisassembler::disassembleIns(ostream &so, uint8_t *ins) {
         case BCE_GetCachedMethod:
             so << "getcachedmethod";
             return ins + sizeof(ByteCode<BCE_GetCachedMethod>);
+        case BCE_Inline_Add:
+            so << "inline +";
+            return ins + sizeof(ByteCode<BCE_Inline_Add>);
+        case BCE_Inline_Sub:
+            so << "inline -";
+            return ins + sizeof(ByteCode<BCE_Inline_Sub>);
+        case BCE_Inline_Mul:
+            so << "inline *";
+            return ins + sizeof(ByteCode<BCE_Inline_Mul>);
+        case BCE_Inline_Div:
+            so << "inline /";
+            return ins + sizeof(ByteCode<BCE_Inline_Div>);
+        case BCE_Inline_Quotient:
+            so << "inline quotient";
+            return ins + sizeof(ByteCode<BCE_Inline_Quotient>);
+        case BCE_Inline_Mod:
+            so << "inline remainder";
+            return ins + sizeof(ByteCode<BCE_Inline_Mod>);
+        case BCE_Inline_Num_Equal:
+            so << "inline =";
+            return ins + sizeof(ByteCode<BCE_Inline_Num_Equal>);
+        case BCE_Inline_Num_Less:
+            so << "inline <";
+            return ins + sizeof(ByteCode<BCE_Inline_Num_Less>);
+        case BCE_Inline_Num_LessEq:
+            so << "inline <=";
+            return ins + sizeof(ByteCode<BCE_Inline_Num_LessEq>);
+        case BCE_Inline_Num_Greater:
+            so << "inline >";
+            return ins + sizeof(ByteCode<BCE_Inline_Num_Greater>);
+        case BCE_Inline_Num_GreaterEq:
+            so << "inline >=";
+            return ins + sizeof(ByteCode<BCE_Inline_Num_GreaterEq>);
+        case BCE_Inline_Not:
+            so << "inline not";
+            return ins + sizeof(ByteCode<BCE_Inline_Not>);
+        case BCE_Inline_Eq:
+            so << "inline eq?";
+            return ins + sizeof(ByteCode<BCE_Inline_Eq>);
+        case BCE_Inline_Empty:
+            so << "inline empty?";
+            return ins + sizeof(ByteCode<BCE_Inline_Empty>);
+        case BCE_Inline_Cons:
+            so << "inline cons";
+            return ins + sizeof(ByteCode<BCE_Inline_Cons>);
+        case BCE_Inline_Car:
+            so << "inline car";
+            return ins + sizeof(ByteCode<BCE_Inline_Car>);
+        case BCE_Inline_Cdr:
+            so << "inline cdr";
+            return ins + sizeof(ByteCode<BCE_Inline_Cdr>);
         default:
             ASSERT(0);
             return ins;

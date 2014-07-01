@@ -64,22 +64,22 @@
   )
 
 ;------------------------------
+(define builtins (list
+                   (cons '+ +) (cons '- -) (cons '* *) (cons '/ /) (cons 'quotient quotient) (cons 'remainder remainder)
+                   (cons 'sqr sqr) (cons 'sqrt sqrt) (cons 'identity identity)
+                   (cons 'true true) (cons 'false false) (cons 'else true)
+                   (cons '= =) (cons 'not not) (cons '< <) (cons '<= <=) (cons '> >) (cons '>= >=) (cons 'eq? eq?)
+                   (cons 'cons cons) (cons 'car car) (cons 'cdr cdr)
+                   (cons 'drop drop) (cons 'append append) (cons 'length length) (cons 'empty empty) (cons 'empty? empty?)
+                   (cons 'pretty-print pretty-print) (cons 'current-inexact-milliseconds current-inexact-milliseconds)
+                   (cons 'random random)))
+
 (define (setup-builtin)
-  (let ([builtins 
-          (list
-            (cons '+ +) (cons '- -) (cons '* *) (cons '/ /) (cons 'quotient quotient) (cons 'remainder remainder)
-            (cons 'sqr sqr) (cons 'sqrt sqrt) (cons 'identity identity)
-            (cons 'true true) (cons 'false false) (cons 'else true)
-            (cons '= =) (cons 'not not) (cons '< <) (cons '<= <=) (cons '> >) (cons '>= >=) (cons 'eq? eq?)
-            (cons 'cons cons) (cons 'car car) (cons 'cdr cdr)
-            (cons 'drop drop) (cons 'append append) (cons 'length length) (cons 'empty empty) (cons 'empty? empty?)
-            (cons 'pretty-print pretty-print) (cons 'current-inexact-milliseconds current-inexact-milliseconds)
-            (cons 'random random))])
-    (for-each (lambda (kv)
-                (let ([pos (assq (car kv) the-global-map)])
-                  (if pos
-                    (vector-set! the-globals (cdr pos) (cdr kv))
-                    'ok))) builtins))
+  (for-each (lambda (kv)
+              (let ([pos (assq (car kv) the-global-map)])
+                (if pos
+                  (vector-set! the-globals (cdr pos) (cdr kv))
+                  'ok))) builtins)
   )
 
 ;------------------------------
@@ -166,9 +166,14 @@
           (interpret (cdr eval-stack) (cdr (assq label labels)) labels frees env)
           (interpret (cdr eval-stack) (cdr codes) labels frees env))]
       [`(tail) 
-        (let* ([actual-count (cadadr codes)]
-              [actuals-and-func (take eval-stack (add1 actual-count))])
-         (apply-function (last actuals-and-func) (reverse (drop-right actuals-and-func 1))))]
+        (if (eq? 'call (caadr codes))
+          (let* ([actual-count (cadadr codes)]
+                 [actuals-and-func (take eval-stack (add1 actual-count))])
+            (apply-function (last actuals-and-func) (reverse (drop-right actuals-and-func 1))))
+          (let* ([actual-count (caddr (cadr codes))]
+                 [op (cadadr codes)]
+                 [v (apply (cdr (assq op builtins)) (reverse (take eval-stack actual-count)))])
+            v))]
       [`(call ,actual-count)
         (let* ([actuals-and-func (take eval-stack (add1 actual-count))]
                [v (apply-function (last actuals-and-func) (reverse (drop-right actuals-and-func 1)))])
@@ -188,6 +193,11 @@
                [func (get-method-func-by-index (get-free-env env (car address)) (cadr address))]
                [v (make-closure (get-free-env env (sub1 (car address))) func)])
           (interpret (cons v eval-stack) (cdr codes) labels frees env))]
+      [`(inline-op ,(? symbol? op) ,actual-count)
+        (let* ([f (cdr (assq op builtins))]
+               [actual-args (reverse (take eval-stack actual-count))]
+               [v (apply f actual-args)])
+          (interpret (cons v (drop eval-stack actual-count)) (cdr codes) labels frees env))]
       [else (error "invalid message")]))
   )
 
