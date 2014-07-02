@@ -194,8 +194,27 @@
   (replace-labels codes (find-out-equal-labels codes empty))
   )
 
+(define (optimize-pass-remove-unused-labels codes)
+  (define (find-out-used-labels codes labels)
+    (cond
+      [(empty? codes) labels]
+      [(memq (caar codes) jmp-instructions) (find-out-used-labels (cdr codes) (cons (cadar codes) labels))]
+      [else (find-out-used-labels (cdr codes) labels)])
+    )
+  (define (remove-unused-labels codes used-labels)
+    (cond
+      [(empty? codes) empty]
+      [(and (eq? 'label (caar codes)) (not (memq (cadar codes) used-labels))) (remove-unused-labels (cdr codes) used-labels)]
+      [else (cons (car codes) (remove-unused-labels (cdr codes) used-labels))])
+    )
+  (remove-unused-labels codes (find-out-used-labels codes empty))
+  )
+
 (define (optimize codes)
-  (let ([pass-list (list optimize-pass-remove-duplicate-pop optimize-pass-forward-jmps)])
+  (let ([pass-list (list 
+                    optimize-pass-remove-duplicate-pop 
+                    optimize-pass-forward-jmps 
+                    optimize-pass-remove-unused-labels)])
     (foldl (lambda (pass codes) (pass codes)) codes pass-list))
   )
 ;------------------------------
