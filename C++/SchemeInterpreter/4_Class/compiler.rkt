@@ -157,6 +157,7 @@
 
 ;------------------------------
 (define load-instructions '(loadk loadvar loadfunc loadclass))
+(define jmp-instructions '(jmp tjmp opjmp))
 (define inline-procedure '(+ - * / quotient remainder = < <= > >= not cons car cdr eq? empty?))
 
 ;------------------------------
@@ -168,8 +169,33 @@
     [else (cons (car codes) (optimize-pass-remove-duplicate-pop (cdr codes)))])
   )
 
+(define (optimize-pass-forward-jmps codes)
+  (define (find-out-equal-labels codes label-map)
+    (cond
+      [(or (empty? codes) (empty? (cdr codes))) label-map]
+      [(and (eq? 'label (caar codes)) (eq? 'jmp (caadr codes))) 
+       (find-out-equal-labels (cddr codes) (cons (cons (cadar codes) (cadr (cadr codes))) label-map))]
+      [else (find-out-equal-labels (cdr codes) label-map)])
+    )
+  (define (map-label label label-map) 
+    (let ([entry (assq label label-map)])
+      (if entry
+        (map-label (cdr entry) label-map)
+        label))
+    )
+  (define (replace-labels codes label-map)
+    (cond
+      [(empty? codes) empty]
+      [(memq (caar codes) jmp-instructions) 
+       (cons `(,(caar codes) ,(map-label (cadar codes) label-map) ,@(cddar codes)) 
+             (replace-labels (cdr codes) label-map))]
+      [else (cons (car codes) (replace-labels (cdr codes) label-map))])
+    )
+  (replace-labels codes (find-out-equal-labels codes empty))
+  )
+
 (define (optimize codes)
-  (let ([pass-list (list optimize-pass-remove-duplicate-pop)])
+  (let ([pass-list (list optimize-pass-remove-duplicate-pop optimize-pass-forward-jmps)])
     (foldl (lambda (pass codes) (pass codes)) codes pass-list))
   )
 ;------------------------------
@@ -192,12 +218,18 @@
                 (if entry
                   (iter size (max size max-size) (cdr entry) (remq entry labels))
                   (max size max-size)))]
-            [`(,(? (lambda (x) (memq x '(opjmp tjmp)))) ,l-name ,others ...) 
+            [`(tjmp ,l-name) 
               (let ([entry (assq l-name labels)])
                 (if entry
-                  (max (iter (sub1 size) (max size max-size) (cdr (assq l-name labels)) (remq entry labels))
+                  (max (iter (sub1 size) (max size max-size) (cdr entry) (remq entry labels))
                        (iter (sub1 size) (max size max-size) (cdr codes) labels))
                   (iter (sub1 size) (max size max-size) (cdr codes) labels)))]
+            [`(opjmp ,l-name ,op ,actual-count) 
+              (let ([entry (assq l-name labels)])
+                (if entry
+                  (max (iter (- size actual-count) (max size max-size) (cdr entry) (remq entry labels))
+                       (iter (- size actual-count) (max size max-size) (cdr codes) labels))
+                  (iter (- size actual-count) (max size max-size) (cdr codes) labels)))]
             [`(tail) (iter size (max size max-size) (cdr codes) labels)]
             [`(call ,actual-count) (iter (- size actual-count) (max size max-size) (cdr codes) labels)]
             [`(loadclass ,cindex) (iter (add1 size) (max size max-size) (cdr codes) labels)]
