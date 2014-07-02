@@ -25,7 +25,7 @@ private:
 class AtomPool: public Singleton<AtomPool> {
 public:
     Atom* intern(const char *s, int id = 0) {
-        int len = strlen(s);
+        int len = (int)strlen(s);
         auto entry = mMap.get(s, len);
         if (entry == nullptr) {
             entry = mMap.insert(s, len, id);

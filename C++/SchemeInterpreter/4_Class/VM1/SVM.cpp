@@ -30,7 +30,6 @@ static void setupConstants(SExpression e, vector<SValue> &constants, SObjectMana
     }
 }
 
-double g_clocks = 0;
 static void setupGlobals(SExpression e, vector<SValue> &globals, SObjectManager *mgr) {
     vector<Atom*> names;
 

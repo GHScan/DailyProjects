@@ -31,7 +31,6 @@ static void setupConstants(SExpression e, vector<SValue> &constants, SObjectMana
     }
 }
 
-double g_clocks = 0;
 static void setupGlobals(SExpression e, vector<SValue> &globals, SObjectManager *mgr) {
     vector<Atom*> names;
 
@@ -80,13 +79,13 @@ static void setupGlobals(SExpression e, vector<SValue> &globals, SObjectManager 
         {"cdr", [](SObjectManager *mgr, SValue *ret){ ret[0] = ret[1].getObject<SPair>()->getCdr(); }},
         {"drop", [](SObjectManager *mgr, SValue *ret){
             SPair *p = ret[1].getObject<SPair>();
-            double n = ret[2].getNumber();
+            int n = ret[2].getNumber();
             for (; n > 0; --n) p = p->getCdr().getObject<SPair>();
             *ret = SValue(p);
          }},
         {"length", [](SObjectManager *mgr, SValue *ret){
             SValue l = ret[1];
-            double n = 0;
+            int n = 0;
             for (; l != SValue::EMPTY; l = l.getObject<SPair>()->getCdr(), ++n);
             *ret = SValue(n);
         }},
@@ -121,10 +120,10 @@ static void setupGlobals(SExpression e, vector<SValue> &globals, SObjectManager 
             ret[0] = SValue::VOID;
         }},
         {"current-inexact-milliseconds", [](SObjectManager *mgr, SValue *ret){
-            *ret = SValue(clock() * 1000.0 / CLOCKS_PER_SEC);
+            *ret = SValue(PtrValue(clock() * 1000.0 / CLOCKS_PER_SEC));
         }},
         {"random", [](SObjectManager *mgr, SValue *ret){
-            *ret = SValue(fmod(::rand() * RAND_MAX + ::rand(), ret[1].getNumber()));
+            *ret = SValue((::rand() * RAND_MAX + ::rand()) % ret[1].getNumber());
         }},
     };
     for (auto kv : builtinFuncs) {
@@ -154,7 +153,7 @@ static void setupFuncs(SExpression e, vector<SFuncProto*> &protos, SAssembler *a
         ASSERT(!codes.empty());
         fproto->evalStackSize = atoi(f->value.getNode()->ref(1).getNode()->ref(0).getNode()->ref(1).getInt()->c_str());
         fproto->codeSize = (int)codes.size();
-        fproto->codes = alloc->mallocArray<uint8_t>(codes.size());
+        fproto->codes = alloc->mallocArray<uint8_t>((int)codes.size());
         memcpy(fproto->codes, &codes[0], codes.size());
 
         protos.push_back(fproto);

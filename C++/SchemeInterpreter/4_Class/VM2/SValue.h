@@ -176,6 +176,6 @@ private:
     };
 };
 
-typedef function<void(class SObjectManager *mgr, SValue *ret)> NativeFuncT;
+typedef void (*NativeFuncT) (class SObjectManager *mgr, SValue *ret);
 
 #endif

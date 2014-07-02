@@ -382,14 +382,14 @@ Label_PeekFrame:
                          }
                     break;
                 case BCE_Inline_Quotient: {
-                        evalStack->top<-2>() = SValue(floor(evalStack->top<-2>().getNumber() / evalStack->top<-1>().getNumber()));
+                        evalStack->top<-2>() = SValue(evalStack->top<-2>().getNumber() / evalStack->top<-1>().getNumber());
                         evalStack->pop();
                         if (frame == nullptr) goto Label_PeekFrame;
                         pc += sizeof(ByteCode<BCE_Inline_Quotient>);
                           }
                     break;
                 case BCE_Inline_Mod: {
-                        evalStack->top<-2>() = SValue(fmod(evalStack->top<-2>().getNumber(), evalStack->top<-1>().getNumber()));
+                        evalStack->top<-2>() = SValue(evalStack->top<-2>().getNumber() % evalStack->top<-1>().getNumber());
                         evalStack->pop();
                         if (frame == nullptr) goto Label_PeekFrame;
                         pc += sizeof(ByteCode<BCE_Inline_Mod>);

@@ -1,8 +1,8 @@
 #ifndef SCOPEDVALUE_H
 #define SCOPEDVALUE_H
 
-class SValue;
-class SObject;
+struct SValue;
+struct SObject;
 
 namespace ScopedValueHelp {
     template<typename T>

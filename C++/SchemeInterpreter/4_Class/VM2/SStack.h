@@ -25,7 +25,7 @@ public:
         if (mCapacity - mBase < capacity) {
             capacity = max(capacity, int(mCapacity - mBase) * 3 / 2);
 
-            int size = mTop - mBase;
+            int size = int(mTop - mBase);
 
             mBase = static_cast<SValue*>(::realloc(mBase, sizeof(SValue) * capacity));
             mTop = mBase + size;
@@ -67,7 +67,7 @@ public:
     }
 
     int size() const {
-        return mTop - mBase;
+        return int(mTop - mBase);
     }
 
     SValue* begin() {

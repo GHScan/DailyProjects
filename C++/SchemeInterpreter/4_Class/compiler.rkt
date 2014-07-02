@@ -377,3 +377,4 @@
       (globals ,(g-sym-table 'symbols))
       (classes ,(the-classes 'tolist))
       (funcs ,(the-funcs 'tolist)))))
+(flush-output)
