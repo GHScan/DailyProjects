@@ -1,0 +1,3 @@
+-I/usr/include/i386-linux-gnu/c++/4.8/
+-I.
+-std=c++11

@@ -1,0 +1,22 @@
+do_profiling=0
+test_coverage=0
+use_cpp0x=1
+build_dll=0
+macro_defs=
+include_dirs=
+lib_dirs=
+lib_files=tcmalloc
+
+.PHONY: 
+
+parser.yy.dummy: grammar.y
+	bison -vdo parser.yy.cpp grammar.y
+	mv parser.yy.cpp parser.yy.dummy
+tokenizer.yy.h: lex.l
+	flex -o tokenizer.yy.h lex.l
+
+build_actions: parser.yy.dummy tokenizer.yy.h
+
+clean_actions: 
+	rm -f parser.yy.* tokenizer.yy.*
+
