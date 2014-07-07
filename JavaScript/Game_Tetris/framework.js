@@ -16,7 +16,10 @@ var framework = (function() {
             }
 
             if (typeof this.onRender == 'function') {
-                this.onRender(this.canvas.getContext('2d'));
+                if (this.refresh) {
+                    this.refresh = false;
+                    this.onRender(this.canvas.getContext('2d'));
+                }
             }
 
             installTimer();
@@ -74,6 +77,7 @@ var framework = (function() {
     gFramework.width = 0;
     gFramework.height = 0;
     gFramework.keyPressTime = 0.20;
+    gFramework.refresh = true;
     gFramework.onSetup = null;
     gFramework.onStart = null;
     gFramework.onKeyPress = null;

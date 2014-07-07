@@ -261,14 +261,16 @@ var gameplay = (function() {
             } else {
                 ++gY;
             }
+
+            framework.refresh = true;
         }
     }
 
     function onRender(ctx) {
         // background
         var gradient = ctx.createLinearGradient(0, 0, this.width, this.height);
-        gradient.addColorStop(0,"rgba(128,128,128, 0.3)");
-        gradient.addColorStop(1,"rgba(96,96,96, 0.3)");
+        gradient.addColorStop(0,"rgba(128,128,128, 1)");
+        gradient.addColorStop(1,"rgba(96,96,96, 1)");
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, this.width, this.height);
 
@@ -338,6 +340,8 @@ var gameplay = (function() {
             default:
                 break;
         }
+
+        framework.refresh = true;
     }
 
     //------------------------------
