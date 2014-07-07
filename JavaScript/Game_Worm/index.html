@@ -1,0 +1,32 @@
+<!DOCTYPE HTML>
+<html>
+    <body onload="startGame()">
+        <table>
+            <tr>
+                <td>
+                    <button type="button" onclick="startGame()" >Start</button>
+                </td>
+                <td>
+                    <button type="button" onclick="pause()" >Pause</button>
+                </td>
+                <td>
+                FPS:<input id="game_fps" type="text" style="width:60px" value="30"></input>
+                </td>
+            </tr>
+            <tr>
+                <canvas id="game_canvas" width="200" height="200">
+                Your browser does not support the canvas element.
+                </canvas>
+            </tr>
+        </table>
+
+        <script type="text/javascript" src="utils.js"> </script>
+        <script type="text/javascript" src="main.js"> </script>
+        <script type="text/javascript">
+            function startGame() {
+                start(document.getElementById('game_canvas'), Number(document.getElementById('game_fps').value));
+            }
+        </script>
+
+    </body>
+</html>

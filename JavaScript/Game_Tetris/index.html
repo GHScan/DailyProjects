@@ -1,0 +1,75 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <table>
+            <tr>
+                <canvas id="game_canvas" width="300" height="600">
+            </tr>
+            <tr>
+                <td>
+                    <button type="button" onclick="startGame(); this.blur();">Start</button>
+                </td>
+                <td>
+                    <button type="button" onclick="framework.pause(); this.blur();">Pause</button>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    Level: <input id="level_text" type="text" readonly="readonly" style="width:80px" />
+                </td>
+                <td>
+                    Score: <input id="score_text" type="text" readonly="readonly" style="width:80px" />
+                </td>
+            </tr>
+        </table>
+        <script type="text/javascript" src="utils.js"></script>
+        <script type="text/javascript" src="framework.js"></script>
+        <script type="text/javascript" src="gameplay.js"></script>
+        <script type="text/javascript">
+            'use strict';
+
+            var gLevel;
+            var gScore;
+            var gLines;
+
+            var LEVEL_2_LINES = [0, 1, 4, 16, 32, 48, 64, 80];
+            var LEVEL_2_DROPTIME = [0, 0.75, 0.5, 0.33, 0.25, 0.2, 0.1, 0.05];
+
+            framework.setup(document.getElementById('game_canvas'));
+
+            function onGameStateChange() {
+                gameplay.dropTime = LEVEL_2_DROPTIME[gLevel];
+
+                document.getElementById('level_text').value = gLevel;
+                document.getElementById('score_text').value = gScore;
+            }
+
+            function startGame() {
+                framework.start();
+
+                gLevel = 1;
+                gScore = 0;
+                gLines = 0;
+
+                onGameStateChange();
+            }
+
+            gameplay.onLineClear = function(lines) {
+                gScore += Math.floor(10 * lines * Math.pow(1.2, (lines - 1)));
+                gLines += lines;
+                if (gLines > LEVEL_2_LINES[gLevel] && gLevel + 1 < LEVEL_2_LINES.length) {
+                    ++gLevel;
+                }
+
+                onGameStateChange();
+            };
+
+            gameplay.onGameOver = function() {
+                alert("Game over! \nLevel : " + gLevel + "\nScore : " + gScore);
+                startGame();
+            };
+
+            startGame();
+        </script>
+    </body>
+</html>

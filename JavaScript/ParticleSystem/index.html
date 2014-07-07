@@ -1,0 +1,57 @@
+<!DOCTYPE HTML>
+<html>
+    <body onload="start(document.getElementById('game_canvas'))">
+        <table>
+            <tr>
+                <canvas id="game_canvas" width="400" height="400">
+                </canvas>
+            </tr>
+            <tr>
+                <td>
+                    FPS<input id="fps" type="text" style="width:60px" onchange="onFPSChange();" value="60">
+                </td>
+                <td>
+                    Emit<input id="emit_ps" type="text" style="width:60px" onchange="onEmitPSChange();" value="1">
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    Life<input id="life" type="text" style="width:60px" onchange="onLifeChange();" value="1">
+                </td>
+                <td>
+                    Size<input id="size" type="text" style="width:60px" onchange="onSizeChange();" value="1">
+                </td>
+                <td>
+                    Velocity<input id="velocity" type="text" style="width:60px" onchange="onVelocityChange();" value="1">
+                </td>
+            </tr>
+        </table>
+
+        <script type="text/javascript" src="utils.js" ></script>
+        <script type="text/javascript" src="main.js" ></script>
+        <script type="text/javascript">
+            function onFPSChange() {
+                FPS= Number(document.getElementById("fps").value);
+            }
+            function onEmitPSChange() {
+                EMIT_PER_SEC= Number(document.getElementById("emit_ps").value);
+            }
+            function onLifeChange() {
+                LIFE_SCALE= Number(document.getElementById("life").value);
+            }
+            function onSizeChange() {
+                SIZE_SCALE= Number(document.getElementById("size").value);
+            }
+            function onVelocityChange() {
+                VELOCITY_SCALE= Number(document.getElementById("velocity").value);
+            }
+
+            onFPSChange();
+            onEmitPSChange();
+            onLifeChange();
+            onSizeChange();
+            onVelocityChange();
+        </script>
+
+    </body>
+</html>

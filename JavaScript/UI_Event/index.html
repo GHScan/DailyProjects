@@ -1,0 +1,59 @@
+<!DOCTYPE HTML>
+<html>
+    <body>
+        <canvas id="game_canvas" width="200" heigth="200">
+        </canvas>
+        <table>
+            <tr>
+                <td>
+                    <div id="mouse_event" style="width:200px" />
+                </td>
+                <td>
+                    <div id="keyboard_event" style="width:200px" />
+                </td>
+            </tr>
+        </table>
+    
+        <script type="text/javascript">
+
+            function logMessage(id, message) {
+                var e = document.getElementById(id);
+                var s = message + "\n" + e.innerText;
+                s = s.substring(0, 1024);
+                e.innerText = s;
+            }
+
+            var canvas = document.getElementById("game_canvas");
+
+            var ctx = canvas.getContext("2d");
+            ctx.strokeRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+
+            var isMouseDown = false;
+
+            canvas.onmousedown = function (event) {
+                isMouseDown = true;
+                logMessage("mouse_event", "onmousedown:" + event.x + "," + event.y);
+            };
+            canvas.onmouseup = function (event) {
+                isMouseDown = false;
+                logMessage("mouse_event", "onmouseup:" + event.x + "," + event.y);
+            };
+            canvas.onmousemove = function (event) {
+                if (isMouseDown) {
+                    logMessage("mouse_event", "onmousemove:" + event.x + "," + event.y);
+                }
+            };
+            canvas.onmouseout = function (event) {
+                isMouseDown = false;
+            };
+
+            document.onkeydown = function (event) {
+                logMessage("keyboard_event", "onkeydown:" + String.fromCharCode(event.keyCode));
+            };
+            document.onkeyup = function (event) {
+                logMessage("keyboard_event", "onkeyup:" + String.fromCharCode(event.keyCode));
+            };
+
+        </script>
+    </body>
+</html>
