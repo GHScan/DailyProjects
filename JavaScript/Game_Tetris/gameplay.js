@@ -20,7 +20,7 @@ var gameplay = (function() {
         }
     }
 
-    Board.prototype.collide = function(x, y) {
+    Board.prototype.testCollide = function(x, y) {
         if (y >= 0 && y < this.mGrids.length) {
             if (x >= 0 && x < this.mGrids[y].length) {
                 return typeof this.mGrids[y][x] != "undefined";
@@ -62,58 +62,58 @@ var gameplay = (function() {
     //------------------------------
     function Shape(color) {
         this.mColor = color;
-        this.mTransforms = [];
+        this.mFrames = [];
     }
 
-    Shape.prototype.addTransform = function(anchorX, anchorY, matrix) {
-        this.mTransforms.push({anchorX: anchorX, anchorY: anchorY, matrix: matrix});
+    Shape.prototype.addFrame = function(anchorX, anchorY, matrix) {
+        this.mFrames.push({anchorX: anchorX, anchorY: anchorY, matrix: matrix});
         return this;
     };
 
-    Shape.prototype.transformCount = function() {
-        return this.mTransforms.length;
+    Shape.prototype.frameCount = function() {
+        return this.mFrames.length;
     };
 
-    Shape.prototype.getTransformAnchor = function(transformIdx) {
-        var transform = this.mTransforms[transformIdx];
-        return {x:transform.anchorX, y:transform.anchorY};
+    Shape.prototype.getFrameAnchor = function(frameID) {
+        var frame = this.mFrames[frameID];
+        return {x:frame.anchorX, y:frame.anchorY};
     };
 
-    Shape.prototype.getTransformWidth = function(transformIdx) {
-        var transform = this.mTransforms[transformIdx];
-        return transform.matrix[0].length
+    Shape.prototype.getFrameWidth = function(frameID) {
+        var frame = this.mFrames[frameID];
+        return frame.matrix[0].length
     };
 
-    Shape.prototype._foreach = function(x, y, transformIdx, callback) {
-        var transform = this.mTransforms[transformIdx];
-        var matrix = transform.matrix;
+    Shape.prototype._foreach = function(x, y, frameID, callback) {
+        var frame = this.mFrames[frameID];
+        var matrix = frame.matrix;
         for (var ri = matrix.length - 1; ri >= 0; --ri) {
             var row = matrix[ri];
             for (var ci = row.length - 1; ci >= 0; --ci) {
                 if (row[ci] == 1) {
-                    callback.call(this, x - transform.anchorX + ci, y - transform.anchorY + ri);
+                    callback.call(this, x - frame.anchorX + ci, y - frame.anchorY + ri);
                 }
             }
         }
     }
 
-    Shape.prototype.testCollide = function(board, x, y, transformIdx) {
+    Shape.prototype.testCollide = function(board, x, y, frameID) {
         var collide = false;
-        this._foreach(x, y, transformIdx, function(x, y) {
-            collide = collide || board.collide(x, y);
+        this._foreach(x, y, frameID, function(x, y) {
+            collide = collide || board.testCollide(x, y);
         });
         return collide;
     };
 
-    Shape.prototype.putIntoBoard = function(board, x, y, transformIdx) {
-        this._foreach(x, y, transformIdx, function(x, y) {
+    Shape.prototype.putIntoBoard = function(board, x, y, frameID) {
+        this._foreach(x, y, frameID, function(x, y) {
             board.fill(x, y, this.mColor);
         });
     };
 
-    Shape.prototype.getGrids = function(x, y, transformIdx) {
+    Shape.prototype.getGrids = function(x, y, frameID) {
         var grids = [];
-        this._foreach(x, y, transformIdx, function(x, y) {
+        this._foreach(x, y, frameID, function(x, y) {
             grids.push({x:x, y:y, color:this.mColor});
         });
         return grids;
@@ -121,81 +121,81 @@ var gameplay = (function() {
     //------------------------------
     var SHAPES = [
         new Shape("#F20C0E")
-        .addTransform(0, 0, [
+        .addFrame(0, 0, [
                 [1,1],
                 [1,1]]),
 
         new Shape("#F8FD1A")
-            .addTransform(1, 0, [
+            .addFrame(1, 0, [
                     [1,1,1],
                     [0,1,0],])
-            .addTransform(1, 1, [
+            .addFrame(1, 1, [
                     [0,1,0],
                     [0,1,1],
                     [0,1,0], ])
-            .addTransform(1, 1, [
+            .addFrame(1, 1, [
                     [0,1,0],
                     [1,1,1],])
-            .addTransform(1, 1, [
+            .addFrame(1, 1, [
                     [0,1,],
                     [1,1,],
                     [0,1,], ]),
 
         new Shape("#FE6300")
-            .addTransform(1, 0, [
+            .addFrame(1, 0, [
                     [1,1,1,1],])
-            .addTransform(1, 1, [
+            .addFrame(1, 1, [
                     [0,1,],
                     [0,1,],
                     [0,1,],
                     [0,1,], ]),
 
         new Shape("#0201F3")
-            .addTransform(1, 1, [
+            .addFrame(1, 1, [
                     [1,0,0],
                     [1,1,1]])
-            .addTransform(1, 1, [
+            .addFrame(1, 1, [
                     [0,1,],
                     [0,1,],
                     [1,1,],])
-            .addTransform(1, 1, [
+            .addFrame(1, 1, [
                     [1,1,1],
                     [0,0,1]])
-            .addTransform(1, 1, [
+            .addFrame(1, 1, [
                     [1,1,],
                     [1,0,],
                     [1,0,],]),
 
         new Shape("#7003CA")
-            .addTransform(1, 1, [
+            .addFrame(1, 1, [
                     [0,0,1],
                     [1,1,1]])
-            .addTransform(1, 1, [
+            .addFrame(1, 1, [
                     [1,1,],
                     [0,1,],
                     [0,1,],])
-            .addTransform(1, 1, [
+            .addFrame(1, 1, [
                     [1,1,1],
                     [1,0,0]])
-            .addTransform(1, 1, [
+            .addFrame(1, 1, [
                     [1,0,],
                     [1,0,],
                     [1,1,],]),
 
         new Shape("#6BC5F7")
-            .addTransform(1, 1, [
+            .addFrame(1, 1, [
                     [1,1,0],
                     [0,1,1]])
-            .addTransform(1, 1, [
+            .addFrame(1, 1, [
                     [0,1,],
                     [1,1,],
                     [1,0,],]),
 
         new Shape("#0EF511")
-            .addTransform(1, 1, [
+            .addFrame(1, 1, [
                     [0,1,1],
                     [1,1,0]])
-            .addTransform(1, 1, [
+            .addFrame(1, 1, [
                     [1,0,],
                     [1,1,],
                     [0,1,],]), 
@@ -207,22 +207,22 @@ var gameplay = (function() {
     var gShape = null;
     var gX = null; 
     var gY = null;
-    var gTransformIdx = null;
+    var gFrameID = null;
 
     var gAccumDropTime = 0;
 
     function emitShape() {
         gShape = Math.randomChoice(SHAPES);
-        gTransformIdx = 0;
+        gFrameID = 0;
 
-        var transWidth = gShape.getTransformWidth(gTransformIdx);
-        var transAnchor = gShape.getTransformAnchor(gTransformIdx);
-        gX = transAnchor.x + Math.floor((COLS - transWidth) / 2);
-        gY = transAnchor.y;
+        var frameWidth = gShape.getFrameWidth(gFrameID);
+        var frameAnchor = gShape.getFrameAnchor(gFrameID);
+        gX = frameAnchor.x + Math.floor((COLS - frameWidth) / 2);
+        gY = frameAnchor.y;
 
         gAccumDropTime = 0;
 
-        if (gShape.testCollide(gBoard, gX, gY, gTransformIdx)) {
+        if (gShape.testCollide(gBoard, gX, gY, gFrameID)) {
             if (typeof gGameplay.onGameOver == 'function') {
                 gGameplay.onGameOver();
             } 
@@ -246,8 +246,8 @@ var gameplay = (function() {
         if (gAccumDropTime >= gGameplay.dropTime) {
             gAccumDropTime -= gGameplay.dropTime;
 
-            if (gShape.testCollide(gBoard, gX, gY + 1, gTransformIdx)) {
-                gShape.putIntoBoard(gBoard, gX, gY, gTransformIdx);
+            if (gShape.testCollide(gBoard, gX, gY + 1, gFrameID)) {
+                gShape.putIntoBoard(gBoard, gX, gY, gFrameID);
 
                 
                 var lines = gBoard.clearLines();
@@ -276,7 +276,7 @@ var gameplay = (function() {
 
         // grids
         var grids = gBoard.getGrids();
-        grids = grids.concat(gShape.getGrids(gX, gY, gTransformIdx));
+        grids = grids.concat(gShape.getGrids(gX, gY, gFrameID));
 
         grids.sort(function(a, b) {
             return (a.y * ROWS + a.x) - (b.y * ROWS + b.x);
@@ -311,29 +311,29 @@ var gameplay = (function() {
                 break;
             case framework.KEYCODE.up:
                 {
-                    var nextTransformIdx = (gTransformIdx + 1) % gShape.transformCount();
-                    if (!gShape.testCollide(gBoard, gX, gY, nextTransformIdx)) {
-                        gTransformIdx = nextTransformIdx;
+                    var nextFrameID = (gFrameID + 1) % gShape.frameCount();
+                    if (!gShape.testCollide(gBoard, gX, gY, nextFrameID)) {
+                        gFrameID = nextFrameID;
                     } 
                 }
                 break;
             case framework.KEYCODE.down:
-                if (!gShape.testCollide(gBoard, gX, gY + 1, gTransformIdx)) {
+                if (!gShape.testCollide(gBoard, gX, gY + 1, gFrameID)) {
                     ++gY;
                 }
                 break;
             case framework.KEYCODE.left:
-                if (!gShape.testCollide(gBoard, gX - 1, gY, gTransformIdx)) {
+                if (!gShape.testCollide(gBoard, gX - 1, gY, gFrameID)) {
                     --gX;
                 }
                 break;
             case framework.KEYCODE.right:
-                if (!gShape.testCollide(gBoard, gX + 1, gY, gTransformIdx)) {
+                if (!gShape.testCollide(gBoard, gX + 1, gY, gFrameID)) {
                     ++gX;
                 }
                 break;
             case framework.KEYCODE.space:
-                while (!gShape.testCollide(gBoard, gX, gY + 1, gTransformIdx)) {
+                while (!gShape.testCollide(gBoard, gX, gY + 1, gFrameID)) {
                     ++gY;
                 }
                 break;
