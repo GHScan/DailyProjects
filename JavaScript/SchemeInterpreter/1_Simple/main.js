@@ -85,7 +85,7 @@ function S_eval(env, exp) {
                 }
                 break;
             case exp[0] === 'lambda':
-                return { env: env, formalArgs: exp[1], bodyExps: exp.slice(2)};
+                return { env: env, formalArgs: exp[1], formalArgIdx: 0, bodyExps: exp, bodyExpIdx: 2};
             case exp[0] === 'begin':
                 for (var i = 1; i < exp.length - 1; ++i) {
                     S_eval(env, exp[i]);
@@ -109,7 +109,7 @@ function S_eval(env, exp) {
                 if (typeof exp[1] == 'string') {
                     env[exp[1]] = S_eval(env, exp[2]);
                 } else {
-                    env[exp[1][0]] = {env: env, formalArgs: exp[1].slice(1), bodyExps: exp.slice(2)};
+                    env[exp[1][0]] = {env: env, formalArgs: exp[1], formalArgIdx:1, bodyExps: exp, bodyExpIdx:2};
                 }
                 return undefined;
             case exp[0] === 'set!': 
@@ -124,9 +124,9 @@ function S_eval(env, exp) {
                 break;
             default: {
                     var p = S_eval(env, exp[0]);
-                    var actualArgs = [];
+                    var actualArgs = new Array(exp.length - 1);
                     for (var i = 1; i < exp.length; ++i) {
-                        actualArgs.push(S_eval(env, exp[i]));
+                        actualArgs[i - 1] = S_eval(env, exp[i]);
                     }
 
                     if (typeof p == 'function') {
@@ -134,12 +134,12 @@ function S_eval(env, exp) {
                     } else {
                         env = Object.create(p.env);
 
-                        console.assert(p.formalArgs.length == actualArgs.length);
+                        console.assert(p.formalArgs.length - p.formalArgIdx == actualArgs.length);
                         for (var i = 0; i < actualArgs.length; ++i) {
-                            env[p.formalArgs[i]] = actualArgs[i];
+                            env[p.formalArgs[i + p.formalArgIdx]] = actualArgs[i];
                         }
 
-                        for (var i = 0; i < p.bodyExps.length - 1; ++i) {
+                        for (var i = p.bodyExpIdx; i < p.bodyExps.length - 1; ++i) {
                             S_eval(env, p.bodyExps[i]);
                         }
 
@@ -162,7 +162,7 @@ function S_setupG() {
         'sqrt': function(a){ return Math.sqrt(a); },
         'identity': function(a){ return a; },
         'not': function(a){ return !a; },
-        'empty?': function(a){ return a == Pair.empty; },
+        'empty?': function(a){ return a === Pair.empty; },
 
         '+': function(a, b){ return a + b; },
         '-': function(a, b){ return a - b; },
