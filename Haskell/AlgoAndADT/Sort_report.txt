@@ -1,0 +1,39 @@
+"pass correctness testing ..."
+"ordered 1K:"
+   qsort : 0.009819s
+   qsort2 : 0.000732s
+   mergeSort : 0.000505s
+   insertionSort : 0.009154s
+   bubbleSort : 0.00573s
+"half-repeat 1K:"
+   qsort : 0.017686s
+   qsort2 : 0.000425s
+   mergeSort : 0.000576s
+   insertionSort : 0.005243s
+   bubbleSort : 0.005943s
+"full-repeat 1K:"
+   qsort : 0.088637s
+   qsort2 : 0.000071s
+   mergeSort : 0.000483s
+   insertionSort : 0.000041s
+   bubbleSort : 0.005135s
+"random 1K:"
+   qsort : 0.000979s
+   qsort2 : 0.00097s
+   mergeSort : 0.000617s
+   insertionSort : 0.004093s
+   bubbleSort : 0.007444s
+"random 4K:"
+   qsort : 0.00557s
+   qsort2 : 0.005266s
+   mergeSort : 0.005541s
+   insertionSort : 0.138137s
+"random 32K:"
+   qsort : 0.07535s
+   qsort2 : 0.074101s
+   mergeSort : 0.069753s
+"random 128K:"
+   qsort : 0.362036s
+   qsort2 : 0.429499s
+   mergeSort : 0.421475s
+"pass benchmark..."
