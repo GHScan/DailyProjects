@@ -6,6 +6,7 @@ main = do
     let funcs = [("qsort",(128*1024),qsort),
                  ("qsort2",(128*1024),qsort2),
                  ("mergeSort",(128*1024),mergeSort),
+                 ("mergeSort2",(128*1024),mergeSort2),
                  ("insertionSort",(4*1024),insertionSort),
                  ("bubbleSort",(1*1024),bubbleSort),
                  ("selectionSort",(4*1024),selectionSort)]
@@ -61,14 +62,25 @@ merge :: (Ord a) => [a] -> [a] -> [a]
 merge [] right = right
 merge left [] = left
 merge left@(lx:lxs) right@(rx:rxs) 
-    | lx <= rx = lx:merge lxs right
-    | otherwise = rx: merge left rxs
+    | lx < rx = lx:merge lxs right
+    | lx > rx = rx:merge left rxs
+    | otherwise = lx:rx: merge lxs rxs
 
 mergeSort :: (Ord a) => [a] -> [a]
 mergeSort l@[] = l
 mergeSort l@[x] = l
 mergeSort l = merge (mergeSort left) (mergeSort right)
     where (left,right) = splitAt ((length l) `div` 2) l
+
+mergeSort2 :: (Ord a) => [a] -> [a]
+mergeSort2 l = loop $ [[v]|v<-l]
+    where
+        loop [] = []
+        loop [x] = x
+        loop l = loop $scan l
+        scan l@[] = l
+        scan l@[x] = l
+        scan (x1:x2:rest) = merge x1 x2: scan rest
 
 insertionSort :: (Ord a) => [a] -> [a]
 insertionSort l = foldl insert [] l
