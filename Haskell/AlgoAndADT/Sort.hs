@@ -7,7 +7,8 @@ main = do
                  ("qsort2",(128*1024),qsort2),
                  ("mergeSort",(128*1024),mergeSort),
                  ("insertionSort",(4*1024),insertionSort),
-                 ("bubbleSort",(1*1024),bubbleSort)]
+                 ("bubbleSort",(1*1024),bubbleSort),
+                 ("selectionSort",(4*1024),selectionSort)]
     testCorrectness funcs
     benchmark funcs
 
@@ -88,3 +89,9 @@ bubbleSort :: (Ord a) => [a] -> [a]
 bubbleSort [] = []
 bubbleSort l = x:bubbleSort xs
     where (x:xs) = bubble l
+
+selectionSort :: (Ord a) => [a] -> [a]
+selectionSort [] = []
+selectionSort l = x:selectionSort xs
+    where x = minimum l
+          xs = delete x l
