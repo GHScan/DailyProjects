@@ -65,3 +65,8 @@ AWK:
 
     @result
         array   : 3.782s, 55.556M
+
+Haskell:
+    ghc -O2 interning.hs
+    ./randGen '0123456789' 1000000 5 12 | ./interning
+    -> 7.73s, 335.560M
