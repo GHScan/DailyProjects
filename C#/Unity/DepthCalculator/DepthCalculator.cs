@@ -1,5 +1,4 @@
 ﻿using UnityEngine;
-using UnityEditor;
 
 using System;
 using System.Collections;
@@ -10,9 +9,10 @@ public class DepthCalculator : MonoBehaviour
 {
     public List<UIWidget> Dependences;
 
+#if UNITY_EDITOR
     private void OnDrawGizmos()
     {
-        if (Selection.activeTransform != transform) return;
+        if (UnityEditor.Selection.activeTransform != transform) return;
 
         foreach (var w in Dependences)
         {
@@ -25,10 +25,10 @@ public class DepthCalculator : MonoBehaviour
         }
     }
 
-    [MenuItem("Tool/DepthCalculator/AdjustDepth(Bind+AdjustDepth+Unbind)")]
+    [UnityEditor.MenuItem("Tool/DepthCalculator/AdjustDepth(Bind+AdjustDepth+Unbind)")]
     private static void AdjustDepth()
     {
-        var panel = Selection.activeTransform.GetComponent<UIPanel>();
+        var panel = UnityEditor.Selection.activeTransform.GetComponent<UIPanel>();
         var widgets = GetPanelWidgets(panel, false);
         
         DepthCalculatorBindingAlgorithm.BindToWidgets(widgets);
@@ -40,17 +40,17 @@ public class DepthCalculator : MonoBehaviour
             if (c != null) NGUITools.Destroy(c);
         }
     }
-    [MenuItem("Tool/DepthCalculator/Bind")]
+    [UnityEditor.MenuItem("Tool/DepthCalculator/Bind")]
     private static void Bind()
     {
-        var panel = Selection.activeTransform.GetComponent<UIPanel>();
+        var panel = UnityEditor.Selection.activeTransform.GetComponent<UIPanel>();
         DepthCalculatorBindingAlgorithm.BindToWidgets(GetPanelWidgets(panel, false));
     }
 
-    [MenuItem("Tool/DepthCalculator/Unbind")]
+    [UnityEditor.MenuItem("Tool/DepthCalculator/Unbind")]
     private static void Unbind()
     {
-        foreach (var trans in Selection.transforms)
+        foreach (var trans in UnityEditor.Selection.transforms)
         {
             foreach (var c in trans.gameObject.GetComponentsInChildren<DepthCalculator>(true))
             {
@@ -58,15 +58,16 @@ public class DepthCalculator : MonoBehaviour
             }
         }
     }
-    [MenuItem("Tool/DepthCalculator/CalculateDepth")]
+    [UnityEditor.MenuItem("Tool/DepthCalculator/CalculateDepth")]
     private static void CalculateDepth()
     {
-        var panel = Selection.activeTransform.GetComponent<UIPanel>();
+        var panel = UnityEditor.Selection.activeTransform.GetComponent<UIPanel>();
         var widgets = GetPanelWidgets(panel, false);
 
         UnityEditor.Undo.RecordObjects(widgets, "CalculateDepth");
         DepthCalculationAlgorithm.CalculateDepthForWidgets(widgets);
     }
+#endif
 
     public static UIWidget[] GetPanelWidgets(UIPanel panel, bool includeInactive)
     {
