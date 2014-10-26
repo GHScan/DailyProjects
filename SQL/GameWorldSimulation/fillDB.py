@@ -1,3 +1,4 @@
+import time
 import random
 import sys
 import datetime
@@ -6,6 +7,14 @@ import getpass
 def randomChoose(a, e):
     r = random.random()
     return a[int(len(a) * (r ** e))]
+
+class Timer(object):
+    def __init__(self, name):
+        self.mName = name
+    def __enter__(self):
+        self.mStart = time.clock()
+    def __exit__(self, *args):
+        print '%s: %.3fs' % (self.mName, time.clock() - self.mStart)
 #------------------------------
 kFirstNames = ['James', 'John', 'Robert', 'Michael', 'William', 'David', 'Richard', 'Charles', 'Joseph', 'Thomas', 'Christopher', 'Daniel', 'Paul', 'Mark', 'Donald', 'George', 'Kenneth', ]
 kLastNames = ['Smith', 'Johnson', 'Williams', 'Jones', 'Brown', 'Davis', 'Miller', 'Wilson', 'Moore', 'Taylor', 'Anderson', 'Thomas', 'Jackson', 'White', 'Harris', 'Martin', 'Thompson', 'Garcia', 'Martinez', 'Robinson', 'Clark', 'Rodriguez', 'Lewis', ]
@@ -87,11 +96,28 @@ def fillMySQL(*args, **dargs):
     conn = mysql.connector.connect(*args, **dargs)
     cursor = conn.cursor()
 
-    cursor.executemany('insert into gangs(id,name,description,level) values(%s,%s,%s,%s)', gGangs)
-    cursor.executemany('insert into players(id,name,gang_id,last_login,level,gold,gem) values(%s,%s,%s,%s,%s,%s,%s)', gPlayers)
-    cursor.executemany('insert into items(id,item_id,player_id,exp) values(%s,%s,%s,%s)', gItems)
+    # make sure the mysqld variable 'max_allowed_packet' is large enough!
+    kBatch = 10000
 
-    conn.commit()
+    i = 0
+    while i < len(gGangs):
+        cursor.executemany('insert into gangs(id,name,description,level) values(%s,%s,%s,%s)', gGangs[i: min(len(gGangs), i + kBatch)])
+        conn.commit()
+        i += kBatch
+
+    i = 0
+    while i < len(gPlayers):
+        cursor.executemany('insert into players(id,name,gang_id,last_login,level,gold,gem) values(%s,%s,%s,%s,%s,%s,%s)', gPlayers[i: min(len(gPlayers), i + kBatch)])
+        conn.commit()
+        i += kBatch
+
+    i = 0
+    while i < len(gItems):
+        cursor.executemany('insert into items(id,item_id,player_id,exp) values(%s,%s,%s,%s)', gItems[i: min(len(gItems), i + kBatch)])
+        conn.commit()
+        i += kBatch
+
+    conn.close()
 
 def fillSqlite(*args, **dargs):
     import sqlite3
@@ -105,15 +131,16 @@ def fillSqlite(*args, **dargs):
 
     conn.commit()
 #------------------------------
-gGangNum = 10
-gPlayerNum = 300
-gItemNum = 2000
+gGangNum = 200 * 10
+gPlayerNum = 10000 * 10
+gItemNum = 80000 * 10
 
-genGangs()
-genPlayers()
-genItems()
+with Timer('genGang'): genGangs()
+with Timer('genPlayers'): genPlayers()
+with Timer('genItems'): genItems()
 
-#fillMySQL(user=raw_input('user:'),password=getpass.getpass(),host=raw_input('host:'),database=raw_input('db:'))
-fillSqlite(raw_input('db path:'))
+with Timer('fillDB'):
+    #fillMySQL(user=raw_input('user:'),password=getpass.getpass(),host=raw_input('host:'),database=raw_input('db:'))
+    fillSqlite(raw_input('db path:'))
 
 print 'success!'
