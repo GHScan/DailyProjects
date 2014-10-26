@@ -90,32 +90,24 @@ def genItems():
     gItems.sort(key=lambda p:p[1], reverse=True)
 
 #------------------------------
+def batchInsert(conn, sql, data, batchSize):
+    cursor = conn.cursor()
+    i = 0
+    while i < len(data):
+        cursor.executemany(sql, data[i:min(len(data), i + batchSize)])
+        conn.commit()
+        i += batchSize
+
 def fillMySQL(*args, **dargs):
     import mysql.connector 
 
     conn = mysql.connector.connect(*args, **dargs)
-    cursor = conn.cursor()
 
     # make sure the mysqld variable 'max_allowed_packet' is large enough!
-    kBatch = 10000
-
-    i = 0
-    while i < len(gGangs):
-        cursor.executemany('insert into gangs(id,name,description,level) values(%s,%s,%s,%s)', gGangs[i: min(len(gGangs), i + kBatch)])
-        conn.commit()
-        i += kBatch
-
-    i = 0
-    while i < len(gPlayers):
-        cursor.executemany('insert into players(id,name,gang_id,last_login,level,gold,gem) values(%s,%s,%s,%s,%s,%s,%s)', gPlayers[i: min(len(gPlayers), i + kBatch)])
-        conn.commit()
-        i += kBatch
-
-    i = 0
-    while i < len(gItems):
-        cursor.executemany('insert into items(id,item_id,player_id,exp) values(%s,%s,%s,%s)', gItems[i: min(len(gItems), i + kBatch)])
-        conn.commit()
-        i += kBatch
+    kBatchSize = 10000
+    batchInsert(conn, 'insert into gangs(id,name,description,level) values(%s,%s,%s,%s)', gGangs, kBatchSize)
+    batchInsert(conn, 'insert into players(id,name,gang_id,last_login,level,gold,gem) values(%s,%s,%s,%s,%s,%s,%s)', gPlayers, kBatchSize)
+    batchInsert(conn, 'insert into items(id,item_id,player_id,exp) values(%s,%s,%s,%s)', gItems, kBatchSize)
 
     conn.close()
 
@@ -140,7 +132,7 @@ with Timer('genPlayers'): genPlayers()
 with Timer('genItems'): genItems()
 
 with Timer('fillDB'):
-    #fillMySQL(user=raw_input('user:'),password=getpass.getpass(),host=raw_input('host:'),database=raw_input('db:'))
-    fillSqlite(raw_input('db path:'))
+    fillMySQL(user=raw_input('user:'),password=getpass.getpass(),host=raw_input('host:'),database=raw_input('db:'))
+    #fillSqlite(raw_input('db path:'))
 
 print 'success!'
