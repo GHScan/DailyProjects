@@ -271,6 +271,8 @@ public static class ReferenceAnalysisAlgorithm
                             path.RemoveAt(path.Count - 1);
                         }
                     }
+
+                    FlushErrorLog();
                 }
 
                 using (new ScopeTimer("GC", LogInfo))
@@ -337,8 +339,7 @@ public static class ReferenceAnalysisAlgorithm
             }
             catch (Exception e)
             {
-                LogError(PathToString(path));
-                LogError(e.ToString());
+                LogException(PathToString(path), e);
                 return null;
             }
         }
@@ -350,8 +351,7 @@ public static class ReferenceAnalysisAlgorithm
             }
             catch (Exception e)
             {
-                LogError(PathToString(path));
-                LogError(e.ToString());
+                LogException(PathToString(path), e);
                 return null;
             }
         }
@@ -368,9 +368,27 @@ public static class ReferenceAnalysisAlgorithm
             }
             return mCachedStrBuilder.ToString();
         }
+        private void LogException(string ctx, Exception e)
+        {
+            if (mErrLogBuffer.Count == mErrLogBuffer.Capacity)
+            {
+                FlushErrorLog();
+            }
+            mErrLogBuffer.Add(new KeyValuePair<string, string>(ctx, e.ToString()));
+        }
+        private void FlushErrorLog()
+        {
+            foreach (var g in mErrLogBuffer.GroupBy(kv => kv.Value))
+            {
+                foreach (var kv in g) LogError(kv.Key);
+                LogError(g.Key);
+            }
+            mErrLogBuffer.Clear();
+        }
 
         private TypeGraph mGraph;
         private StringBuilder mCachedStrBuilder = new StringBuilder(128);
+        private List<KeyValuePair<string, string>> mErrLogBuffer = new List<KeyValuePair<string, string>>(2048);
     }
 }
 
