@@ -101,10 +101,10 @@ public static class ReferenceAnalysisAlgorithm
     {
         public TypeLayout Layout;
         public bool Related;
-        public List<TypeNode> DerivedNodes = new List<TypeNode>();
+        public HashSet<TypeNode> DerivedNodes = new HashSet<TypeNode>();
         public void AddDerivedNode(TypeNode node)
         {
-            if (!DerivedNodes.Contains(node)) DerivedNodes.Add(node);
+            DerivedNodes.Add(node);
         }
     }
     private class TypeGraph
@@ -185,8 +185,8 @@ public static class ReferenceAnalysisAlgorithm
             }
         }
 
-        private Dictionary<Type, TypeNode> mType2Node = new Dictionary<Type, TypeNode>();
-        private Stack<TypeNode> mNewRelatedNodes = new Stack<TypeNode>();
+        private Dictionary<Type, TypeNode> mType2Node = new Dictionary<Type, TypeNode>(2048);
+        private Stack<TypeNode> mNewRelatedNodes = new Stack<TypeNode>(256);
         private ReflectionPolicy mPolicy;
     }
     private class ScopeTimer : IDisposable
@@ -259,7 +259,7 @@ public static class ReferenceAnalysisAlgorithm
             using (new ScopeTimer("Find all", LogInfo))
             {
                 {
-                    var path = new List<object>();
+                    var path = new List<object>(32);
                     var findCache = new HashSet<object>();
 
                     foreach (var kv in roots)
@@ -447,22 +447,29 @@ public class ReferenceFinderTestCase
             {
                 LogInfo = infoFile.WriteLine,
                 LogError = errFile.WriteLine,
+                Policy = new ReferenceAnalysisAlgorithm.ReflectionPolicy()
+                {
+                    GetInstanceProperties = type =>
+                    {
+#if UNITY_EDITOR
+                        if (type.IsArray) return Enumerable.Empty<PropertyInfo>();
+                        if (!type.IsSubclassOf(typeof(Delegate)) && type.Assembly != typeof(UnityEngine.Vector3).Assembly) return Enumerable.Empty<PropertyInfo>();
+                        return
+                            from prop in type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                            where !prop.PropertyType.ContainsGenericParameters
+                            let getter = prop.GetGetMethod()
+                            where getter != null && getter.GetParameters().Length == 0
+                            select prop;
+#else
+                        return Enumerable.Empty<PropertyInfo>();
+#endif
+                    },
+                },
             }.Initialize(obj.GetType());
 
             finder.FindReferences(obj, outputFile.WriteLine);
         }
 
         Cleanup();
-    }
-}
-
-namespace CSharp13
-{
-    public class Program
-    {
-        public static void Main(string[] args)
-        {
-            ReferenceFinderTestCase.Run();
-        }
     }
 }
