@@ -9,7 +9,7 @@ namespace CSharp13
     {
         public static IEnumerable<T> QSort<T>(IEnumerable<T> a) where T : IComparable<T>
         {
-            return !a.Any() ? a : QSort(a.Where(i => i.CompareTo(a.First()) < 0)).Concat(a.Where(i => i.CompareTo(a.First()) == 0)).Concat(a.Where(i => i.CompareTo(a.First()) > 0));
+            return !a.Any() ? a : QSort(a.Where(i => i.CompareTo(a.First()) < 0)).Concat(a.Where(i => i.CompareTo(a.First()) == 0)).Concat(QSort(a.Where(i => i.CompareTo(a.First()) > 0)));
         }
         public static Func<T, T> Y<T>(Func<Func<T, T>, Func<T, T>> f)
         {
