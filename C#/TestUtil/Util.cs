@@ -1,76 +1,35 @@
 ﻿using System;
-
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 
-namespace CSharp08
+namespace CSharp13
 {
-    partial class Program
+    public static class Utils
     {
-        public static void Print(params object[] a) 
-        { 
-            foreach (var i in a) 
-            { 
-                Console.Write("{0}\t", i ?? "null"); 
-            }
-            Console.WriteLine("");
+        public static void Print(params object[] args)
+        {
+            Console.WriteLine(string.Join("\t", args));
         }
 
-        public static void Assert(bool b)
+        public static void Timeit(int times, Action a)        
         {
-            Debug.Assert(b);
-        }
+            // JIT、Warm up cache
+            if (times > 1) a();
 
-        public static void PerfTimer(Action f, params string[] name)
-        {
-            Assert(name.Length <= 1);
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
+            var gcCounts = new int[GC.MaxGeneration + 1];
+            for (var i = 0; i < gcCounts.Length; ++i) gcCounts[i] = GC.CollectionCount(i);
 
-            Stopwatch watch = new Stopwatch();
-            watch.Start();
-            f();
-            watch.Stop();
-            float seconds = (watch.ElapsedMilliseconds / 1000.0f);
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
+            for (var i = 0; i < times; ++i) a();
+            stopwatch.Stop();
 
-            if (name.Length > 0) Print(name[0], ":", seconds);
-            else Print(seconds);
-        }
-
-        public static byte[] ToByteArray<T>(T a)
-        where T : struct
-        {
-            int size = Marshal.SizeOf(typeof(T));
-            IntPtr p = Marshal.AllocHGlobal(size);
-            try
-            {
-                Marshal.StructureToPtr(a, p, false);
-
-                byte[] r = new byte[size];
-                Marshal.Copy(p, r, 0, r.Length);
-                return r;
-            }
-            finally
-            {
-                Marshal.FreeHGlobal(p);
-            }
-        }
-
-        public static T FromByteArray<T>(byte[] a)
-        where T : struct
-        {
-            Assert(a.Length == Marshal.SizeOf(typeof(T)));
-
-            IntPtr p = Marshal.AllocHGlobal(a.Length);
-            try
-            {
-                Marshal.Copy(a, 0, p, a.Length);
-
-                T r = (T)Marshal.PtrToStructure(p, typeof(T));
-                return r;
-            }
-            finally
-            {
-                Marshal.FreeHGlobal(p);
-            }
+            for (var i = 0; i < gcCounts.Length; ++i) gcCounts[i] = GC.CollectionCount(i) - gcCounts[i];
+            Console.WriteLine(string.Format("Time: {0:0.######}ms, GC counts: {1}", stopwatch.Elapsed.TotalMilliseconds / times, string.Join(",", gcCounts)));
         }
     }
 }
