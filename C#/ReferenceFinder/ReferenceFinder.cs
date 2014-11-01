@@ -6,6 +6,7 @@ using System.Text;
 using System.IO;
 using System.Reflection;
 using System.Diagnostics;
+using System.Linq.Expressions;
 
 public static class ReferenceAnalysisAlgorithm
 {
@@ -92,12 +93,29 @@ public static class ReferenceAnalysisAlgorithm
         }
         private static string kSystemReflectionNameSpace = typeof(System.Reflection.MethodInfo).Namespace;
     }
-    private class TypeLayout
+    public class TypeLayout
     {
-        public PropertyInfo[] Properties;
-        public FieldInfo[] Fields;
+        public KeyValuePair<string, Func<object, object>>[] Members { get; private set; }
+        public TypeLayout(IEnumerable<PropertyInfo> properties, IEnumerable<FieldInfo> fields)
+        {
+            Members = properties.Select(f => new KeyValuePair<string, Func<object, object>>(f.Name, Compile(f)))
+                    .Concat(fields.Select(f => new KeyValuePair<string, Func<object, object>>(f.Name, Compile(f)))).ToArray();
+        }
+        private static Func<object, object> Compile(FieldInfo field)
+        {
+            var a = Expression.Parameter(typeof(object), "a");
+            var body = Expression.Convert(Expression.Field(Expression.Convert(a, field.DeclaringType), field), typeof(object));
+            return Expression.Lambda<Func<object, object>>(body, a).Compile();
+        }
+
+        private static Func<object, object> Compile(PropertyInfo prop)
+        {
+            var a = Expression.Parameter(typeof(object), "a");
+            var body = Expression.Convert(Expression.Property(Expression.Convert(a, prop.DeclaringType), prop), typeof(object));
+            return Expression.Lambda<Func<object, object>>(body, a).Compile();
+        }
     }
-    private class TypeNode
+    public class TypeNode
     {
         public TypeLayout Layout;
         public bool Related;
@@ -107,11 +125,22 @@ public static class ReferenceAnalysisAlgorithm
             DerivedNodes.Add(node);
         }
     }
-    private class TypeGraph
+    public class TypeGraph
     {
+        public ReflectionPolicy Policy { get; private set; }
+        public Type TargetType { get; private set; }
+        public TypeGraph(Type targetType, ReflectionPolicy policy) :
+            this(targetType, AppDomain.CurrentDomain.GetAssemblies(), policy)
+        {
+        }
+        public TypeGraph(Type targetType, IEnumerable<Assembly> assemblys, ReflectionPolicy policy) :
+            this(targetType, assemblys.SelectMany(a => policy.GetAssemblyTypes(a)), policy)
+        {
+        }
         public TypeGraph(Type targetType, IEnumerable<Type> types, ReflectionPolicy policy)
         {
-            mPolicy = policy;
+            TargetType = targetType;
+            Policy = policy;
 
             foreach (var type in types) GetOrAddNode(type);
 
@@ -138,13 +167,13 @@ public static class ReferenceAnalysisAlgorithm
             node = new TypeNode();
             mType2Node.Add(type, node);
 
-            foreach (var memberType in mPolicy.GetInstanceMemberTypes(type))
+            foreach (var memberType in Policy.GetInstanceMemberTypes(type))
             {
                 var memberNode = GetOrAddNode(memberType);
                 memberNode.AddDerivedNode(node);
                 node.Related |= memberNode.Related;
             }
-            foreach (var superType in mPolicy.GetInstanceSuperTypes(type))
+            foreach (var superType in Policy.GetInstanceSuperTypes(type))
             {
                 node.AddDerivedNode(GetOrAddNode(superType));
             }
@@ -157,15 +186,13 @@ public static class ReferenceAnalysisAlgorithm
         {
             if (type.IsArray || ReflectionPolicy.IsAtom(type))
             {
-                return new TypeLayout();
+                return new TypeLayout(Enumerable.Empty<PropertyInfo>(), Enumerable.Empty<FieldInfo>());
             }
             else
             {
-                return new TypeLayout()
-                {
-                    Fields = mPolicy.GetInstanceFields(type).Where(f => mType2Node[f.FieldType].Related).ToArray(),
-                    Properties = mPolicy.GetInstanceProperties(type).Where(p => mType2Node[p.PropertyType].Related).ToArray(),
-                };
+                return new TypeLayout(
+                    Policy.GetInstanceProperties(type).Where(p => mType2Node[p.PropertyType].Related), 
+                    Policy.GetInstanceFields(type).Where(f => mType2Node[f.FieldType].Related));
             }
         }
         private void MarkDerivedNodesAsRelated()
@@ -187,9 +214,8 @@ public static class ReferenceAnalysisAlgorithm
 
         private Dictionary<Type, TypeNode> mType2Node = new Dictionary<Type, TypeNode>(2048);
         private Stack<TypeNode> mNewRelatedNodes = new Stack<TypeNode>(256);
-        private ReflectionPolicy mPolicy;
     }
-    private class ScopeTimer : IDisposable
+    public class ScopeTimer : IDisposable
     {
         public ScopeTimer(string name, Action<string> log)
         {
@@ -212,24 +238,11 @@ public static class ReferenceAnalysisAlgorithm
     {
         public Action<string> LogInfo = Console.Out.WriteLine;
         public Action<string> LogError = Console.Error.WriteLine;
-        public ReflectionPolicy Policy = new ReflectionPolicy();
+        public ReferenceFinder(TypeGraph graph)
+        {
+            mGraph = graph;
+        }
 
-        public ReferenceFinder Initialize(Type targetType)
-        {
-            return Initialize(targetType, AppDomain.CurrentDomain.GetAssemblies());
-        }
-        public ReferenceFinder Initialize(Type targetType, IEnumerable<Assembly> assemblys)
-        {
-            return Initialize(targetType, assemblys.SelectMany(a => Policy.GetAssemblyTypes(a)));
-        }
-        public ReferenceFinder Initialize(Type targetType, IEnumerable<Type> types)
-        {
-            using (new ScopeTimer("Build type graph", LogInfo))
-            {
-                mGraph = new TypeGraph(targetType, types, Policy);
-            }
-            return this;
-        }
         public void FindReferences(object targetObj, Action<string> callback)
         {
             FindReferences(targetObj, new[] { Assembly.GetCallingAssembly() }, callback);
@@ -237,15 +250,15 @@ public static class ReferenceAnalysisAlgorithm
         public void FindReferences(object targetObj, IEnumerable<Assembly> assemblys, Action<string> callback)
         {
             var roots =
-                from type in assemblys.SelectMany(a => Policy.GetAssemblyTypes(a))
+                from type in assemblys.SelectMany(a => mGraph.Policy.GetAssemblyTypes(a))
                 from root in
-                    ((from field in Policy.GetStaticFields(type)
+                    ((from field in mGraph.Policy.GetStaticFields(type)
                       let path = string.Format("{0}.{1}", type.Name, field.Name)
                       let v = TryGetFieldValue(new object[] { path }, null, field)
                       where v != null
                       select new KeyValuePair<string, object>(path, v)))
                       .Concat(
-                         from prop in Policy.GetStaticProperties(type)
+                         from prop in mGraph.Policy.GetStaticProperties(type)
                          let path = string.Format("{0}.{1}", type.Name, prop.Name)
                          let v = TryGetPropertyValue(new object[] { path }, null, prop)
                          where v != null
@@ -317,16 +330,10 @@ public static class ReferenceAnalysisAlgorithm
             }
             else
             {
-                foreach (var field in layout.Fields)
+                foreach (var member in layout.Members)
                 {
-                    path.Add(field.Name);
-                    FindReferencesRecursively(path, TryGetFieldValue(path, obj, field), targetObj, findCache, callback);
-                    path.RemoveAt(path.Count - 1);
-                }
-                foreach (var prop in layout.Properties)
-                {
-                    path.Add(prop.Name);
-                    FindReferencesRecursively(path, TryGetPropertyValue(path, obj, prop), targetObj, findCache, callback);
+                    path.Add(member.Key);
+                    FindReferencesRecursively(path, TryGetMemberValue(path, obj, member.Value), targetObj, findCache, callback);
                     path.RemoveAt(path.Count - 1);
                 }
             }
@@ -348,6 +355,18 @@ public static class ReferenceAnalysisAlgorithm
             try
             {
                 return prop.GetValue(o, null);
+            }
+            catch (Exception e)
+            {
+                LogException(PathToString(path), e);
+                return null;
+            }
+        }
+        private object TryGetMemberValue(IEnumerable<object> path, object o, Func<object, object> accessor)
+        {
+            try
+            {
+                return accessor(o);
             }
             catch (Exception e)
             {
@@ -461,29 +480,35 @@ public class ReferenceFinderTestCase
         {
             var obj = Instance.mUnit;
 
-            var finder = new ReferenceAnalysisAlgorithm.ReferenceFinder()
+            ReferenceAnalysisAlgorithm.TypeGraph graph;
+            using (new ReferenceAnalysisAlgorithm.ScopeTimer("Build type graph", infoFile.WriteLine))
             {
-                LogInfo = infoFile.WriteLine,
-                LogError = errFile.WriteLine,
-                Policy = new ReferenceAnalysisAlgorithm.ReflectionPolicy()
-                {
-                    GetInstanceProperties = type =>
+                graph = new ReferenceAnalysisAlgorithm.TypeGraph(obj.GetType(),
+                    new ReferenceAnalysisAlgorithm.ReflectionPolicy()
                     {
+                        GetInstanceProperties = type =>
+                        {
 #if UNITY_EDITOR
-                        if (type.IsArray) return Enumerable.Empty<PropertyInfo>();
-                        if (!type.IsSubclassOf(typeof(Delegate)) && type.Assembly != typeof(UnityEngine.Vector3).Assembly) return Enumerable.Empty<PropertyInfo>();
-                        return
-                            from prop in type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                            where !prop.PropertyType.ContainsGenericParameters
-                            let getter = prop.GetGetMethod()
-                            where getter != null && getter.GetParameters().Length == 0
-                            select prop;
+                            if (type.IsArray) return Enumerable.Empty<PropertyInfo>();
+                            if (!type.IsSubclassOf(typeof(Delegate)) && type.Assembly != typeof(UnityEngine.Vector3).Assembly) return Enumerable.Empty<PropertyInfo>();
+                            return
+                                from prop in type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                                where !prop.PropertyType.ContainsGenericParameters
+                                let getter = prop.GetGetMethod()
+                                where getter != null && getter.GetParameters().Length == 0
+                                select prop;
 #else
                         return Enumerable.Empty<PropertyInfo>();
 #endif
-                    },
-                },
-            }.Initialize(obj.GetType());
+                        },
+                    });
+            }
+
+            var finder = new ReferenceAnalysisAlgorithm.ReferenceFinder(graph)
+            {
+                LogInfo = infoFile.WriteLine,
+                LogError = errFile.WriteLine,
+            };
 
             finder.FindReferences(obj, outputFile.WriteLine);
         }
