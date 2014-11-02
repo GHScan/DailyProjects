@@ -391,6 +391,140 @@ private:
     Node mEmptyNode;
 };
 
+template<typename KT, typename VT, typename HashT = hash<KT>, typename EqualT = equal_to<KT>>
+class ChainingHashTable2 {
+private:
+    struct Node {
+        KT key;
+        VT value;
+        int next;
+        explicit Node(int _next): key(KT()), value(VT()), next(_next) {}
+        Node(const KT &_key, const KT &_value, int _next): key(_key), value(_value), next(_next){}
+    };
+public:
+    ChainingHashTable2(int bucketSize = 8): mBuckets(bucketSize, -1), mSize(0), mLoadFactor(1), mFreeList(0) {
+        initNodes(mNodes, bucketSize);
+    }
+    ~ChainingHashTable2() {
+        clear();
+    }
+
+    ChainingHashTable2(const ChainingHashTable2& o): ChainingHashTable2(o.mBuckets.size()) {
+        o.foreach([this](const KT &k, VT &v){ insert(k, v); });
+    }
+    ChainingHashTable2& operator = (const ChainingHashTable2& o) {
+        if (this != &o) {
+            ChainingHashTable2 tmp(o);
+            swap(tmp);
+        }
+        return *this;
+    }
+    ChainingHashTable2(ChainingHashTable2&& o): ChainingHashTable2(0) {
+        swap(o);
+    }
+    ChainingHashTable2& operator = (ChainingHashTable2&& o) {
+        swap(o);
+        return *this;
+    }
+
+    void clear() {
+        mBuckets.assign(mBuckets.size(), -1);
+        mSize = 0;
+        mFreeList = 0;
+        initNodes(mNodes, (int)mNodes.size());
+    }
+    int size() const { return mSize; }
+    bool empty() const { return size() == 0; }
+    void setLoadFactor(float loadFactor) { mLoadFactor = loadFactor; }
+    void swap(ChainingHashTable2& o) {
+        std::swap(mNodes, o.mNodes);
+        std::swap(mSize, o.mSize);
+        std::swap(mLoadFactor, o.mLoadFactor);
+        std::swap(mFreeList, o.mFreeList);
+        std::swap(mBuckets, o.mBuckets);
+        std::swap(mHash, o.mHash);
+        std::swap(mEqual, o.mEqual);
+    }
+
+    bool insert(const KT &k, const VT &v) {
+        if (mSize >= mLoadFactor * mBuckets.size()) rehash();
+        int *p = &mBuckets[mHash(k) % mBuckets.size()];
+        for (; *p != -1 && !mEqual(k, mNodes[*p].key); p = &mNodes[*p].next);
+        if (*p == -1) {
+            assert(mFreeList != -1);
+            *p = mFreeList;
+            mFreeList = mNodes[mFreeList].next;
+            mNodes[*p] = Node(k, v, -1);
+            ++mSize;
+            return true;
+        } else {
+            mNodes[*p].value = v;
+            return false;
+        }
+    } 
+    bool remove(const KT &k) {
+        int *p = &mBuckets[mHash(k) % mBuckets.size()];
+        for (; *p != -1 && !mEqual(k, mNodes[*p].key); p = &mNodes[*p].next);
+        if (*p == -1) return false;
+        int t = *p;
+        *p = mNodes[t].next;
+        mNodes[t] = Node(mFreeList);
+        mFreeList = t;
+        --mSize;
+        return true;
+    }
+    VT* get(const KT &k) {
+        int i = mBuckets[mHash(k) % mBuckets.size()];
+        for (; i != -1 && !mEqual(mNodes[i].key, k); i = mNodes[i].next);
+        return i == -1 ? nullptr : &mNodes[i].value;
+    }
+
+    void foreach(function<void(const KT&, const VT&)> f) const {
+        for (auto i : mBuckets) {
+            for (; i != -1; i = mNodes[i].next) f(mNodes[i].key, mNodes[i].value);
+        }
+    }
+    void foreach(function<void(const KT&, VT&)> f) {
+        for (auto i : mBuckets) {
+            for (; i != -1; i = mNodes[i].next) f(mNodes[i].key, mNodes[i].value);
+        }
+    }
+private:
+    void rehash() {
+        vector<int> buckets(mBuckets.size() * 2, -1);
+        vector<Node> nodes;
+        initNodes(nodes, int(buckets.size() * mLoadFactor) + 1);
+        int freeList = 0;
+
+        for (auto i : mBuckets) {
+            for (; i != -1; i = mNodes[i].next) {
+                int *p = &buckets[mHash(mNodes[i].key) % buckets.size()];
+                int t = freeList;
+                freeList = nodes[freeList].next;
+                nodes[t] = Node(mNodes[i].key, mNodes[i].value, *p);
+                *p = t;
+            }
+        }
+
+        std::swap(mFreeList, freeList);
+        std::swap(mNodes, nodes);
+        std::swap(mBuckets, buckets);
+    }
+    static void initNodes(vector<Node> &nodes, int n) {
+        nodes.assign(n, Node(-1));
+        for (int i = 0; i < (int)nodes.size(); ++i) nodes[i].next = i + 1;
+        nodes.back().next = -1;
+    }
+private:
+    vector<int> mBuckets;
+    int mSize;
+    float mLoadFactor;
+    int mFreeList;
+    vector<Node> mNodes;
+    HashT mHash;
+    EqualT mEqual;
+};
+
 template<typename TableT>
 class STLWrapper {
 public:
@@ -524,6 +658,7 @@ static void benchmark(const char *name) {
 typedef STLWrapper<map<int, int>> STLMap;
 typedef STLWrapper<unordered_map<int, int>> STLHash;
 typedef ChainingHashTable<int, int> ChainingHash;
+typedef ChainingHashTable2<int, int> ChainingHash2;
 typedef OpenAddressingHashTable<int, int> OpenAddressingHash;
 typedef OpenAddressingHashTable2<int, int> OpenAddressingHash2;
 
@@ -537,11 +672,13 @@ int main() {
     CORRECTNESS_TEST(STLMap);
     CORRECTNESS_TEST(STLHash);
     CORRECTNESS_TEST(ChainingHash);
+    CORRECTNESS_TEST(ChainingHash2);
     CORRECTNESS_TEST(OpenAddressingHash);
     CORRECTNESS_TEST(OpenAddressingHash2);
     BENCHMARK(STLMap);
     BENCHMARK(STLHash);
     BENCHMARK(ChainingHash);
+    BENCHMARK(ChainingHash2);
     BENCHMARK(OpenAddressingHash);
     BENCHMARK(OpenAddressingHash2);
 }
