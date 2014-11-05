@@ -1,0 +1,10 @@
+﻿[
+{
+    "$type": "Program+Command_Json2Excel, Json2Excel",
+    "JsonPath": "W武器表.json",
+    "ExcelPath": "W武器表.xls",
+    "ExcelTitleRow": 1,
+    "ExcelContentRow": 2,
+    "Active": true
+  }
+]

@@ -1,0 +1,11 @@
+﻿[
+  {
+    "$type": "Program+Command_JsonMerge, JsonMerge",
+    "DestPath": "W武器表.json",
+    "SrcPath": "W武器表2.json",
+    "SheetsPrimaryKey": {
+      "Sheet1": "id"
+    },
+    "Active": true
+  }
+]

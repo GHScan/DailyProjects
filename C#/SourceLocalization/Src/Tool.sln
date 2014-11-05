@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.30501.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Json2Excel", "Json2Excel\Json2Excel.csproj", "{D09DB095-B0CC-4528-8127-47E6C7C80ADC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JsonMerge", "JsonMerge\JsonMerge.csproj", "{04046D46-2844-41F9-8E0E-A3BC201BA918}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LiteralReplace", "LiteralReplace\LiteralReplace.csproj", "{58548B2E-CE93-4257-9E0C-230733FBDAE3}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D09DB095-B0CC-4528-8127-47E6C7C80ADC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D09DB095-B0CC-4528-8127-47E6C7C80ADC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D09DB095-B0CC-4528-8127-47E6C7C80ADC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D09DB095-B0CC-4528-8127-47E6C7C80ADC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{04046D46-2844-41F9-8E0E-A3BC201BA918}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{04046D46-2844-41F9-8E0E-A3BC201BA918}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{04046D46-2844-41F9-8E0E-A3BC201BA918}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{04046D46-2844-41F9-8E0E-A3BC201BA918}.Release|Any CPU.Build.0 = Release|Any CPU
+		{58548B2E-CE93-4257-9E0C-230733FBDAE3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{58548B2E-CE93-4257-9E0C-230733FBDAE3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{58548B2E-CE93-4257-9E0C-230733FBDAE3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{58548B2E-CE93-4257-9E0C-230733FBDAE3}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

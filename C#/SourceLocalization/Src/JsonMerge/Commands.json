@@ -1,0 +1,11 @@
+﻿[
+  {
+    "$type": "Program+Command_JsonMerge, JsonMerge",
+    "SrcPath": "2.json",
+    "DestPath": "1.json",
+    "SheetsMergeKey": {
+      "Sheet1": "id"
+    },
+    "Active": false
+  }
+]

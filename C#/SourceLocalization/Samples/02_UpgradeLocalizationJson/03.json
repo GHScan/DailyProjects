@@ -1,0 +1,13 @@
+﻿[
+  {
+    "$type": "Program+Command_Excel2Json, Json2Excel",
+    "ExcelPath": "Localization.xls",
+    "ExcelTitleRow": 1,
+    "ExcelContentRow": 2,
+    "ExcelSheetNames": [
+      "Localization"
+    ],
+    "JsonPath": "Localization2.json",
+    "Active": true
+  }
+]

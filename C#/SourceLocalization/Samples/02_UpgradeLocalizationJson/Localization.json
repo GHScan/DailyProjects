@@ -1,0 +1,67 @@
+﻿[
+  {
+    "Name": "Localization",
+    "Rows": [
+      {
+        "Name": "kString_0",
+        "zh_cn": "Hello"
+      },
+      {
+        "Name": "kString_1",
+        "zh_cn": "Hello\\r\\n            Haha, \\\\t\\r\\n            \\\\n"
+      },
+      {
+        "Name": "kString_10",
+        "zh_cn": "这是一条\\r\\n    多行\\r\\n中文文本"
+      },
+      {
+        "Name": "kString_11",
+        "zh_cn": "这是一条\\n"
+      },
+      {
+        "Name": "kString_12",
+        "zh_cn": "多行"
+      },
+      {
+        "Name": "kString_13",
+        "zh_cn": "中文文本2"
+      },
+      {
+        "Name": "kString_14",
+        "zh_cn": "E:\\\\ejoy\\\\act\\\\tool\\\\Localization\\\\Src\\\\CSharp_StringLiteralReplace_Test\\\\Program.cs"
+      },
+      {
+        "Name": "kString_2",
+        "zh_cn": "你好"
+      },
+      {
+        "Name": "kString_3",
+        "zh_cn": "你好\\r\\n哈哈，，\\r\\n    \\\\r\\\\n\\r\\n"
+      },
+      {
+        "Name": "kString_4",
+        "zh_cn": "Argument count: "
+      },
+      {
+        "Name": "kString_5",
+        "zh_cn": "参数个数: "
+      },
+      {
+        "Name": "kString_6",
+        "zh_cn": "\\tformat: {0}\\n {1}\\n {2}\\n"
+      },
+      {
+        "Name": "kString_7",
+        "zh_cn": "格式"
+      },
+      {
+        "Name": "kString_8",
+        "zh_cn": "\\t格式: {0}\\n {1}\\n {2}\\n"
+      },
+      {
+        "Name": "kString_9",
+        "zh_cn": "format"
+      }
+    ]
+  }
+]

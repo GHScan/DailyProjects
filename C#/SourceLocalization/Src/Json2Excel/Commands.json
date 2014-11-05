@@ -1,0 +1,18 @@
+﻿[
+  {
+    "$type": "Program+Command_Excel2Json, Json2Excel",
+    "ExcelPath": "X虚拟物品表.xls",
+    "ExcelTitleRow": 1,
+    "ExcelContentRow": 2,
+    "JsonPath": "X虚拟物品表.json",
+    "Active": false
+  },
+  {
+    "$type": "Program+Command_Json2Excel, Json2Excel",
+    "JsonPath": "Localization.json",
+    "ExcelPath": "Localization.xls",
+    "ExcelTitleRow": 1,
+    "ExcelContentRow": 2,
+    "Active": false
+  }
+]

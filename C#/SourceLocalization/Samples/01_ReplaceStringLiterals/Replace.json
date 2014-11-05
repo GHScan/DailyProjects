@@ -1,0 +1,42 @@
+﻿[
+  {
+    "$type": "Program+Command_FindoutStringLiterals, LiteralReplace",
+    "Macros": [
+        "MyGame",
+        "A1_UPDATELIST_1_TENCENT",
+        "A1_RELEASE",
+        "OPERATOR_QQAPP",
+        "SDK_QQ_MSDK",
+        "UNITY_ANDROID"
+    ],
+    "CSharpSrcDirectories": [
+      "."
+    ],
+    "ResultPath": "Filter.txt",
+    "Active": true
+  },
+  {
+    "$type": "Program+Command_ReplaceStringLiteralsWithVariables, LiteralReplace",
+    "Macros": [
+        "MyGame",
+        "A1_UPDATELIST_1_TENCENT",
+        "A1_RELEASE",
+        "OPERATOR_QQAPP",
+        "SDK_QQ_MSDK",
+        "UNITY_ANDROID"
+    ],
+    "CSharpSrcDirectories": [
+      "."
+    ],
+    "FilterPath": "Filter.txt",
+    "ResultPath": "Localization.json",
+    "Active": true
+  },
+  {
+    "$type": "Program+Command_GenerateClassFile, LiteralReplace",
+    "JsonPath": "Localization.json",
+    "Language": "zh_cn",
+    "ResultPath": "Localization.cs",
+    "Active": true
+  }
+]

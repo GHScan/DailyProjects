@@ -1,0 +1,9 @@
+﻿[
+  {
+    "$type": "Program+Command_GenerateClassFile, LiteralReplace",
+    "JsonPath": "Localization.json",
+    "Language": "en_us",
+    "ResultPath": "Localization.cs",
+    "Active": true
+  }
+]

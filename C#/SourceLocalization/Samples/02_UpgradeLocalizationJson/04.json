@@ -1,0 +1,11 @@
+﻿[
+  {
+    "$type": "Program+Command_JsonMerge, JsonMerge",
+    "DestPath": "Localization.json",
+    "SrcPath": "Localization2.json",
+    "SheetsPrimaryKey": {
+      "Localization": "Name"
+    },
+    "Active": true
+  }
+]

@@ -1,0 +1,24 @@
+﻿[
+  {
+    "$type": "Program+Command_Excel2Json, Json2Excel",
+    "ExcelPath": "W武器表.xls",
+    "ExcelTitleRow": 1,
+    "ExcelContentRow": 2,
+    "ExcelSheetNames": [
+      "Sheet1"
+    ],
+    "JsonPath": "W武器表.json",
+    "Active": true
+  },
+  {
+    "$type": "Program+Command_Excel2Json, Json2Excel",
+    "ExcelPath": "W武器表2.xls",
+    "ExcelTitleRow": 1,
+    "ExcelContentRow": 2,
+    "ExcelSheetNames": [
+      "Sheet1"
+    ],
+    "JsonPath": "W武器表2.json",
+    "Active": true
+  }
+]
