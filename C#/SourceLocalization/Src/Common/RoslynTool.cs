@@ -12,7 +12,7 @@ namespace RoslynTool
     {
         public static string EscapeString(string s)
         {
-            return SymbolDisplay.FormatLiteral(s, false);
+            return SymbolDisplay.FormatLiteral(s, true);
         }
         public static string UnescapeString(string s)
         {
@@ -29,7 +29,7 @@ namespace RoslynTool
             if (node.CSharpKind() != SyntaxKind.StringLiteralExpression) return node;
 
             var pos = node.GetLocation().GetMappedLineSpan();
-            var result = OnRewrite(pos.StartLinePosition.Line + 1, pos.StartLinePosition.Character + 1, Utils.EscapeString(Source.Lines[pos.StartLinePosition.Line].ToString()), Utils.EscapeString(node.Token.ValueText));
+            var result = OnRewrite(pos.StartLinePosition.Line + 1, pos.StartLinePosition.Character + 1, Source.Lines[pos.StartLinePosition.Line].ToString(), node.Token.ValueText);
             if (result == null) return node;
 
             var names = result.Split('.');

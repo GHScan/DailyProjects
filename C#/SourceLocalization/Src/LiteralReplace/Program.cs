@@ -43,10 +43,10 @@ public class Program
                     Log.Info("\tProcessing file: {0}", path);
 
                     var encoding = Utils.DetectFileEncoding(path);
-                    RoslynTool.CodeTransform.ReplaceStringLiteralsWithVariables(File.ReadAllText(path, encoding), Macros,
+                    NRefactoryTool.CodeTransform.ReplaceStringLiteralsWithVariables(File.ReadAllText(path, encoding), Macros,
                     (line, column, lineText, s) =>
                     {
-                        resultFile.WriteLine(string.Format("{0}({1},{2}):{3}", path, line, column, lineText));
+                        resultFile.WriteLine(string.Format("{0}({1},{2}):{3}", path, line, column, NRefactoryTool.Utils.EscapeString(lineText)));
                         return null;
                     });
                 }
@@ -87,10 +87,10 @@ public class Program
 
                 var encoding = Utils.DetectFileEncoding(path);
                 var oldText = File.ReadAllText(path, encoding);
-                var newText = RoslynTool.CodeTransform.ReplaceStringLiteralsWithVariables(oldText, Macros,
+                var newText = NRefactoryTool.CodeTransform.ReplaceStringLiteralsWithVariables(oldText, Macros,
                 (line, column, lineText, s) =>
                 {
-                    if (!filter.Contains(string.Format("{0}({1},{2}):{3}", path, line, column, lineText))) return null;
+                    if (!filter.Contains(string.Format("{0}({1},{2}):{3}", path, line, column, NRefactoryTool.Utils.EscapeString(lineText)))) return null;
 
                     string field;
                     if (str2Field.TryGetValue(s, out field)) return field;
@@ -153,7 +153,7 @@ public class Program
                 outputFile.WriteLine("{");
                 foreach (var row in sheet.Rows)
                 {
-                    outputFile.WriteLine(string.Format("\tpublic const string {0} = \"{1}\";", row[kNameKey], row[Language]));
+                    outputFile.WriteLine(string.Format("\tpublic const string {0} = {1};", row[kNameKey], NRefactoryTool.Utils.EscapeString(row[Language] as string)));
                 }
                 outputFile.WriteLine("}");
             }
@@ -162,7 +162,7 @@ public class Program
         }
     }
 
-    public static void Main(string[] args)
+    public static void Main(string[] args) 
     {
         Command.RunMain(args);
     }
