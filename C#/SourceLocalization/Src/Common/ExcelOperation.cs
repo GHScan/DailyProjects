@@ -20,6 +20,10 @@ namespace ExcelOperation
             mContentRow = contentRow;
             mWorkbook = WorkbookFactory.Create(fileName);
         }
+        public IEnumerable<string> GetSheetNames()
+        {
+            foreach (ISheet sheet in mWorkbook) yield return sheet.SheetName;
+        }
         public DataSheet Read(string name)
         {
             var sheet = mWorkbook.GetSheet(name);
