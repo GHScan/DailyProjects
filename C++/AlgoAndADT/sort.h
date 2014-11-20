@@ -219,8 +219,8 @@ static void _mergeCombineWithHalfTempSpace(T *begin, T *mid, T *end, T *temp) {
     int step = p1 - begin;
     T *tempDest = begin, *p1Dest = temp;
     for (T *tempSrc = temp; tempSrc != tempEnd; ) {
-        for (int i = min(step, tempEnd - tempSrc); i > 0; --i) *tempDest++ = *tempSrc++;
-        for (int i = min(step, mid - p1); i > 0; --i) *p1Dest++ = *p1++;
+        for (int i = min<int>(step, tempEnd - tempSrc); i > 0; --i) *tempDest++ = *tempSrc++;
+        for (int i = min<int>(step, mid - p1); i > 0; --i) *p1Dest++ = *p1++;
     }
     assert(p1 == mid);
     assert((p1Dest - temp) + (end - p2) == end - mid);
@@ -624,31 +624,6 @@ static void quickSort_swapRand_insertion(T *begin, T *end) {
 }
 
 template<typename T>
-static void quickSort_hack(T *begin, T *end) {
-    if (end - begin <= INSERTION_CUTOFF) {
-        insertionSort(begin, end);
-        return;
-    }
-
-    swap(begin[0], begin[(end - begin) / 2]);
-    if (end[-1] < begin[0]) swap(begin[0], end[-1]);
-    ++end[-1]; // Warning: hack!!! integer specific and may overflow
-
-    T *lower = begin + 1, *upper = end - 2;
-    for (; lower <= upper; ) {
-        while (lower[0] <= begin[0]) ++lower;
-        while (upper[0] > begin[0]) --upper;
-        if (lower <= upper) swap(lower[0], upper[0]);
-    }
-    swap(begin[0], upper[0]);
-
-    --end[-1]; // Warning: hack!!!
-
-    quickSort_hack(begin, upper);
-    quickSort_hack(upper + 1, end);
-}
-
-template<typename T>
 static void quickSort_optimal(T *begin, T *end) {
     if (end - begin <= INSERTION_CUTOFF) {
         insertionSort(begin, end);
@@ -668,6 +643,37 @@ static void quickSort_optimal(T *begin, T *end) {
     swap(begin[0], lo[-1]);
     quickSort_optimal(begin, lo - 1);
     quickSort_optimal(lo, end);
+}
+
+template<typename T>
+static void quickSort_optimal2(T *begin, T *end) {
+    if (end - begin <= INSERTION_CUTOFF) {
+        insertionSort(begin, end);
+        return;
+    }
+
+    while (end - begin > INSERTION_CUTOFF) {
+        swap(begin[0], begin[(end - begin) / 2]);
+        if (begin[0] > end[-1]) swap(begin[0], end[-1]);
+
+        T *lo = begin + 1, *hi = end - 2;
+        while (lo <= hi) {
+            while (begin[0] < hi[0]) --hi;
+            while (lo[0] < begin[0]) ++lo;
+            if (lo <= hi) swap(*lo++, *hi--);
+        }
+        swap(begin[0], *--lo);
+
+        if (lo - begin < (end - (lo + 1))) {
+            quickSort_optimal2(begin, lo);
+            begin = lo + 1;
+        } else {
+            quickSort_optimal2(lo + 1, end);
+            end = lo;
+        }
+    }
+
+    insertionSort(begin, end);
 }
 
 static int ANSICqsortCmp(const void *a, const void *b) { return *(int*)a - *(int*)b;}
@@ -887,7 +893,7 @@ int main() {
         ITEM(quickSort_swapRand, 0),
         ITEM(quickSort_swapRand_insertion, 0),
         ITEM(quickSort_optimal, 0),
-        ITEM(quickSort_hack, 0),
+        ITEM(quickSort_optimal2, 0),
         ITEM(cQuickSort, 0),
         ITEM(ANSICqsort, 0),
         ITEM(sort, 0),
