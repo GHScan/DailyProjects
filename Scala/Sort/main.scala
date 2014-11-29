@@ -135,13 +135,15 @@ object Test extends App {
 		println((System.nanoTime - start) / 1000000000.0 / times, GC.status - gcStatus)
 	}
 
-	class GCStatus(val status : List[(String, Long, Float)]) {
+	class GCStatus(_status : List[(String, Long, Float)]) {
+		val status = _status.filter(s=>s._2 > 0)
 		def -(o : GCStatus) =
-			new GCStatus(status.map(s =>
-				o.status.find(v => v._1 == s._1) match {
-					case None => s
-					case Some((oname, ocount, otime)) => (oname, s._2 - ocount, s._3 - otime)
-				}).filter(s=>s._2 > 0))
+			new GCStatus(
+				status.map(s =>
+					o.status.find(v => v._1 == s._1) match {
+						case None => s
+						case Some((oname, ocount, otime)) => (oname, s._2 - ocount, s._3 - otime)
+					}))
 		override def toString = "GC:" + 
 				status
 				.map(v => f"(${v._1}%s,count=${v._2}%d,time=${v._3}%.3f)")
@@ -153,7 +155,6 @@ object Test extends App {
 				java.lang.management.ManagementFactory.getGarbageCollectorMXBeans
 					.toArray
 					.map(o => o.asInstanceOf[java.lang.management.GarbageCollectorMXBean])
-					.filter(g => g.getCollectionCount > 0)
 					.map(g => (g.getName, g.getCollectionCount, g.getCollectionTime / 1000.0f))
 					.toList)
 	}
