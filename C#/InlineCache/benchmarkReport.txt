@@ -1,21 +1,24 @@
-            dynamic (1 ): Time: 4.15117ms, GC counts: 18,0,0
-            dynamic (4 ): Time: 22.65599ms, GC counts: 41,0,0
-            dynamic (15): Time: 125.19701ms, GC counts: 95,0,0
-         reflection (1 ): Time: 77.31961ms, GC counts: 11,0,0
-         reflection (4 ): Time: 81.85028ms, GC counts: 11,0,0
-         reflection (15): Time: 81.09248ms, GC counts: 11,0,0
-  reflection optmize(1 ): Time: 59.28145ms, GC counts: 11,0,0
-  reflection optmize(4 ): Time: 81.64019ms, GC counts: 11,0,0
-  reflection optmize(15): Time: 81.07462ms, GC counts: 11,0,0
-         monomorphic(1 ): Time: 1.9659ms, GC counts: 0,0,0
+            dynamic (1 ): Time: 7.46449ms, GC counts: 14,0,0
+            dynamic (4 ): Time: 45.58612ms, GC counts: 31,0,0
+            dynamic (15): Time: 226.03337ms, GC counts: 71,0,0
+         reflection (1 ): Time: 108.59223ms, GC counts: 8,0,0
+         reflection (4 ): Time: 109.58076ms, GC counts: 8,0,0
+         reflection (15): Time: 110.52187ms, GC counts: 8,0,0
+  reflection optmize(1 ): Time: 81.10227ms, GC counts: 8,0,0
+  reflection optmize(4 ): Time: 110.29642ms, GC counts: 8,0,0
+  reflection optmize(15): Time: 110.96827ms, GC counts: 8,0,0
+         monomorphic(1 ): Time: 5.48853ms, GC counts: 0,0,0
          monomorphic(4 ): failed(Out of time)
          monomorphic(15): failed(Out of time)
-         polymorphic(1 ): Time: 2.76499ms, GC counts: 0,0,0
-         polymorphic(4 ): Time: 4.04241ms, GC counts: 0,0,0
+         polymorphic(1 ): Time: 4.00787ms, GC counts: 0,0,0
+         polymorphic(4 ): Time: 7.68547ms, GC counts: 0,0,0
          polymorphic(15): failed(Out of time)
-         megamorphic(1 ): Time: 11.45912ms, GC counts: 0,0,0
-         megamorphic(4 ): Time: 12.41284ms, GC counts: 0,0,0
-         megamorphic(15): Time: 13.49735ms, GC counts: 0,0,0
-            callsite(1 ): Time: 2.44475ms, GC counts: 0,0,0
-            callsite(4 ): Time: 4.29653ms, GC counts: 0,0,0
-            callsite(15): Time: 14.78466ms, GC counts: 0,0,0
+         megamorphic(1 ): Time: 15.7875ms, GC counts: 0,0,0
+         megamorphic(4 ): Time: 16.86731ms, GC counts: 0,0,0
+         megamorphic(15): Time: 19.50574ms, GC counts: 0,0,0
+            callsite(1 ): Time: 3.58517ms, GC counts: 0,0,0
+            callsite(4 ): Time: 8.30603ms, GC counts: 0,0,0
+            callsite(15): Time: 21.84299ms, GC counts: 0,0,0
+         tointerface(1 ): Time: 13.5879ms, GC counts: 2,0,0
+         tointerface(4 ): Time: 17.35453ms, GC counts: 2,0,0
+         tointerface(15): Time: 21.02148ms, GC counts: 2,0,0
