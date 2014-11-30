@@ -129,6 +129,7 @@ object Test extends App {
 
 	def timeit(times : Int, f : () => Unit) {
 		if (times > 1) f()
+		System.gc
 		val start = System.nanoTime
 		val gcStatus = GC.status
 		for (_ <- 0 until times) f()
