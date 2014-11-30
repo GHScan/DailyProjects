@@ -19,6 +19,12 @@
             callsite(1 ): Time: 3.58517ms, GC counts: 0,0,0
             callsite(4 ): Time: 8.30603ms, GC counts: 0,0,0
             callsite(15): Time: 21.84299ms, GC counts: 0,0,0
+              simple(1 ): Time: 5.58862ms, GC counts: 0,0,0
+              simple(4 ): Time: 12.58933ms, GC counts: 0,0,0
+              simple(15): Time: 19.7757ms, GC counts: 0,0,0
          tointerface(1 ): Time: 10.81884ms, GC counts: 2,0,0
          tointerface(4 ): Time: 15.11753ms, GC counts: 2,0,0
          tointerface(15): Time: 17.35061ms, GC counts: 2,0,0
+ tointerface2 (ineq)(1 ): Time: 0.83161ms, GC counts: 0,0,0
+ tointerface2 (ineq)(4 ): Time: 1.20075ms, GC counts: 0,0,0
+ tointerface2 (ineq)(15): Time: 1.17755ms, GC counts: 0,0,0

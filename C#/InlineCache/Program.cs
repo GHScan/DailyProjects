@@ -163,6 +163,46 @@ public class CallSite<T> {
     }
 }
 //-------------------------------------------------------------------------
+public class SimpleCache<T>: IInlineCache<T> {
+    public string MethodName { get; private set; }
+    private Type mLastType;
+    private Func<object, T> mLastGet;
+    List<KeyValuePair<Type, Func<object, T>>> mCache = new List<KeyValuePair<Type,Func<object,T>>>(4);
+    public SimpleCache(string methodName) {
+        MethodName = methodName;
+    }
+    public bool TryGet(object target, out T result) {
+        result = Get(target);
+        return true;
+    }
+    public T Get(object target) {
+        var targetType = target.GetType();
+        if (mLastType == targetType) return mLastGet(target);
+
+        for (var i = 0; i < mCache.Count; ++i) {
+            var pair = mCache[i];
+            if (pair.Key == targetType) {
+                mLastType = targetType;
+                mLastGet = pair.Value;
+                return mLastGet(target);
+            }
+        }
+
+        mLastType = targetType;
+        mLastGet = BuildGet(MethodName, targetType);
+        mCache.Add(new KeyValuePair<Type, Func<object, T>>(mLastType, mLastGet));
+        return mLastGet(target);
+    }
+    public IInlineCache<T> Promote(Type newTargetType) {
+        throw new Exception("Not implemention");
+    }
+    private static Func<object, T> BuildGet(string methodName, Type targetType) {
+        var target = Expression.Parameter(typeof(object));
+        var body = Expression.Call(Expression.Convert(target, targetType), targetType.GetMethod(methodName));
+        return Expression.Lambda<Func<object, T>>(body, target).Compile();
+    }
+}
+//-------------------------------------------------------------------------
 public static class DynamicObject {
     public static InterfaceT ToInterface<InterfaceT>(object target) where InterfaceT: class {
         var i = target as InterfaceT;
@@ -253,6 +293,8 @@ public class Program {
     static MegamorphicCache<int> MegaCache_Capacity = new MegamorphicCache<int>(MethodName_Capacity, new Type[0]);
     static CallSite<int> CallSite_Count = new CallSite<int>(MethodName_Count);
     static CallSite<int> CallSite_Capacity = new CallSite<int>(MethodName_Capacity);
+    static SimpleCache<int> SimpleCache_Count = new SimpleCache<int>(MethodName_Count);
+    static SimpleCache<int> SimpleCache_Capacity = new SimpleCache<int>(MethodName_Capacity);
     public interface ICountCapacity {
         int get_Count();
         int get_Capacity();
@@ -271,12 +313,14 @@ public class Program {
             Debug.Assert(count == PolyCache_Count.Get(obj));
             Debug.Assert(count == MegaCache_Count.Get(obj));
             Debug.Assert(count == CallSite_Count.Get(obj));
+            Debug.Assert(count == SimpleCache_Count.Get(obj));
 
             int capacity = (int)obj.GetType().GetMethod(MethodName_Capacity).Invoke(obj, null);
             Debug.Assert(capacity == MonoCache_Capacity.Get(obj));
             Debug.Assert(capacity == PolyCache_Capacity.Get(obj));
             Debug.Assert(capacity == MegaCache_Capacity.Get(obj));
             Debug.Assert(capacity == CallSite_Capacity.Get(obj));
+            Debug.Assert(capacity == SimpleCache_Capacity.Get(obj));
 
             var i = DynamicObject.ToInterface<ICountCapacity>(obj);
             Debug.Assert(count == i.get_Count());
@@ -424,6 +468,17 @@ public class Program {
                     }
                 ),
                 new Tuple<string, Action<int, object[], int>>(
+                    "simple",
+                    (loop, objs, typeN)=>
+                    {
+                        for (var i = 0; i < loop; ++i)
+                        {
+                            var o = objs[i % typeN];
+                            var v = SimpleCache_Count.Get(o) + SimpleCache_Count.Get(o) * SimpleCache_Capacity.Get(o);
+                        }
+                    }
+                ),
+                new Tuple<string, Action<int, object[], int>>(
                     "tointerface",
                     (loop, objs, typeN)=>
                     {
@@ -431,6 +486,18 @@ public class Program {
                         {
                             var icc = DynamicObject.ToInterface<ICountCapacity>(objs[i % typeN]);
                             var v = icc.get_Count() + icc.get_Count() * icc.get_Capacity();
+                        }
+                    }
+                ),
+                 new Tuple<string, Action<int, object[], int>>(
+                    "tointerface2 (ineq)",
+                    (loop, objs, typeN)=>
+                    {
+                        for (var i = 0; i < typeN; ++i) {
+                            var icc = DynamicObject.ToInterface<ICountCapacity>(objs[i]);
+                            for (var j = i; j < loop; j += typeN) {
+                                var v = icc.get_Count() + icc.get_Count() * icc.get_Capacity();
+                            }
                         }
                     }
                 ),
