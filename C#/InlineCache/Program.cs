@@ -164,93 +164,81 @@ public class CallSite<T> {
 }
 //-------------------------------------------------------------------------
 public static class DynamicObject {
-    public struct TypePair: IEquatable<TypePair> {
-        public TypePair(Type type1, Type type2) {
-            Type1 = type1;
-            Type2 = type2;
-        }
-        public Type Type1;
-        public Type Type2;
-        public bool Equals(TypePair other) {
-            return Type1 == other.Type1 && Type2 == other.Type2;
-        }
-        public override bool Equals(object obj) {
-            return obj != null && obj is Type && Equals((TypePair)obj);
-        }
-        public override int GetHashCode() {
-            int h1 = Type1.GetHashCode();
-            return (h1 << 5) + (h1 >> 2) + Type2.GetHashCode();
-        }
-    }
     public static InterfaceT ToInterface<InterfaceT>(object target) where InterfaceT: class {
         var i = target as InterfaceT;
         if (i == null) {
-            i = GetAdapterConstructor(target.GetType(), typeof(InterfaceT))(target) as InterfaceT;
+            i = AdapterFactory<InterfaceT>.Create(target);
         }
         return i;
     }
-    private static Dictionary<TypePair, Func<object, object>> sAdapterConstructors = new Dictionary<TypePair, Func<object, object>>();
-    private static Func<object, object> GetAdapterConstructor(Type targetType, Type itype) {
-        var pair = new TypePair(targetType, itype);
+    static class AdapterFactory<InterfaceT> {
+        private static Dictionary<Type, Func<object, InterfaceT>> sConstructors = new Dictionary<Type,Func<object,InterfaceT>>();
+        public static InterfaceT Create(object target) {
+            var targetType = target.GetType();
 
-        Func<object, object> constructor;
-        if (sAdapterConstructors.TryGetValue(pair, out constructor)) return constructor;
+            Func<object, InterfaceT> constructor;
+            if (!sConstructors.TryGetValue(targetType, out constructor)) {
+                var adapterType = AdapterClassBuilder.Create(targetType, typeof(InterfaceT));
 
-        var adapterType = CreateAdapterType(targetType, itype);
+                var p1 = Expression.Parameter(typeof(object));
+                var body = Expression.New(adapterType.GetConstructor(new[] { targetType }), Expression.Convert(p1, targetType));
+                constructor = Expression.Lambda<Func<object, InterfaceT>>(body, p1).Compile();
 
-        var p1 = Expression.Parameter(typeof(object));
-        var body = Expression.New(adapterType.GetConstructor(new[] { targetType }), Expression.Convert(p1, targetType));
-        constructor = Expression.Lambda<Func<object, object>>(body, p1).Compile();
+                sConstructors.Add(targetType, constructor);
+            }
 
-        sAdapterConstructors.Add(pair, constructor);
-        return constructor;
+            return constructor(target);
+        }
     }
-    private static Type CreateAdapterType(Type targetType, Type itype) {
-        string name = "Adapter_" + sAdapterConstructors.Count;
+    static class AdapterClassBuilder {
+        private static int sNextClassID = 0;
+        public static Type Create(Type targetType, Type itype) {
+            string name = "Adapter_" + sNextClassID++;
 
-        var assemblyBuilder = AppDomain.CurrentDomain.DefineDynamicAssembly(new AssemblyName(name), AssemblyBuilderAccess.Run);
-        var moduleBuilder = assemblyBuilder.DefineDynamicModule(name, false);
+            var assemblyBuilder = AppDomain.CurrentDomain.DefineDynamicAssembly(new AssemblyName(name), AssemblyBuilderAccess.Run);
+            var moduleBuilder = assemblyBuilder.DefineDynamicModule(name, false);
 
-        TypeBuilder typeBuilder = moduleBuilder.DefineType(
-            name,
-            TypeAttributes.Public | TypeAttributes.Class | TypeAttributes.AutoClass | TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit,
-            typeof(object),
-            new[] { itype });
+            TypeBuilder typeBuilder = moduleBuilder.DefineType(
+                name,
+                TypeAttributes.Public | TypeAttributes.Class | TypeAttributes.AutoClass | TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit,
+                typeof(object),
+                new[] { itype });
 
-        var targetField = typeBuilder.DefineField("Target", targetType, FieldAttributes.Private); 
+            var targetField = typeBuilder.DefineField("Target", targetType, FieldAttributes.Private);
 
-        {
-            var methodBuilder = typeBuilder.DefineConstructor(
-                MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
-                CallingConventions.HasThis,
-                new[] { targetType });
+            {
+                var methodBuilder = typeBuilder.DefineConstructor(
+                    MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName,
+                    CallingConventions.HasThis,
+                    new[] { targetType });
 
-            var ilGen = methodBuilder.GetILGenerator();
-            ilGen.Emit(OpCodes.Ldarg_0);
-            ilGen.Emit(OpCodes.Ldarg_1);
-            ilGen.Emit(OpCodes.Stfld, targetField);
-            ilGen.Emit(OpCodes.Ret);
+                var ilGen = methodBuilder.GetILGenerator();
+                ilGen.Emit(OpCodes.Ldarg_0);
+                ilGen.Emit(OpCodes.Ldarg_1);
+                ilGen.Emit(OpCodes.Stfld, targetField);
+                ilGen.Emit(OpCodes.Ret);
+            }
+
+            foreach (var iMethod in itype.GetMethods()) {
+                var paramTypes = iMethod.GetParameters().Select(p => p.ParameterType).ToArray();
+
+                var methodBuilder = typeBuilder.DefineMethod(
+                    iMethod.Name,
+                    MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual | MethodAttributes.Final,
+                    CallingConventions.HasThis,
+                    iMethod.ReturnType,
+                    paramTypes);
+
+                var ilGen = methodBuilder.GetILGenerator();
+                ilGen.Emit(OpCodes.Ldarg_0);
+                ilGen.Emit(OpCodes.Ldfld, targetField);
+                for (var i = 0; i < iMethod.GetParameters().Length; ++i) ilGen.Emit(OpCodes.Ldarg, i + 1);
+                ilGen.Emit(OpCodes.Callvirt, targetType.GetMethod(iMethod.Name, paramTypes));
+                ilGen.Emit(OpCodes.Ret);
+            }
+
+            return typeBuilder.CreateType();
         }
-
-        foreach (var iMethod in itype.GetMethods()) {
-            var paramTypes = iMethod.GetParameters().Select(p => p.ParameterType).ToArray();
-
-            var methodBuilder = typeBuilder.DefineMethod(
-                iMethod.Name,
-                MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.NewSlot | MethodAttributes.Virtual | MethodAttributes.Final,
-                CallingConventions.HasThis,
-                iMethod.ReturnType,
-                paramTypes);
-
-            var ilGen = methodBuilder.GetILGenerator();
-            ilGen.Emit(OpCodes.Ldarg_0);
-            ilGen.Emit(OpCodes.Ldfld, targetField);
-            for (var i = 0; i < iMethod.GetParameters().Length; ++i) ilGen.Emit(OpCodes.Ldarg, i + 1);
-            ilGen.Emit(OpCodes.Callvirt, targetType.GetMethod(iMethod.Name, paramTypes));
-            ilGen.Emit(OpCodes.Ret);
-        }
-
-        return typeBuilder.CreateType();
     }
 }
 //-------------------------------------------------------------------------
@@ -364,7 +352,7 @@ public class Program {
                     }
                 ),
                 new Tuple<string, Action<int, object[], int>>(
-                    "reflection optmize",
+                    "reflection optimize",
                     (loop, objs, typeN)=>
                     {
                         if (typeN == 1)
