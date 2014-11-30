@@ -9,7 +9,7 @@ object Test extends App {
 			randList.sorted
 		})
 		timeit(1, () => {
-			qsort[Int](randList, (i, j) => i - j)
+			qsort[Int](randList, _ - _)
 		})
 
 		val randArray = Array.fill(len)(Random.nextInt)
@@ -23,17 +23,17 @@ object Test extends App {
 		})
 		tempArray = randArray.clone
 		timeit(1, () => {
-			qsort2[Int](tempArray, 0, tempArray.length, (i, j) => i < j)
+			qsort2[Int](tempArray, 0, tempArray.length, _ < _)
 		})
 		tempArray = randArray.clone
 		timeit(1, () => {
-			qsort3[Int](tempArray, 0, tempArray.length, (i, j) => i < j)
+			qsort3[Int](tempArray, 0, tempArray.length, _ < _)
 		})
 	}
 	def qsort[@specialized(Int) T](a : List[T], cmp : (T, T) => Int) : List[T] = {
 		a match {
 			case Nil => Nil
-			case _ => qsort(a.filter(v => cmp(v, a.head) < 0), cmp) ++ a.filter(v => cmp(v, a.head) == 0) ++ qsort(a.filter(v => cmp(v, a.head) > 0), cmp)
+			case _ => qsort(a.filter(cmp(_, a.head) < 0), cmp) ++ a.filter(cmp(_, a.head) == 0) ++ qsort(a.filter(cmp(_, a.head) > 0), cmp)
 		}
 	}
 	def qsort1(a : Array[Int], begin : Int, end : Int) {
@@ -141,14 +141,14 @@ object Test extends App {
 		def -(o : GCStatus) =
 			new GCStatus(
 				status.map(s =>
-					o.status.find(v => v._1 == s._1) match {
+					o.status.find(s._1 == _._1) match {
 						case None => s
 						case Some((oname, ocount, otime)) => (oname, s._2 - ocount, s._3 - otime)
 					}))
 		override def toString = "GC:" + 
 				status
 				.map(v => f"(${v._1}%s,count=${v._2}%d,time=${v._3}%.3f)")
-				.fold("")((a, b) => a + b) 
+				.fold("")(_ + _) 
 	}
 	object GC {
 		def status =
