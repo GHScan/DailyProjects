@@ -76,6 +76,8 @@ public class Program
                     Log.Info("Write sheet : {0}", sheet.Name);
                     writer.Write(sheet);
                 }
+
+                writer.Save();
             }
 
             Log.Info("Done.");

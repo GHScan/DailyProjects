@@ -69,8 +69,7 @@ namespace ExcelOperation
             return data;
         }
 
-        public void Dispose()
-        {
+        public void Dispose() {
             if (mWorkbook == null) return;
 
             mWorkbook = null;
@@ -152,15 +151,16 @@ namespace ExcelOperation
                 }
             }
         }
+        public void Save() {
+            using (var fs = new BufferedStream(File.OpenWrite(mFileName))) {
+                mWorkbook.Write(fs);
+            }
+        }
 
         public void Dispose()
         {
             if (mWorkbook == null) return;
 
-            using (var fs = new BufferedStream(File.OpenWrite(mFileName)))
-            {
-                mWorkbook.Write(fs);
-            }
             mWorkbook = null;
         }
     }
