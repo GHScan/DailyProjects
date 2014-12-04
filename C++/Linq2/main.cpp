@@ -147,27 +147,17 @@ private:
 	FuncT mF;
 };
 
-template<bool take, typename T, typename FuncT>
+template<typename T, typename FuncT>
 class TakeEnumerable : public IEnumerable<T> {
 private:
 	class Enumerator : public IEnumerator<T> {
 	public:
-		Enumerator(IEnumeratorPtr<T> prevEnumerator, FuncT const &f) : mPreEnumerator(prevEnumerator), mF(f), mFailed(false) {
+		Enumerator(IEnumeratorPtr<T> prevEnumerator, FuncT const &f) : mPreEnumerator(prevEnumerator), mF(f), mTake(true) {
 		}
 		bool moveNext() override final {
-			if (take) {
-				if (mFailed) return false;
-				if (!mPreEnumerator->moveNext()) return false;
-				mFailed = !mF(mPreEnumerator->current());
-				return !mFailed;
-			} else {
-				if (mFailed) return mPreEnumerator->moveNext();
-				for (;;) {
-					if (!mPreEnumerator->moveNext()) return false;
-					if (!mF(mPreEnumerator->current())) break;
-				}
-				return mFailed = true;
-			}
+			if (!mTake) return false;
+			mTake = mPreEnumerator->moveNext() && mF(mPreEnumerator->current());
+			return mTake;
 		}
 		T current() override final {
 			return mPreEnumerator->current();
@@ -175,12 +165,51 @@ private:
 	private:
 		IEnumeratorPtr<T> mPreEnumerator;
 		FuncT mF;
-		bool mFailed;
+		bool mTake;
 	};
 
 public:
 
 	TakeEnumerable(IEnumerablePtr<T> prevEnumereable, FuncT const &f) : mPrevEnumereable(prevEnumereable), mF(f) {
+	}
+
+	IEnumeratorPtr<T> getEnumerator() override final {
+		return make_shared<Enumerator>(mPrevEnumereable->getEnumerator(), mF);
+	}
+
+private:
+	IEnumerablePtr<T> mPrevEnumereable;
+	FuncT mF;
+};
+
+template<typename T, typename FuncT>
+class DropEnumerable : public IEnumerable<T> {
+private:
+	class Enumerator : public IEnumerator<T> {
+	public:
+		Enumerator(IEnumeratorPtr<T> prevEnumerator, FuncT const &f) : mPreEnumerator(prevEnumerator), mF(f), mDrop(true) {
+		}
+		bool moveNext() override final {
+			if (!mDrop) return mPreEnumerator->moveNext();
+			for (;;) {
+				if (!mPreEnumerator->moveNext()) return false;
+				if (!mF(mPreEnumerator->current())) break;
+			}
+			mDrop = false;
+			return true;
+		}
+		T current() override final {
+			return mPreEnumerator->current();
+		}
+	private:
+		IEnumeratorPtr<T> mPreEnumerator;
+		FuncT mF;
+		bool mDrop;
+	};
+
+public:
+
+	DropEnumerable(IEnumerablePtr<T> prevEnumereable, FuncT const &f) : mPrevEnumereable(prevEnumereable), mF(f) {
 	}
 
 	IEnumeratorPtr<T> getEnumerator() override final {
@@ -318,7 +347,7 @@ public:
 
 	template<typename FuncT>
 	LinqObject takeWhile(FuncT const &f) {
-		return LinqObject(make_shared<TakeEnumerable<true, T, FuncT>>(mEnumerable, f));
+		return LinqObject(make_shared<TakeEnumerable<T, FuncT>>(mEnumerable, f));
 	}
 
 	LinqObject drop(int n) {
@@ -328,7 +357,7 @@ public:
 
 	template<typename FuncT>
 	LinqObject dropWhile(FuncT const &f) {
-		return LinqObject(make_shared<TakeEnumerable<false, T, FuncT>>(mEnumerable, f));
+		return LinqObject(make_shared<DropEnumerable<T, FuncT>>(mEnumerable, f));
 	}
 
 	vector<T> toVector() {
