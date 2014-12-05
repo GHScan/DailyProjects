@@ -13,7 +13,7 @@ object Test extends App {
             qsort_g(randList)
         }
         Utils.timeit(kTimes) {
-            qsort(randList)(_ - _)
+            qsort(randList)(_ < _)
         }
 
         val randArrays = List.fill(kTimes + 1) { Array.fill(kLen)(Random.nextInt) }
@@ -47,10 +47,10 @@ object Test extends App {
             case head :: tail => qsort_g(tail.filter(_ < head)) ++: List(head) ++: qsort_g(tail.filter(_ > head))
         }
     }
-    def qsort[T](a : List[T])(implicit f : (T, T) => Int) : List[T] = {
+    def qsort[T](a : List[T])(implicit f : (T, T) => Boolean) : List[T] = {
         a match {
             case Nil => Nil
-            case head :: tail => qsort(tail.filter(f(_, head) < 0)) ::: head :: qsort(tail.filter(f(_, head) > 0))
+            case head :: tail => qsort(tail.filter(f(_, head))) ::: head :: qsort(tail.filter(f(head, _)))
         }
     }
     def qsort1(a : Array[Int], begin : Int, end : Int) {
