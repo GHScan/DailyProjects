@@ -86,7 +86,7 @@ public static partial class Monad {
         return null;
     }
     public static Maybe<T2> Select<T, T2>(this Maybe<T> source, Func<T, T2> f) {
-        return source != null ? f(source.Value).ToMaybe() : null;
+        return source.SelectMany(v => new Maybe<T2>(f(v)), (a, b) => b);
     }
     public static Maybe<T> Where<T>(this Maybe<T> source, Func<T, bool> f) {
         return source != null && f(source.Value) ? source : null;
@@ -115,10 +115,7 @@ public static partial class Monad {
         };
     }
     public static StateAccess<TState, T2> Select<TState, T, T2>(this StateAccess<TState, T> source, Func<T, T2> f) {
-        return state => {
-            var r = source(state);
-            return new Tuple<TState, T2>(r.Item1, f(r.Item2));
-        };
+        return source.SelectMany(v => new StateAccess<TState, T2>(state => new Tuple<TState, T2>(state, f(v))), (a, b) => b);
     }
     public static StateAccess<TState, T3> Then<TState, T, T2, T3>(this StateAccess<TState, T> source, StateAccess<TState, T2> source2, Func<T, T2, T3> combine) {
         return source.SelectMany(_ => source2, combine);
@@ -131,7 +128,7 @@ public static partial class Monad {
         return k => source(v => f(v)(v2 => k(combine(v, v2))));
     }
     public static CPS<T2> Select<T, T2>(this CPS<T> source, Func<T, T2> f) {
-        return k => source(v => k(f(v)));
+        return source.SelectMany(v => new CPS<T2>(k => k(f(v))), (a, b) => b);
     }
     public static CPS<T> ToCPS<T>(this Task<T> task) {
         return k => {
@@ -151,9 +148,9 @@ public class Program {
         Utils.Print(r);
     }
     static void TestListMonad() {
-        var r = from i in FPListHelper.Range(1, 5)
-                from j in FPListHelper.Create(i + 1, 5)
-                from k in FPListHelper.Create(j + 1, 5)
+        var r = from i in FPListHelper.Range(1, 6)
+                from j in FPListHelper.Range(i + 1, 6)
+                from k in FPListHelper.Range(j + 1, 6)
                 where i * i + j * j == k * k
                 select new { I = i, J = j, K = k };
         Utils.Print(r.ToArray());

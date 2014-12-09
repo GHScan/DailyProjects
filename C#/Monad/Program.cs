@@ -19,8 +19,7 @@ public static partial class Monad {
         return new Maybe<T3>(result(source.Value, source2.Value));
     }
     public static Maybe<T2> Select<T1, T2>(this Maybe<T1> source, Func<T1, T2> f) {
-        if (source == null) return null;
-        return new Maybe<T2>(f(source.Value));
+        return source.SelectMany(v=> new Maybe<T2>(f(v)), (a,b)=>b);
     }
     public static Maybe<T> Where<T>(this Maybe<T> source, Func<T, bool> f) {
         if (source == null) return null;
@@ -54,11 +53,7 @@ public static partial class Monad {
         };
     }
     public static Awaiter<T2> Select<T1, T2>(this Awaiter<T1> source, Func<T1, T2> f) {
-        return k => {
-            return source(v => {
-                k(f(v));
-            });
-        };
+        return source.SelectMany(v => new Awaiter<T2>(k => { k(f(v)); return () => { }; }), (a, b) => b);
     }
 }
 
