@@ -7,51 +7,51 @@ object Test extends App {
     val kTimes = 3
 
     val randList = List.fill(kLen) { Random.nextInt }
-    Utils.timeit("List.sorted")(kTimes) {
+    Utils.timeit("List.sorted", kTimes) {
       randList.sorted
     }
-    Utils.timeit("qsort_g")(kTimes) {
+    Utils.timeit("qsort_g", kTimes) {
       qsort_g(randList)
     }
-    Utils.timeit("qsort")(kTimes) {
+    Utils.timeit("qsort", kTimes) {
       qsort[Int](randList, _ < _)
     }
-    Utils.timeit("mergeSort")(kTimes) {
+    Utils.timeit("mergeSort", kTimes) {
       mergeSort[Int](randList, _ < _)
     }
 
     val randArrays = List.fill(kTimes + 1) { Array.fill(kLen)(Random.nextInt) }
     var tempArrays = randArrays.map(a => a.clone).iterator
-    Utils.timeit("java.util.Arrays.sort")(kTimes) {
+    Utils.timeit("java.util.Arrays.sort", kTimes) {
       java.util.Arrays.sort(tempArrays.next)
     }
     tempArrays = randArrays.map(a => a.clone).iterator
-    Utils.timeit("qsort1")(kTimes) {
+    Utils.timeit("qsort1", kTimes) {
       val a = tempArrays.next
       qsort1(a, 0, a.length)
     }
     tempArrays = randArrays.map(a => a.clone).iterator
-    Utils.timeit("qsort2")(kTimes) {
+    Utils.timeit("qsort2", kTimes) {
       val a = tempArrays.next
       qsort2[Int](a, 0, a.length, _ < _)
     }
     tempArrays = randArrays.map(a => a.clone).iterator
-    Utils.timeit("qsort2_g")(kTimes) {
+    Utils.timeit("qsort2_g", kTimes) {
       val a = tempArrays.next
       qsort2_g(a, 0, a.length)
     }
     tempArrays = randArrays.map(a => a.clone).iterator
-    Utils.timeit("qsort3")(kTimes) {
+    Utils.timeit("qsort3", kTimes) {
       val a = tempArrays.next
       qsort3[Int](a, 0, a.length, _ < _)
     }
     tempArrays = randArrays.map(a => a.clone).iterator
-    Utils.timeit("qsort3_g")(kTimes) {
+    Utils.timeit("qsort3_g", kTimes) {
       val a = tempArrays.next
       qsort3_g(a, 0, a.length)
     }
     tempArrays = randArrays.map(a => a.clone).iterator
-    Utils.timeit("mergeSort_2")(kTimes) {
+    Utils.timeit("mergeSort_2", kTimes) {
       val a = tempArrays.next
       mergeSort_2[Int](a, _ < _)
     }
@@ -281,7 +281,7 @@ object Test extends App {
 
     def sort(a : Array[T], begin : Int, len : Int, temp : Array[T], tempBegin : Int) {
       if (len < 2) return
-      
+
       val half = len / 2
       val mid = begin + half
       sortTo(a, begin, half, temp, tempBegin)

@@ -1,0 +1,4 @@
+(List.+:                         ,0.0054480949,GC:)
+(List.+:                         ,0.20886032280000003,GC:(PS Scavenge,count=8,time=0.009))
+(DifferenceList.+:               ,0.0012277413,GC:)
+(DifferenceList.+:               ,8.536648E-4,GC:)

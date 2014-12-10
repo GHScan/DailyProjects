@@ -25,7 +25,7 @@ object GC {
 }
 
 object Utils {
-  def timeit(name : String)(times : Int)(f : => Unit) {
+  def timeit(name : String, times : Int)(f : => Unit) {
     if (times > 1) f
     System.gc
     val start = System.nanoTime
