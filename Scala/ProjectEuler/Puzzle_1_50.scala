@@ -21,7 +21,10 @@ object Helper {
     }
     a
   }
-  def isPrime(n : Int) = mPrimeBuffer(n) == 1
+  def isPrime(n : Int) : Boolean = {
+    if (n < kMaxPrimeValue) mPrimeBuffer(n) == 1
+    else BigInt(n).isProbablePrime(20)
+  }
   val primes : Stream[Int] = Stream.from(2) filter isPrime
 
   def group[T](a : List[T]) : List[(T, Int)] = {
@@ -128,11 +131,11 @@ object Helper {
     }
   }
 
-  def intToArray(a : Array[Int], n : Int) : Int = {
+  def longToArray(a : Array[Int], n : Long) : Int = {
     var len = 0
     var tn = n
     while (tn > 0) {
-      a(len) = tn % 10
+      a(len) = (tn % 10).toInt
       len += 1
       tn /= 10
     }
@@ -140,14 +143,42 @@ object Helper {
     len
   }
 
-  def arrayToInt(a : Array[Int], begin : Int, end : Int, step : Int = 1) : Int = {
+  def arrayToLong(a : Array[Int], begin : Int, end : Int, step : Int = 1) : Long = {
     var i = begin
-    var sum = 0
+    var sum = 0L
     while (i != end) {
       sum = sum * 10 + a(i)
       i += step
     }
     sum
+  }
+
+  def permutation[T](a : Array[T], f : Array[T] => Unit) {
+    def iterate(i : Int) {
+      if (i == a.length) f(a)
+      else {
+        for (j <- (i until a.length)) {
+          { val t = a(i); a(i) = a(j); a(j) = t }
+          iterate(i + 1);
+          { val t = a(i); a(i) = a(j); a(j) = t }
+        }
+      }
+    }
+    iterate(0)
+  }
+
+  def combination[T](a : Array[T], n : Int, f : Array[T] => Unit) {
+    val tempArray = a.clone
+    def iterate(ia : Int, itemp : Int) {
+      if (itemp == n) f(tempArray)
+      else if (ia == a.length) {}
+      else {
+        tempArray(itemp) = a(ia)
+        iterate(ia + 1, itemp + 1)
+        iterate(ia + 1, itemp)
+      }
+    }
+    iterate(0, 0)
   }
 }
 
@@ -420,22 +451,9 @@ object Test extends App {
       if (begin == end) 0
       else toInt(a, begin, end - 1) * 10 + a(end - 1)
     }
-    def perm(a : Array[Int], f : Array[Int] => Unit) {
-      def iterate(i : Int) {
-        if (i == a.length) f(a)
-        else {
-          for (j <- (i until a.length)) {
-            { val t = a(i); a(i) = a(j); a(j) = t }
-            iterate(i + 1);
-            { val t = a(i); a(i) = a(j); a(j) = t }
-          }
-        }
-      }
-      iterate(0)
-    }
 
     var result = Set[Int]()
-    perm((1 to 9).toArray, a => {
+    Helper.permutation[Int]((1 to 9).toArray, a => {
       val n = toInt(a, 0, 4)
       val n2 = toInt(a, 4, 5)
       val n3 = toInt(a, 5, 9)
@@ -494,7 +512,7 @@ object Test extends App {
     def valid(n : Int) : Boolean = {
       if (!Helper.isPrime(n)) false
       else {
-        val len = Helper.intToArray(tempArray, n)
+        val len = Helper.longToArray(tempArray, n)
         var off = 0
         while (off < len) {
           val tn = loopArrayToInt(tempArray, off, len)
@@ -521,19 +539,181 @@ object Test extends App {
     def valid(n : Int) : Boolean = {
       if (!Helper.isPrime(n)) return false
 
-      val len = Helper.intToArray(tempArray, n)
+      val len = Helper.longToArray(tempArray, n)
       for (begin <- (0 until len)) {
-        val tn = Helper.arrayToInt(tempArray, begin, len, 1)
+        val tn = Helper.arrayToLong(tempArray, begin, len, 1).toInt
         if (!Helper.isPrime(tn)) return false
       }
       for (end <- (1 to len)) {
-        val tn = Helper.arrayToInt(tempArray, 0, end, 1)
+        val tn = Helper.arrayToLong(tempArray, 0, end, 1).toInt
         if (!Helper.isPrime(tn)) return false
       }
       true
     }
 
     Helper.primes.dropWhile(_ < 10).filter(valid).take(11).sum
+  }
+  def puzzle_38() : Int = {
+    def valid(s : String) : Boolean = {
+      val set = mutable.BitSet(s.map(_ - '0') : _*)
+      set.size == 9 && !set(0)
+    }
+    (9000 until 10000) map (n => n.toString + n * 2) filter valid map (_.toInt) max
+  }
+  def puzzle_39() : Int = {
+    val m = mutable.Map[Int, Int]()
+    for (
+      c <- (2 until 500);
+      b <- (2 until c - 1);
+      aa = c * c - b * b;
+      if aa < b * b;
+      a = math.sqrt(aa).toInt;
+      if a * a == aa;
+      p = a + b + c if p < 1000
+    ) {
+      m(p) = 1 + m.getOrElse(p, 0)
+    }
+    m.maxBy(_._2)._1
+  }
+  def puzzle_40() : Int = {
+    def d(n : Int) : Char = {
+      def getIndexAndLen(i : Int, len : Int = 1) : (Int, Int) = {
+        val totalDigit = (math.pow(10, len) - math.pow(10, len - 1)).toInt * len
+        if (i >= totalDigit) getIndexAndLen(i - totalDigit, len + 1) else (i, len)
+      }
+      val (i, len) = getIndexAndLen(n)
+      val numIdx = i / len
+      val digitIdx = i % len
+      (math.pow(10, len - 1) + numIdx).toString()(digitIdx)
+    }
+
+    (0 to 6) map (v => d(math.pow(10, v).toInt - 1) - '0') product
+  }
+  def puzzle_41() : Int = {
+    var max = 0
+
+    import scala.util.control.Breaks
+    val label = new Breaks
+    label.breakable {
+      for (end <- ('2' to '9').reverse) {
+        Helper.permutation[Char](('1' to end).reverse.toArray, a => {
+          val n = new String(a).toInt
+          if (Helper.isPrime(n)) {
+            max = n
+            label.break
+          }
+        })
+      }
+    }
+
+    max
+  }
+  def puzzle_42() : Int = {
+    val nums = Stream.from(1).map(v => v * (v + 1) / 2)
+    def valid(word : String) : Boolean = {
+      val n = word.map(_ - 'A' + 1).sum
+      nums.dropWhile(_ < n).head == n
+    }
+
+    val words = """\"(\w+)\"""".r.findAllMatchIn(scala.io.Source.fromFile("words.txt").mkString).map(_.group(1))
+    words filter valid length
+  }
+  def puzzle_43() : Long = {
+    def valid(a : Array[Int]) : Boolean = {
+      def iterate(i : Int, primes : Stream[Int]) : Boolean = {
+        if (i == 8) true
+        else if (Helper.arrayToLong(a, i, i + 3) % primes.head == 0) iterate(i + 1, primes.tail)
+        else false
+      }
+      iterate(1, Helper.primes)
+    }
+
+    var nums = List[Long]()
+    Helper.permutation[Int]((0 to 9).toArray, a => {
+      if (valid(a)) nums = Helper.arrayToLong(a, 0, a.length, 1) :: nums
+    })
+    nums.sum
+  }
+  def puzzle_44() : Int = {
+    def valid(r : Long) : Boolean = {
+      val sqrtbbp4ac = math.sqrt(1 + 24 * r)
+      ((1 + sqrtbbp4ac) / 6).isValidInt
+    }
+
+    val nums = Stream.range(1L, 2000L).map(v => v * (3 * v - 1) / 2)
+    (for (
+      d <- nums;
+      j <- nums;
+      k = d + j;
+      if valid(k) && valid(j + k)
+    ) yield d).head.toInt
+  }
+  def puzzle_45() : Long = {
+    def isTriangle(n : Long) : Boolean = {
+      val sqrtbbp4ac = math.sqrt(1 + 8 * n)
+      ((-1 + sqrtbbp4ac) / 2).isValidInt
+    }
+    def isPentagonal(n : Long) : Boolean = {
+      val sqrtbbp4ac = math.sqrt(1 + 24 * n)
+      ((1 + sqrtbbp4ac) / 6).isValidInt
+    }
+    Stream.from(144).map(v => v * (2 * v - 1)).filter(v => isTriangle(v) && isPentagonal(v)).head
+  }
+  def puzzle_46() : Int = {
+    def isOddComposite(n : Int) : Boolean = {
+      n % 2 == 1 && Helper.isPrime(n)
+    }
+    def diff(s1 : Stream[Int], s2 : Stream[Int]) : Stream[Int] = {
+      if (s1.head == s2.head) diff(s1.tail, s2.tail)
+      else if (s1.head < s2.head) s1.head #:: diff(s1.tail, s2)
+      else diff(s1, s2.tail)
+    }
+
+    val validNums = Helper.mergeStream[Int](Stream.from(1).map(v => v * v * 2), Helper.primes,
+      (a, b) => a._1 + a._2 < b._1 + b._2).map(v => v._1 + v._2)
+    diff(Stream.from(3).filter(v => v % 2 == 1 && !Helper.isPrime(v)), validNums).head
+  }
+  def puzzle_47() : Int = {
+    val counts = Array.fill(140000)(0)
+    for (
+      p <- Helper.primes.takeWhile(_ < counts.length);
+      i <- (p + p until counts.length by p)
+    ) {
+      counts(i) += 1
+    }
+
+    Stream.from(1).sliding(4).filter(l => l.forall(i => counts(i) == 4)).next()(0)
+  }
+  def puzzle_48() : String = {
+    val s = ((1 to 1000) map (i => BigInt(i).pow(i)) sum).toString
+    s.substring(s.length - 10)
+  }
+  def puzzle_49() : String = {
+    val m = Helper.primes.dropWhile(_ < 1000).takeWhile(_ < 10000).toList.groupBy(v => v.toString.sorted)
+    (for (
+      (_, nums) <- m;
+      a <- nums;
+      b <- nums if a < b;
+      c <- nums if b < c && b - a == c - b
+    ) yield a.toString + b + c).head
+  }
+  def puzzle_50() : Int = {
+    val validPrimes = Helper.primes.takeWhile(_ < 50000)
+    lazy val primeSums : Stream[Int] = 0 #:: primeSums.zip(validPrimes).map { case (i, j) => i + j }
+    val sumTable = primeSums.toArray
+
+    def findWithLength(len : Int) : Int = {
+      def iterate(i : Int) : Int = {
+        if (i + len >= sumTable.length) 0
+        else {
+          val n = sumTable(i + len) - sumTable(i)
+          if (n < 1000000 && Helper.isPrime(n)) n else iterate(i + 1)
+        }
+      }
+      iterate(0)
+    }
+
+    Stream.range(validPrimes.length, 22, -1).map(findWithLength).dropWhile(_ == 0).head
   }
 
   Utils.timeit("1-15", 1) {
@@ -578,6 +758,19 @@ object Test extends App {
     assert(puzzle_35() == 55)
     assert(puzzle_36() == 872187)
     assert(puzzle_37() == 748317)
+    assert(puzzle_38() == 932718654)
+    assert(puzzle_39() == 840)
+    assert(puzzle_40() == 210)
+    assert(puzzle_41() == 7652413)
+    assert(puzzle_42() == 162)
+    assert(puzzle_43() == 16695334890L)
+    assert(puzzle_44() == 5482660)
+    assert(puzzle_45() == 1533776805L)
+    assert(puzzle_46() == 5777)
+    assert(puzzle_47() == 134043)
+    assert(puzzle_48() == "9110846700")
+    assert(puzzle_49() == "296962999629")
+    assert(puzzle_50() == 997651)
   }
 
   println("pass!")
