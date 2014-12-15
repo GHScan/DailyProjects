@@ -21,7 +21,7 @@ object Test extends App {
   }
 
   object AST {
-    abstract class Exp
+    sealed abstract class Exp
     case class Var(name : Symbol) extends Exp
     case class Const(value : Any) extends Exp
     case class Define(name : Symbol, valueExp : Exp) extends Exp
