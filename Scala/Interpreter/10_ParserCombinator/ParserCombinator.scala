@@ -12,7 +12,7 @@ object ParserCombinator {
     sealed abstract class ParseResult[+T] {
       def flatMap[U](f : (T, Reader) => ParseResult[U]) : ParseResult[U]
     }
-    case class Success[T](value : T, reader : Reader) extends ParseResult[T] {
+    case class Success[+T](value : T, reader : Reader) extends ParseResult[T] {
       override def toString = s"Success : $value"
       override def flatMap[U](f : (T, Reader) => ParseResult[U]) = f(value, reader)
     }
