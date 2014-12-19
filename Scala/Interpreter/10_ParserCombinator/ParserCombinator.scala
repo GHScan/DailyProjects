@@ -82,7 +82,7 @@ object ParserCombinator {
       case x ~ xs => xs.foldLeft(x) { case (x, op ~ v) => op(x, v) }
     }
     def chainl1[T](a : => Parser[T], sep : => Parser[(T, T) => T]) : Parser[T] = chainl1[T, T](a, a, sep)
-    def rep1sep[T](a : => Parser[T], sep : => Parser[_]) : Parser[List[T]] = chainl1[List[T], T](a ^^ (List(_)), a, sep ^^ (_ => (xs, x) => x :: xs))
+    def rep1sep[T](a : => Parser[T], sep : => Parser[_]) : Parser[List[T]] = chainl1[List[T], T](a ^^ (List(_)), a, sep ^^ (_ => (xs, x) => xs ::: List(x)))
     def repsep[T](a : => Parser[T], sep : => Parser[_]) : Parser[List[T]] = rep1sep(a, sep) | success(Nil)
     def log[T](a : => Parser[T])(name : String) = new Parser[T] {
       def apply(reader : Reader) = { println("log: " + name); a(reader) }
