@@ -1,6 +1,5 @@
 import scala.collection.mutable
 import scala.collection.immutable
-import javax.lang.model.`type`.PrimitiveType
 
 object Test extends App {
   import ParserCombinator._
@@ -34,18 +33,19 @@ object Test extends App {
       case class Field(name : String, _type : Type)
       case class Class(name : String, fields : List[Field]) extends Type
     }
+    import AST._
 
     private val ident : Parser[String] = """\w+""".r
     private val number : Parser[Int] = """\d+""".r ^^ (_.toInt)
-    private val typeDecl : Parser[AST.Type] = ident ~ rep("[" ~> number <~ "]") ^^ {
+    private val typeDecl : Parser[Type] = ident ~ rep("[" ~> number <~ "]") ^^ {
       case id ~ l =>
-        l.foldRight(AST.PrimitiveType(id) : AST.Type) { case (n, t) => AST.ArrayType(t, n) }
+        l.foldRight(PrimitiveType(id) : Type) { case (n, t) => ArrayType(t, n) }
     }
-    private val fieldDecl : Parser[AST.Field] = typeDecl ~! ident ~! ";" ^^ { case t ~ id ~ _ => AST.Field(id, t) }
-    private val classDecl : Parser[AST.Class] = "class" ~! ident ~! "{" ~! rep(fieldDecl) ~! "}" ^^ {
-      case _ ~ id ~ _ ~ fields ~ _ => AST.Class(id, fields)
+    private val fieldDecl : Parser[Field] = typeDecl ~! ident ~! ";" ^^ { case t ~ id ~ _ => Field(id, t) }
+    private val classDecl : Parser[Class] = "class" ~! ident ~! "{" ~! rep(fieldDecl) ~! "}" ^^ {
+      case _ ~ id ~ _ ~ fields ~ _ => Class(id, fields)
     }
-    private val program : Parser[List[AST.Class]] = rep(classDecl)
+    private val program : Parser[List[Class]] = rep(classDecl)
     def parse(input : String) = parseAll(program, input)
   }
 
