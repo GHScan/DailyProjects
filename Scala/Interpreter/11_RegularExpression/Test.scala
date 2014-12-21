@@ -58,6 +58,7 @@ object RegexParser {
 
 class CharGroups(val groupCount : Int, table : Array[Int]) {
   def apply(c : Char) = table(c)
+  def getGroupChars(group : Int) = (0 until table.length).filter(table(_) == group).toList
 
   override def toString = s"CharGroups(count=$groupCount,${
     (0 until table.length).groupBy(table(_)).map(p => p._2.map(_.toChar)).toList.sortBy(_.length)
@@ -181,13 +182,17 @@ object NFA {
 }
 
 object DFA {
-  class Machine(start : Int, ends : Array[Boolean], transfer : mutable.ArrayBuffer[Array[Int]], charGroups : CharGroups) {
+  class Machine(
+    val start : Int, val ends : Array[Boolean],
+    val transfer : mutable.ArrayBuffer[Array[Int]],
+    val charGroups : CharGroups) {
+    val deadState = ((0 until transfer.length).filter(i => transfer(i).forall(_ == i)) ++ List(-1)).head
 
     def matchPrefix(s : String) : String = {
       def iterate(state : Int, i : Int, lastMatch : Int) : Int = {
         if (i == s.length) return lastMatch
         val newState = transfer(state)(charGroups(s(i)))
-        if (newState == -1) return lastMatch
+        if (newState == deadState) return lastMatch
         else iterate(newState, i + 1, if (ends(newState)) i else lastMatch)
       }
       s.substring(0, iterate(start, 0, -1) + 1)
@@ -276,7 +281,9 @@ object DFA {
 }
 
 object Test extends App {
-  val ast = RegexParser.parse("""if|else|for|class|function|\d+|\A\w*|"[^"]*"""")
+  import Visualizer._
+
+  val ast = RegexParser.parse("""if|else|for|struct|\d+|\A+""")
   val charGroups = CharGroups.fromAST(ast)
   val nfa = NFA.Machine.fromAST(ast, charGroups)
   val dfa = DFA.Machine.fromNFA(nfa, charGroups)
@@ -286,7 +293,12 @@ object Test extends App {
   println(nfa)
   println(dfa)
   println(odfa)
-  val s = """Z23423"""
+  Utils.timeit("saveImages", 1) {
+    nfa.saveImage("nfa.png")
+    dfa.saveImage("dfa.png")
+    odfa.saveImage("odfa.png")
+  }
+  val s = """sjdkl"""
   println(nfa.matchPrefix(s))
   println(dfa.matchPrefix(s))
   println(odfa.matchPrefix(s))
