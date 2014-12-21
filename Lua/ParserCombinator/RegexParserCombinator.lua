@@ -9,10 +9,7 @@ local Failure = ParserCombinator.Failure
 ---------------------------------------------------
 Location = makeClass {
     new = function(class, line, column)
-        assert(class == Location)
-        local a = {line = line, column = column}
-        setmetatable(a, class)
-        return a
+        return {line = line, column = column}
     end,
     __tostring = function(self)
         return string.format("Location(%s,%s)", self.line, self.column)
@@ -21,10 +18,7 @@ Location = makeClass {
 
 Reader = makeClass {
     new = function(class, source, index, loc)
-        assert(class == Reader)
-        local a = {source = source, index = index, loc = loc}
-        setmetatable(a, class)
-        return a
+        return {source = source, index = index, loc = loc}
     end,
     isEof = function(self)
         return self.index > #self.source

@@ -7,10 +7,7 @@ local List = Functional.List
 ---------------------------------------------------
 Success = makeClass {
     new = function(class, value, reader)
-        assert(class == Success)
-        local a = {value = value, reader = reader}
-        setmetatable(a, class)
-        return a
+        return {value = value, reader = reader}
     end,
     __tostring = function(self)
         return string.format("Success(%s)", tostring(self.value))
@@ -21,10 +18,7 @@ Success = makeClass {
 }
 Failure = makeClass {
     new = function(class, message, reader)
-        assert(class == Failure)
-        local a = {message = message, reader = reader}
-        setmetatable(a, class)
-        return a
+        return {message = message, reader = reader}
     end,
     __tostring = function(self)
         return string.format("Failure(%s, %s)", self.message, tostring(self.reader))
@@ -35,10 +29,7 @@ Failure = makeClass {
 }
 Error = makeClass {
     new = function(class, message, reader)
-        assert(class == Error)
-        local a = {message = message, reader = reader}
-        setmetatable(a, class)
-        return a
+        return {message = message, reader = reader}
     end,
     __tostring = function(self)
         return string.format("Error(%s, %s)", self.message, tostring(self.reader))
@@ -51,10 +42,7 @@ Error = makeClass {
 local Packer
 Packer = makeClass {
     new = function(class, first, second)
-        assert(class == Packer)
-        local a = {first = first, second = second}
-        setmetatable(a, class)
-        return a
+        return {first = first, second = second}
     end,
     unpackToArray = function(self, a, n)
         if n > 2 then
@@ -77,11 +65,8 @@ Packer = makeClass {
 
 Parser = makeClass {
     new = function(class, f)
-        assert(class == Parser)
         assert(f)
-        local a = {func = f}
-        setmetatable(a, class)
-        return a
+        return {func = f}
     end,
     succ = function(class, value)
         assert(class == Parser)
@@ -205,10 +190,7 @@ Parser = makeClass {
 
 ProxyParser = makeClass {
     new = function(class)
-        assert(class == ProxyParser)
-        local a = {}
-        setmetatable(a, class)
-        return a
+        return {}
     end,
     __call = function(self, reader)
         return self.parser(reader)

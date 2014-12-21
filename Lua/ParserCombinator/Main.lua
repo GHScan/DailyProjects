@@ -33,9 +33,7 @@ JsonParser = makeClass {
         end)
         valueParser.parser = stringParser .. intParser .. arrayParser .. dictParser
 
-        local a = { parser = valueParser:phrase() }
-        setmetatable(a, class)
-        return a
+        return { parser = valueParser:phrase() }
     end,
     parse = function(self, input)
         return self.parser:parseString(input)

@@ -4,10 +4,7 @@ require "TypeSystem"
 ---------------------------------------------------
 List = makeClass {
     new = function(class, value, next)
-        assert(class == List)
-        local a = {value = value, next = next}
-        setmetatable(a, class)
-        return a
+        return {value = value, next = next}
     end,
     items = function(class, ...)
         assert(class == List)
@@ -69,10 +66,7 @@ List.Nil = List:new(nil, nil)
 
 Tuple = makeClass {
     new = function(class, ...)
-        assert(class == Tuple)
-        local a = {...}
-        setmetatable(a, class)
-        return a
+        return {...}
     end,
     __tostring = function(self)
         local a = {}
