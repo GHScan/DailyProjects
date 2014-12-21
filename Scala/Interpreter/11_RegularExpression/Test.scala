@@ -58,7 +58,26 @@ object RegexParser {
 
 class CharGroups(val groupCount : Int, table : Array[Int]) {
   def apply(c : Char) = table(c)
-  def getGroupChars(group : Int) = (0 until table.length).filter(table(_) == group).toList
+
+  def getGroupName(group : Int) : String = {
+    def makeRange(first : Int, last : Int) : String = {
+      if (first == last) first.toChar.toString
+      else s"${first.toChar}-${last.toChar}"
+    }
+    def chars2Segment(first : Int, prev : Int, chars : List[Int]) : List[String] = {
+      chars match {
+        case Nil => List(makeRange(first, prev))
+        case head :: tail if head == prev + 1 => chars2Segment(first, head, tail)
+        case head :: tail => makeRange(first, prev) :: chars2Segment(head, head, tail)
+      }
+    }
+
+    if (group == NFA.EmptyGroup) "¦Å"
+    else {
+      val chars = (0 until table.length).filter(table(_) == group).toList
+      chars2Segment(chars.head, chars.head, chars.tail).mkString(",")
+    }
+  }
 
   override def toString = s"CharGroups(count=$groupCount,${
     (0 until table.length).groupBy(table(_)).map(p => p._2.map(_.toChar)).toList.sortBy(_.length)
@@ -128,6 +147,16 @@ object NFA {
         else iterate(newStates, i + 1, if (newStates.contains(end)) i else lastMatch)
       }
       s.substring(0, iterate(closure(List(start)), 0, -1) + 1)
+    }
+
+    def saveImage(imgPath : String) {
+      val state2ID = mutable.Map[State, Int]()
+      case class Node(state : State) extends GraphVisualizer.Node {
+        override def shape = if (state == end) "doublecircle" else super.shape
+        def label = state2ID.getOrElseUpdate(state, state2ID.size).toString
+        def edges = state.edges.map(e => (charGroups.getGroupName(e.group), Node(e.state))).toList
+      }
+      GraphVisualizer.saveImage(imgPath, Node(start))
     }
 
     override def toString = s"NFAMachine(start=$start,end=$end)"
@@ -239,6 +268,15 @@ object DFA {
       new Machine(toNewState(start), newEnds, newTransfer, charGroups)
     }
 
+    def saveImage(imgPath : String) {
+      case class Node(i : Int) extends GraphVisualizer.Node {
+        override def shape = if (ends(i)) "doublecircle" else super.shape
+        def label = i.toString
+        def edges = transfer(i).zipWithIndex.filter(_._1 != deadState).map { case (j, group) => (charGroups.getGroupName(group), Node(j)) }.toList
+      }
+      GraphVisualizer.saveImage(imgPath, Node(start))
+    }
+
     override def toString = s"DFAMachine(count=${ends.length},start=$start,ends=${ends.toList.zipWithIndex.filter(_._1).map(_._2)})"
   }
 
@@ -281,8 +319,6 @@ object DFA {
 }
 
 object Test extends App {
-  import Visualizer._
-
   val ast = RegexParser.parse("""if|else|for|struct|\d+|\A+""")
   val charGroups = CharGroups.fromAST(ast)
   val nfa = NFA.Machine.fromAST(ast, charGroups)
