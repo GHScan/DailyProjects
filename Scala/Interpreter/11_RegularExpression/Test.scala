@@ -149,14 +149,14 @@ object NFA {
       s.substring(0, iterate(closure(List(start)), 0, -1) + 1)
     }
 
-    def saveImage(imgPath : String) {
+    def exportAsImage(imgPath : String) {
       val state2ID = mutable.Map[State, Int]()
-      case class Node(state : State) extends GraphVisualizer.Node {
-        override def shape = if (state == end) "doublecircle" else super.shape
+      case class VizState(state : State) extends GraphVisualize.StateMachine.State {
+        override def shape = if (state == end) GraphVisualize.Shape.DoubleCircle else super.shape
         def label = state2ID.getOrElseUpdate(state, state2ID.size).toString
-        def edges = state.edges.map(e => (charGroups.getGroupName(e.group), Node(e.state))).toList
+        def transitions = state.edges.map(e => (charGroups.getGroupName(e.group), VizState(e.state)))
       }
-      GraphVisualizer.saveImage(imgPath, Node(start))
+      VizState(start).exportAsImage(imgPath)
     }
 
     override def toString = s"NFAMachine(start=$start,end=$end)"
@@ -268,13 +268,13 @@ object DFA {
       new Machine(toNewState(start), newEnds, newTransfer, charGroups)
     }
 
-    def saveImage(imgPath : String) {
-      case class Node(i : Int) extends GraphVisualizer.Node {
-        override def shape = if (ends(i)) "doublecircle" else super.shape
+    def exportAsImage(imgPath : String) {
+      case class VizState(i : Int) extends GraphVisualize.StateMachine.State {
+        override def shape = if (ends(i)) GraphVisualize.Shape.DoubleCircle else super.shape
         def label = i.toString
-        def edges = transfer(i).zipWithIndex.filter(_._1 != deadState).map { case (j, group) => (charGroups.getGroupName(group), Node(j)) }.toList
+        def transitions = transfer(i).zipWithIndex.filter(_._1 != deadState).map { case (j, group) => (charGroups.getGroupName(group), VizState(j)) }
       }
-      GraphVisualizer.saveImage(imgPath, Node(start))
+      VizState(start).exportAsImage(imgPath)
     }
 
     override def toString = s"DFAMachine(count=${ends.length},start=$start,ends=${ends.toList.zipWithIndex.filter(_._1).map(_._2)})"
@@ -330,9 +330,9 @@ object Test extends App {
   println(dfa)
   println(odfa)
   Utils.timeit("saveImages", 1) {
-    nfa.saveImage("nfa.png")
-    dfa.saveImage("dfa.png")
-    odfa.saveImage("odfa.png")
+    nfa.exportAsImage("nfa.png")
+    dfa.exportAsImage("dfa.png")
+    odfa.exportAsImage("odfa.png")
   }
   val s = """sjdkl"""
   println(nfa.matchPrefix(s))
