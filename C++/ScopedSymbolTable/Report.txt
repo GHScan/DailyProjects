@@ -1,0 +1,8 @@
+map                             : 0.496407s, 1.94132s
+unordered_map                   : 0.283052s, 1.12279s
+HashTable                       : 0.235774s, 0.929445s
+ScopedSymbolTable               : 0.0478712s, 0.191608s
+map [Symbol]                    : 0.538363s, 2.10051s
+unordered_map [Symbol]          : 0.142567s, 0.56376s
+HashTable [Symbol]              : 0.0560891s, 0.225361s
+ScopedSymbolTable [Symbol]      : 0.00624619s, 0.0267762s
