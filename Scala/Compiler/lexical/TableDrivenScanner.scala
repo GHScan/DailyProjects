@@ -1,0 +1,5 @@
+package lexical
+
+object TableDrivenScanner {
+
+}
