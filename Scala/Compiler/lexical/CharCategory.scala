@@ -7,11 +7,11 @@ object CharCategory {
   val Empty = new CharCategory(-1)
 
   implicit val nfaSymbolClass = new NFASymbolClass[CharCategory] {
-    val Empty = new CharCategory(-1)
+    val Empty = CharCategory.Empty
   }
 }
 
-class CharCategoryMap(table : Array[CharCategory]) extends Function1[Char, CharCategory] {
+class CharCategoryMap(val table : Array[CharCategory]) extends Function1[Char, CharCategory] {
 
   def apply(c : Char) : CharCategory = table(c)
 
@@ -28,19 +28,31 @@ class CharCategoryMap(table : Array[CharCategory]) extends Function1[Char, CharC
       }.mkString(",")
     }
   }
+
+  def map(f : CharCategory => CharCategory) : CharCategoryMap = {
+    new CharCategoryMap(table.map(f))
+  }
+
+  override def equals(other : Any) : Boolean = {
+    other.isInstanceOf[CharCategoryMap] && other.asInstanceOf[CharCategoryMap].equals(this)
+  }
+
+  def equals(other : CharCategoryMap) : Boolean = {
+    table.view == other.table.view
+  }
 }
 
 class CharCategoryMapBuilder(size : Int = 128) {
 
   private val mTable : Array[CharCategory] = Array.fill(size)(new CharCategory(0))
-  private var mNextCategroy : Int = 0
+  private var mNextCategory : Int = 0
 
   def addChars(chars : Seq[Char]) : CharCategoryMapBuilder = {
     chars.groupBy(mTable(_)).foreach {
       case (_, l) =>
-        mNextCategroy += 1
+        mNextCategory += 1
         l.foreach { c =>
-          mTable(c) = new CharCategory(mNextCategroy)
+          mTable(c) = new CharCategory(mNextCategory)
         }
     }
 
@@ -48,13 +60,12 @@ class CharCategoryMapBuilder(size : Int = 128) {
   }
 
   def result : CharCategoryMap = {
-    mNextCategroy = -1
-    (0 until mTable.length).groupBy(mTable(_)).foreach {
-      case (_, l) =>
-        mNextCategroy += 1
-        l.foreach { c =>
-          mTable(c) = new CharCategory(mNextCategroy)
-        }
+    mNextCategory = 0
+    (0 until mTable.length).groupBy(mTable(_)).toList.map(_._2).sortBy(_.head).foreach { l =>
+      l.foreach { c =>
+        mTable(c) = new CharCategory(mNextCategory)
+      }
+      mNextCategory += 1
     }
 
     new CharCategoryMap(mTable)

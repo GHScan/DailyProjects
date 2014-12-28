@@ -2,8 +2,10 @@ package lexical.test
 
 import org.scalatest._
 import lexical.NFARegex
+import lexical.DFARegex
+import lexical.Regex
 
-class RegexTest extends FlatSpec with Matchers {
+class NFARegexTest extends FlatSpec with Matchers {
   behavior of "Prefix matcher"
   it should "match literal" in {
     val re = new NFARegex("abc")
@@ -26,5 +28,43 @@ class RegexTest extends FlatSpec with Matchers {
     val re = new NFARegex("""\w+""")
     re.isMatch("fsdjk234") should equal(true)
     re.isMatch("[[") should equal(false)
+  }
+}
+
+class DFARegexTest extends FlatSpec with Matchers {
+  behavior of "Prefix matcher"
+  it should "match literal" in {
+    val re = new DFARegex("abc")
+    re.matchPrefix("abcdef") should equal("abc")
+    re.matchPrefix("def") should equal("")
+  }
+  it should "match dot" in {
+    val re = new DFARegex(".a")
+    re.matchPrefix("za") should equal("za")
+    re.matchPrefix("zba") should equal("")
+  }
+  it should "match longest" in {
+    val re = new DFARegex("""123|\d+a""")
+    re.matchPrefix("123456") should equal("123")
+    re.matchPrefix("123456a") should equal("123456a")
+  }
+
+  behavior of "Full matcher"
+  it should "match \\w+" in {
+    val re = new DFARegex("""\w+""")
+    re.isMatch("fsdjk234") should equal(true)
+    re.isMatch("[[") should equal(false)
+  }
+}
+
+class RegexEqualsTest extends FlatSpec with Matchers {
+  behavior of "Regex equals"
+  it should "enable test for simple pattern" in {
+    Regex.patternEquals(
+      "0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15",
+      "0|1[0-5]?|[2-9]") should be(true)
+    Regex.patternEquals(
+      "here|there|this|that",
+      "(he|the)re|th(at|is)") should be(true)
   }
 }

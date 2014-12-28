@@ -21,7 +21,7 @@ trait NFA[T, U] extends FA[T] {
   def acceptsAttr : List[(NFAState[T], U)]
 }
 
-class TokenizedAcceptStateAttr(val priority : Int, val token : String)
+case class TokenizedAcceptStateAttr(val priority : Int, val token : String)
 
 trait TokenizedNFA extends NFA[CharCategory, TokenizedAcceptStateAttr] {
   def charMap : CharCategoryMap
@@ -69,10 +69,12 @@ object TokenizedNFA {
         val accept = new State(Nil)
         (new State(chars.asInstanceOf[Seq[CharCategory]].map(symbol => new Transition(symbol, accept)).toList), accept)
       }
-      case KleenePlus(content) => {
+      case KleeneStar(content) => {
         val (start, accept) = iterate(content)
+        val accept2 = new State(Nil)
         accept.transitions = new Transition(symbolClass.Empty, start) :: accept.transitions
-        (start, accept)
+        accept.transitions = new Transition(symbolClass.Empty, accept2) :: accept.transitions
+        (new State(List(new Transition(symbolClass.Empty, start), new Transition(symbolClass.Empty, accept2))), accept2)
       }
       case Concatenation(first, second) => {
         val (start1, accept1) = iterate(first)
@@ -107,6 +109,15 @@ abstract class NFAEmulator[T, U](
   val start : Int,
   val acceptsAttr : Array[Option[U]],
   val transitions : Array[List[(T, Int)]])(implicit symbolClass : NFASymbolClass[T]) {
+
+  override def equals(other : Any) : Boolean = {
+    other.isInstanceOf[NFAEmulator[T, U]] && other.asInstanceOf[NFAEmulator[T, U]].equals(this)
+  }
+  def equals(other : NFAEmulator[T, U]) : Boolean = {
+    (start == other.start
+      && acceptsAttr.view == other.acceptsAttr.view
+      && transitions.view == other.transitions.view)
+  }
 
   private lazy val statesClosure : Array[mutable.BitSet] = {
 
@@ -161,6 +172,12 @@ class TokenizedNFAEmulator(
   transitions : Array[List[(CharCategory, Int)]]) extends NFAEmulator[CharCategory, TokenizedAcceptStateAttr](
   start, acceptsAttr, transitions) {
 
+  override def equals(other : Any) : Boolean = {
+    other.isInstanceOf[TokenizedNFAEmulator] && other.asInstanceOf[TokenizedNFAEmulator].equals(this)
+  }
+  def equals(other : TokenizedNFAEmulator) : Boolean = {
+    charMap == other.charMap && super.equals(this)
+  }
 }
 
 object TokenizedNFAEmulator {

@@ -3,7 +3,7 @@ package lexical.test
 import org.scalatest._
 import lexical.RegexParser
 import lexical.RegexAST._
-import utils.CharacterClass._
+import utils.Characters._
 
 class RegexParserTest extends FlatSpec with Matchers {
 
@@ -39,10 +39,10 @@ class RegexParserTest extends FlatSpec with Matchers {
     p.parse("""a?""") should equal(Alternation(Chars("a"), Empty))
   }
   it should "parse +" in {
-    p.parse("""a+""") should equal(KleenePlus(Chars("a")))
+    p.parse("""a+""") should equal(Concatenation(Chars("a"), KleeneStar(Chars("a"))))
   }
   it should "parse *" in {
-    p.parse("""a*""") should equal(Alternation(KleenePlus(Chars("a")), Empty))
+    p.parse("""a*""") should equal(KleeneStar(Chars("a")))
   }
 
   behavior of "Concatenation parser"
@@ -63,12 +63,14 @@ class RegexParserTest extends FlatSpec with Matchers {
   behavior of "Complex parser"
   it should "parse complex re" in {
     p.parse("""([ab]|[\da]bc)*a""") should equal(
-      Concatenation(Alternation(KleenePlus(
-        Alternation(Chars("ab"),
+      Concatenation(
+        KleeneStar(Alternation(
+          Chars("ab"),
           Concatenation(
-            Concatenation(Chars("0123456789a"),
+            Concatenation(
+              Chars("0123456789a"),
               Chars("b")),
             Chars("c")))),
-        Empty), Chars("a")))
+        Chars("a")))
   }
 }

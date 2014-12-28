@@ -27,6 +27,18 @@ abstract class DFAEmulator[U](
   val acceptAttrs : Array[Option[U]],
   val transitions : Array[Array[Int]]) {
 
+  override def equals(other : Any) : Boolean = {
+    other.isInstanceOf[DFAEmulator[U]] && other.asInstanceOf[DFAEmulator[U]].equals(this)
+  }
+  def equals(other : DFAEmulator[U]) : Boolean = {
+    (start == other.start
+      && acceptAttrs.view == other.acceptAttrs.view
+      && transitions.length == other.transitions.length
+      && transitions.iterator.zip(other.transitions.iterator).forall {
+        case ((a1, a2)) => a1.view == a2.view
+      })
+  }
+
   val dead = (states.filter(i => transitions(i).forall(_ == i)) ++ List(-1)).head
 
   def states : Seq[Int] = 0 until transitions.length
@@ -39,6 +51,13 @@ class TokenizedDFAEmulator(
   transitions : Array[Array[Int]]) extends DFAEmulator[TokenizedAcceptStateAttr](
   start, acceptAttrs, transitions) {
   outer =>
+
+  override def equals(other : Any) : Boolean = {
+    other.isInstanceOf[TokenizedDFAEmulator] && other.asInstanceOf[TokenizedDFAEmulator].equals(this)
+  }
+  def equals(other : TokenizedDFAEmulator) : Boolean = {
+    charMap == other.charMap && super.equals(other)
+  }
 
   def toDFA() : TokenizedDFA = {
     class Transition(val symbol : CharCategory, val target : State) extends DFATransition[CharCategory]
@@ -56,6 +75,68 @@ class TokenizedDFAEmulator(
     }
   }
 
+  def minimize() : TokenizedDFAEmulator = {
+
+    val state2Group = Array.fill(states.length)(0)
+    var gid = 0
+    states.groupBy(acceptAttrs(_)).foreach {
+      case (_, l) =>
+        l.foreach { c => state2Group(c) = gid }
+        gid += 1
+    }
+
+    def iterate() {
+      for (
+        (_, group) <- states.groupBy(state2Group(_));
+        category <- charMap.categories
+      ) {
+        val newGroups = group.groupBy(state => state2Group(transitions(state)(category.value)))
+        if (newGroups.size > 1) {
+          newGroups.foreach {
+            case (_, l) =>
+              l.foreach { c => state2Group(c) = gid }
+              gid += 1
+          }
+          return iterate()
+        }
+      }
+    }
+    iterate()
+
+    gid = 0
+    states.groupBy(state2Group(_)).foreach {
+      case (_, l) =>
+        l.foreach { c => state2Group(c) = gid }
+        gid += 1
+    }
+
+    val newTransitions = Array.fill(state2Group.distinct.length, charMap.categories.length)(0)
+    val newAcceptAttrs = Array.fill(newTransitions.length)(acceptAttrs(0))
+    states.foreach { s => newAcceptAttrs(state2Group(s)) = acceptAttrs(s) }
+    for (
+      state <- states;
+      category <- charMap.categories
+    ) {
+      newTransitions(state2Group(state))(category.value) = state2Group(transitions(state)(category.value))
+    }
+    new TokenizedDFAEmulator(charMap, state2Group(start), newAcceptAttrs, newTransitions)
+  }
+
+  def compactCharMap() : TokenizedDFAEmulator = {
+
+    val oldCategory2New = charMap.categories.groupBy(c => transitions.toList.map(t => t(c.value))).toList.map(_._2).sortBy(_.head.value).zipWithIndex.
+      flatMap {
+        case ((l, i)) => l.map((_, new CharCategory(i)))
+      }.toMap
+    val newColumns = oldCategory2New.map(p => (p._2.value, p._1.value)).toList.sortBy(_._1).map(_._2).toArray
+
+    val newCharMap = charMap.map(oldCategory2New)
+    new TokenizedDFAEmulator(newCharMap, start, acceptAttrs, transitions.map(t => newColumns.map(t)))
+  }
+
+  def optimize() : TokenizedDFAEmulator = {
+    minimize().compactCharMap()
+  }
 }
 
 object TokenizedDFAEmulator {

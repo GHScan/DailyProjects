@@ -8,7 +8,7 @@ class NFAVisualizer(nfa : TokenizedNFA) {
 
     case class State(state : NFAState[CharCategory]) extends graphvisualize.State {
       override def shape = if (nfa.acceptsAttr.find(_._1 == state) != None) graphvisualize.Shape.DoubleCircle else super.shape
-      def label : String = state2ID(state).toString + nfa.acceptsAttr.find(_._1 == state).map(p => s" (${p._2.token})").getOrElse("")
+      def label : String = state2ID(state).toString + nfa.acceptsAttr.find(_._1 == state).map(p => s" (${p._2.token.take(16)})").getOrElse("")
       def transitions : Seq[(String, Any)] = state.transitions.map { trans =>
         (nfa.charMap.toPrettyString(trans.symbol), State(trans.target))
       }
@@ -27,7 +27,7 @@ class DFAVisualizer(dfa : TokenizedDFA) {
 
     case class State(state : DFAState[CharCategory]) extends graphvisualize.State {
       override def shape = if (dfa.acceptsAttr.find(_._1 == state) != None) graphvisualize.Shape.DoubleCircle else super.shape
-      def label : String = state2ID(state).toString + dfa.acceptsAttr.find(_._1 == state).map(p => s" (${p._2.token})").getOrElse("")
+      def label : String = state2ID(state).toString + dfa.acceptsAttr.find(_._1 == state).map(p => s" (${p._2.token.take(16)})").getOrElse("")
       def transitions : Seq[(String, Any)] = state.transitions.filter(_.target != dfa.dead).map { trans =>
         (dfa.charMap.toPrettyString(trans.symbol), State(trans.target))
       }

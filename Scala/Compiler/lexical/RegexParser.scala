@@ -2,7 +2,7 @@ package lexical
 
 import scala.util.parsing.combinator._
 import RegexAST._
-import utils.CharacterClass._
+import utils.Characters._
 
 class RegexParser extends RegexParsers with PackratParsers {
 
@@ -45,8 +45,8 @@ class RegexParser extends RegexParsers with PackratParsers {
   private val kleeneParser : Parser[Tree] = factorParser ~ opt("?" | "*" | "+") ^^ {
     case p ~ None => p
     case p ~ Some("?") => Alternation(p, Empty)
-    case p ~ Some("*") => Alternation(KleenePlus(p), Empty)
-    case p ~ Some("+") => KleenePlus(p)
+    case p ~ Some("*") => KleeneStar(p)
+    case p ~ Some("+") => Concatenation(p, KleeneStar(p))
   }
 
   private val concatenationParser : Parser[Tree] = rep1(kleeneParser) ^^ {
