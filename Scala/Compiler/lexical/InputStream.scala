@@ -1,5 +1,0 @@
-package lexical
-
-object InputStream {
-
-}

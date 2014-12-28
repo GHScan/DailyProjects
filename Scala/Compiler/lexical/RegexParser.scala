@@ -57,5 +57,5 @@ class RegexParser extends RegexParsers with PackratParsers {
     case l => l.tail.fold(l.head) { case (a, b) => Alternation(a, b) }
   }
 
-  def parse(str : String) : Tree = parseAll(alternationParser, str).get
+  def parse(pattern : String) : Tree = parseAll(alternationParser, pattern).get
 }

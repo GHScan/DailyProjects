@@ -19,6 +19,7 @@ trait State {
     val edgeStrings = new StringBuilder()
 
     def getStateID(state : State) = state2ID.getOrElseUpdate(state, state2ID.size)
+
     def traverse(state : State) {
       if (foundStates.contains(state)) return
       foundStates += state
@@ -29,6 +30,7 @@ trait State {
         case _ =>
       }
     }
+
     traverse(this)
 
     val script = s"""

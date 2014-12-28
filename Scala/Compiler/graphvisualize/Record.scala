@@ -17,6 +17,7 @@ trait Record {
     val edgeStrings = new StringBuilder()
 
     def getRecordID(record : Record) = record2ID.getOrElseUpdate(record, record2ID.size)
+
     def getRecordLabel(record : Record) =
       record.fields.zipWithIndex.map {
         case (Link(name, _), index) => s"<f_$index>$name"
@@ -24,6 +25,7 @@ trait Record {
         case (Value(name, v), index) => s"<f_$index>$name=$v"
         case _ => assert(false, "It's impossible!")
       }.mkString("|")
+
     def traverse(record : Record) {
       if (foundRecord(record)) return
       foundRecord += record
@@ -35,6 +37,7 @@ trait Record {
         case _ =>
       }
     }
+
     traverse(this)
 
     val script = s"""
