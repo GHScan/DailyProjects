@@ -4,7 +4,9 @@ import scala.util.parsing.combinator._
 import RegexAST._
 import utils.Characters._
 
-class RegexParser extends RegexParsers with PackratParsers {
+final class RegexParser extends RegexParsers with PackratParsers {
+
+  override val whiteSpace = """""".r
 
   private val charParser : Parser[Seq[Char]] =
     ((("""\\.""".r ^^ { s =>
@@ -18,8 +20,8 @@ class RegexParser extends RegexParsers with PackratParsers {
         case 'D' => NoneDigits
         case 'w' => LetterOrDigits
         case 'W' => NoneLetterOrDigits
-        case 's' => Spaces
-        case 'S' => NoneSpaces
+        case 's' => Whitespaces
+        case 'S' => NoneWhitespaces
         case c => List(c)
       }
     }) : Parser[Seq[Char]])
@@ -57,5 +59,9 @@ class RegexParser extends RegexParsers with PackratParsers {
     case l => l.tail.fold(l.head) { case (a, b) => Alternation(a, b) }
   }
 
-  def parse(pattern : String) : Tree = parseAll(alternationParser, pattern).get
+  def parse(pattern : String) : Tree = {
+    val result = parseAll(alternationParser, pattern)
+    if (result.successful) result.get
+    else throw new Exception(result.toString)
+  }
 }

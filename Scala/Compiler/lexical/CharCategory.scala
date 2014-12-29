@@ -11,9 +11,10 @@ object CharCategory {
   }
 }
 
-class CharCategoryMap(val table : Array[CharCategory]) extends Function1[Char, CharCategory] {
+final class CharCategoryMap(val table : Array[CharCategory]) extends Function1[Char, CharCategory] {
 
   def apply(c : Char) : CharCategory = table(c)
+  def unapply(category : CharCategory) : Option[List[Char]] = Some(chars.filter(table(_) == category))
 
   lazy val chars : List[Char] = (0 until table.length).map(_.toChar).toList
   lazy val categories : List[CharCategory] = table.distinct.toList

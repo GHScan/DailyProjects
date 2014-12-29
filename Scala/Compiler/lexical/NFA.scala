@@ -54,7 +54,7 @@ object TokenizedNFA {
     (newTree, charMap)
   }
 
-  def fromRegex(pattern : String, priority : Int = 0)(implicit symbolClass : NFASymbolClass[CharCategory]) : TokenizedNFA = {
+  def fromPattern(pattern : String, priority : Int = 0)(implicit symbolClass : NFASymbolClass[CharCategory]) : TokenizedNFA = {
     import RegexAST._
 
     class Transition(val symbol : CharCategory, val target : State) extends NFATransition[CharCategory]
@@ -98,7 +98,7 @@ object TokenizedNFA {
     new TokenizedNFA {
       val start : NFAState[CharCategory] = start1
       val accepts : List[NFAState[CharCategory]] = List(accept1)
-      val acceptsAttr : List[(NFAState[CharCategory], TokenizedAcceptStateAttr)] = List((accept1, new TokenizedAcceptStateAttr(priority, pattern)))
+      val acceptsAttr : List[(NFAState[CharCategory], TokenizedAcceptStateAttr)] = List((accept1, TokenizedAcceptStateAttr(priority, pattern)))
       val charMap : CharCategoryMap = charMap1
     }
   }
@@ -165,7 +165,7 @@ abstract class NFAEmulator[T, U](
 
 }
 
-class TokenizedNFAEmulator(
+final class TokenizedNFAEmulator(
   val charMap : CharCategoryMap,
   start : Int,
   acceptsAttr : Array[Option[TokenizedAcceptStateAttr]],

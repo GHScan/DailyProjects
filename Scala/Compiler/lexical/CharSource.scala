@@ -7,7 +7,7 @@ trait CharSource extends Iterator[Char] {
   def rollback() : Unit
 }
 
-class StringCharSource(str : String) extends CharSource {
+final class StringCharSource(str : String) extends CharSource {
   private var mOff = 0
 
   def hasNext : Boolean = mOff < str.length
@@ -25,7 +25,7 @@ class StringCharSource(str : String) extends CharSource {
 
 }
 
-class StreamCharSource(inputStream : InputStream, bufferSize : Int = 4096)(implicit val codec : Codec) extends CharSource {
+final class StreamCharSource(inputStream : InputStream, bufferSize : Int = 4096)(implicit val codec : Codec) extends CharSource {
 
   private val mBufferSize = utils.Func.round2PowerOf2(bufferSize)
   private val mBufferMask = mBufferSize - 1

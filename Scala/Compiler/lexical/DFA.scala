@@ -44,7 +44,7 @@ abstract class DFAEmulator[U](
   def states : Seq[Int] = 0 until transitions.length
 }
 
-class TokenizedDFAEmulator(
+final class TokenizedDFAEmulator(
   val charMap : CharCategoryMap,
   start : Int,
   acceptAttrs : Array[Option[TokenizedAcceptStateAttr]],

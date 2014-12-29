@@ -21,7 +21,7 @@ class RegexParserTest extends FlatSpec with Matchers {
     p.parse(""".""") should equal(Chars(All))
   }
   it should "parse spaces" in {
-    p.parse("""\s""") should equal(Chars(Spaces))
+    p.parse("""\s""") should equal(Chars(Whitespaces))
   }
   it should "parse digits" in {
     p.parse("""\d""") should equal(Chars(Digits))

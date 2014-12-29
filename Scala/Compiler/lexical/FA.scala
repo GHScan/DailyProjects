@@ -17,7 +17,7 @@ trait FA[T] {
 
   def states : List[FAState[T]] = _states
 
-  lazy val _states : List[FAState[T]] = {
+  private lazy final val _states : List[FAState[T]] = {
 
     var result = List[FAState[T]](start)
     val stateSet = mutable.Set[FAState[T]](start)

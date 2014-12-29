@@ -7,9 +7,9 @@ object Characters {
   val Lowers = All.filter(_.isLower)
   val Digits = All.filter(_.isDigit)
   val LetterOrDigits = All.filter(_.isLetterOrDigit)
-  val Spaces = All.filter(_.isSpaceChar)
+  val Whitespaces = All.filter(_.isWhitespace)
   val NoneLetters = All.filter(!_.isLetter)
   val NoneDigits = All.filter(!_.isDigit)
   val NoneLetterOrDigits = All.filter(!_.isLetterOrDigit)
-  val NoneSpaces = All.filter(!_.isSpaceChar)
+  val NoneWhitespaces = All.filter(!_.isWhitespace)
 }
