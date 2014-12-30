@@ -1,8 +1,8 @@
-package lexical.test
+package test.lexical
 
 import java.io.ByteArrayInputStream
 import org.scalatest._
-import lexical.{ StringCharSource, StreamCharSource }
+import lexical.{StringCharSource, StreamCharSource}
 
 class CharSourceTest extends FlatSpec with Matchers {
 

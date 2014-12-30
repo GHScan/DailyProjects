@@ -1,11 +1,11 @@
-package lexical.test
+package test.lexical
 
 import org.scalatest._
 import lexical._
 
 class DFABuilderTest extends FlatSpec with Matchers {
 
-  //  behavior of "DFA of 3 Multipler, in base10"
+  //  behavior of "DFA of 3 Multiplier, in base10"
   //  it should "correct" in {
   //
   //    val N = 3

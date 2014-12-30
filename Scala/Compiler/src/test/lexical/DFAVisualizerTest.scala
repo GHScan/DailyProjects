@@ -1,7 +1,7 @@
-package lexical.test
+package test.lexical
 
 import org.scalatest._
-import lexical.{ TokenizedNFA, TokenizedNFAEmulator }
+import lexical.{TokenizedNFA, TokenizedNFAEmulator}
 import lexical.TokenizedDFAEmulator
 import lexical.NFAVisualizer
 import lexical.DFAVisualizer

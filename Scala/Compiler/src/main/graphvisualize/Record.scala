@@ -23,7 +23,7 @@ trait Record {
         case (Link(name, _), index) => s"<f_$index>$name"
         case (Value("", v), index) => s"<f_$index>$v"
         case (Value(name, v), index) => s"<f_$index>$name=$v"
-        case _ => assert(false, "It's impossible!")
+        case _ => sys.error("It's impossible!")
       }.mkString("|")
 
     def traverse(record : Record) {

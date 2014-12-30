@@ -1,13 +1,13 @@
-package lexical.test
+package test.lexical
 
 import org.scalatest._
-import lexical.CharCategoryMapBuilder
+import lexical.CharClassifyTableBuilder
 
 class CharCategoryTest extends FlatSpec with Matchers {
 
   behavior of "Empty CharCategory"
   it should "map all to 0" in {
-    val cc = new CharCategoryMapBuilder(4)
+    val cc = new CharClassifyTableBuilder(4)
       .result
 
     cc.categories.length should equal(1)
@@ -15,7 +15,7 @@ class CharCategoryTest extends FlatSpec with Matchers {
 
   behavior of "CharCategory with 3 disintersect category"
   it should "map all to 0,1,2" in {
-    val cc = new CharCategoryMapBuilder(128)
+    val cc = new CharClassifyTableBuilder(128)
       .addChars("abc")
       .addChars("def")
       .result
@@ -31,7 +31,7 @@ class CharCategoryTest extends FlatSpec with Matchers {
 
   behavior of "CharCategory with 4 intersect category"
   it should "map all to 0,1,2,3" in {
-    val cc = new CharCategoryMapBuilder(128)
+    val cc = new CharClassifyTableBuilder(128)
       .addChars("abc")
       .addChars("bcd")
       .result
@@ -49,7 +49,7 @@ class CharCategoryTest extends FlatSpec with Matchers {
 
   behavior of "Complex CharCategory"
   it should "map all to smaller space" in {
-    val cc = new CharCategoryMapBuilder(8)
+    val cc = new CharClassifyTableBuilder(8)
       .addChars("\u0000\u0001\u0002")
       .addChars("\u0001\u0002\u0003")
       .addChars("\u0002\u0003\u0004")

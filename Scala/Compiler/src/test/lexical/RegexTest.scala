@@ -18,14 +18,14 @@ class NFARegexTest extends FlatSpec with Matchers {
     re.matchPrefix("zba") should equal("")
   }
   it should "match longest" in {
-    val re = new NFARegex("""123|\d+a""")
+    val re = new NFARegex( """123|\d+a""")
     re.matchPrefix("123456") should equal("123")
     re.matchPrefix("123456a") should equal("123456a")
   }
 
   behavior of "Full matcher"
   it should "match \\w+" in {
-    val re = new NFARegex("""\w+""")
+    val re = new NFARegex( """\w+""")
     re.isMatch("fsdjk234") should equal(true)
     re.isMatch("[[") should equal(false)
   }
@@ -44,14 +44,14 @@ class DFARegexTest extends FlatSpec with Matchers {
     re.matchPrefix("zba") should equal("")
   }
   it should "match longest" in {
-    val re = new DFARegex("""123|\d+a""")
+    val re = new DFARegex( """123|\d+a""")
     re.matchPrefix("123456") should equal("123")
     re.matchPrefix("123456a") should equal("123456a")
   }
 
   behavior of "Full matcher"
   it should "match \\w+" in {
-    val re = new DFARegex("""\w+""")
+    val re = new DFARegex( """\w+""")
     re.isMatch("fsdjk234") should equal(true)
     re.isMatch("[[") should equal(false)
   }

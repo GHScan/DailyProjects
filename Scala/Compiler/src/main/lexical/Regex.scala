@@ -1,51 +1,52 @@
 package lexical
 
 trait Regex {
-  def matchPrefix(s : String) : String
-  def isMatch(s : String) : Boolean = matchPrefix(s) == s
+  def matchPrefix(s: String): String
+
+  def isMatch(s: String): Boolean = matchPrefix(s) == s
 }
 
 object Regex {
 
-  def patternEquals(pattern1 : String, pattern2 : String) : Boolean = {
+  def patternEquals(pattern1: String, pattern2: String): Boolean = {
     val dfa1 = TokenizedDFAEmulator(TokenizedNFAEmulator(TokenizedNFA.fromPattern(pattern1, 0))).optimize()
     val dfa2 = TokenizedDFAEmulator(TokenizedNFAEmulator(TokenizedNFA.fromPattern(pattern2, 0))).optimize()
 
-    TokenizedNFAEmulator(dfa1.toDFA()) == TokenizedNFAEmulator(dfa2.toDFA())
+    TokenizedNFAEmulator(dfa1.dfa) == TokenizedNFAEmulator(dfa2.dfa)
   }
 
 }
 
-final class NFARegex(pattern : String) extends Regex {
+final class NFARegex(pattern: String) extends Regex {
   val nfa = TokenizedNFAEmulator(TokenizedNFA.fromPattern(pattern))
 
-  def matchPrefix(s : String) : String = {
+  def matchPrefix(s: String): String = {
     val source = new StringCharSource(s)
 
     val result = new StringBuilder()
     var matchLen = 0
     var stateSet = nfa.closure(nfa.start)
     var len = 0
-    while (!stateSet.isEmpty && source.hasNext) {
+    while (stateSet.nonEmpty && source.hasNext) {
       len += 1
 
       val c = source.next()
-      val category = nfa.charMap(c)
+      val category = nfa.charTable(c)
       stateSet = nfa.move(stateSet, category)
       result += c
 
-      if (!(stateSet & nfa.acceptSet).isEmpty) matchLen = len
+      if ((stateSet & nfa.acceptSet).nonEmpty) matchLen = len
     }
 
     for (_ <- matchLen until len) source.rollback()
-    if (matchLen > 0) result.toString.substring(0, matchLen) else ""
+    if (matchLen > 0) result.mkString.substring(0, matchLen) else ""
   }
 }
 
-final class DFARegex(pattern : String) extends Regex {
+final class DFARegex(pattern: String) extends Regex {
   val dfa = TokenizedDFAEmulator(TokenizedNFAEmulator(TokenizedNFA.fromPattern(pattern))).optimize()
 
-  def matchPrefix(s : String) : String = {
+  def matchPrefix(s: String): String = {
     val source = new StringCharSource(s)
 
     val result = new StringBuilder()
@@ -56,7 +57,7 @@ final class DFARegex(pattern : String) extends Regex {
       len += 1
 
       val c = source.next()
-      val category = dfa.charMap(c)
+      val category = dfa.charTable(c)
       state = dfa.transitions(state)(category.value)
       result += c
 
@@ -64,6 +65,6 @@ final class DFARegex(pattern : String) extends Regex {
     }
 
     for (_ <- matchLen until len) source.rollback()
-    if (matchLen > 0) result.toString.substring(0, matchLen) else ""
+    if (matchLen > 0) result.mkString.substring(0, matchLen) else ""
   }
 }
