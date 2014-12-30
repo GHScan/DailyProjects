@@ -28,7 +28,19 @@ trait NFA[T, U] extends FA[T] {
 case class TokenizedAcceptStateAttr(priority : Int, token : String)
 
 trait TokenizedNFA extends NFA[CharCategory, TokenizedAcceptStateAttr] {
+
   def charTable : CharClassifyTable
+
+  def toEmulator : TokenizedNFAEmulator = {
+    val state2ID = states.zipWithIndex.toMap
+    new TokenizedNFAEmulator(
+      charTable,
+      state2ID(start),
+      state2ID.toList.sortBy(_._2).map { case ((state, _)) => acceptsAttr.find(_._1 == state).map(_._2)}.toArray,
+      state2ID.toList.sortBy(_._2).map {
+        case ((state, _)) => state.transitions.map { t => (t.symbol, state2ID(t.target))}
+      }.toArray)
+  }
 }
 
 class TokenizedNFATransition(val symbol : CharCategory, val target : TokenizedNFAState) extends NFATransition[CharCategory]
@@ -180,19 +192,6 @@ final class TokenizedNFAEmulator(
   def equals(other : TokenizedNFAEmulator) : Boolean = {
     charTable == other.charTable && super.equals(this)
   }
-}
 
-object TokenizedNFAEmulator {
-
-  def apply(nfa : TokenizedNFA) : TokenizedNFAEmulator = {
-    val state2ID = nfa.states.zipWithIndex.toMap
-
-    new TokenizedNFAEmulator(
-      nfa.charTable,
-      state2ID(nfa.start),
-      state2ID.toList.sortBy(_._2).map { case ((state, _)) => nfa.acceptsAttr.find(_._1 == state).map(_._2)}.toArray,
-      state2ID.toList.sortBy(_._2).map {
-        case ((state, _)) => state.transitions.map { t => (t.symbol, state2ID(t.target))}
-      }.toArray)
-  }
+  def toDFAEmulator : TokenizedDFAEmulator = TokenizedDFAEmulator.fromNFAEmulator(this)
 }

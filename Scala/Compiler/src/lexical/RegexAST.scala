@@ -33,60 +33,6 @@ object RegexAST {
     }
   }
 
-  object Provider {
-
-    def none : Tree = null
-
-    def empty : Tree = Empty
-
-    def chars(chars : Seq[Char]) : Tree = Chars(chars)
-
-    def kleeneStar(content : Tree) : Tree = content match {
-      case null => empty
-      case Empty => empty
-      case KleeneStar(_) => content
-      case QuestionMark(a) => kleeneStar(a)
-      case _ => KleeneStar(content)
-    }
-
-    def concatenation(first : Tree, second : Tree) : Tree = (first, second) match {
-      case (null, _) => null
-      case (_, null) => null
-      case (Empty, _) => second
-      case (_, Empty) => first
-      case (KleenePlus(k), _) if k == second => first
-      case (_, KleenePlus(k)) if k == first => second
-      case (KleeneStar(content), QuestionMark(q)) if content == q => first
-      case (QuestionMark(q), KleeneStar(content)) if content == q => second
-      case (Concatenation(c1, c2), _) => concatenation(c1, concatenation(c2, second))
-      case (_, Concatenation(c1, c2)) => concatenation(first, c1) match {
-        case Concatenation(cc1, cc2) => Concatenation(cc1, concatenation(cc2, c2))
-        case r => concatenation(r, c2)
-      }
-      case _ => Concatenation(first, second)
-    }
-
-    def alternation(first : Tree, second : Tree) : Tree =
-      if (first.priority < second.priority) alternation(second, first)
-      else if (first == second) first
-      else (first, second) match {
-        case (null, _) => second
-        case (Empty, KleeneStar(_)) => second
-        case (Empty, KleenePlus(k)) => KleeneStar(k)
-        case (Chars(chars1), Chars(chars2)) => Chars((chars1 ++ chars2).distinct)
-        case (Chars(_), KleeneStar(k)) if first == k => second
-        case (KleeneStar(k), _) if k == second => first
-        case (Concatenation(c1, c2), Concatenation(c3, c4)) if c1 == c3 => concatenation(c1, alternation(c2, c4))
-        case (Concatenation(c1, c2), Concatenation(c3, c4)) if c2 == c4 => concatenation(alternation(c1, c3), c2)
-        case (Alternation(a1, a2), Alternation(_, _)) => alternation(a1, alternation(a2, second))
-        case (_, Alternation(a1, a2)) => alternation(first, a1) match {
-          case Alternation(aa1, aa2) => Alternation(aa1, alternation(aa2, a2))
-          case r => alternation(r, a2)
-        }
-        case (_, _) => Alternation(first, second)
-      }
-  }
-
   private lazy val characterClasses : List[(immutable.BitSet, String)] = List(
     (immutable.BitSet(NoneWhitespaces.map(_.toInt) : _*), "\\S"),
     (immutable.BitSet(NoneDigits.map(_.toInt) : _*), "\\D"),
@@ -100,7 +46,7 @@ object RegexAST {
 
   implicit class RegexExtension(tree : Tree) {
 
-    def pattern : String = {
+    def toPattern : String = {
 
       def escapeChar(c : Char) : String = c match {
         case '\t' => "\\t"
@@ -153,7 +99,7 @@ object RegexAST {
       iterate(tree, 0)
     }
 
-    private[RegexAST] def priority : Int = tree match {
+    def priority : Int = tree match {
       case null => 5
       case Empty => 4
       case Chars(_) => 3
@@ -163,13 +109,13 @@ object RegexAST {
     }
 
 
-    def simplify : Tree = {
+    def simplified : Tree = {
       def iterate(tree : Tree) : Tree = tree match {
         case Empty => tree
         case Chars(chars) => tree
-        case KleeneStar(content) => Provider.kleeneStar(iterate(content))
-        case Concatenation(first, second) => Provider.concatenation(iterate(first), iterate(second))
-        case Alternation(first, second) => Provider.alternation(iterate(first), iterate(second))
+        case KleeneStar(content) => iterate(content).kleeneStar
+        case Concatenation(first, second) => iterate(first) & iterate(second)
+        case Alternation(first, second) => iterate(first) | iterate(second)
       }
 
       iterate(tree)
@@ -186,6 +132,51 @@ object RegexAST {
       }
       iterate(tree)
     }
+
+    def kleeneStar : Tree = tree match {
+      case null => Empty
+      case Empty => Empty
+      case KleeneStar(_) => tree
+      case QuestionMark(a) => a.kleeneStar
+      case _ => KleeneStar(tree)
+    }
+
+    def &(other : Tree) : Tree = (tree, other) match {
+      case (null, _) => null
+      case (_, null) => null
+      case (Empty, _) => other
+      case (_, Empty) => tree
+      case (KleenePlus(k), _) if k == other => tree
+      case (_, KleenePlus(k)) if k == tree => other
+      case (KleeneStar(content), QuestionMark(q)) if content == q => tree
+      case (QuestionMark(q), KleeneStar(content)) if content == q => other
+      case (Concatenation(c1, c2), _) => c1 & (c2 & other)
+      case (_, Concatenation(c1, c2)) => tree & c1 match {
+        case Concatenation(cc1, cc2) => Concatenation(cc1, cc2 & c2)
+        case r => r & c2
+      }
+      case _ => Concatenation(tree, other)
+    }
+
+    def |(other : Tree) : Tree =
+      if (tree.priority < other.priority) other | tree
+      else if (tree == other) tree
+      else (tree, other) match {
+        case (null, _) => other
+        case (Empty, KleeneStar(_)) => other
+        case (Empty, KleenePlus(k)) => KleeneStar(k)
+        case (Chars(chars1), Chars(chars2)) => Chars((chars1 ++ chars2).distinct)
+        case (Chars(_), KleeneStar(k)) if tree == k => other
+        case (KleeneStar(k), _) if k == other => tree
+        case (Concatenation(c1, c2), Concatenation(c3, c4)) if c1 == c3 => c1 & (c2 | c4)
+        case (Concatenation(c1, c2), Concatenation(c3, c4)) if c2 == c4 => (c1 | c3) & c2
+        case (Alternation(a1, a2), Alternation(_, _)) => a1 | (a2 | other)
+        case (_, Alternation(a1, a2)) => tree | a1 match {
+          case Alternation(aa1, aa2) => Alternation(aa1, aa2 | a2)
+          case r => r | a2
+        }
+        case (_, _) => Alternation(tree, other)
+      }
   }
 
 }

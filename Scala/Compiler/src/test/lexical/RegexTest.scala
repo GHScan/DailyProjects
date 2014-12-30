@@ -1,9 +1,7 @@
 package lexical.test
 
 import org.scalatest._
-import lexical.NFARegex
-import lexical.DFARegex
-import lexical.Regex
+import lexical.{RegexParser, NFARegex, DFARegex, Regex}
 
 class NFARegexTest extends FlatSpec with Matchers {
   behavior of "Prefix matcher"
@@ -57,14 +55,21 @@ class DFARegexTest extends FlatSpec with Matchers {
   }
 }
 
-class RegexEqualsTest extends FlatSpec with Matchers {
-  behavior of "Regex equals"
-  it should "enable test for simple pattern" in {
+class RegexPatternEqualityTest extends FlatSpec with Matchers {
+  behavior of "Regex Pattern"
+  it should "enable test for equality" in {
     Regex.patternEquals(
       "0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15",
       "0|1[0-5]?|[2-9]") should be(true)
     Regex.patternEquals(
       "here|there|this|that",
       "(he|the)re|th(at|is)") should be(true)
+  }
+}
+
+class RegexSimplifyTest extends FlatSpec with Matchers {
+  behavior of "Regex"
+  it should "enable simplify" in {
+    new RegexParser().parse("0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15").simplified.toPattern should be("\\d|1[0-5]")
   }
 }

@@ -67,7 +67,7 @@ final class TokenizedDFAEmulator(
     charTable == other.charTable && super.equals(other)
   }
 
-  def dfa : TokenizedDFA = {
+  def toDFA : TokenizedDFA = {
     class Transition(val symbol : CharCategory, val target : State) extends DFATransition[CharCategory]
     case class State(id : Int) extends DFAState[CharCategory] {
       def transitions : List[Transition] = outer.transitions(id).toList.zipWithIndex.map {
@@ -86,7 +86,7 @@ final class TokenizedDFAEmulator(
     }
   }
 
-  def minimize() : TokenizedDFAEmulator = {
+  def minimized : TokenizedDFAEmulator = {
 
     val state2Group = Array.fill(states.length)(0)
     var gid = 0
@@ -133,7 +133,7 @@ final class TokenizedDFAEmulator(
     new TokenizedDFAEmulator(charTable, state2Group(start), newAcceptAttrs, newTransitions)
   }
 
-  def compactCharMap() : TokenizedDFAEmulator = {
+  def charTableCompacted : TokenizedDFAEmulator = {
 
     val oldCategory2New = charTable.categories.groupBy(c => transitions.toList.map(t => t(c.value))).toList.map(_._2).sortBy(_.head.value).zipWithIndex.
       flatMap {
@@ -145,14 +145,12 @@ final class TokenizedDFAEmulator(
     new TokenizedDFAEmulator(newCharMap, start, acceptAttrs, transitions.map(t => newColumns.map(t)))
   }
 
-  def optimize() : TokenizedDFAEmulator = {
-    minimize().compactCharMap()
-  }
+  def optimized : TokenizedDFAEmulator = minimized.charTableCompacted
 }
 
 object TokenizedDFAEmulator {
 
-  def apply(nfa : TokenizedNFAEmulator) : TokenizedDFAEmulator = {
+  def fromNFAEmulator(nfa : TokenizedNFAEmulator) : TokenizedDFAEmulator = {
 
     val stateSet2ID = mutable.Map[mutable.BitSet, Int]()
     val transitions = mutable.ArrayBuffer[Array[Int]]()

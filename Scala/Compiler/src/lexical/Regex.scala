@@ -1,6 +1,7 @@
 package lexical
 
 trait Regex {
+
   def matchPrefix(s : String) : String
 
   def isMatch(s : String) : Boolean = matchPrefix(s) == s
@@ -9,16 +10,14 @@ trait Regex {
 object Regex {
 
   def patternEquals(pattern1 : String, pattern2 : String) : Boolean = {
-    val dfa1 = TokenizedDFAEmulator(TokenizedNFAEmulator(TokenizedNFA.fromPattern(pattern1, 0))).optimize()
-    val dfa2 = TokenizedDFAEmulator(TokenizedNFAEmulator(TokenizedNFA.fromPattern(pattern2, 0))).optimize()
-
-    TokenizedNFAEmulator(dfa1.dfa) == TokenizedNFAEmulator(dfa2.dfa)
+    TokenizedNFA.fromPattern(pattern1, 0).toEmulator.toDFAEmulator.optimized.toDFA.toEmulator ==
+      TokenizedNFA.fromPattern(pattern2, 0).toEmulator.toDFAEmulator.optimized.toDFA.toEmulator
   }
 
 }
 
 final class NFARegex(pattern : String) extends Regex {
-  val nfa = TokenizedNFAEmulator(TokenizedNFA.fromPattern(pattern))
+  val nfa = TokenizedNFA.fromPattern(pattern).toEmulator
 
   def matchPrefix(s : String) : String = {
     val source = new StringCharSource(s)
@@ -44,7 +43,7 @@ final class NFARegex(pattern : String) extends Regex {
 }
 
 final class DFARegex(pattern : String) extends Regex {
-  val dfa = TokenizedDFAEmulator(TokenizedNFAEmulator(TokenizedNFA.fromPattern(pattern))).optimize()
+  val dfa = TokenizedNFA.fromPattern(pattern).toEmulator.toDFAEmulator.optimized
 
   def matchPrefix(s : String) : String = {
     val source = new StringCharSource(s)

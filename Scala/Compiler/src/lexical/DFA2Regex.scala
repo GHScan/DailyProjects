@@ -9,7 +9,7 @@ object DFA2Regex {
   implicit class DFA2RegexExtension(dfa : TokenizedDFA) {
 
     // Kleene construction
-    def regex2 : Tree = {
+    def toRegex2 : Tree = {
       type State = DFAState[CharCategory]
 
       assert(dfa.acceptsAttr.map(_._2).distinct.length == 1)
@@ -21,9 +21,8 @@ object DFA2Regex {
         s1 <- states;
         s2 <- states
       ) {
-        val path = s1.transitions.filter(_.target == s2).foldLeft[Tree](if (s1 == s2) Provider.empty else null) { (path, t) =>
-          val charTable(chars) = t.symbol
-          Provider.alternation(Chars(chars), path)
+        val path = s1.transitions.filter(_.target == s2).foldLeft[Tree](if (s1 == s2) Empty else null) { (path, t) =>
+          Chars(charTable.unapply(t.symbol).get) | path
         }
         pathMapPair._1((s1, s2)) = path
       }
@@ -36,23 +35,17 @@ object DFA2Regex {
           s1 <- states;
           s2 <- states
         ) {
-          val path = Provider.concatenation(prevMap(s1, s0),
-            Provider.concatenation(
-              Provider.kleeneStar(prevMap(s0, s0)),
-              prevMap(s0, s2)))
-          curMap((s1, s2)) = Provider.alternation(path, prevMap(s1, s2))
+          curMap((s1, s2)) = prevMap(s1, s0) & (prevMap(s0, s0).kleeneStar & prevMap(s0, s2)) | prevMap(s1, s2)
         }
 
         pathMapPair = pathMapPair.swap
       }
 
-      dfa.accepts.foldLeft[Tree](null) {
-        case (path, s) => Provider.alternation(path, pathMapPair._1((dfa.start, s)))
-      }
+      dfa.accepts.foldLeft[Tree](null) { (path, s) => path | pathMapPair._1((dfa.start, s))}
     }
 
     // States reducing
-    def regex : Tree = {
+    def toRegex : Tree = {
       type State = DFAState[CharCategory]
       type EdgeMap = immutable.Map[(State, State), Tree]
 
@@ -68,11 +61,8 @@ object DFA2Regex {
           predecessor <- edgeMap.iterator.filter(_._1._2 == state).map(_._1._1);
           successor <- edgeMap.iterator.filter(_._1._1 == state).map(_._1._2)
         ) {
-          val path = Provider.concatenation(lookup(edgeMap, predecessor, state),
-            Provider.concatenation(
-              Provider.kleeneStar(lookup(edgeMap, state, state)),
-              lookup(edgeMap, state, successor)))
-          newMap = newMap.updated((predecessor, successor), Provider.alternation(path, lookup(edgeMap, predecessor, successor)))
+          val path = lookup(edgeMap, predecessor, state) & (lookup(edgeMap, state, state).kleeneStar & lookup(edgeMap, state, successor))
+          newMap = newMap.updated((predecessor, successor), path | lookup(edgeMap, predecessor, successor))
         }
         newMap
       }
@@ -83,16 +73,13 @@ object DFA2Regex {
         val state = accepts.head
         val privateEdgeMap = accepts.tail.foldLeft[EdgeMap](edgeMap)(remove)
         val path = if (start == state) {
-          Provider.kleeneStar(lookup(privateEdgeMap, start, state))
+          lookup(privateEdgeMap, start, state).kleeneStar
         } else {
-          Provider.concatenation(
-            Provider.kleeneStar(Provider.alternation(lookup(privateEdgeMap, start, start),
-              Provider.concatenation(lookup(privateEdgeMap, start, state),
-                Provider.concatenation(
-                  Provider.kleeneStar(lookup(privateEdgeMap, state, state)),
-                  lookup(privateEdgeMap, state, start))))),
-            Provider.concatenation(lookup(privateEdgeMap, start, state),
-              Provider.kleeneStar(lookup(privateEdgeMap, state, state))))
+          (lookup(privateEdgeMap, start, start) |
+            (lookup(privateEdgeMap, start, state) &
+              (lookup(privateEdgeMap, state, state).kleeneStar & lookup(privateEdgeMap, state, start)))).kleeneStar &
+            (lookup(privateEdgeMap, start, state) &
+              lookup(privateEdgeMap, state, state).kleeneStar)
         }
 
         path :: iterate(start, accepts.tail, remove(edgeMap, state))
@@ -101,18 +88,16 @@ object DFA2Regex {
       val states = dfa.states.diff(List(dfa.dead))
       val charTable = dfa.charTable
       val edgeMap : EdgeMap = (for (s1 <- states; s2 <- states) yield ((s1, s2), s1.transitions.filter(_.target == s2).foldLeft[Tree](null) {
-        case (path, t) =>
-          val charTable(chars) = t.symbol
-          Provider.alternation(Chars(chars), path)
+        (path, t) => Chars(charTable.unapply(t.symbol).get) | path
       })).filter(_._2 != null).toMap
       val edgeMapContainsStartAccepts = states.diff(dfa.start :: dfa.accepts).foldLeft(edgeMap)(remove)
 
-      iterate(dfa.start, dfa.accepts, edgeMapContainsStartAccepts).foldRight[Tree](null)(Provider.alternation)
+      iterate(dfa.start, dfa.accepts, edgeMapContainsStartAccepts).foldRight[Tree](null)(_ | _)
     }
 
-    def regexPattern2 : String = this.regex2.pattern
+    def toRegexPattern2 : String = this.toRegex2.toPattern
 
-    def regexPattern : String = this.regex.pattern
+    def toRegexPattern : String = this.toRegex.toPattern
   }
 
 }
