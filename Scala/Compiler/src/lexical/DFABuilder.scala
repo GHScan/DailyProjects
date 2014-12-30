@@ -43,8 +43,8 @@ final class IterativeDFABuilder[T] extends DFABuilder[TokenizedDFA] {
   }
 
   def result: TokenizedDFA = {
-    class Transition(val symbol: CharCategory, val target: State) extends DFATransition[CharCategory]
-    class State(var transitions: List[Transition]) extends DFAState[CharCategory]
+    type State = TokenizedDFAState
+    type Transition = TokenizedDFATransition
 
     val value2State = mutable.Map[T, State](outer.dead -> new State(Nil))
     def getOrAddState(value: T): State = {

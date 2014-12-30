@@ -22,9 +22,11 @@ trait DFA[T, U] extends NFA[T, U] {
   def dead: DFAState[T]
 }
 
-trait TokenizedDFA extends DFA[CharCategory, TokenizedAcceptStateAttr] with TokenizedNFA {
+trait TokenizedDFA extends DFA[CharCategory, TokenizedAcceptStateAttr] with TokenizedNFA
 
-}
+class TokenizedDFATransition(val symbol: CharCategory, val target: TokenizedDFAState) extends DFATransition[CharCategory]
+
+class TokenizedDFAState(var transitions: List[TokenizedDFATransition]) extends DFAState[CharCategory]
 
 abstract class DFAEmulator[U](
                                val start: Int,

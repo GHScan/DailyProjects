@@ -24,11 +24,16 @@ trait NFA[T, U] extends FA[T] {
   def acceptsAttr: List[(NFAState[T], U)]
 }
 
+
 case class TokenizedAcceptStateAttr(priority: Int, token: String)
 
 trait TokenizedNFA extends NFA[CharCategory, TokenizedAcceptStateAttr] {
   def charTable: CharClassifyTable
 }
+
+class TokenizedNFATransition(val symbol: CharCategory, val target: TokenizedNFAState) extends NFATransition[CharCategory]
+
+class TokenizedNFAState(var transitions: List[TokenizedNFATransition]) extends NFAState[CharCategory]
 
 object TokenizedNFA {
 
@@ -57,8 +62,8 @@ object TokenizedNFA {
   def fromPattern(pattern: String, priority: Int = 0)(implicit symbolClass: NFASymbolClass[CharCategory]): TokenizedNFA = {
     import RegexAST._
 
-    class Transition(val symbol: CharCategory, val target: State) extends NFATransition[CharCategory]
-    class State(var transitions: List[Transition]) extends NFAState[CharCategory]
+    type State = TokenizedNFAState
+    type Transition = TokenizedNFATransition
 
     def iterate(tree: Tree): (State, State) = tree match {
       case Empty =>
