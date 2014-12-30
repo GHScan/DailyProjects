@@ -3,51 +3,51 @@ package lexical
 import scala.collection.mutable
 
 trait DFABuilder[T] {
-  def result: T
+  def result : T
 }
 
 final class IterativeDFABuilder[T] extends DFABuilder[TokenizedDFA] {
   outer =>
 
-  private var charTable: CharClassifyTable = null
-  private var init: T = _
-  private var dead: T = _
-  private var accepts: List[T] = Nil
-  private var func: (T, Char) => T = null
+  private var charTable : CharClassifyTable = null
+  private var init : T = _
+  private var dead : T = _
+  private var accepts : List[T] = Nil
+  private var func : (T, Char) => T = null
 
-  def charSet(chars: Seq[Char]) = {
+  def charSet(chars : Seq[Char]) = {
     val builder = new CharClassifyTableBuilder()
     chars.foreach { c => builder.addChars(List(c))}
     charTable = builder.result
     this
   }
 
-  def initialValue(value: T) = {
+  def initialValue(value : T) = {
     init = value
     this
   }
 
-  def deadValue(value: T) = {
+  def deadValue(value : T) = {
     dead = value
     this
   }
 
-  def acceptValue(value: T) = {
+  def acceptValue(value : T) = {
     accepts = value :: accepts
     this
   }
 
-  def iterateFunc(f: (T, Char) => T) = {
+  def iterateFunc(f : (T, Char) => T) = {
     func = f
     this
   }
 
-  def result: TokenizedDFA = {
+  def result : TokenizedDFA = {
     type State = TokenizedDFAState
     type Transition = TokenizedDFATransition
 
     val value2State = mutable.Map[T, State](outer.dead -> new State(Nil))
-    def getOrAddState(value: T): State = {
+    def getOrAddState(value : T) : State = {
       if (value2State.contains(value)) value2State(value)
       else {
         val state = new State(Nil)

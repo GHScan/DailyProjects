@@ -3,41 +3,41 @@ package lexical
 import scala.collection.mutable
 
 trait DFATransition[T] extends NFATransition[T] {
-  def target: DFAState[T]
+  def target : DFAState[T]
 }
 
 trait DFAState[T] extends NFAState[T] {
-  def transitions: List[DFATransition[T]]
+  def transitions : List[DFATransition[T]]
 }
 
 trait DFA[T, U] extends NFA[T, U] {
-  def start: DFAState[T]
+  def start : DFAState[T]
 
-  override def states: List[DFAState[T]] = super.states.asInstanceOf[List[DFAState[T]]]
+  override def states : List[DFAState[T]] = super.states.asInstanceOf[List[DFAState[T]]]
 
-  def accepts: List[DFAState[T]]
+  def accepts : List[DFAState[T]]
 
-  def acceptsAttr: List[(DFAState[T], U)]
+  def acceptsAttr : List[(DFAState[T], U)]
 
-  def dead: DFAState[T]
+  def dead : DFAState[T]
 }
 
 trait TokenizedDFA extends DFA[CharCategory, TokenizedAcceptStateAttr] with TokenizedNFA
 
-class TokenizedDFATransition(val symbol: CharCategory, val target: TokenizedDFAState) extends DFATransition[CharCategory]
+class TokenizedDFATransition(val symbol : CharCategory, val target : TokenizedDFAState) extends DFATransition[CharCategory]
 
-class TokenizedDFAState(var transitions: List[TokenizedDFATransition]) extends DFAState[CharCategory]
+class TokenizedDFAState(var transitions : List[TokenizedDFATransition]) extends DFAState[CharCategory]
 
 abstract class DFAEmulator[U](
-                               val start: Int,
-                               val acceptAttrs: Array[Option[U]],
-                               val transitions: Array[Array[Int]]) {
+                               val start : Int,
+                               val acceptAttrs : Array[Option[U]],
+                               val transitions : Array[Array[Int]]) {
 
-  override def equals(other: Any): Boolean = {
+  override def equals(other : Any) : Boolean = {
     other.isInstanceOf[DFAEmulator[U]] && other.asInstanceOf[DFAEmulator[U]].equals(this)
   }
 
-  def equals(other: DFAEmulator[U]): Boolean = {
+  def equals(other : DFAEmulator[U]) : Boolean = {
     (start == other.start
       && acceptAttrs.view == other.acceptAttrs.view
       && transitions.length == other.transitions.length
@@ -48,29 +48,29 @@ abstract class DFAEmulator[U](
 
   val dead = (states.filter(i => transitions(i).forall(_ == i)) ++ List(-1)).head
 
-  def states: Seq[Int] = 0 until transitions.length
+  def states : Seq[Int] = 0 until transitions.length
 }
 
 final class TokenizedDFAEmulator(
-                                  val charTable: CharClassifyTable,
-                                  start: Int,
-                                  acceptAttrs: Array[Option[TokenizedAcceptStateAttr]],
-                                  transitions: Array[Array[Int]]) extends DFAEmulator[TokenizedAcceptStateAttr](
+                                  val charTable : CharClassifyTable,
+                                  start : Int,
+                                  acceptAttrs : Array[Option[TokenizedAcceptStateAttr]],
+                                  transitions : Array[Array[Int]]) extends DFAEmulator[TokenizedAcceptStateAttr](
   start, acceptAttrs, transitions) {
   outer =>
 
-  override def equals(other: Any): Boolean = {
+  override def equals(other : Any) : Boolean = {
     other.isInstanceOf[TokenizedDFAEmulator] && other.asInstanceOf[TokenizedDFAEmulator].equals(this)
   }
 
-  def equals(other: TokenizedDFAEmulator): Boolean = {
+  def equals(other : TokenizedDFAEmulator) : Boolean = {
     charTable == other.charTable && super.equals(other)
   }
 
-  def dfa: TokenizedDFA = {
-    class Transition(val symbol: CharCategory, val target: State) extends DFATransition[CharCategory]
-    case class State(id: Int) extends DFAState[CharCategory] {
-      def transitions: List[Transition] = outer.transitions(id).toList.zipWithIndex.map {
+  def dfa : TokenizedDFA = {
+    class Transition(val symbol : CharCategory, val target : State) extends DFATransition[CharCategory]
+    case class State(id : Int) extends DFAState[CharCategory] {
+      def transitions : List[Transition] = outer.transitions(id).toList.zipWithIndex.map {
         case ((target, ci)) => new Transition(new CharCategory(ci), State(target))
       }
     }
@@ -86,7 +86,7 @@ final class TokenizedDFAEmulator(
     }
   }
 
-  def minimize(): TokenizedDFAEmulator = {
+  def minimize() : TokenizedDFAEmulator = {
 
     val state2Group = Array.fill(states.length)(0)
     var gid = 0
@@ -133,7 +133,7 @@ final class TokenizedDFAEmulator(
     new TokenizedDFAEmulator(charTable, state2Group(start), newAcceptAttrs, newTransitions)
   }
 
-  def compactCharMap(): TokenizedDFAEmulator = {
+  def compactCharMap() : TokenizedDFAEmulator = {
 
     val oldCategory2New = charTable.categories.groupBy(c => transitions.toList.map(t => t(c.value))).toList.map(_._2).sortBy(_.head.value).zipWithIndex.
       flatMap {
@@ -145,14 +145,14 @@ final class TokenizedDFAEmulator(
     new TokenizedDFAEmulator(newCharMap, start, acceptAttrs, transitions.map(t => newColumns.map(t)))
   }
 
-  def optimize(): TokenizedDFAEmulator = {
+  def optimize() : TokenizedDFAEmulator = {
     minimize().compactCharMap()
   }
 }
 
 object TokenizedDFAEmulator {
 
-  def apply(nfa: TokenizedNFAEmulator): TokenizedDFAEmulator = {
+  def apply(nfa : TokenizedNFAEmulator) : TokenizedDFAEmulator = {
 
     val stateSet2ID = mutable.Map[mutable.BitSet, Int]()
     val transitions = mutable.ArrayBuffer[Array[Int]]()

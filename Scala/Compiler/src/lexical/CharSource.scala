@@ -4,28 +4,28 @@ import java.io.{InputStream, InputStreamReader}
 import scala.io.Codec
 
 trait CharSource extends Iterator[Char] {
-  def rollback(): Unit
+  def rollback() : Unit
 }
 
-final class StringCharSource(str: String) extends CharSource {
+final class StringCharSource(str : String) extends CharSource {
   private var mOff = 0
 
-  def hasNext: Boolean = mOff < str.length
+  def hasNext : Boolean = mOff < str.length
 
-  def next(): Char = {
+  def next() : Char = {
     val c = str.charAt(mOff)
     mOff += 1
     c
   }
 
-  def rollback(): Unit = {
+  def rollback() : Unit = {
     assert(mOff > 0)
     mOff -= 1
   }
 
 }
 
-final class StreamCharSource(inputStream: InputStream, bufferSize: Int = 4096)(implicit val codec: Codec) extends CharSource {
+final class StreamCharSource(inputStream : InputStream, bufferSize : Int = 4096)(implicit val codec : Codec) extends CharSource {
 
   private val mBufferSize = utils.Func.round2PowerOf2(bufferSize)
   private val mDBufferSize = mBufferSize * 2
@@ -50,16 +50,16 @@ final class StreamCharSource(inputStream: InputStream, bufferSize: Int = 4096)(i
     mStart = (mOff - mBufferSize) & mDBufferMask
   }
 
-  def hasNext: Boolean = mEof == -1 || mOff != mEof
+  def hasNext : Boolean = mEof == -1 || mOff != mEof
 
-  def next(): Char = {
+  def next() : Char = {
     val c = mBuffer(mOff)
     mOff = (mOff + 1) & mDBufferMask
     if (mOff == mEnd) readNextChunk()
     c
   }
 
-  def rollback(): Unit = {
+  def rollback() : Unit = {
     assert(mOff != mStart)
     mOff = (mOff - 1) & mDBufferMask
   }

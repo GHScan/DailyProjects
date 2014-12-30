@@ -3,22 +3,22 @@ package lexical
 import scala.collection.mutable
 
 trait FATransition[T] {
-  def symbol: T
+  def symbol : T
 
-  def target: FAState[T]
+  def target : FAState[T]
 }
 
 trait FAState[T] {
-  def transitions: List[FATransition[T]]
+  def transitions : List[FATransition[T]]
 }
 
 trait FA[T] {
 
-  def start: FAState[T]
+  def start : FAState[T]
 
-  def states: List[FAState[T]] = _states
+  def states : List[FAState[T]] = _states
 
-  private lazy final val _states: List[FAState[T]] = {
+  private lazy final val _states : List[FAState[T]] = {
 
     var result = List[FAState[T]](start)
     val stateSet = mutable.Set[FAState[T]](start)
