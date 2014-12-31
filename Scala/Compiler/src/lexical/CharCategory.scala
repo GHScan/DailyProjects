@@ -9,9 +9,19 @@ object CharCategory {
 
 final class CharClassifyTable(val table : Array[CharCategory]) extends (Char => CharCategory) {
 
+  override def equals(other : Any) : Boolean = {
+    other.isInstanceOf[CharClassifyTable] && other.asInstanceOf[CharClassifyTable].equals(this)
+  }
+
+  def equals(other : CharClassifyTable) : Boolean = {
+    table.view == other.table.view
+  }
+
   def apply(c : Char) : CharCategory = table(c)
 
-  def unapply(category : CharCategory) : Option[List[Char]] = Some(chars.filter(table(_) == category))
+  def lookup(c : Char) : CharCategory = table(c)
+
+  def rlookup(category : CharCategory) : List[Char] = chars.filter(table(_) == category)
 
   lazy val chars : List[Char] = (0 until table.length).map(_.toChar).toList
   lazy val categories : List[CharCategory] = table.distinct.toList
@@ -31,12 +41,11 @@ final class CharClassifyTable(val table : Array[CharCategory]) extends (Char => 
     new CharClassifyTable(table.map(f))
   }
 
-  override def equals(other : Any) : Boolean = {
-    other.isInstanceOf[CharClassifyTable] && other.asInstanceOf[CharClassifyTable].equals(this)
-  }
-
-  def equals(other : CharClassifyTable) : Boolean = {
-    table.view == other.table.view
+  def union(other : CharClassifyTable) : CharClassifyTable = {
+    val builder = new CharClassifyTableBuilder()
+    for (c <- categories) builder.addChars(rlookup(c))
+    for (c <- other.categories) builder.addChars(other.rlookup(c))
+    builder.result
   }
 }
 

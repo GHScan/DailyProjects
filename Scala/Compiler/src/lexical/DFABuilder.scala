@@ -43,8 +43,8 @@ final class IterativeDFABuilder[T] extends DFABuilder[TokenizedDFA] {
   }
 
   def result : TokenizedDFA = {
-    type State = TokenizedDFAState
-    type Transition = TokenizedDFATransition
+    type State = SimpleDFAState[CharCategory]
+    type Transition = SimpleDFATransition[CharCategory]
 
     val value2State = mutable.Map[T, State](outer.dead -> new State(Nil))
     def getOrAddState(value : T) : State = {
@@ -53,7 +53,7 @@ final class IterativeDFABuilder[T] extends DFABuilder[TokenizedDFA] {
         val state = new State(Nil)
         value2State(value) = state
         charTable.categories.foreach { category =>
-          val target = if (category == charTable(0)) value2State(outer.dead) else getOrAddState(func(value, charTable.unapply(category).get.head))
+          val target = if (category == charTable(0)) value2State(outer.dead) else getOrAddState(func(value, charTable.rlookup(category).head))
           state.transitions = new Transition(category, target) :: state.transitions
         }
         state
@@ -61,15 +61,11 @@ final class IterativeDFABuilder[T] extends DFABuilder[TokenizedDFA] {
     }
     getOrAddState(init)
 
-    new TokenizedDFA {
-      def start = value2State(init)
-
-      val accepts = value2State.iterator.filter(p => outer.accepts.contains(p._1)).map(_._2).toList
-      val acceptsAttr = value2State.iterator.filter(p => outer.accepts.contains(p._1)).map(p => (p._2, new TokenizedAcceptStateAttr(0, p._1.toString))).toList
-
-      def dead = value2State(outer.dead)
-
-      def charTable = outer.charTable
-    }
+    new TokenizedDFA(
+      outer.charTable,
+      value2State(init),
+      value2State.iterator.filter(p => outer.accepts.contains(p._1)).map(_._2).toList,
+      value2State.iterator.filter(p => outer.accepts.contains(p._1)).map(p => (p._2, new TokenizedAcceptStateAttr(0, p._1.toString))).toList,
+      value2State(outer.dead))
   }
 }

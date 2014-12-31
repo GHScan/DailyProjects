@@ -1,14 +1,19 @@
 package lexical
 
 import scala.collection.mutable
+import scala.collection.immutable
 
 trait DFATransition[T] extends NFATransition[T] {
   def target : DFAState[T]
 }
 
+class SimpleDFATransition[T](val symbol : T, val target : DFAState[T]) extends DFATransition[T]
+
 trait DFAState[T] extends NFAState[T] {
   def transitions : List[DFATransition[T]]
 }
+
+class SimpleDFAState[T](var transitions : List[DFATransition[T]]) extends DFAState[T]
 
 trait DFA[T, U] extends NFA[T, U] {
   def start : DFAState[T]
@@ -20,19 +25,115 @@ trait DFA[T, U] extends NFA[T, U] {
   def acceptsAttr : List[(DFAState[T], U)]
 
   def dead : DFAState[T]
+
+  lazy val activeStates = states.diff(List(dead))
 }
 
-trait TokenizedDFA extends DFA[CharCategory, TokenizedAcceptStateAttr] with TokenizedNFA
+class TokenizedDFA(
+  override val charTable : CharClassifyTable,
+  override val start : DFAState[CharCategory],
+  override val accepts : List[DFAState[CharCategory]],
+  override val acceptsAttr : List[(DFAState[CharCategory], TokenizedAcceptStateAttr)],
+  val dead : DFAState[CharCategory])
+  extends TokenizedNFA(charTable, start, accepts, acceptsAttr)
+  with DFA[CharCategory, TokenizedAcceptStateAttr] {
 
-class TokenizedDFATransition(val symbol : CharCategory, val target : TokenizedDFAState) extends DFATransition[CharCategory]
+  import RegexAST._
 
-class TokenizedDFAState(var transitions : List[TokenizedDFATransition]) extends DFAState[CharCategory]
+  // Kleene construction
+  def toRegex2 : Tree = {
+    type State = DFAState[CharCategory]
+
+    assert(acceptsAttr.map(_._2).distinct.length == 1)
+
+    var pathMapPair = (mutable.Map[(State, State), Tree](), mutable.Map[(State, State), Tree]())
+    for (
+      s1 <- activeStates;
+      s2 <- activeStates
+    ) {
+      val path = s1.transitions.filter(_.target == s2).foldLeft[Tree](if (s1 == s2) Empty else null) { (path, t) =>
+        Chars(charTable.rlookup(t.symbol)) | path
+      }
+      pathMapPair._1((s1, s2)) = path
+    }
+
+    for (s0 <- activeStates) {
+      val prevMap = pathMapPair._1
+      val curMap = pathMapPair._2
+
+      for (
+        s1 <- activeStates;
+        s2 <- activeStates
+      ) {
+        curMap((s1, s2)) = prevMap(s1, s0) & (prevMap(s0, s0).kleeneStar & prevMap(s0, s2)) | prevMap(s1, s2)
+      }
+
+      pathMapPair = pathMapPair.swap
+    }
+
+    accepts.foldLeft[Tree](null) { (path, s) => path | pathMapPair._1((start, s))}
+  }
+
+  // States reducing
+  def toRegex : Tree = {
+    type State = DFAState[CharCategory]
+    type EdgeMap = immutable.Map[(State, State), Tree]
+
+    assert(acceptsAttr.map(_._2).distinct.length == 1)
+
+    def lookup(edgeMap : EdgeMap, s1 : State, s2 : State) : Tree = {
+      edgeMap.getOrElse((s1, s2), null)
+    }
+
+    def remove(edgeMap : EdgeMap, state : State) : EdgeMap = {
+      var newMap = edgeMap.filter(kv => kv._1._1 != state && kv._1._2 != state)
+      for (
+        predecessor <- edgeMap.iterator.filter(_._1._2 == state).map(_._1._1);
+        successor <- edgeMap.iterator.filter(_._1._1 == state).map(_._1._2)
+      ) {
+        val path = lookup(edgeMap, predecessor, state) & (lookup(edgeMap, state, state).kleeneStar & lookup(edgeMap, state, successor))
+        newMap = newMap.updated((predecessor, successor), path | lookup(edgeMap, predecessor, successor))
+      }
+      newMap
+    }
+
+    def iterate(start : State, accepts : List[State], edgeMap : EdgeMap) : List[Tree] = {
+      if (accepts.isEmpty) return Nil
+
+      val state = accepts.head
+      val privateEdgeMap = accepts.tail.foldLeft[EdgeMap](edgeMap)(remove)
+      val path = if (start == state) {
+        lookup(privateEdgeMap, start, state).kleeneStar
+      } else {
+        (lookup(privateEdgeMap, start, start) |
+          (lookup(privateEdgeMap, start, state) &
+            (lookup(privateEdgeMap, state, state).kleeneStar & lookup(privateEdgeMap, state, start)))).kleeneStar &
+          (lookup(privateEdgeMap, start, state) &
+            lookup(privateEdgeMap, state, state).kleeneStar)
+      }
+
+      path :: iterate(start, accepts.tail, remove(edgeMap, state))
+    }
+
+    val edgeMap : EdgeMap = (for (s1 <- activeStates; s2 <- activeStates) yield ((s1, s2), s1.transitions.filter(_.target == s2).foldLeft[Tree](null) {
+      (path, t) => Chars(charTable.rlookup(t.symbol)) | path
+    })).filter(_._2 != null).toMap
+    val edgeMapContainsStartAccepts = activeStates.diff(start :: accepts).foldLeft(edgeMap)(remove)
+
+    iterate(start, accepts, edgeMapContainsStartAccepts).foldRight[Tree](null)(_ | _)
+  }
+
+  def toRegexPattern2 : String = toRegex2.toPattern
+
+  def toRegexPattern : String = toRegex.toPattern
+
+}
 
 final class TokenizedDFAEmulator(
-                                  val charTable : CharClassifyTable,
-                                  val start : Int,
-                                  val acceptAttrs : Array[Option[TokenizedAcceptStateAttr]],
-                                  val transitions : Array[Array[Int]]) {
+  val charTable : CharClassifyTable,
+  val start : Int,
+  val acceptAttrs : Array[Option[TokenizedAcceptStateAttr]],
+  val transitions : Array[Array[Int]]) {
   outer =>
 
   override def equals(other : Any) : Boolean = {
@@ -60,16 +161,12 @@ final class TokenizedDFAEmulator(
         case ((target, ci)) => new Transition(new CharCategory(ci), State(target))
       }
     }
-    new TokenizedDFA {
-      def start = State(outer.start)
-
-      val accepts = outer.acceptAttrs.zipWithIndex.filter(_._1 != None).map(p => State(p._2)).toList
-      val acceptsAttr = acceptAttrs.toList.zipWithIndex.filter(_._1 != None).map(p => (State(p._2), p._1.get))
-
-      def dead = State(outer.dead)
-
-      def charTable = outer.charTable
-    }
+    new TokenizedDFA(
+      outer.charTable,
+      State(outer.start),
+      outer.acceptAttrs.zipWithIndex.filter(_._1 != None).map(p => State(p._2)).toList,
+      acceptAttrs.toList.zipWithIndex.filter(_._1 != None).map(p => (State(p._2), p._1.get)),
+      State(outer.dead))
   }
 
   def minimized : TokenizedDFAEmulator = {
@@ -119,6 +216,10 @@ final class TokenizedDFAEmulator(
     new TokenizedDFAEmulator(charTable, state2Group(start), newAcceptAttrs, newTransitions)
   }
 
+  def minimized2 : TokenizedDFAEmulator = {
+    toDFA.reversed.subset.reachable.reversed.subset.reachable.toEmulator.toDFAEmulator
+  }
+
   def charTableCompacted : TokenizedDFAEmulator = {
 
     val oldCategory2New = charTable.categories.groupBy(c => transitions.toList.map(t => t(c.value))).toList.map(_._2).sortBy(_.head.value).zipWithIndex.
@@ -132,6 +233,8 @@ final class TokenizedDFAEmulator(
   }
 
   def optimized : TokenizedDFAEmulator = minimized.charTableCompacted
+
+  def optimized2 : TokenizedDFAEmulator = minimized2.charTableCompacted
 }
 
 object TokenizedDFAEmulator {
