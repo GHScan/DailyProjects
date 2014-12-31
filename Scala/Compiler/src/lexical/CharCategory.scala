@@ -5,10 +5,6 @@ class CharCategory(val value : Int) extends AnyVal
 object CharCategory {
 
   val Empty = new CharCategory(-1)
-
-  implicit val nfaSymbolClass = new NFASymbolClass[CharCategory] {
-    val Empty = CharCategory.Empty
-  }
 }
 
 final class CharClassifyTable(val table : Array[CharCategory]) extends (Char => CharCategory) {
@@ -46,15 +42,15 @@ final class CharClassifyTable(val table : Array[CharCategory]) extends (Char => 
 
 class CharClassifyTableBuilder(size : Int = 128) {
 
-  private val mTable : Array[CharCategory] = Array.fill(size)(new CharCategory(0))
-  private var mNextCategory : Int = 0
+  private val table : Array[CharCategory] = Array.fill(size)(new CharCategory(0))
+  private var nextCategory : Int = 0
 
   def addChars(chars : Seq[Char]) : CharClassifyTableBuilder = {
-    chars.groupBy(mTable(_)).foreach {
+    chars.groupBy(table(_)).foreach {
       case (_, l) =>
-        mNextCategory += 1
+        nextCategory += 1
         l.foreach { c =>
-          mTable(c) = new CharCategory(mNextCategory)
+          table(c) = new CharCategory(nextCategory)
         }
     }
 
@@ -62,14 +58,14 @@ class CharClassifyTableBuilder(size : Int = 128) {
   }
 
   def result : CharClassifyTable = {
-    mNextCategory = 0
-    (0 until mTable.length).groupBy(mTable(_)).toList.map(_._2).sortBy(_.head).foreach { l =>
+    nextCategory = 0
+    (0 until table.length).groupBy(table(_)).toList.map(_._2).sortBy(_.head).foreach { l =>
       l.foreach { c =>
-        mTable(c) = new CharCategory(mNextCategory)
+        table(c) = new CharCategory(nextCategory)
       }
-      mNextCategory += 1
+      nextCategory += 1
     }
 
-    new CharClassifyTable(mTable)
+    new CharClassifyTable(table)
   }
 }

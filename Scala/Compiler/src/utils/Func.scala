@@ -4,7 +4,7 @@ object Func {
 
   def escape(s : String) : String = {
     import scala.reflect.runtime.universe._
-    Literal(Constant(s)).toString
+    Literal(Constant(s)).toString()
   }
 
   def round2PowerOf2(i : Int) : Int = {

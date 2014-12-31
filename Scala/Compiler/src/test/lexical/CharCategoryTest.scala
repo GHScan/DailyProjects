@@ -13,7 +13,7 @@ class CharCategoryTest extends FlatSpec with Matchers {
     cc.categories.length should equal(1)
   }
 
-  behavior of "CharCategory with 3 disintersect category"
+  behavior of "CharCategory with 3 distinct category"
   it should "map all to 0,1,2" in {
     val cc = new CharClassifyTableBuilder(128)
       .addChars("abc")

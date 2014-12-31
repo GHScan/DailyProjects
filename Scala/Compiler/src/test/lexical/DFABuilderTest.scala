@@ -26,7 +26,7 @@ class DFABuilderTest extends FlatSpec with Matchers {
 //      println(odfa.toRegexPattern)
 //    }
 //
-//    behavior of "DFA of 3 Multipler, in base2"
+//    behavior of "DFA of 3 Multiplier, in base2"
 //    it should "correct" in {
 //
 //      val N = 3

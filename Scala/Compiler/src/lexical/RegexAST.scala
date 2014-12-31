@@ -34,14 +34,14 @@ object RegexAST {
   }
 
   private lazy val characterClasses : List[(immutable.BitSet, String)] = List(
-    (immutable.BitSet(NoneWhitespaces.map(_.toInt) : _*), "\\S"),
-    (immutable.BitSet(NoneDigits.map(_.toInt) : _*), "\\D"),
-    (immutable.BitSet(NoneLetters.map(_.toInt) : _*), "\\A"),
-    (immutable.BitSet(NoneLetterOrDigits.map(_.toInt) : _*), "\\W"),
-    (immutable.BitSet(LetterOrDigits.map(_.toInt) : _*), "\\w"),
-    (immutable.BitSet(Letters.map(_.toInt) : _*), "\\a"),
-    (immutable.BitSet(Digits.map(_.toInt) : _*), "\\d"),
-    (immutable.BitSet(Whitespaces.map(_.toInt) : _*), "\\s"))
+    (NoneWhitespaces, "\\S"),
+    (NoneDigits, "\\D"),
+    (NoneLetters, "\\A"),
+    (NoneLetterOrDigits, "\\W"),
+    (LetterOrDigits, "\\w"),
+    (Letters, "\\a"),
+    (Digits, "\\d"),
+    (Whitespaces, "\\s")).map(p => (immutable.BitSet(p._1.map(_.toInt) : _*), p._2))
 
 
   implicit class RegexExtension(tree : Tree) {
@@ -180,3 +180,4 @@ object RegexAST {
   }
 
 }
+

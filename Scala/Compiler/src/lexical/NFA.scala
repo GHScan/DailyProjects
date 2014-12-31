@@ -2,10 +2,6 @@ package lexical
 
 import scala.collection.mutable
 
-trait NFASymbolClass[T] {
-  val Empty : T
-}
-
 trait NFATransition[T] extends FATransition[T] {
   def target : NFAState[T]
 }
@@ -71,7 +67,7 @@ object TokenizedNFA {
     (newTree, charTable)
   }
 
-  def fromPattern(pattern : String, priority : Int = 0)(implicit symbolClass : NFASymbolClass[CharCategory]) : TokenizedNFA = {
+  def fromPattern(pattern : String, priority : Int = 0, token : String = null) : TokenizedNFA = {
     import RegexAST._
 
     type State = TokenizedNFAState
@@ -80,28 +76,28 @@ object TokenizedNFA {
     def iterate(tree : Tree) : (State, State) = tree match {
       case Empty =>
         val accept = new State(Nil)
-        (new State(List(new Transition(symbolClass.Empty, accept))), accept)
+        (new State(List(new Transition(CharCategory.Empty, accept))), accept)
       case Chars(chars : Seq[_]) if chars.head.isInstanceOf[CharCategory] =>
         val accept = new State(Nil)
         (new State(chars.asInstanceOf[Seq[CharCategory]].map(symbol => new Transition(symbol, accept)).toList), accept)
       case KleeneStar(content) =>
         val (start, accept) = iterate(content)
         val accept2 = new State(Nil)
-        accept.transitions = new Transition(symbolClass.Empty, start) :: accept.transitions
-        accept.transitions = new Transition(symbolClass.Empty, accept2) :: accept.transitions
-        (new State(List(new Transition(symbolClass.Empty, start), new Transition(symbolClass.Empty, accept2))), accept2)
+        accept.transitions = new Transition(CharCategory.Empty, start) :: accept.transitions
+        accept.transitions = new Transition(CharCategory.Empty, accept2) :: accept.transitions
+        (new State(List(new Transition(CharCategory.Empty, start), new Transition(CharCategory.Empty, accept2))), accept2)
       case Concatenation(first, second) =>
         val (start1, accept1) = iterate(first)
         val (start2, accept2) = iterate(second)
-        accept1.transitions = new Transition(symbolClass.Empty, start2) :: accept1.transitions
+        accept1.transitions = new Transition(CharCategory.Empty, start2) :: accept1.transitions
         (start1, accept2)
       case Alternation(first, second) =>
         val (start1, accept1) = iterate(first)
         val (start2, accept2) = iterate(second)
-        val start = new State(List(start1, start2).map(new Transition(symbolClass.Empty, _)))
+        val start = new State(List(start1, start2).map(new Transition(CharCategory.Empty, _)))
         val accept = new State(Nil)
-        accept1.transitions = new Transition(symbolClass.Empty, accept) :: accept1.transitions
-        accept2.transitions = new Transition(symbolClass.Empty, accept) :: accept2.transitions
+        accept1.transitions = new Transition(CharCategory.Empty, accept) :: accept1.transitions
+        accept2.transitions = new Transition(CharCategory.Empty, accept) :: accept2.transitions
         (start, accept)
     }
 
@@ -110,24 +106,26 @@ object TokenizedNFA {
     new TokenizedNFA {
       val start : NFAState[CharCategory] = start1
       val accepts : List[NFAState[CharCategory]] = List(accept1)
-      val acceptsAttr : List[(NFAState[CharCategory], TokenizedAcceptStateAttr)] = List((accept1, TokenizedAcceptStateAttr(priority, pattern)))
+      val acceptsAttr : List[(NFAState[CharCategory], TokenizedAcceptStateAttr)] = List((accept1, TokenizedAcceptStateAttr(priority, if (token == null) pattern else token)))
       val charTable : CharClassifyTable = charTable1
     }
   }
 
 }
 
-abstract class NFAEmulator[T, U](
+final class TokenizedNFAEmulator(
+                                  val charTable : CharClassifyTable,
                                   val start : Int,
-                                  val acceptsAttr : Array[Option[U]],
-                                  val transitions : Array[List[(T, Int)]])(implicit symbolClass : NFASymbolClass[T]) {
+                                  val acceptsAttr : Array[Option[TokenizedAcceptStateAttr]],
+                                  val transitions : Array[List[(CharCategory, Int)]])  {
 
   override def equals(other : Any) : Boolean = {
-    other.isInstanceOf[NFAEmulator[T, U]] && other.asInstanceOf[NFAEmulator[T, U]].equals(this)
+    other.isInstanceOf[TokenizedNFAEmulator] && other.asInstanceOf[TokenizedNFAEmulator].equals(this)
   }
 
-  def equals(other : NFAEmulator[T, U]) : Boolean = {
-    (start == other.start
+  def equals(other : TokenizedNFAEmulator) : Boolean = {
+    (charTable == other.charTable
+      && start == other.start
       && acceptsAttr.view == other.acceptsAttr.view
       && transitions.view == other.transitions.view)
   }
@@ -143,7 +141,7 @@ abstract class NFAEmulator[T, U](
 
         for (
           trans <- transitions(state)
-          if symbolClass.Empty == trans._1
+          if CharCategory.Empty == trans._1
         ) {
           iterate(trans._2)
         }
@@ -162,7 +160,7 @@ abstract class NFAEmulator[T, U](
 
   def closure(state : Int) : mutable.BitSet = statesClosure(state)
 
-  def move(stateSet : mutable.BitSet, symbol : T) : mutable.BitSet = {
+  def move(stateSet : mutable.BitSet, symbol : CharCategory) : mutable.BitSet = {
     val result = mutable.BitSet()
 
     for (
@@ -174,23 +172,6 @@ abstract class NFAEmulator[T, U](
     }
 
     result
-  }
-
-}
-
-final class TokenizedNFAEmulator(
-                                  val charTable : CharClassifyTable,
-                                  start : Int,
-                                  acceptsAttr : Array[Option[TokenizedAcceptStateAttr]],
-                                  transitions : Array[List[(CharCategory, Int)]]) extends NFAEmulator[CharCategory, TokenizedAcceptStateAttr](
-  start, acceptsAttr, transitions) {
-
-  override def equals(other : Any) : Boolean = {
-    other.isInstanceOf[TokenizedNFAEmulator] && other.asInstanceOf[TokenizedNFAEmulator].equals(this)
-  }
-
-  def equals(other : TokenizedNFAEmulator) : Boolean = {
-    charTable == other.charTable && super.equals(this)
   }
 
   def toDFAEmulator : TokenizedDFAEmulator = TokenizedDFAEmulator.fromNFAEmulator(this)
