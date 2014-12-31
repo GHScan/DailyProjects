@@ -126,7 +126,6 @@ class TokenizedDFA(
   def toRegexPattern2 : String = toRegex2.toPattern
 
   def toRegexPattern : String = toRegex.toPattern
-
 }
 
 final class TokenizedDFAEmulator(

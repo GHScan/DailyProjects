@@ -41,7 +41,7 @@ trait NFA[T, U] extends FA[T] {
 class SimpleNFA[T, U](val start : NFAState[T], val accepts : List[NFAState[T]], val acceptsAttr : List[(NFAState[T], U)]) extends NFA[T, U]
 
 
-case class TokenizedAcceptStateAttr(priority : Int, token : String)
+case class TokenizedAcceptStateAttr(priority : Int, id : String)
 
 class TokenizedNFA(
   val charTable : CharClassifyTable,
@@ -108,7 +108,7 @@ object TokenizedNFA {
     new TokenizedNFA(newCharTable, newNFA.start, newNFA.accepts, newNFA.acceptsAttr)
   }
 
-  def fromPattern(pattern : String, priority : Int = 0, token : String = null) : TokenizedNFA = {
+  def fromPattern(pattern : String, priority : Int = 0, id : String = null) : TokenizedNFA = {
     import lexical.RegexAST._
 
     type State = SimpleNFAState[Seq[Char]]
@@ -146,7 +146,7 @@ object TokenizedNFA {
     fromCharsNFA(new SimpleNFA[Seq[Char], TokenizedAcceptStateAttr](
       start,
       List(accept),
-      List((accept, TokenizedAcceptStateAttr(priority, if (token == null) pattern else token)))))
+      List((accept, TokenizedAcceptStateAttr(priority, if (id == null) pattern else id)))))
   }
 
 }

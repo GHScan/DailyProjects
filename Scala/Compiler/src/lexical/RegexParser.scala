@@ -61,6 +61,6 @@ final class RegexParser extends RegexParsers with PackratParsers {
   def parse(pattern : String) : Tree = {
     val result = parseAll(alternationParser, pattern)
     if (result.successful) result.get
-    else throw new Exception(result.toString)
+    else throw new Exception(s"$pattern, $result")
   }
 }

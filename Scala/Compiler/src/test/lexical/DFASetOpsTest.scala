@@ -20,4 +20,5 @@ class DFASetOpsTest extends FlatSpec with Matchers {
 //    new DFAVisualizer(dfa).exportAsImage("nfa.jpg")
 //    new DFAVisualizer(rdfa).exportAsImage("rnfa.jpg")
 //  }
+
 }
