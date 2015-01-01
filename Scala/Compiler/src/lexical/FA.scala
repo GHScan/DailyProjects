@@ -12,13 +12,15 @@ trait IFAState[T] {
   def transitions : List[IFATransition[T]]
 }
 
+class FATransition[T](val symbol : T, val target : IFAState[T]) extends IFATransition[T]
+
+class FAState[T](var transitions : List[IFATransition[T]]) extends IFAState[T]
+
 trait IFA[T] {
 
   def start : IFAState[T]
 
-  def states : List[IFAState[T]] = _states
-
-  private lazy final val _states : List[IFAState[T]] = {
+  lazy val states : List[IFAState[T]] =  {
 
     var result = List[IFAState[T]](start)
     val stateSet = mutable.Set[IFAState[T]](start)

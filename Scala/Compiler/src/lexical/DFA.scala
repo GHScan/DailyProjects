@@ -3,54 +3,31 @@ package lexical
 import scala.collection.mutable
 import scala.collection.immutable
 
-trait IDFATransition[T] extends INFATransition[T] {
-  def target : IDFAState[T]
-}
-
-trait IDFAState[T] extends INFAState[T] {
-  def transitions : List[IDFATransition[T]]
-}
-
-class DFATransition[T](val symbol : T, val target : IDFAState[T]) extends IDFATransition[T]
-
-class DFAState[T](var transitions : List[IDFATransition[T]]) extends IDFAState[T]
-
 trait IDFA[T] extends INFA[T] {
-  def start : IDFAState[T]
-
-  override def states : List[IDFAState[T]] = super.states.asInstanceOf[List[IDFAState[T]]]
-
-  def accepts : List[IDFAState[T]]
-
-  def acceptsAttr : List[(IDFAState[T], IStateAttribute)]
-
-  def dead : IDFAState[T]
-
-  lazy val activeStates = states.diff(List(dead))
+  lazy val dead : IFAState[T] = (unaccepts.filter(s => s.transitions.forall(t => t.target == s)) ::: List(null)).head
+  lazy val actives = states.diff(List(dead))
 }
 
 class TokenizedDFA(
-  override val charTable : CharClassifyTable,
-  override val start : IDFAState[CharCategory],
-  override val accepts : List[IDFAState[CharCategory]],
-  override val acceptsAttr : List[(IDFAState[CharCategory], IStateAttribute)])
+  charTable : CharClassifyTable,
+  start : IFAState[CharCategory],
+  accepts : List[IFAState[CharCategory]],
+  acceptsAttr : List[(IFAState[CharCategory], IFAStateAttribute)])
   extends TokenizedNFA(charTable, start, accepts, acceptsAttr)
   with IDFA[CharCategory] {
-
-  val dead : IDFAState[CharCategory] = (states.diff(accepts).filter(s => s.transitions.forall(t => t.target == s)) ::: List(null)).head
 
   import RegexAST._
 
   // Kleene construction
   def toRegex2 : Tree = {
-    type State = IDFAState[CharCategory]
+    type State = IFAState[CharCategory]
 
     assert(acceptsAttr.map(_._2).distinct.length == 1)
 
     var pathMapPair = (mutable.Map[(State, State), Tree](), mutable.Map[(State, State), Tree]())
     for (
-      s1 <- activeStates;
-      s2 <- activeStates
+      s1 <- actives;
+      s2 <- actives
     ) {
       val path = s1.transitions.filter(_.target == s2).foldLeft[Tree](if (s1 == s2) Empty else null) { (path, t) =>
         Chars(charTable.rlookup(t.symbol)) | path
@@ -58,13 +35,13 @@ class TokenizedDFA(
       pathMapPair._1((s1, s2)) = path
     }
 
-    for (s0 <- activeStates) {
+    for (s0 <- actives) {
       val prevMap = pathMapPair._1
       val curMap = pathMapPair._2
 
       for (
-        s1 <- activeStates;
-        s2 <- activeStates
+        s1 <- actives;
+        s2 <- actives
       ) {
         curMap((s1, s2)) = prevMap(s1, s0) & (prevMap(s0, s0).kleeneStar & prevMap(s0, s2)) | prevMap(s1, s2)
       }
@@ -77,7 +54,7 @@ class TokenizedDFA(
 
   // States reducing
   def toRegex : Tree = {
-    type State = IDFAState[CharCategory]
+    type State = IFAState[CharCategory]
     type EdgeMap = immutable.Map[(State, State), Tree]
 
     assert(acceptsAttr.map(_._2).distinct.length == 1)
@@ -116,10 +93,10 @@ class TokenizedDFA(
       path :: iterate(start, accepts.tail, remove(edgeMap, state))
     }
 
-    val edgeMap : EdgeMap = (for (s1 <- activeStates; s2 <- activeStates) yield ((s1, s2), s1.transitions.filter(_.target == s2).foldLeft[Tree](null) {
+    val edgeMap : EdgeMap = (for (s1 <- actives; s2 <- actives) yield ((s1, s2), s1.transitions.filter(_.target == s2).foldLeft[Tree](null) {
       (path, t) => Chars(charTable.rlookup(t.symbol)) | path
     })).filter(_._2 != null).toMap
-    val edgeMapContainsStartAccepts = activeStates.diff(start :: accepts).foldLeft(edgeMap)(remove)
+    val edgeMapContainsStartAccepts = actives.diff(start :: accepts).foldLeft(edgeMap)(remove)
 
     iterate(start, accepts, edgeMapContainsStartAccepts).foldRight[Tree](null)(_ | _)
   }
@@ -130,8 +107,7 @@ class TokenizedDFA(
 
   def complement : TokenizedDFA = {
     val attr = acceptsAttr.map(_._2).distinct.ensuring(_.length == 1).head
-    val newAccepts = states.diff(accepts)
-    new TokenizedDFA(charTable, start, newAccepts, newAccepts.map((_, attr)))
+    new TokenizedDFA(charTable, start, unaccepts, unaccepts.map((_, attr)))
   }
 
   def |(other : TokenizedDFA) : TokenizedDFA = {
@@ -150,10 +126,11 @@ class TokenizedDFA(
 final class TokenizedDFAEmulator(
   val charTable : CharClassifyTable,
   val start : Int,
-  val acceptAttrs : Array[IStateAttribute],
+  val acceptAttrs : Array[IFAStateAttribute],
   val transitions : Array[Array[Int]]) {
   outer =>
 
+  val states : Seq[Int] = 0 until transitions.length
   val dead = (states.filter(i => acceptAttrs(i) == null && transitions(i).forall(_ == i)) ++ List(-1)).head
 
   override def equals(other : Any) : Boolean = {
@@ -170,11 +147,9 @@ final class TokenizedDFAEmulator(
     })
   }
 
-  def states : Seq[Int] = 0 until transitions.length
-
   def toDFA : TokenizedDFA = {
-    class Transition(val symbol : CharCategory, val target : State) extends IDFATransition[CharCategory]
-    case class State(id : Int) extends IDFAState[CharCategory] {
+    class Transition(val symbol : CharCategory, val target : State) extends IFATransition[CharCategory]
+    case class State(id : Int) extends IFAState[CharCategory] {
       def transitions : List[Transition] = outer.transitions(id).toList.zipWithIndex.map {
         case ((target, ci)) => new Transition(new CharCategory(ci), State(target))
       }

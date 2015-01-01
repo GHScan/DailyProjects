@@ -43,8 +43,8 @@ final class IterativeDFABuilder[T] extends IDFABuilder[TokenizedDFA] {
   }
 
   def result : TokenizedDFA = {
-    type State = DFAState[CharCategory]
-    type Transition = DFATransition[CharCategory]
+    type State = FAState[CharCategory]
+    type Transition = FATransition[CharCategory]
 
     val value2State = mutable.Map[T, State](outer.dead -> new State(Nil))
     def getOrAddState(value : T) : State = {
@@ -65,6 +65,6 @@ final class IterativeDFABuilder[T] extends IDFABuilder[TokenizedDFA] {
       outer.charTable,
       value2State(init),
       value2State.iterator.filter(p => outer.accepts.contains(p._1)).map(_._2).toList,
-      value2State.iterator.filter(p => outer.accepts.contains(p._1)).map(p => (p._2, new StateAttribute(0, p._1.toString))).toList)
+      value2State.iterator.filter(p => outer.accepts.contains(p._1)).map(p => (p._2, new FAStateAttribute(0, p._1.toString))).toList)
   }
 }

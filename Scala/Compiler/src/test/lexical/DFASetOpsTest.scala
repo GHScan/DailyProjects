@@ -1,6 +1,6 @@
 package test.lexical
 
-import lexical.{StateAttribute, NFAVisualizer, DFAVisualizer, TokenizedNFA}
+import lexical._
 import org.scalatest.{Matchers, FlatSpec}
 
 class DFASetOpsTest extends FlatSpec with Matchers {
@@ -31,18 +31,18 @@ class DFASetOpsTest extends FlatSpec with Matchers {
 
 //  behavior of "DFA intersect"
 //  it should "correct" in {
-//    val dfa1 = TokenizedNFA.fromPattern("""\d+|for|if""", StateAttribute.Default).subset
-//    val dfa2 = TokenizedNFA.fromPattern("""[a-z]+|12|34""", StateAttribute.Default).subset
+//    val dfa1 = TokenizedNFA.fromPattern("""\d+|for|if""", FAStateAttribute.Default).subset
+//    val dfa2 = TokenizedNFA.fromPattern("""[a-z]+|12|34""", FAStateAttribute.Default).subset
 //    val intersect = (dfa1 & dfa2).toEmulator.toDFAEmulator.optimized.toDFA
 //    new DFAVisualizer(dfa1).exportAsImage("dfa1.jpg")
 //    new DFAVisualizer(dfa2).exportAsImage("dfa2.jpg")
 //    new DFAVisualizer(intersect).exportAsImage("dfai.jpg")
 //  }
-
+//
 //  behavior of "DFA diff"
 //    it should "correct" in {
-//      val dfa1 = TokenizedNFA.fromPattern("""\d+|for|if""", StateAttribute.Default).subset
-//      val dfa2 = TokenizedNFA.fromPattern("""[a-z]+|12""", StateAttribute.Default).subset
+//      val dfa1 = TokenizedNFA.fromPattern("""\d+|for|if""", FAStateAttribute.Default).subset
+//      val dfa2 = TokenizedNFA.fromPattern("""[a-z]+|12""", FAStateAttribute.Default).subset
 //      val diff = (dfa1 - dfa2).toEmulator.toDFAEmulator.optimized.toDFA
 //      new DFAVisualizer(dfa1).exportAsImage("dfa1.jpg")
 //      new DFAVisualizer(dfa2).exportAsImage("dfa2.jpg")

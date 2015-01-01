@@ -45,7 +45,7 @@ final class FileTokenBuilder extends ITokenBuilder {
 
 trait IScanner extends Iterator[IToken]
 
-class TokenStateAttribute(val priority : Int, val id : String, val handler : String => Any) extends IStateAttribute {
+class TokenFAStateAttribute(val priority : Int, val id : String, val lexemeHandler : String => Any) extends IFAStateAttribute {
   override def toString = id
 }
 
@@ -55,8 +55,8 @@ trait ScannerBuilder {
   private final var nextPriority = 0
   private final var regexNFAs : List[TokenizedNFA] = Nil
 
-  def token(id : String, pattern : String, handler : String => Any = identity) : this.type = {
-    regexNFAs = TokenizedNFA.fromPattern(pattern, new TokenStateAttribute(nextPriority, id, handler)) :: regexNFAs
+  def token(id : String, pattern : String, lexemeHandler : String => Any = identity) : this.type = {
+    regexNFAs = TokenizedNFA.fromPattern(pattern, new TokenFAStateAttribute(nextPriority, id, lexemeHandler)) :: regexNFAs
     nextPriority -= 1
     this
   }
