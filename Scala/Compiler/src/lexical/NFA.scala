@@ -50,7 +50,7 @@ class TokenizedNFA(
     new TokenizedNFAEmulator(
       charTable,
       state2ID(start),
-      state2ID.toList.sortBy(_._2).map { case ((state, _)) => acceptsAttr.find(_._1 == state).map(_._2).getOrElse(null)}.toArray,
+      state2ID.toList.sortBy(_._2).map { case ((state, _)) => acceptsAttr.find(_._1 == state).map(_._2).orNull}.toArray,
       state2ID.toList.sortBy(_._2).map {
         case ((state, _)) => state.transitions.map { t => (t.symbol, state2ID(t.target))}
       }.toArray)

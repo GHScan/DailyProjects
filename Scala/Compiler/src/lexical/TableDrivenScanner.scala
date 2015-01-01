@@ -31,7 +31,7 @@ private final class TableDrivenScanner(
 
     for (_ <- matchLen until len) source.rollback()
 
-    if (matchLen == 0) tokenBuilder.error(strBuilder.toString)
+    if (matchLen == 0) tokenBuilder.error(strBuilder.toString())
     else {
       val attr = dfaEmulator.acceptAttrs(matchState).asInstanceOf[TokenFAStateAttribute]
       val lexeme = strBuilder.substring(0, matchLen)
