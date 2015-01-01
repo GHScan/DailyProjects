@@ -3,46 +3,45 @@ package lexical
 import scala.collection.mutable
 import scala.collection.immutable
 
-trait DFATransition[T] extends NFATransition[T] {
-  def target : DFAState[T]
+trait IDFATransition[T] extends INFATransition[T] {
+  def target : IDFAState[T]
 }
 
-class SimpleDFATransition[T](val symbol : T, val target : DFAState[T]) extends DFATransition[T]
-
-trait DFAState[T] extends NFAState[T] {
-  def transitions : List[DFATransition[T]]
+trait IDFAState[T] extends INFAState[T] {
+  def transitions : List[IDFATransition[T]]
 }
 
-class SimpleDFAState[T](var transitions : List[DFATransition[T]]) extends DFAState[T]
+class DFATransition[T](val symbol : T, val target : IDFAState[T]) extends IDFATransition[T]
+class DFAState[T](var transitions : List[IDFATransition[T]]) extends IDFAState[T]
 
-trait DFA[T, U] extends NFA[T, U] {
-  def start : DFAState[T]
+trait IDFA[T] extends INFA[T] {
+  def start : IDFAState[T]
 
-  override def states : List[DFAState[T]] = super.states.asInstanceOf[List[DFAState[T]]]
+  override def states : List[IDFAState[T]] = super.states.asInstanceOf[List[IDFAState[T]]]
 
-  def accepts : List[DFAState[T]]
+  def accepts : List[IDFAState[T]]
 
-  def acceptsAttr : List[(DFAState[T], U)]
+  def acceptsAttr : List[(IDFAState[T], IStateAttribute)]
 
-  def dead : DFAState[T]
+  def dead : IDFAState[T]
 
   lazy val activeStates = states.diff(List(dead))
 }
 
 class TokenizedDFA(
   override val charTable : CharClassifyTable,
-  override val start : DFAState[CharCategory],
-  override val accepts : List[DFAState[CharCategory]],
-  override val acceptsAttr : List[(DFAState[CharCategory], TokenizedAcceptStateAttr)],
-  val dead : DFAState[CharCategory])
+  override val start : IDFAState[CharCategory],
+  override val accepts : List[IDFAState[CharCategory]],
+  override val acceptsAttr : List[(IDFAState[CharCategory], IStateAttribute)],
+  val dead : IDFAState[CharCategory])
   extends TokenizedNFA(charTable, start, accepts, acceptsAttr)
-  with DFA[CharCategory, TokenizedAcceptStateAttr] {
+  with IDFA[CharCategory] {
 
   import RegexAST._
 
   // Kleene construction
   def toRegex2 : Tree = {
-    type State = DFAState[CharCategory]
+    type State = IDFAState[CharCategory]
 
     assert(acceptsAttr.map(_._2).distinct.length == 1)
 
@@ -76,7 +75,7 @@ class TokenizedDFA(
 
   // States reducing
   def toRegex : Tree = {
-    type State = DFAState[CharCategory]
+    type State = IDFAState[CharCategory]
     type EdgeMap = immutable.Map[(State, State), Tree]
 
     assert(acceptsAttr.map(_._2).distinct.length == 1)
@@ -131,7 +130,7 @@ class TokenizedDFA(
 final class TokenizedDFAEmulator(
   val charTable : CharClassifyTable,
   val start : Int,
-  val acceptAttrs : Array[Option[TokenizedAcceptStateAttr]],
+  val acceptAttrs : Array[IStateAttribute],
   val transitions : Array[Array[Int]]) {
   outer =>
 
@@ -154,8 +153,8 @@ final class TokenizedDFAEmulator(
   def states : Seq[Int] = 0 until transitions.length
 
   def toDFA : TokenizedDFA = {
-    class Transition(val symbol : CharCategory, val target : State) extends DFATransition[CharCategory]
-    case class State(id : Int) extends DFAState[CharCategory] {
+    class Transition(val symbol : CharCategory, val target : State) extends IDFATransition[CharCategory]
+    case class State(id : Int) extends IDFAState[CharCategory] {
       def transitions : List[Transition] = outer.transitions(id).toList.zipWithIndex.map {
         case ((target, ci)) => new Transition(new CharCategory(ci), State(target))
       }
@@ -163,8 +162,8 @@ final class TokenizedDFAEmulator(
     new TokenizedDFA(
       outer.charTable,
       State(outer.start),
-      outer.acceptAttrs.zipWithIndex.filter(_._1 != None).map(p => State(p._2)).toList,
-      acceptAttrs.toList.zipWithIndex.filter(_._1 != None).map(p => (State(p._2), p._1.get)),
+      outer.acceptAttrs.toList.zipWithIndex.filter(_._1 != null).map(p => State(p._2)),
+      acceptAttrs.toList.zipWithIndex.filter(_._1 != null).map(p => (State(p._2), p._1)),
       State(outer.dead))
   }
 
@@ -264,13 +263,13 @@ object TokenizedDFAEmulator {
     val start = stateSet2ID.filter(p => p._1.contains(nfa.start)).map(_._2).ensuring(_.size == 1).head
     val accept2Attr = stateSet2ID.toList.map { case (set, id) => (set & nfa.acceptSet, id)}.filter(_._1.nonEmpty).map {
       case (set, id) =>
-        (id, nfa.acceptsAttr(set.toList.maxBy { x => nfa.acceptsAttr(x).get.priority}).get)
+        (id, nfa.acceptsAttr(set.maxBy { x => nfa.acceptsAttr(x).priority}))
     }.toMap
 
     new TokenizedDFAEmulator(
       nfa.charTable,
       start,
-      (0 until transitions.length).map(accept2Attr.get).toArray,
+      (0 until transitions.length).map(accept2Attr.getOrElse(_, null)).toArray,
       transitions.toArray)
 
   }

@@ -3,11 +3,11 @@ package lexical
 import java.io.{InputStream, InputStreamReader}
 import scala.io.Codec
 
-trait CharSource extends Iterator[Char] {
+trait ICharSource extends Iterator[Char] {
   def rollback() : Unit
 }
 
-final class StringCharSource(str : String) extends CharSource {
+final class StringCharSource(str : String) extends ICharSource {
   private var off = 0
 
   def hasNext : Boolean = off < str.length
@@ -25,11 +25,11 @@ final class StringCharSource(str : String) extends CharSource {
 
 }
 
-final class StreamCharSource(inputStream : InputStream, bufferSize : Int = 4096)(implicit val codec : Codec) extends CharSource {
+final class StreamCharSource(inputStream : InputStream, bufferSize : Int = 4096)(implicit val codec : Codec) extends ICharSource {
 
-  private final val BUFF_SIZE = utils.Func.round2PowerOf2(bufferSize)
-  private final val DBUFF_SIZE = BUFF_SIZE * 2
-  private final val DBUFF_MASK = DBUFF_SIZE - 1
+  private val BUFF_SIZE = utils.Func.round2PowerOf2(bufferSize)
+  private val DBUFF_SIZE = BUFF_SIZE * 2
+  private val DBUFF_MASK = DBUFF_SIZE - 1
   private val reader = new InputStreamReader(inputStream, codec.decoder)
   private val buffer = new Array[Char](DBUFF_SIZE)
   private var off = 0

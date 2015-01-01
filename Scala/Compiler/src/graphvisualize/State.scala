@@ -8,23 +8,23 @@ object Shape {
   val Record = "record"
 }
 
-trait State {
+trait IState {
   def shape = Shape.Circle
   def label : String
   def transitions : Seq[(String, Any)]
 
   def exportAsImage(imgPath : String) {
-    val state2ID = mutable.Map[State, Int]()
-    var foundStates = Set[State]()
+    val state2ID = mutable.Map[IState, Int]()
+    var foundStates = Set[IState]()
     val edgeStrings = new StringBuilder()
 
-    def getStateID(state : State) = state2ID.getOrElseUpdate(state, state2ID.size)
+    def getStateID(state : IState) = state2ID.getOrElseUpdate(state, state2ID.size)
 
-    def traverse(state : State) {
+    def traverse(state : IState) {
       if (foundStates.contains(state)) return
       foundStates += state
       state.transitions.foreach {
-        case (edgeLabel, target : State) =>
+        case (edgeLabel, target : IState) =>
           edgeStrings ++= s"""n_${getStateID(state)}->n_${getStateID(target)}[label=${utils.Func.escape(edgeLabel)}];\n"""
           traverse(target)
         case _ =>

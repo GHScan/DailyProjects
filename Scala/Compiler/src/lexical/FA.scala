@@ -2,26 +2,26 @@ package lexical
 
 import scala.collection.mutable
 
-trait FATransition[T] {
+trait IFATransition[T] {
   def symbol : T
 
-  def target : FAState[T]
+  def target : IFAState[T]
 }
 
-trait FAState[T] {
-  def transitions : List[FATransition[T]]
+trait IFAState[T] {
+  def transitions : List[IFATransition[T]]
 }
 
-trait FA[T] {
+trait IFA[T] {
 
-  def start : FAState[T]
+  def start : IFAState[T]
 
-  def states : List[FAState[T]] = _states
+  def states : List[IFAState[T]] = _states
 
-  private lazy final val _states : List[FAState[T]] = {
+  private lazy final val _states : List[IFAState[T]] = {
 
-    var result = List[FAState[T]](start)
-    val stateSet = mutable.Set[FAState[T]](start)
+    var result = List[IFAState[T]](start)
+    val stateSet = mutable.Set[IFAState[T]](start)
 
     var workList = List(start)
     while (workList.nonEmpty) {

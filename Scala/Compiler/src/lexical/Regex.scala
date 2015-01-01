@@ -1,6 +1,6 @@
 package lexical
 
-trait Regex {
+trait IRegex {
 
   def matchPrefix(s : String) : String
 
@@ -10,13 +10,14 @@ trait Regex {
 object Regex {
 
   def patternEquals(pattern1 : String, pattern2 : String) : Boolean = {
-    TokenizedNFA.fromPattern(pattern1, 0, "").toEmulator.toDFAEmulator.optimized.toDFA.toEmulator ==
-      TokenizedNFA.fromPattern(pattern2, 0, "").toEmulator.toDFAEmulator.optimized.toDFA.toEmulator
+    val attr = new StateAttribute(0, "")
+    TokenizedNFA.fromPattern(pattern1, attr).toEmulator.toDFAEmulator.optimized.toDFA.toEmulator ==
+      TokenizedNFA.fromPattern(pattern2, attr).toEmulator.toDFAEmulator.optimized.toDFA.toEmulator
   }
 
 }
 
-final class NFARegex(pattern : String) extends Regex {
+final class NFARegex(pattern : String) extends IRegex {
   val nfa = TokenizedNFA.fromPattern(pattern).toEmulator
 
   def matchPrefix(s : String) : String = {
@@ -42,7 +43,7 @@ final class NFARegex(pattern : String) extends Regex {
   }
 }
 
-final class DFARegex(pattern : String) extends Regex {
+final class DFARegex(pattern : String) extends IRegex {
   val dfa = TokenizedNFA.fromPattern(pattern).toEmulator.toDFAEmulator.optimized
 
   def matchPrefix(s : String) : String = {
@@ -60,7 +61,7 @@ final class DFARegex(pattern : String) extends Regex {
       state = dfa.transitions(state)(category.value)
       result += c
 
-      if (dfa.acceptAttrs(state) != None) matchLen = len
+      if (dfa.acceptAttrs(state) != null) matchLen = len
     }
 
     for (_ <- matchLen until len) source.rollback()

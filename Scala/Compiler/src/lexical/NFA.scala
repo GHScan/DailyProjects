@@ -2,35 +2,43 @@ package lexical
 
 import scala.collection.mutable
 
-trait NFATransition[T] extends FATransition[T] {
-  def target : NFAState[T]
+trait INFATransition[T] extends IFATransition[T] {
+  def target : INFAState[T]
 }
 
-class SimpleNFATransition[T](val symbol : T, val target : NFAState[T]) extends NFATransition[T]
-
-trait NFAState[T] extends FAState[T] {
-  def transitions : List[NFATransition[T]]
+trait INFAState[T] extends IFAState[T] {
+  def transitions : List[INFATransition[T]]
 }
 
-class SimpleNFAState[T](var transitions : List[NFATransition[T]]) extends NFAState[T]
+trait IStateAttribute {
+  def priority : Int
+}
 
-trait NFA[T, U] extends FA[T] {
+class StateAttribute(val priority : Int, val str : String) extends IStateAttribute {
+  override def toString = str
+}
+
+class NFATransition[T](val symbol : T, val target : INFAState[T]) extends INFATransition[T]
+
+class NFAState[T](var transitions : List[INFATransition[T]]) extends INFAState[T]
+
+trait INFA[T] extends IFA[T] {
   outer =>
 
-  def start : NFAState[T]
+  def start : INFAState[T]
 
-  override def states : List[NFAState[T]] = super.states.asInstanceOf[List[NFAState[T]]]
+  override def states : List[INFAState[T]] = super.states.asInstanceOf[List[INFAState[T]]]
 
-  def accepts : List[NFAState[T]]
+  def accepts : List[INFAState[T]]
 
-  def acceptsAttr : List[(NFAState[T], U)]
+  def acceptsAttr : List[(INFAState[T], IStateAttribute)]
 
-  def transitionsMapped[T2](f : T => Iterable[T2]) : NFA[T2, U] = {
-    val state2NewState = states.map(s => (s, new SimpleNFAState[T2](Nil))).toMap
+  def transitionsMapped[T2](f : T => Iterable[T2]) : INFA[T2] = {
+    val state2NewState = states.map(s => (s, new NFAState[T2](Nil))).toMap
     for ((s, ns) <- state2NewState) {
-      ns.transitions = s.transitions.flatMap(t => f(t.symbol).map(sym => new SimpleNFATransition[T2](sym, state2NewState(t.target))))
+      ns.transitions = s.transitions.flatMap(t => f(t.symbol).map(sym => new NFATransition[T2](sym, state2NewState(t.target))))
     }
-    new SimpleNFA[T2, U](
+    new NFA[T2](
       state2NewState(outer.start),
       outer.accepts.map(state2NewState),
       outer.acceptsAttr.map(p => (state2NewState(p._1), p._2))
@@ -38,16 +46,13 @@ trait NFA[T, U] extends FA[T] {
   }
 }
 
-class SimpleNFA[T, U](val start : NFAState[T], val accepts : List[NFAState[T]], val acceptsAttr : List[(NFAState[T], U)]) extends NFA[T, U]
-
-
-case class TokenizedAcceptStateAttr(priority : Int, id : String)
+class NFA[T](val start : INFAState[T], val accepts : List[INFAState[T]], val acceptsAttr : List[(INFAState[T], IStateAttribute)]) extends INFA[T]
 
 class TokenizedNFA(
   val charTable : CharClassifyTable,
-  val start : NFAState[CharCategory],
-  val accepts : List[NFAState[CharCategory]],
-  val acceptsAttr : List[(NFAState[CharCategory], TokenizedAcceptStateAttr)]) extends NFA[CharCategory, TokenizedAcceptStateAttr] {
+  val start : INFAState[CharCategory],
+  val accepts : List[INFAState[CharCategory]],
+  val acceptsAttr : List[(INFAState[CharCategory], IStateAttribute)]) extends INFA[CharCategory] {
   outer =>
 
   def toEmulator : TokenizedNFAEmulator = {
@@ -55,13 +60,13 @@ class TokenizedNFA(
     new TokenizedNFAEmulator(
       charTable,
       state2ID(start),
-      state2ID.toList.sortBy(_._2).map { case ((state, _)) => acceptsAttr.find(_._1 == state).map(_._2)}.toArray,
+      state2ID.toList.sortBy(_._2).map { case ((state, _)) => acceptsAttr.find(_._1 == state).map(_._2).getOrElse(null)}.toArray,
       state2ID.toList.sortBy(_._2).map {
         case ((state, _)) => state.transitions.map { t => (t.symbol, state2ID(t.target))}
       }.toArray)
   }
 
-  final private def toCharsNFA : NFA[Seq[Char], TokenizedAcceptStateAttr] = {
+  final private def toCharsNFA : INFA[Seq[Char]] = {
     transitionsMapped[Seq[Char]] { category =>
       List(if (category == CharCategory.Empty) Nil else charTable.rlookup(category))
     }
@@ -70,21 +75,21 @@ class TokenizedNFA(
   def |(other : TokenizedNFA) : TokenizedNFA = {
     val nfa1 = toCharsNFA
     val nfa2 = other.toCharsNFA
-    val newStart = new SimpleNFAState[Seq[Char]](List(
-      new SimpleNFATransition[Seq[Char]](Nil, nfa1.start),
-      new SimpleNFATransition[Seq[Char]](Nil, nfa2.start)))
-    TokenizedNFA.fromCharsNFA(new SimpleNFA(newStart, nfa1.accepts ++ nfa2.accepts, nfa1.acceptsAttr ++ nfa2.acceptsAttr))
+    val newStart = new NFAState[Seq[Char]](List(
+      new NFATransition[Seq[Char]](Nil, nfa1.start),
+      new NFATransition[Seq[Char]](Nil, nfa2.start)))
+    TokenizedNFA.fromCharsNFA(new NFA(newStart, nfa1.accepts ++ nfa2.accepts, nfa1.acceptsAttr ++ nfa2.acceptsAttr))
   }
 
   def reversed : TokenizedNFA = {
     val attr = acceptsAttr.map(_._2).distinct.ensuring(_.length == 1).head
 
-    val state2New = states.map(s => (s, new SimpleNFAState[CharCategory](Nil))).toMap
+    val state2New = states.map(s => (s, new NFAState[CharCategory](Nil))).toMap
     for (s <- states; t <- s.transitions) {
       val newTarget = state2New(t.target)
-      newTarget.transitions = new SimpleNFATransition[CharCategory](t.symbol, state2New(s)) :: newTarget.transitions
+      newTarget.transitions = new NFATransition[CharCategory](t.symbol, state2New(s)) :: newTarget.transitions
     }
-    val newStart = new SimpleNFAState[CharCategory](accepts.map(s => new SimpleNFATransition[CharCategory](CharCategory.Empty, state2New(s))))
+    val newStart = new NFAState[CharCategory](accepts.map(s => new NFATransition[CharCategory](CharCategory.Empty, state2New(s))))
 
     new TokenizedNFA(charTable, newStart, List(state2New(start)), List((state2New(start), attr)))
   }
@@ -98,7 +103,7 @@ class TokenizedNFA(
 
 object TokenizedNFA {
 
-  private def fromCharsNFA(nfa : NFA[Seq[Char], TokenizedAcceptStateAttr]) : TokenizedNFA = {
+  private def fromCharsNFA(nfa : INFA[Seq[Char]]) : TokenizedNFA = {
     val builder = new CharClassifyTableBuilder()
     for (s <- nfa.states; t <- s.transitions) {
       builder.addChars(t.symbol)
@@ -108,11 +113,11 @@ object TokenizedNFA {
     new TokenizedNFA(newCharTable, newNFA.start, newNFA.accepts, newNFA.acceptsAttr)
   }
 
-  def fromPattern(pattern : String, priority : Int = 0, id : String = null) : TokenizedNFA = {
+  def fromPattern(pattern : String, attr : IStateAttribute = null) : TokenizedNFA = {
     import lexical.RegexAST._
 
-    type State = SimpleNFAState[Seq[Char]]
-    type Transition = SimpleNFATransition[Seq[Char]]
+    type State = NFAState[Seq[Char]]
+    type Transition = NFATransition[Seq[Char]]
 
     def iterate(tree : Tree) : (State, State) = tree match {
       case Empty =>
@@ -143,10 +148,7 @@ object TokenizedNFA {
     }
 
     val (start, accept) = iterate(new RegexParser().parse(pattern))
-    fromCharsNFA(new SimpleNFA[Seq[Char], TokenizedAcceptStateAttr](
-      start,
-      List(accept),
-      List((accept, TokenizedAcceptStateAttr(priority, if (id == null) pattern else id)))))
+    fromCharsNFA(new NFA[Seq[Char]](start, List(accept), List((accept, if (attr != null) attr else new StateAttribute(0, pattern)))))
   }
 
 }
@@ -154,7 +156,7 @@ object TokenizedNFA {
 final class TokenizedNFAEmulator(
   val charTable : CharClassifyTable,
   val start : Int,
-  val acceptsAttr : Array[Option[TokenizedAcceptStateAttr]],
+  val acceptsAttr : Array[IStateAttribute],
   val transitions : Array[List[(CharCategory, Int)]]) {
 
   override def equals(other : Any) : Boolean = {
@@ -192,7 +194,7 @@ final class TokenizedNFAEmulator(
     states.map(traceClosure).toArray
   }
 
-  val acceptSet = mutable.BitSet(states.filter(acceptsAttr(_) != None) : _*)
+  val acceptSet = mutable.BitSet(states.filter(acceptsAttr(_) != null) : _*)
 
   def states : Seq[Int] = 0 until transitions.length
 

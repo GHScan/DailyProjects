@@ -2,23 +2,23 @@ package graphvisualize
 
 import scala.collection.mutable
 
-trait Record {
+trait IRecord {
   def width = 1.0
   def height = 0.5
-  def fields : Seq[Record#Field]
+  def fields : Seq[IRecord#Field]
 
   sealed abstract class Field
   case class Value(name : String, value : Any) extends Field
   case class Link(name : String, value : Any) extends Field
 
   def exportAsImage(imgPath : String) {
-    var foundRecord = Set[Record]()
-    val record2ID = mutable.Map[Record, Int]()
+    var foundRecord = Set[IRecord]()
+    val record2ID = mutable.Map[IRecord, Int]()
     val edgeStrings = new StringBuilder()
 
-    def getRecordID(record : Record) = record2ID.getOrElseUpdate(record, record2ID.size)
+    def getRecordID(record : IRecord) = record2ID.getOrElseUpdate(record, record2ID.size)
 
-    def getRecordLabel(record : Record) =
+    def getRecordLabel(record : IRecord) =
       record.fields.zipWithIndex.map {
         case (Link(name, _), index) => s"<f_$index>$name"
         case (Value("", v), index) => s"<f_$index>$v"
@@ -26,11 +26,11 @@ trait Record {
         case _ => sys.error("It's impossible!")
       }.mkString("|")
 
-    def traverse(record : Record) {
+    def traverse(record : IRecord) {
       if (foundRecord(record)) return
       foundRecord += record
       record.fields.zipWithIndex.foreach {
-        case (Link(_, target : Record), index) =>
+        case (Link(_, target : IRecord), index) =>
           edgeStrings ++=
             s"""n_${getRecordID(record)}:f_$index->n_${getRecordID(target)}:f_0;\n"""
           traverse(target)
