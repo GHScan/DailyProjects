@@ -18,6 +18,10 @@ class StateAttribute(val priority : Int, val str : String) extends IStateAttribu
   override def toString = str
 }
 
+object StateAttribute {
+  val Default = new StateAttribute(0, "")
+}
+
 class NFATransition[T](val symbol : T, val target : INFAState[T]) extends INFATransition[T]
 
 class NFAState[T](var transitions : List[INFATransition[T]]) extends INFAState[T]

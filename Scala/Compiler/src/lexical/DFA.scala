@@ -12,6 +12,7 @@ trait IDFAState[T] extends INFAState[T] {
 }
 
 class DFATransition[T](val symbol : T, val target : IDFAState[T]) extends IDFATransition[T]
+
 class DFAState[T](var transitions : List[IDFATransition[T]]) extends IDFAState[T]
 
 trait IDFA[T] extends INFA[T] {
@@ -32,10 +33,11 @@ class TokenizedDFA(
   override val charTable : CharClassifyTable,
   override val start : IDFAState[CharCategory],
   override val accepts : List[IDFAState[CharCategory]],
-  override val acceptsAttr : List[(IDFAState[CharCategory], IStateAttribute)],
-  val dead : IDFAState[CharCategory])
+  override val acceptsAttr : List[(IDFAState[CharCategory], IStateAttribute)])
   extends TokenizedNFA(charTable, start, accepts, acceptsAttr)
   with IDFA[CharCategory] {
+
+  val dead : IDFAState[CharCategory] = (states.diff(accepts).filter(s => s.transitions.forall(t => t.target == s)) ::: List(null)).head
 
   import RegexAST._
 
@@ -125,6 +127,24 @@ class TokenizedDFA(
   def toRegexPattern2 : String = toRegex2.toPattern
 
   def toRegexPattern : String = toRegex.toPattern
+
+  def complement : TokenizedDFA = {
+    val attr = acceptsAttr.map(_._2).distinct.ensuring(_.length == 1).head
+    val newAccepts = states.diff(accepts)
+    new TokenizedDFA(charTable, start, newAccepts, newAccepts.map((_, attr)))
+  }
+
+  def |(other : TokenizedDFA) : TokenizedDFA = {
+    super.|(other).subset
+  }
+
+  def &(other : TokenizedDFA) : TokenizedDFA = {
+    (complement | other.complement).complement
+  }
+
+  def -(other : TokenizedDFA) : TokenizedDFA = {
+    this & other.complement
+  }
 }
 
 final class TokenizedDFAEmulator(
@@ -133,6 +153,8 @@ final class TokenizedDFAEmulator(
   val acceptAttrs : Array[IStateAttribute],
   val transitions : Array[Array[Int]]) {
   outer =>
+
+  val dead = (states.filter(i => acceptAttrs(i) == null && transitions(i).forall(_ == i)) ++ List(-1)).head
 
   override def equals(other : Any) : Boolean = {
     other.isInstanceOf[TokenizedDFAEmulator] && other.asInstanceOf[TokenizedDFAEmulator].equals(this)
@@ -148,8 +170,6 @@ final class TokenizedDFAEmulator(
     })
   }
 
-  val dead = (states.filter(i => transitions(i).forall(_ == i)) ++ List(-1)).head
-
   def states : Seq[Int] = 0 until transitions.length
 
   def toDFA : TokenizedDFA = {
@@ -163,8 +183,7 @@ final class TokenizedDFAEmulator(
       outer.charTable,
       State(outer.start),
       outer.acceptAttrs.toList.zipWithIndex.filter(_._1 != null).map(p => State(p._2)),
-      acceptAttrs.toList.zipWithIndex.filter(_._1 != null).map(p => (State(p._2), p._1)),
-      State(outer.dead))
+      acceptAttrs.toList.zipWithIndex.filter(_._1 != null).map(p => (State(p._2), p._1)))
   }
 
   def minimized : TokenizedDFAEmulator = {

@@ -65,7 +65,6 @@ final class IterativeDFABuilder[T] extends IDFABuilder[TokenizedDFA] {
       outer.charTable,
       value2State(init),
       value2State.iterator.filter(p => outer.accepts.contains(p._1)).map(_._2).toList,
-      value2State.iterator.filter(p => outer.accepts.contains(p._1)).map(p => (p._2, new StateAttribute(0, p._1.toString))).toList,
-      value2State(outer.dead))
+      value2State.iterator.filter(p => outer.accepts.contains(p._1)).map(p => (p._2, new StateAttribute(0, p._1.toString))).toList)
   }
 }

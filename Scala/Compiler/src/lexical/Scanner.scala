@@ -2,6 +2,7 @@ package lexical
 
 trait IToken {
   def id : String
+
   def value : Any
 }
 
@@ -15,17 +16,21 @@ final case class FileToken(id : String, value : Any, lexeme : String, startLoc :
 
 trait ITokenBuilder {
   def create(id : String, value : Any, lexeme : String) : IToken
+
+  def error(lexeme : String) : IToken
 }
 
 final class TokenBuilder extends ITokenBuilder {
   def create(id : String, value : Any, lexeme : String) : IToken = new Token(id, value)
+
+  def error(lexeme : String) : IToken = throw new Exception(s"Invalid token: $lexeme")
 }
 
 final class FileTokenBuilder extends ITokenBuilder {
   var line = 1
   var column = 1
 
-  override def create(id : String, value : Any, lexeme : String) : IToken = {
+  def create(id : String, value : Any, lexeme : String) : IToken = {
     val startLine = line
     val startColumn = column
     lexeme.foreach {
@@ -34,11 +39,13 @@ final class FileTokenBuilder extends ITokenBuilder {
     }
     new FileToken(id, value, lexeme, (startLine, startColumn), (line, column))
   }
+
+  def error(lexeme : String) : IToken = throw new Exception(s"Invalid token: $lexeme ($line,$column)")
 }
 
 trait IScanner extends Iterator[IToken]
 
-class TokenStateAttribute(val priority : Int, val id : String, val handler : String=>Any) extends IStateAttribute {
+class TokenStateAttribute(val priority : Int, val id : String, val handler : String => Any) extends IStateAttribute {
   override def toString = id
 }
 
@@ -48,7 +55,7 @@ trait ScannerBuilder {
   private final var nextPriority = 0
   private final var regexNFAs : List[TokenizedNFA] = Nil
 
-  def token(id : String, pattern : String, handler : String=>Any = identity) : this.type = {
+  def token(id : String, pattern : String, handler : String => Any = identity) : this.type = {
     regexNFAs = TokenizedNFA.fromPattern(pattern, new TokenStateAttribute(nextPriority, id, handler)) :: regexNFAs
     nextPriority -= 1
     this

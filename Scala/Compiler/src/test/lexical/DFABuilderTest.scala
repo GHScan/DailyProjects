@@ -2,7 +2,6 @@ package test.lexical
 
 import org.scalatest._
 import lexical._
-import DFA2Regex._
 
 class DFABuilderTest extends FlatSpec with Matchers {
 

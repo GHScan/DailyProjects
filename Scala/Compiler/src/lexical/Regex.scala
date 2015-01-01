@@ -10,9 +10,8 @@ trait IRegex {
 object Regex {
 
   def patternEquals(pattern1 : String, pattern2 : String) : Boolean = {
-    val attr = new StateAttribute(0, "")
-    TokenizedNFA.fromPattern(pattern1, attr).toEmulator.toDFAEmulator.optimized.toDFA.toEmulator ==
-      TokenizedNFA.fromPattern(pattern2, attr).toEmulator.toDFAEmulator.optimized.toDFA.toEmulator
+    TokenizedNFA.fromPattern(pattern1, StateAttribute.Default).toEmulator.toDFAEmulator.optimized.toDFA.toEmulator ==
+      TokenizedNFA.fromPattern(pattern2, StateAttribute.Default).toEmulator.toDFAEmulator.optimized.toDFA.toEmulator
   }
 
 }
