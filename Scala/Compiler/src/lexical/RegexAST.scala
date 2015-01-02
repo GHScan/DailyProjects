@@ -43,17 +43,21 @@ object RegexAST {
     (Digits, "\\d"),
     (Whitespaces, "\\s")).map(p => (immutable.BitSet(p._1.map(_.toInt) : _*), p._2))
 
+  def escape(s : String) : String = {
+    s.map {
+      case '\t' => "\\t"
+      case '\n' => "\\n"
+      case '\r' => "\\r"
+      case c if """[]().*+?\|-^""".indexOf(c) >= 0 => "\\" + c
+      case c => c.toString
+    }.mkString
+  }
 
   implicit class RegexExtension(tree : Tree) {
 
     def toPattern : String = {
 
-      def escapeChar(c : Char) : String = c match {
-        case '\t' => "\\t"
-        case '\n' => "\\n"
-        case '\r' => "\\r"
-        case _ => c.toString
-      }
+      def escapeChar(c : Char) : String = escape(c.toString)
 
       def charsToPattern(chars : Seq[Char]) : String = {
         var result = ""

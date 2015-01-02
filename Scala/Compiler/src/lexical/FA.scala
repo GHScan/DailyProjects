@@ -20,7 +20,7 @@ trait IFA[T] {
 
   def start : IFAState[T]
 
-  lazy val states : List[IFAState[T]] =  {
+  lazy val states : List[IFAState[T]] = {
 
     var result = List[IFAState[T]](start)
     val stateSet = mutable.Set[IFAState[T]](start)
