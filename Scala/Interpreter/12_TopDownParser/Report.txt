@@ -1,0 +1,310 @@
+----------------------------------
+start: program
+factor => 'NUMBER'
+factor => 'IDENT'
+factor => 'IDENT' '[' opt_exp_list ']'
+factor => 'IDENT' '(' opt_exp_list ')'
+factor => '(' exp ')'
+term => term '*' factor
+term => term '/' factor
+term => factor
+opt_exp_list => ε
+opt_exp_list => exp_list
+exp_list => exp
+exp_list => exp_list ',' exp
+exp => exp '+' term
+exp => exp '-' term
+exp => term
+program => exp EOF
+
+backtrackFree=false
+exp_list: (predicative=false)
+	'NUMBER','IDENT','('=>
+		exp_list => exp
+		exp_list => exp_list ',' exp
+
+program: (predicative=true)
+	'NUMBER','IDENT','('=>
+		program => exp EOF
+
+factor: (predicative=false)
+	'('=>
+		factor => '(' exp ')'
+
+	'IDENT'=>
+		factor => 'IDENT'
+		factor => 'IDENT' '[' opt_exp_list ']'
+		factor => 'IDENT' '(' opt_exp_list ')'
+
+	'NUMBER'=>
+		factor => 'NUMBER'
+
+opt_exp_list: (predicative=true)
+	']',')'=>
+		opt_exp_list => ε
+
+	'NUMBER','IDENT','('=>
+		opt_exp_list => exp_list
+
+exp: (predicative=false)
+	'NUMBER','IDENT','('=>
+		exp => exp '+' term
+		exp => exp '-' term
+		exp => term
+
+term: (predicative=false)
+	'NUMBER','IDENT','('=>
+		term => term '*' factor
+		term => term '/' factor
+		term => factor
+
+----------------------------------
+start: program
+exp_list => term exp_rr0 exp_rr1 exp_list_rr0
+exp_list_rr0 => ε
+exp_list_rr0 => ',' exp exp_list_rr0
+program => term exp_rr0 exp_rr1 EOF
+factor => 'NUMBER'
+factor => 'IDENT'
+factor => 'IDENT' '[' opt_exp_list ']'
+factor => 'IDENT' '(' opt_exp_list ')'
+factor => '(' exp ')'
+term_rr0 => ε
+term_rr0 => '*' factor term_rr0
+exp_rr1 => ε
+exp_rr1 => '-' term exp_rr0 exp_rr1
+exp_rr0 => ε
+exp_rr0 => '+' term exp_rr0
+opt_exp_list => ε
+opt_exp_list => term exp_rr0 exp_rr1 exp_list_rr0
+term_rr1 => ε
+term_rr1 => '/' factor term_rr0 term_rr1
+exp => term exp_rr0 exp_rr1
+term => 'NUMBER' term_rr0 term_rr1
+term => 'IDENT' term_rr0 term_rr1
+term => 'IDENT' '[' opt_exp_list ']' term_rr0 term_rr1
+term => 'IDENT' '(' opt_exp_list ')' term_rr0 term_rr1
+term => '(' exp ')' term_rr0 term_rr1
+
+backtrackFree=false
+exp_list: (predicative=true)
+	'NUMBER','IDENT','('=>
+		exp_list => term exp_rr0 exp_rr1 exp_list_rr0
+
+exp_list_rr0: (predicative=true)
+	','=>
+		exp_list_rr0 => ',' exp exp_list_rr0
+
+	']',')'=>
+		exp_list_rr0 => ε
+
+program: (predicative=true)
+	'NUMBER','IDENT','('=>
+		program => term exp_rr0 exp_rr1 EOF
+
+factor: (predicative=false)
+	'('=>
+		factor => '(' exp ')'
+
+	'IDENT'=>
+		factor => 'IDENT'
+		factor => 'IDENT' '[' opt_exp_list ']'
+		factor => 'IDENT' '(' opt_exp_list ')'
+
+	'NUMBER'=>
+		factor => 'NUMBER'
+
+term_rr0: (predicative=true)
+	'*'=>
+		term_rr0 => '*' factor term_rr0
+
+	']',EOF,'/','-',',',')','+'=>
+		term_rr0 => ε
+
+exp_rr1: (predicative=true)
+	'-'=>
+		exp_rr1 => '-' term exp_rr0 exp_rr1
+
+	']',EOF,',',')'=>
+		exp_rr1 => ε
+
+exp_rr0: (predicative=true)
+	']',EOF,'-',',',')'=>
+		exp_rr0 => ε
+
+	'+'=>
+		exp_rr0 => '+' term exp_rr0
+
+opt_exp_list: (predicative=true)
+	']',')'=>
+		opt_exp_list => ε
+
+	'NUMBER','IDENT','('=>
+		opt_exp_list => term exp_rr0 exp_rr1 exp_list_rr0
+
+term_rr1: (predicative=true)
+	']',EOF,'-',',',')','+'=>
+		term_rr1 => ε
+
+	'/'=>
+		term_rr1 => '/' factor term_rr0 term_rr1
+
+exp: (predicative=true)
+	'NUMBER','IDENT','('=>
+		exp => term exp_rr0 exp_rr1
+
+term: (predicative=false)
+	'('=>
+		term => '(' exp ')' term_rr0 term_rr1
+
+	'NUMBER'=>
+		term => 'NUMBER' term_rr0 term_rr1
+
+	'IDENT'=>
+		term => 'IDENT' term_rr0 term_rr1
+		term => 'IDENT' '[' opt_exp_list ']' term_rr0 term_rr1
+		term => 'IDENT' '(' opt_exp_list ')' term_rr0 term_rr1
+
+Success
+Failed
+Success
+Failed
+----------------------------------
+start: program
+exp_list => term exp_rr0 exp_rr1 exp_list_rr0
+exp_list_rr0 => ε
+exp_list_rr0 => ',' exp exp_list_rr0
+program => term exp_rr0 exp_rr1 EOF
+factor => 'IDENT' factor_lf0
+factor => '(' exp ')'
+factor => 'NUMBER'
+factor_lf0 => ε
+factor_lf0 => '[' opt_exp_list ']'
+factor_lf0 => '(' opt_exp_list ')'
+term_rr0 => ε
+term_rr0 => '*' factor term_rr0
+exp_rr1 => ε
+exp_rr1 => '-' term exp_rr0 exp_rr1
+exp_rr0 => ε
+exp_rr0 => '+' term exp_rr0
+opt_exp_list => ε
+opt_exp_list => term exp_rr0 exp_rr1 exp_list_rr0
+term_rr1 => '/' factor term_rr0 term_rr1
+term_rr1 => ε
+exp => term exp_rr0 exp_rr1
+term => 'IDENT' term_lf1
+term => '(' exp ')' term_rr0 term_rr1
+term => 'NUMBER' term_rr0 term_rr1
+term_lf1 => term_rr0 term_rr1
+term_lf1 => '[' opt_exp_list ']' term_rr0 term_rr1
+term_lf1 => '(' opt_exp_list ')' term_rr0 term_rr1
+
+backtrackFree=true
+term_lf1: (predicative=true)
+	'('=>
+		term_lf1 => '(' opt_exp_list ')' term_rr0 term_rr1
+
+	'['=>
+		term_lf1 => '[' opt_exp_list ']' term_rr0 term_rr1
+
+	']',EOF,'/','*','-',',',')','+'=>
+		term_lf1 => term_rr0 term_rr1
+
+exp_list: (predicative=true)
+	'NUMBER','IDENT','('=>
+		exp_list => term exp_rr0 exp_rr1 exp_list_rr0
+
+exp_list_rr0: (predicative=true)
+	','=>
+		exp_list_rr0 => ',' exp exp_list_rr0
+
+	']',')'=>
+		exp_list_rr0 => ε
+
+program: (predicative=true)
+	'NUMBER','IDENT','('=>
+		program => term exp_rr0 exp_rr1 EOF
+
+factor: (predicative=true)
+	'('=>
+		factor => '(' exp ')'
+
+	'NUMBER'=>
+		factor => 'NUMBER'
+
+	'IDENT'=>
+		factor => 'IDENT' factor_lf0
+
+term_rr0: (predicative=true)
+	'*'=>
+		term_rr0 => '*' factor term_rr0
+
+	']',EOF,'/','-',',',')','+'=>
+		term_rr0 => ε
+
+exp_rr1: (predicative=true)
+	'-'=>
+		exp_rr1 => '-' term exp_rr0 exp_rr1
+
+	']',EOF,',',')'=>
+		exp_rr1 => ε
+
+exp_rr0: (predicative=true)
+	']',EOF,'-',',',')'=>
+		exp_rr0 => ε
+
+	'+'=>
+		exp_rr0 => '+' term exp_rr0
+
+opt_exp_list: (predicative=true)
+	']',')'=>
+		opt_exp_list => ε
+
+	'NUMBER','IDENT','('=>
+		opt_exp_list => term exp_rr0 exp_rr1 exp_list_rr0
+
+term_rr1: (predicative=true)
+	']',EOF,'-',',',')','+'=>
+		term_rr1 => ε
+
+	'/'=>
+		term_rr1 => '/' factor term_rr0 term_rr1
+
+factor_lf0: (predicative=true)
+	'['=>
+		factor_lf0 => '[' opt_exp_list ']'
+
+	'('=>
+		factor_lf0 => '(' opt_exp_list ')'
+
+	']',EOF,'/','*','-',',',')','+'=>
+		factor_lf0 => ε
+
+exp: (predicative=true)
+	'NUMBER','IDENT','('=>
+		exp => term exp_rr0 exp_rr1
+
+term: (predicative=true)
+	'('=>
+		term => '(' exp ')' term_rr0 term_rr1
+
+	'NUMBER'=>
+		term => 'NUMBER' term_rr0 term_rr1
+
+	'IDENT'=>
+		term => 'IDENT' term_lf1
+
+Success
+Failed
+Success
+Failed
+----------------------------------
+Success
+Success
+Success
+Success
+
+(cfg grammar                     ,0.47706610580000003,GC:(PS Scavenge,count=6,time=0.008))
+(backtrack grammar               ,0.1799855742,GC:(PS Scavenge,count=1,time=0.001))
+(backtrack-free grammar          ,0.1603162408,GC:(PS Scavenge,count=1,time=0.001))
+(backtrack-free grammar          ,0.036193626799999996,GC:)
