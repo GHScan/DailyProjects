@@ -86,6 +86,6 @@ trait ScannerBuilder {
 
   protected lazy val dfaEmulator : TokenizedDFAEmulator = {
     val resultNFA = regexNFAs.tail.fold(regexNFAs.head) { (r, nfa) => r | nfa}
-    resultNFA.toEmulator.toDFAEmulator.optimized
+    resultNFA.toDFAEmulator.optimized
   }
 }

@@ -56,6 +56,8 @@ class TokenizedNFA(
       }.toArray)
   }
 
+  def toDFAEmulator = toEmulator.toDFAEmulator
+
   final private def toCharsNFA : INFA[Seq[Char]] = {
     transitionsMapped[Seq[Char]] { category =>
       List(if (category == CharCategory.Empty) Nil else charTable.rlookup(category))
@@ -88,7 +90,7 @@ class TokenizedNFA(
     new TokenizedNFA(charTable, start, accepts.filter(states.contains(_)), acceptsAttr.filter(p => states.contains(p._1)))
   }
 
-  def subset : TokenizedDFA = toEmulator.toDFAEmulator.toDFA
+  def subset : TokenizedDFA = toDFAEmulator.toDFA
 }
 
 object TokenizedNFA {

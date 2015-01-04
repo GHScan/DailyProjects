@@ -209,7 +209,7 @@ final class TokenizedDFAEmulator(
   }
 
   def minimized2 : TokenizedDFAEmulator = {
-    toDFA.reversed.subset.reachable.reversed.subset.reachable.toEmulator.toDFAEmulator
+    toDFA.reversed.subset.reachable.reversed.subset.reachable.toDFAEmulator
   }
 
   def charTableCompacted : TokenizedDFAEmulator = {

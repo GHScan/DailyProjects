@@ -10,8 +10,8 @@ trait IRegex {
 object Regex {
 
   def patternEquals(pattern1 : String, pattern2 : String) : Boolean = {
-    TokenizedNFA.fromPattern(pattern1, FAStateAttribute.Default).toEmulator.toDFAEmulator.optimized.toDFA.toEmulator ==
-      TokenizedNFA.fromPattern(pattern2, FAStateAttribute.Default).toEmulator.toDFAEmulator.optimized.toDFA.toEmulator
+    TokenizedNFA.fromPattern(pattern1, FAStateAttribute.Default).toDFAEmulator.optimized.toDFA.toEmulator ==
+      TokenizedNFA.fromPattern(pattern2, FAStateAttribute.Default).toDFAEmulator.optimized.toDFA.toEmulator
   }
 
 }
@@ -43,7 +43,7 @@ final class NFARegex(pattern : String) extends IRegex {
 }
 
 final class DFARegex(pattern : String) extends IRegex {
-  val dfa = TokenizedNFA.fromPattern(pattern).toEmulator.toDFAEmulator.optimized
+  val dfa = TokenizedNFA.fromPattern(pattern).toDFAEmulator.optimized
 
   def matchPrefix(s : String) : String = {
     val source = new StringCharSource(s)

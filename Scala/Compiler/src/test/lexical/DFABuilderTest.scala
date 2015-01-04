@@ -19,7 +19,7 @@ class DFABuilderTest extends FlatSpec with Matchers {
 //        .result
 //      new DFAVisualizer(dfa).exportAsImage("dfa.jpg")
 //
-//      val odfa = dfa.toEmulator.toDFAEmulator.optimized.toDFA
+//      val odfa = dfa.toDFAEmulator.optimized.toDFA
 //      new DFAVisualizer(odfa).exportAsImage("odfa.jpg")
 //
 //      println(odfa.toRegexPattern)
@@ -39,7 +39,7 @@ class DFABuilderTest extends FlatSpec with Matchers {
 //        .result
 //      new DFAVisualizer(dfa).exportAsImage("dfa2.jpg")
 //
-//      val odfa = dfa.toEmulator.toDFAEmulator.optimized.toDFA
+//      val odfa = dfa.toDFAEmulator.optimized.toDFA
 //      new DFAVisualizer(odfa).exportAsImage("odfa2.jpg")
 //
 //      println(odfa.toRegexPattern)

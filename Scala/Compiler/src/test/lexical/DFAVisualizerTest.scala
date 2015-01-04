@@ -15,7 +15,7 @@ class DFAVisualizerTest extends FlatSpec with Matchers {
 //    // val nfa = TokenizedNFA.fromPattern("""0|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15""")
 //    // new NFAVisualizer(nfa).exportAsImage("nfa.jpg")
 //
-//    val dfaEmulator = nfa.toEmulator.toDFAEmulator
+//    val dfaEmulator = nfa.toDFAEmulator
 //    new DFAVisualizer(dfaEmulator.toDFA).exportAsImage("dfa.jpg")
 //
 //    val dfaEmulator2 = dfaEmulator.minimized

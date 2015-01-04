@@ -9,7 +9,7 @@ class DFASetOpsTest extends FlatSpec with Matchers {
   //    val nfa1 = TokenizedNFA.fromPattern("""for""")
   //    val nfa2 = TokenizedNFA.fromPattern("""if""")
   //    val nfa3 = TokenizedNFA.fromPattern("""\d+""")
-  //    val result = (nfa1 | nfa2 | nfa3).toEmulator.toDFAEmulator.optimized.toDFA
+  //    val result = (nfa1 | nfa2 | nfa3).toDFAEmulator.optimized.toDFA
   //    new DFAVisualizer(result).exportAsImage("dfaUnion.jpg")
   //  }
 
@@ -33,7 +33,7 @@ class DFASetOpsTest extends FlatSpec with Matchers {
 //  it should "correct" in {
 //    val dfa1 = TokenizedNFA.fromPattern("""\d+|for|if""", FAStateAttribute.Default).subset
 //    val dfa2 = TokenizedNFA.fromPattern("""[a-z]+|12|34""", FAStateAttribute.Default).subset
-//    val intersect = (dfa1 & dfa2).toEmulator.toDFAEmulator.optimized.toDFA
+//    val intersect = (dfa1 & dfa2).toDFAEmulator.optimized.toDFA
 //    new DFAVisualizer(dfa1).exportAsImage("dfa1.jpg")
 //    new DFAVisualizer(dfa2).exportAsImage("dfa2.jpg")
 //    new DFAVisualizer(intersect).exportAsImage("dfai.jpg")
@@ -43,7 +43,7 @@ class DFASetOpsTest extends FlatSpec with Matchers {
 //    it should "correct" in {
 //      val dfa1 = TokenizedNFA.fromPattern("""\d+|for|if""", FAStateAttribute.Default).subset
 //      val dfa2 = TokenizedNFA.fromPattern("""[a-z]+|12""", FAStateAttribute.Default).subset
-//      val diff = (dfa1 - dfa2).toEmulator.toDFAEmulator.optimized.toDFA
+//      val diff = (dfa1 - dfa2).toDFAEmulator.optimized.toDFA
 //      new DFAVisualizer(dfa1).exportAsImage("dfa1.jpg")
 //      new DFAVisualizer(dfa2).exportAsImage("dfa2.jpg")
 //      new DFAVisualizer(diff).exportAsImage("dfad.jpg")
