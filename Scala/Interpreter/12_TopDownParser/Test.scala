@@ -1,3 +1,4 @@
+
 import scala.collection.mutable
 import scala.collection.immutable
 
@@ -56,6 +57,11 @@ object Test extends App {
       new Grammar(startSymbol, flat(body).map(Production(nonTerm, _)) ::: productions)
     }
 
+    def removeRedundantNonTerms() : Grammar = {
+      val redundants = nonTerms.toSet -- (productions.flatMap(p => p.body.collect { case t : NonTerm => t}).toSet + startSymbol)
+      new Grammar(startSymbol, productions.filter(p => !redundants(p.nonTerm)))
+    }
+
     lazy val nonTerms : List[NonTerm] = {
       productions.flatMap(p => p.nonTerm :: p.body.collect { case t : NonTerm => t}).distinct.sorted
     }
@@ -100,7 +106,7 @@ object Test extends App {
         iterate()
       }
 
-      new Grammar(startSymbol, nonTerm2Productions.values.flatMap(identity).toList)
+      new Grammar(startSymbol, nonTerm2Productions.values.flatMap(identity).toList).removeRedundantNonTerms()
     }
 
     def leftFactoring() : Grammar = {
@@ -124,7 +130,7 @@ object Test extends App {
         }.toList) :: result
       }
 
-      new Grammar(startSymbol, productions.groupBy(_.nonTerm).iterator.flatMap(p => factoring(p._1, p._2)).flatMap(_._2).toList)
+      new Grammar(startSymbol, productions.groupBy(_.nonTerm).iterator.flatMap(p => factoring(p._1, p._2)).flatMap(_._2).toList).removeRedundantNonTerms()
     }
 
     def generatePredicateTable() : PredicateTable = {
