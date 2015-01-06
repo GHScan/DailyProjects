@@ -1,0 +1,8 @@
+(Build LR0 20 times              ,0.0655470784,GC:)
+(Build SLR 20 times              ,0.024432317,GC:)
+(Build LR1 20 times              ,0.1617325778,GC:(PS Scavenge,count=4,time=0.003))
+(Build LALR 20 times             ,0.0633319582,GC:(PS Scavenge,count=1,time=0.000))
+(Parse 3000 with LR0             ,0.0499655178,GC:(PS Scavenge,count=3,time=0.001))
+(Parse 3000 with SLR             ,0.048506497600000004,GC:(PS Scavenge,count=3,time=0.002))
+(Parse 3000 with LR1             ,0.048038527399999996,GC:(PS Scavenge,count=3,time=0.001))
+(Parse 3000 with LALR            ,0.0469393418,GC:(PS Scavenge,count=4,time=0.002))
