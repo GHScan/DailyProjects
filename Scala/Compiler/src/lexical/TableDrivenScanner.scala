@@ -1,10 +1,7 @@
 package lexical
 
 
-private final class TableDrivenScanner(
-  source : ICharSource,
-  tokenBuilder : ITokenBuilder,
-  dfaEmulator : TokenizedDFAEmulator) extends IScanner {
+private final class TableDrivenScanner(source : ICharSource, tokenFactory : ITokenFactory, dfaEmulator : TokenizedDFAEmulator) extends IScanner {
 
   private val strBuilder = new StringBuilder()
 
@@ -12,8 +9,8 @@ private final class TableDrivenScanner(
 
   override def next() : IToken = {
     var state = dfaEmulator.start
-    var matchLen = 0
     var matchState = 0
+    var matchLen = 0
     var len = 0
     strBuilder.clear()
 
@@ -31,18 +28,20 @@ private final class TableDrivenScanner(
 
     for (_ <- matchLen until len) source.rollback()
 
-    if (matchLen == 0) tokenBuilder.error(strBuilder.toString())
-    else {
+    if (matchLen == 0) {
+      if (source.hasNext) tokenFactory.error(strBuilder.toString())
+      else tokenFactory.eof()
+    } else {
       val attr = dfaEmulator.acceptAttrs(matchState).asInstanceOf[TokenFAStateAttribute]
       val lexeme = strBuilder.substring(0, matchLen)
       val value = attr.lexemeHandler(lexeme)
-      if (value == null) tokenBuilder.create(attr.id, lexeme)
-      else tokenBuilder.createExt(attr.id, lexeme, value)
+      if (value == null) tokenFactory.create(attr.id, attr.name, lexeme)
+      else tokenFactory.createExt(attr.id, attr.name, lexeme, value)
     }
   }
 }
 
 class TableDrivenScannerBuilder extends ScannerBuilder {
 
-  override def create(source : ICharSource, tokenBuilder : ITokenBuilder = new FileTokenBuilder) : IScanner = new TableDrivenScanner(source, tokenBuilder, dfaEmulator)
+  override def create(source : ICharSource, tokenFactory : ITokenFactory = new FileTokenFactory) : IScanner = new TableDrivenScanner(source, tokenFactory, dfaEmulator)
 }

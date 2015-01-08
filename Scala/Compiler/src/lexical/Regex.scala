@@ -1,9 +1,7 @@
 package lexical
 
 trait IRegex {
-
   def matchPrefix(s : String) : String
-
   def isMatch(s : String) : Boolean = matchPrefix(s) == s
 }
 

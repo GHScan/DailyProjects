@@ -4,7 +4,6 @@ import scala.collection.mutable
 
 trait IFATransition[T] {
   def symbol : T
-
   def target : IFAState[T]
 }
 

@@ -9,7 +9,7 @@ class GCStatus(_status : Seq[(String, Long, Float)]) {
       status.map(s =>
         o.status.find(s._1 == _._1) match {
           case None => s
-          case Some((oname, ocount, otime)) => (oname, s._2 - ocount, s._3 - otime)
+          case Some((name, count, time)) => (name, s._2 - count, s._3 - time)
         }))
 
   override def toString = "GC:" +

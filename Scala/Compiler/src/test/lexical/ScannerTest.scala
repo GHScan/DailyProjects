@@ -4,25 +4,27 @@ import lexical._
 import org.scalatest.{Matchers, FlatSpec}
 
 class TableDrivenScannerTest extends FlatSpec with Matchers {
-  behavior of "TokenBuilder"
+  behavior of "TableDrivenScanner"
   it should "pass simple test case" in {
-    val tokenBuilder = new TableDrivenScannerBuilder()
-      .token("WS", """[\t\n\r ]+""", _ => null)
+    val scannerBuilder = new TableDrivenScannerBuilder()
+      .token("ws", """[\t\n\r ]+""", _ => null)
       .token(",")
       .token(")")
       .token("(")
       .token("=")
       .token("+")
       .token("def")
-      .token("INT", """\d+""", _.toInt)
-      .token("IDENT", """\w+""", identity)
+      .token("int", """\d+""", _.toInt)
+      .token("ident", """\w+""", identity)
 
-    val scanner = tokenBuilder.create(new StringCharSource("def func(abc, def) = println(abc, def + 1234)"), new TokenBuilder())
-    val tokenList = List(
-      Token("def"),
-      TokenExt("IDENT", "func"), Token("("), TokenExt("IDENT", "abc"), Token(","), Token("def"), Token(")"),
-      Token("="),
-      TokenExt("IDENT", "println"), Token("("), TokenExt("IDENT", "abc"), Token(","), Token("def"), Token("+"), TokenExt("INT", 1234), Token(")"))
-    scanner.filter(_.id != "WS").toList should equal(tokenList)
+    implicit def str2Token(name : String) : IToken = scannerBuilder.lookupToken(name)
+
+    val scanner = scannerBuilder.create(new StringCharSource("def func(abc, def) = println(abc, def + 1234)"), new TokenFactory())
+    val tokenList = List[IToken](
+      "def",
+      "ident", "(", "ident", ",", "def", ")",
+      "=",
+      "ident", "(", "ident", ",", "def", "+", "int", ")")
+    scanner.filter(_ != ("ws" : IToken)).toList should equal(tokenList)
   }
 }

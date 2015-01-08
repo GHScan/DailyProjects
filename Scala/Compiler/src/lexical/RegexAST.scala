@@ -6,17 +6,11 @@ import utils.Characters._
 object RegexAST {
 
   sealed abstract class Tree
-
   case object Empty extends Tree
-
   case class Chars[T](chars : Seq[T]) extends Tree
-
   case class KleeneStar(content : Tree) extends Tree
-
   case class Concatenation(first : Tree, second : Tree) extends Tree
-
   case class Alternation(first : Tree, second : Tree) extends Tree
-
   object KleenePlus {
     def unapply(tree : Tree) : Option[Tree] = tree match {
       case Concatenation(KleeneStar(k), c) if k == c => Some(k)
@@ -24,7 +18,6 @@ object RegexAST {
       case _ => None
     }
   }
-
   object QuestionMark {
     def unapply(tree : Tree) : Option[Tree] = tree match {
       case Alternation(Empty, a) if a != Empty => Some(a)
