@@ -3,9 +3,10 @@ package lexical
 
 private final class TableDrivenScanner(source : ICharSource, tokenFactory : ITokenFactory, dfaEmulator : TokenizedDFAEmulator) extends IScanner {
 
+  private var eofFound = false
   private val strBuilder = new StringBuilder()
 
-  override def hasNext : Boolean = source.hasNext
+  override def hasNext : Boolean = source.hasNext || !eofFound
 
   override def next() : IToken = {
     var state = dfaEmulator.start
@@ -29,14 +30,16 @@ private final class TableDrivenScanner(source : ICharSource, tokenFactory : ITok
     for (_ <- matchLen until len) source.rollback()
 
     if (matchLen == 0) {
-      if (source.hasNext) tokenFactory.error(strBuilder.toString())
-      else tokenFactory.eof()
+      if (source.hasNext) {
+        tokenFactory.error(strBuilder.toString())
+      } else {
+        eofFound = true
+        tokenFactory.eof()
+      }
     } else {
       val attr = dfaEmulator.acceptAttrs(matchState).asInstanceOf[TokenFAStateAttribute]
       val lexeme = strBuilder.substring(0, matchLen)
-      val value = attr.lexemeHandler(lexeme)
-      if (value == null) tokenFactory.create(attr.id, attr.name, lexeme)
-      else tokenFactory.createExt(attr.id, attr.name, lexeme, value)
+      tokenFactory.create(attr.id, attr.name, attr.lexemeHandler(lexeme), lexeme)
     }
   }
 }

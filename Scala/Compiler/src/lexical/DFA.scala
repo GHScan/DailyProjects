@@ -183,7 +183,7 @@ final class TokenizedDFAEmulator(
               l.foreach { c => state2Group(c) = gid}
               gid += 1
           }
-          iterate()
+          return iterate()
         }
       }
     }

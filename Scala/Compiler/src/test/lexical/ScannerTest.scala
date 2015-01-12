@@ -16,15 +16,14 @@ class TableDrivenScannerTest extends FlatSpec with Matchers {
       .token("def")
       .token("int", """\d+""", _.toInt)
       .token("ident", """\w+""", identity)
-
-    implicit def str2Token(name : String) : IToken = scannerBuilder.lookupToken(name)
+    import scannerBuilder.Implicits._
 
     val scanner = scannerBuilder.create(new StringCharSource("def func(abc, def) = println(abc, def + 1234)"), new TokenFactory())
     val tokenList = List[IToken](
       "def",
       "ident", "(", "ident", ",", "def", ")",
       "=",
-      "ident", "(", "ident", ",", "def", "+", "int", ")")
+      "ident", "(", "ident", ",", "def", "+", "int", ")", IToken.Eof)
     scanner.filter(_ != ("ws" : IToken)).toList should equal(tokenList)
   }
 }

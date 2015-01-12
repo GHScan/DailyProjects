@@ -4,57 +4,43 @@ import scala.collection.immutable
 
 trait IToken {
   def id : Int
+  def name : String
+  def value : Any
   override def equals(other : Any) = other match {
     case o : IToken => id == o.id
     case _ => false
   }
+  override def hashCode() = id.hashCode()
 }
 
 object IToken {
 
-  val Empty = new IToken {
-    val id = 0
-    override def toString = "ε"
-  }
-  val Eof = new IToken {
-    val id : Int = 1
-    override def toString = "EOF"
-  }
-  val Error = new IToken {
-    val id : Int = 2
-    override def toString = "Error"
-  }
+  val Eof = new Token(0, "EOF", null)
+  val Error = new Token(1, "ERROR", null)
+  val Empty = new Token(2, "ε", null)
 
   val FirstTokenID = 3
 
 }
 
-final class Token(val id : Int, val name : String) extends IToken {
-  override def toString = s"Token($name)"
-}
-final class TokenExt(val id : Int, val name : String, val value : Any) extends IToken {
+final class Token(val id : Int, val name : String, val value : Any) extends IToken {
   override def toString = s"Token($name,$value)"
 }
 
-final class FileToken(val id : Int, val name : String, val startLoc : (Int, Int), val endLoc : (Int, Int)) extends IToken {
-  override def toString = s"Token($name,start=$startLoc,end=$endLoc)"
-}
-final class FileTokenExt(val id : Int, val name : String, val value : Any, val startLoc : (Int, Int), val endLoc : (Int, Int)) extends IToken {
+final class FileToken(val id : Int, val name : String, val value : Any, val startLoc : (Int, Int), val endLoc : (Int, Int)) extends IToken {
   override def toString = s"Token($name,$value,start=$startLoc,end=$endLoc)"
 }
 
 trait ITokenFactory {
-  def create(id : Int, name : String, lexeme : String) : IToken
-  def createExt(id : Int, name : String, lexeme : String, value : Any) : IToken
+  def create(id : Int, name : String, value : Any, lexeme : String) : IToken
   def eof() : IToken
   def error(lexeme : String) : IToken
 }
 
 final class TokenFactory extends ITokenFactory {
-  def create(id : Int, name : String, lexeme : String) : IToken = new Token(id, name)
-  def createExt(id : Int, name : String, lexeme : String, value : Any) : IToken = new TokenExt(id, name, value)
+  def create(id : Int, name : String, value : Any, lexeme : String) : IToken = new Token(id, name, value)
   def eof() : IToken = IToken.Eof
-  def error(lexeme : String) : IToken = new TokenExt(IToken.Error.id, IToken.Error.toString, lexeme)
+  def error(lexeme : String) : IToken = new Token(IToken.Error.id, IToken.Error.name, lexeme)
 }
 
 final class FileTokenFactory extends ITokenFactory {
@@ -70,21 +56,16 @@ final class FileTokenFactory extends ITokenFactory {
     (startLoc, (line, column))
   }
 
-  def create(id : Int, name : String, lexeme : String) : IToken = {
+  def create(id : Int, name : String, value : Any, lexeme : String) : IToken = {
     val (startLoc, endLoc) = nextLocation(lexeme)
-    new FileToken(id, name, startLoc, endLoc)
-  }
-
-  def createExt(id : Int, name : String, lexeme : String, value : Any) : IToken = {
-    val (startLoc, endLoc) = nextLocation(lexeme)
-    new FileTokenExt(id, name, value, startLoc, endLoc)
+    new FileToken(id, name, value, startLoc, endLoc)
   }
 
   def eof() : IToken = IToken.Eof
 
   def error(lexeme : String) : IToken = {
     val (startLoc, endLoc) = nextLocation(lexeme)
-    new FileTokenExt(IToken.Error.id, IToken.Error.toString, lexeme, startLoc, endLoc)
+    new FileToken(IToken.Error.id, IToken.Error.name, lexeme, startLoc, endLoc)
   }
 }
 
@@ -108,18 +89,27 @@ trait ScannerBuilder {
 
   def token(name : String, pattern : String, lexemeHandler : (String) => Any) : this.type = {
     regexNFAs = TokenizedNFA.fromPattern(pattern, new TokenFAStateAttribute(nextPriority, nextTokenID, name, lexemeHandler)) :: regexNFAs
-    name2Token += ((name, new Token(nextTokenID, name)))
+    name2Token += ((name, new Token(nextTokenID, name, null)))
     nextPriority -= 1
     nextTokenID += 1
     this
   }
 
-  def token(name : String) : this.type = token(name, RegexAST.escape(name), _ => null)
+  def token(name : String) : this.type = token(name, RegexAST.escape(name), identity)
 
-  def lookupToken(name : String) = name2Token(name)
+  def literals(names : String*) : this.type = {
+    names.foreach(token)
+    this
+  }
+
+  def getToken(name : String) = name2Token(name)
 
   protected lazy val dfaEmulator : TokenizedDFAEmulator = {
     val resultNFA = regexNFAs.tail.fold(regexNFAs.head) { (r, nfa) => r | nfa}
     resultNFA.toDFAEmulator.optimized
+  }
+
+  object Implicits {
+    implicit def string2Token(name : String) : IToken = getToken(name)
   }
 }
