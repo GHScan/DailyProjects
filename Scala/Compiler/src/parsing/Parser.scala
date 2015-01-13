@@ -6,7 +6,7 @@ trait IParser {
 }
 
 trait IParserFactory {
-  def create(grammar : Grammar) : IParser
+  def create(grammar : Grammar, reportConflict : Boolean) : IParser
 }
 
 object ParserFactory {

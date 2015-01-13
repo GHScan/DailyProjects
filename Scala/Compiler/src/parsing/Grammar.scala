@@ -5,14 +5,12 @@ import scala.collection.mutable
 
 case class ~[+T, +U](first : T, second : U)
 
-trait IGrammarSymbol {
-}
-trait IGenericGrammarSymbol[T] extends IGrammarSymbol {
-}
+trait IGrammarSymbol
+trait IGenericGrammarSymbol[T] extends IGrammarSymbol
 
-case class TerminalSymbol(token : lexical.IToken) extends IGenericGrammarSymbol[lexical.IToken] with Ordered[TerminalSymbol] {
+case class TerminalSymbol(token : lexical.IToken) extends IGenericGrammarSymbol[Any] with Ordered[TerminalSymbol] {
   override def toString = s"'${token.name}'"
-  def compare(that : TerminalSymbol) : Int = token.id.compare(that.token.id)
+  def compare(that : TerminalSymbol) : Int = token.compare(that.token)
 }
 object TerminalSymbol {
   val EMPTY = TerminalSymbol(lexical.IToken.Empty)
@@ -30,11 +28,7 @@ trait INonTerminalSymbol extends IGrammarSymbol with Ordered[INonTerminalSymbol]
 class NonTerminalSymbol(val name : String, var productions : List[IProduction]) extends INonTerminalSymbol
 abstract class GenericNonTerminalSymbol[T](tree : => IGrammarTree[T]) extends INonTerminalSymbol with IGenericGrammarSymbol[T] {
   outer =>
-  lazy val productions : List[IProduction] = tree.eval().map(p => new IProduction {
-    def left = outer
-    val right = p._1
-    val action = p._2
-  })
+  lazy val productions : List[IProduction] = tree.eval().map(p => new Production(outer, p._1, p._2))
 }
 
 trait IProduction {
@@ -42,6 +36,10 @@ trait IProduction {
   def right : List[IGrammarSymbol]
   def action : mutable.Stack[Any] => Any
   override def toString = s"$left => ${right.mkString(" ")}"
+  def rightHead : IGrammarSymbol = right match {
+    case head :: tail => head
+    case _ => TerminalSymbol.EMPTY
+  }
 }
 class Production(val left : INonTerminalSymbol, val right : List[IGrammarSymbol], val action : mutable.Stack[Any] => Any) extends IProduction
 
@@ -80,20 +78,38 @@ trait IGrammarTree[+T] {
     } : Action)
   }
 
+  def opt : IGrammarTree[Option[T]] = ^^(Some(_)) | new SuccessGrammarTree(None)
+
+  def rep : IGrammarTree[List[T]] = {
+    lazy val nonTerm : GenericNonTerminalSymbol[List[T]] = new GenericNonTerminalSymbol(
+      this ~ new SymbolGrammarTree(nonTerm) ^^ { case head ~ tail => head :: tail}
+        | new SuccessGrammarTree(Nil)
+    ) {
+      def name = "rep_" + this.hashCode()
+    }
+
+    new SymbolGrammarTree(nonTerm)
+  }
+
+  def rep1 : IGrammarTree[List[T]] = this ~ this.rep ^^ { case head ~ tail => head :: tail}
+
+  def rep1sep[U](sep : IGrammarTree[U]) : IGrammarTree[List[T]] = this ~ (sep ~> this).rep ^^ { case head ~ tail => head :: tail}
+  def repsep[U](sep : IGrammarTree[U]) : IGrammarTree[List[T]] = rep1sep(sep) | new SuccessGrammarTree(Nil)
 }
 class SymbolGrammarTree[T](val symbol : IGenericGrammarSymbol[T]) extends IGrammarTree[T] {
   def eval() = List((List(symbol), identity : Action))
 }
-
+class SuccessGrammarTree[T](val value : T) extends IGrammarTree[T] {
+  def eval() = List((Nil, { stack =>
+    stack.push(value)
+  } : Action))
+}
 
 abstract class GrammarBuilder {
-
-  import TerminalSymbol.{EMPTY, EOF, ERROR}
-
   def start : INonTerminalSymbol
 
   implicit def token2TerminalSymbol[T <% lexical.IToken](token : T) : TerminalSymbol = TerminalSymbol(token)
-  implicit def token2GrammarExpr[T <% lexical.IToken](token : T) : IGrammarTree[lexical.IToken] = token2TerminalSymbol(token)
+  implicit def token2GrammarExpr[T <% lexical.IToken](token : T) : IGrammarTree[Any] = token2TerminalSymbol(token)
   implicit def grammarSymbol2GrammarExpr[T](symbol : IGenericGrammarSymbol[T]) : IGrammarTree[T] = new SymbolGrammarTree(symbol)
 
   private lazy val nonTerm2Name : immutable.Map[INonTerminalSymbol, String] = {
@@ -111,7 +127,7 @@ abstract class GrammarBuilder {
     }.toMap
   }
 
-  def newSymbol[T](tree : => IGrammarTree[T]) = new GenericNonTerminalSymbol(tree) {
+  def nonTerm[T](tree : => IGrammarTree[T]) = new GenericNonTerminalSymbol(tree) {
     def name = nonTerm2Name(this)
   }
 
@@ -120,8 +136,13 @@ abstract class GrammarBuilder {
 
 class Grammar(val start : INonTerminalSymbol) {
 
-  import TerminalSymbol.{EMPTY, EOF, ERROR}
   import immutable.BitSet
+
+  override def toString = s"start=$start\n\t${productions.mkString("\n\t")}\n"
+
+  val EMPTY = TerminalSymbol.EMPTY
+  val EOF = TerminalSymbol.EOF
+  val ERROR = TerminalSymbol.ERROR
 
   val nonTerms : List[INonTerminalSymbol] = {
     var set = Set[INonTerminalSymbol](start)
@@ -166,7 +187,7 @@ class Grammar(val start : INonTerminalSymbol) {
         },
         p.action))
     }
-    name2NewNonTerm.values.toList
+    name2NewNonTerm.values.toList.sorted[INonTerminalSymbol]
   }
 
   def removeLeftRecursion() : Grammar = {
@@ -174,7 +195,6 @@ class Grammar(val start : INonTerminalSymbol) {
 
     for (i <- newNonTerms) {
       var ps = i.productions
-
       for (j <- newNonTerms.takeWhile(_ < i)) {
         ps = ps.flatMap {
           p => p.right match {
@@ -193,12 +213,11 @@ class Grammar(val start : INonTerminalSymbol) {
 
       var id = 0
       def iterate() : Unit = {
-        ps.find(_.right.head == i) match {
+        ps.find(_.rightHead == i) match {
           case Some(pl) =>
             val nnt = new NonTerminalSymbol(s"${i.name}_rr$id", Nil)
             nnt.productions = List(
-              new Production(nnt, List(EMPTY), { stack =>
-                stack.pop()
+              new Production(nnt, Nil, { stack =>
                 stack.push(Nil)
               }),
               new Production(nnt, pl.right.tail ::: List(nnt), { stack =>
@@ -235,7 +254,7 @@ class Grammar(val start : INonTerminalSymbol) {
 
     def iterate(nt : NonTerminalSymbol) : Unit = {
       var id = 0
-      nt.productions = nt.productions.groupBy(_.right.head).map {
+      nt.productions = nt.productions.groupBy(_.rightHead).map {
         case (_, List(p)) => p
         case (_, ps) =>
           var len = 1
@@ -244,15 +263,7 @@ class Grammar(val start : INonTerminalSymbol) {
           }
 
           val nnt = new NonTerminalSymbol(s"${nt.name}_lf$id", Nil)
-          nnt.productions = ps.map { p =>
-            if (p.right.length == len) new Production(nnt, List(EMPTY), { stack =>
-              stack.pop()
-              stack.push(p.action)
-            })
-            else new Production(nnt, p.right.drop(len), { stack =>
-              stack.push(p.action)
-            })
-          }
+          nnt.productions = ps.map { p => new Production(nnt, p.right.drop(len), stack => stack.push(p.action))}
 
           iterate(nnt)
 

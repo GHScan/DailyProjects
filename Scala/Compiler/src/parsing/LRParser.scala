@@ -76,6 +76,7 @@ trait ITableDrivenLRParserBuilder {
       case head :: _ => Some((head, LR0Item(production, pos + 1)))
       case _ => None
     }
+    override def toString = new Production(production.left, production.right.take(pos) ::: new NonTerminalSymbol("·", Nil) :: production.right.drop(pos), null).toString
   }
 
   protected case class LR1Item(production : IProduction, pos : Int, lookAhead : TerminalSymbol) extends LRItem {
@@ -91,7 +92,7 @@ trait ITableDrivenLRParserBuilder {
     }
   }
 
-  protected def closure(set : List[LRItem]) : mutable.Set[LRItem] = {
+  protected def closure(set : List[LRItem]) : List[LRItem] = {
     val c = mutable.Set[LRItem](set : _*)
 
     var workList = set
@@ -105,23 +106,23 @@ trait ITableDrivenLRParserBuilder {
       }
     }
 
-    c
+    c.toList
   }
 
   protected def buildCanonicalCollection(start : List[LRItem]) : (Array[List[(IGrammarSymbol, Int)]], Array[List[LRItem]]) = {
-    val set2ID = mutable.Map[List[LRItem], Int](start -> 0)
+    val set2ID = mutable.Map[List[LRItem], Int](closure(start) -> 0)
     val transitions = mutable.ArrayBuffer[List[(IGrammarSymbol, Int)]](Nil)
 
-    var workList = List(start)
+    var workList = List(set2ID.head._1)
     while (workList.nonEmpty) {
       val set = workList.head
       val id = set2ID(set)
       workList = workList.tail
 
       transitions(id) =
-        (for (Some((symbol, targetItem)) <- closure(set).iterator.map(_.move())) yield (symbol, targetItem)).toList.groupBy(_._1).toList
+        (for (Some((symbol, targetItem)) <- set.map(_.move())) yield (symbol, targetItem)).groupBy(_._1).toList
           .map { case (symbol, symbolItems) =>
-          val targetSet = symbolItems.map(_._2)
+          val targetSet = closure(symbolItems.map(_._2))
           (symbol, set2ID.getOrElseUpdate(targetSet, {
             transitions += Nil
             workList = targetSet :: workList
@@ -141,6 +142,7 @@ trait ITableDrivenLRParserBuilder {
 
     val actionTable = Array.fill(id2Set.size, grammar.maxTermID + 1)(null : LRAction.Action)
     val gotoTable = Array.fill(id2Set.size)(mutable.HashMap[String, Int]())
+    var foundConflict = false
 
     for ((trans, id) <- transitions.zipWithIndex) {
       val gotos = gotoTable(id)
@@ -153,52 +155,73 @@ trait ITableDrivenLRParserBuilder {
                          term <- item2LookAheads(id, item)) yield (term, action)
       val shifts = trans.collect { case (t : TerminalSymbol, target) => (t, LRAction.Shift(target) : LRAction.Action)}
 
-      if (reportConflict && reduces.map(_._1).distinct.length < reduces.length) {
-        println(s"Found Reduce-reduce conflict: $reduces")
-      }
-      if (reportConflict && (reduces.map(_._1).toSet & shifts.map(_._1).toSet).nonEmpty) {
-        println(s"Found Shift-reduce conflict: $reduces, $shifts")
+      if (reportConflict) {
+        val reduceConflicts = reduces.groupBy(_._1).iterator.filter(_._2.length > 1).toList
+
+        val shiftSet = shifts.map(_._1).toSet
+        val shiftReduceConflicts = (reduces.filter(p => shiftSet(p._1)) ::: shifts).groupBy(_._1).iterator.filter(_._2.length > 1).toList
+
+        if (reduceConflicts.nonEmpty || shiftReduceConflicts.nonEmpty) {
+          println(s"Set_$id:")
+          foundConflict = true
+        }
+        if (reduceConflicts.nonEmpty) {
+          println(s"Found Reduce-reduce conflict: \n\t${reduceConflicts.mkString("\t\n")}")
+        }
+        if (shiftReduceConflicts.nonEmpty) {
+          println(s"Found Shift-reduce conflict: \n\t${shiftReduceConflicts.mkString("\t\n")}")
+        }
       }
 
       val actions = actionTable(id)
       for ((t, action) <- reduces ::: shifts) actions(t.token.id) = action
     }
 
+    if (foundConflict && reportConflict && id2Set.size < 512) {
+      println("\nSetTable:\n")
+      println(id2Set.zipWithIndex.map { case (set, id) => s"Set_$id:\n\t$set\n"}.mkString(""))
+      println("\nTransitionTable:\n")
+      println(transitions.zipWithIndex.map { case (trans, id) => s"Set_$id:\n\t$trans\n"}.mkString(""))
+    }
+
     new TableDrivenLRParser(new CompressedLRActionTable(actionTable), new CompressedLRGotoTable(gotoTable))
   }
 }
 
-final class TableDrivenLR0ParserBuilder(val grammar : Grammar) extends ITableDrivenLRParserBuilder {
+final class TableDrivenLR0ParserBuilder(val grammar : Grammar, val reportConflict : Boolean) extends ITableDrivenLRParserBuilder {
   def create : TableDrivenLRParser = {
     val (transitions, id2Set) = buildCanonicalCollection(grammar.start.productions.map(LR0Item(_, 0)))
-    create(transitions, id2Set, (id, item) => grammar.terms, false)
+    create(transitions, id2Set, (id, item) => grammar.inputTerms, false)
   }
 }
 
-final class TableDrivenSLRParserBuilder(val grammar : Grammar) extends ITableDrivenLRParserBuilder {
+final class TableDrivenSLRParserBuilder(val grammar : Grammar, val reportConflict : Boolean) extends ITableDrivenLRParserBuilder {
   def create : TableDrivenLRParser = {
     val (transitions, id2Set) = buildCanonicalCollection(grammar.start.productions.map(LR0Item(_, 0)))
-    create(transitions, id2Set, (id, item) => grammar.followMap(item.production.left).toList.map(grammar.id2Term))
+    create(transitions, id2Set, (id, item) => grammar.followMap(item.production.left).toList.map(grammar.id2Term), reportConflict)
   }
 }
 
-final class TableDrivenLALRParserBuilder(val grammar : Grammar) extends ITableDrivenLRParserBuilder {
+final class TableDrivenLALRParserBuilder(val grammar : Grammar, val reportConflict : Boolean) extends ITableDrivenLRParserBuilder {
   def create : TableDrivenLRParser = {
     val (transitions, id2Set) = buildCanonicalCollection(grammar.start.productions.map(LR0Item(_, 0)))
 
     import immutable.BitSet
     type LALRItem = (Int, LRItem)
-    val item2LAs = mutable.Map[LALRItem, BitSet](id2Set(0).map(item => ((0, item), grammar.firstMap(TerminalSymbol.EOF))) : _*)
+    val item2LAs = mutable.Map[LALRItem, BitSet](
+      closure(grammar.start.productions.map(LR1Item(_, 0, grammar.EOF))).map { case item : LR1Item =>
+        ((0, LR0Item(item.production, item.pos)), grammar.firstMap(item.lookAhead))
+      } : _*)
     val itemSpreadMap = mutable.Map[LALRItem, List[LALRItem]]()
 
     for (id <- 0 until transitions.length;
          item <- id2Set(id);
-         Some((symbol, targetLR1Item : LR1Item)) <- closure(List(LR1Item(item.production, item.pos, TerminalSymbol.ERROR))).iterator.map(_.move());
-         targetID = transitions(id).find(_._1 == symbol).get._2;
-         targetItem = LR0Item(targetLR1Item.production, targetLR1Item.pos)) {
+         moveResult = LR1Item(item.production, item.pos, grammar.ERROR).move() if moveResult.nonEmpty;
+         targetID = transitions(id).find(_._1 == moveResult.get._1).get._2;
+         targetLR1Item <- closure(List(moveResult.get._2)).iterator.map(_.asInstanceOf[LR1Item])) {
       val srcLALRItem = (id, item)
-      val targetLALRItem = (targetID, targetItem)
-      if (targetLR1Item.lookAhead == TerminalSymbol.ERROR) {
+      val targetLALRItem = (targetID, LR0Item(targetLR1Item.production, targetLR1Item.pos))
+      if (targetLR1Item.lookAhead == grammar.ERROR) {
         itemSpreadMap(srcLALRItem) = targetLALRItem :: itemSpreadMap.getOrElse(srcLALRItem, Nil)
       } else {
         item2LAs(targetLALRItem) = item2LAs.getOrElse(targetLALRItem, BitSet.empty) + targetLR1Item.lookAhead.token.id
@@ -220,14 +243,14 @@ final class TableDrivenLALRParserBuilder(val grammar : Grammar) extends ITableDr
       }
     }
 
-    create(transitions, id2Set, (id, item) => item2LAs.getOrElse((id, item), BitSet.empty).toList.map(grammar.id2Term))
+    create(transitions, id2Set, (id, item) => item2LAs.getOrElse((id, item), BitSet.empty).toList.map(grammar.id2Term), reportConflict)
   }
 }
 
-final class TableDrivenLR1ParserBuilder(val grammar : Grammar) extends ITableDrivenLRParserBuilder {
+final class TableDrivenLR1ParserBuilder(val grammar : Grammar, val reportConflict : Boolean) extends ITableDrivenLRParserBuilder {
   def create : TableDrivenLRParser = {
-    val (transitions, id2Set) = buildCanonicalCollection(grammar.start.productions.map(LR1Item(_, 0, TerminalSymbol.EOF)))
-    create(transitions, id2Set, (id, item) => List(item.asInstanceOf[LR1Item].lookAhead))
+    val (transitions, id2Set) = buildCanonicalCollection(grammar.start.productions.map(LR1Item(_, 0, grammar.EOF)))
+    create(transitions, id2Set, (id, item) => List(item.asInstanceOf[LR1Item].lookAhead), reportConflict)
   }
 }
 
@@ -239,38 +262,23 @@ final class TableDrivenLRParser(val actionTable : ILRActionTable, val gotoTable 
     val stateStack = mutable.Stack[Int](0)
     val valueStack = mutable.Stack[Any]()
 
-    try {
-      while (stateStack.nonEmpty) {
-        actionTable(stateStack.top, scanner.head.id) match {
-          case LRAction.Shift(target) =>
-            valueStack.push(scanner.next())
-            stateStack.push(target)
-          case LRAction.Reduce(p) =>
-            p.action(valueStack)
-            for (_ <- 0 until p.right.length) stateStack.pop()
-            stateStack.push(gotoTable(stateStack.top, p.left.name))
-          case LRAction.Accept(p) if scanner.head == lexical.IToken.Eof =>
-            p.action(valueStack)
-            return valueStack.ensuring(_.length == 1).pop()
-          case LRAction.Accept(p) =>
-            p.action(valueStack)
-            for (_ <- 0 until p.right.length) stateStack.pop()
-            stateStack.push(gotoTable(stateStack.top, p.left.name))
-          case _ =>
-            actionTable(stateStack.top, lexical.IToken.Empty.id) match {
-              case LRAction.Shift(target) =>
-                valueStack.push(null)
-                stateStack.push(target)
-              case _=>
-                errors = s"Parse failed: found token ${scanner.head}" :: errors
-                return null
-            }
-        }
+    while (stateStack.nonEmpty) {
+      actionTable(stateStack.top, scanner.head.id) match {
+        case LRAction.Shift(target) =>
+          valueStack.push(scanner.next().value)
+          stateStack.push(target)
+        case LRAction.Reduce(p) =>
+          p.action(valueStack)
+          for (_ <- 0 until p.right.length) stateStack.pop()
+          stateStack.push(gotoTable(stateStack.top, p.left.name))
+        case LRAction.Accept(p) if scanner.head == lexical.IToken.Eof =>
+          p.action(valueStack)
+          return valueStack.ensuring(_.length == 1).pop()
+        case LRAction.Accept(p) =>
+          p.action(valueStack)
+          for (_ <- 0 until p.right.length) stateStack.pop()
+          stateStack.push(gotoTable(stateStack.top, p.left.name))
       }
-    } catch {
-      case e : Exception =>
-        errors = s"Parse failed: found token ${scanner.head}" :: errors
-        return null
     }
 
     errors = s"Parse failed: input is too long, ${scanner.head}" :: errors
@@ -279,14 +287,14 @@ final class TableDrivenLRParser(val actionTable : ILRActionTable, val gotoTable 
 }
 
 object TableDrivenLR0ParserFactory extends IParserFactory {
-  def create(grammar : Grammar) : IParser = new TableDrivenLR0ParserBuilder(grammar).create
+  def create(grammar : Grammar, reportConflict : Boolean) = new TableDrivenLR0ParserBuilder(grammar, reportConflict).create
 }
 object TableDrivenSLRParserFactory extends IParserFactory {
-  def create(grammar : Grammar) : IParser = new TableDrivenSLRParserBuilder(grammar).create
+  def create(grammar : Grammar, reportConflict : Boolean) = new TableDrivenSLRParserBuilder(grammar, reportConflict).create
 }
 object TableDrivenLALRParserFactory extends IParserFactory {
-  def create(grammar : Grammar) : IParser = new TableDrivenLALRParserBuilder(grammar).create
+  def create(grammar : Grammar, reportConflict : Boolean) : IParser = new TableDrivenLALRParserBuilder(grammar, reportConflict).create
 }
 object TableDrivenLR1ParserFactory extends IParserFactory {
-  def create(grammar : Grammar) : IParser = new TableDrivenLR1ParserBuilder(grammar).create
+  def create(grammar : Grammar, reportConflict : Boolean) : IParser = new TableDrivenLR1ParserBuilder(grammar, reportConflict).create
 }

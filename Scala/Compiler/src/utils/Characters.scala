@@ -6,10 +6,10 @@ object Characters {
   val Uppers = All.filter(_.isUpper)
   val Lowers = All.filter(_.isLower)
   val Digits = All.filter(_.isDigit)
-  val LetterOrDigits = All.filter(_.isLetterOrDigit)
+  val LetterOrDigits = All.filter(c => c.isLetterOrDigit || c == '_')
   val Whitespaces = All.filter(_.isWhitespace)
   val NoneLetters = All.filter(!_.isLetter)
   val NoneDigits = All.filter(!_.isDigit)
-  val NoneLetterOrDigits = All.filter(!_.isLetterOrDigit)
+  val NoneLetterOrDigits = All.filter(c => !c.isLetterOrDigit && c != '_')
   val NoneWhitespaces = All.filter(!_.isWhitespace)
 }

@@ -2,7 +2,7 @@ package lexical
 
 import scala.collection.immutable
 
-trait IToken {
+trait IToken extends Ordered[IToken] {
   def id : Int
   def name : String
   def value : Any
@@ -11,6 +11,7 @@ trait IToken {
     case _ => false
   }
   override def hashCode() = id.hashCode()
+  def compare(that : IToken) : Int = id.compare(that.id)
 }
 
 object IToken {

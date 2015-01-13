@@ -1,0 +1,9 @@
+2005.1.14 =>
+    (SLR [loop=10]                   ,0.07033950929999999,GC:(PS Scavenge,count=2,time=0.002))
+    (LALR [loop=10]                  ,0.06395929115,GC:(PS Scavenge,count=1,time=0.001))
+    (LR1 [loop=10]                   ,0.06874002629999999,GC:)
+
+2005.1.14 => After merge token
+    (SLR [loop=10]                   ,0.0600384728,GC:(PS Scavenge,count=3,time=0.001))
+    (LALR [loop=10]                  ,0.0567264502,GC:(PS Scavenge,count=2,time=0.001))
+    (LR1 [loop=10]                   ,0.06221624425,GC:(PS Scavenge,count=2,time=0.001))

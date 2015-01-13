@@ -2,9 +2,29 @@ package utils
 
 object Func {
 
-  def escape(s : String) : String = {
+  def escape(_s : String) : String = {
     import scala.reflect.runtime.universe._
-    Literal(Constant(s)).toString()
+    Literal(Constant(_s)).toString()
+  }
+
+  def unescape(s : String) : String = {
+    val sb = new StringBuilder()
+    var i = 1
+    while (i < s.length - 1) {
+      s(i) match {
+        case '\\' =>
+          i += 1
+          s(i) match {
+            case 't' => sb += '\t'
+            case 'r' => sb += '\r'
+            case 'n' => sb += '\n'
+            case c => sb += c
+          }
+        case c => sb += c
+      }
+      i += 1
+    }
+    sb.toString()
   }
 
   def round2PowerOf2(i : Int) : Int = {

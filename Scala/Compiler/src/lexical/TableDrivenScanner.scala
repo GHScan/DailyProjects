@@ -3,10 +3,11 @@ package lexical
 
 private final class TableDrivenScanner(source : ICharSource, tokenFactory : ITokenFactory, dfaEmulator : TokenizedDFAEmulator) extends IScanner {
 
+  private var errorFound = false
   private var eofFound = false
   private val strBuilder = new StringBuilder()
 
-  override def hasNext : Boolean = source.hasNext || !eofFound
+  override def hasNext : Boolean = !errorFound && (source.hasNext || !eofFound)
 
   override def next() : IToken = {
     var state = dfaEmulator.start
@@ -31,6 +32,7 @@ private final class TableDrivenScanner(source : ICharSource, tokenFactory : ITok
 
     if (matchLen == 0) {
       if (source.hasNext) {
+        errorFound = true
         tokenFactory.error(strBuilder.toString())
       } else {
         eofFound = true

@@ -32,43 +32,25 @@ object JsonParser {
 
     import ScannerBuilder.Implicits._
     import parsing._
-    import TerminalSymbol._
 
     def start : INonTerminalSymbol = value
 
-    val array : GenericNonTerminalSymbol[List[Any]] = newSymbol(
-      "[" ~> opt_value_comma_list <~ "]")
-    val dict : GenericNonTerminalSymbol[Map[String, Any]] = newSymbol(
-      "{" ~> (opt_pair_comma_list ^^ (_.toMap)) <~ "}")
-    val pair : GenericNonTerminalSymbol[(String, Any)] = newSymbol(
-      "STRING" ~ ":" ~ value ^^ { case key ~ _ ~ value => (key.value.asInstanceOf[String], value)}
-    )
-    val opt_pair_comma_list : GenericNonTerminalSymbol[List[(String, Any)]] = newSymbol(
-      EMPTY ^^ (_ => Nil) | pair_comma_list)
-    val pair_comma_list : GenericNonTerminalSymbol[List[(String, Any)]] = newSymbol(
-      pair ^^ (List(_))
-        | pair ~ "," ~ pair_comma_list ^^ { case head ~ _ ~ tail => head :: tail}
-    )
-    val opt_value_comma_list : GenericNonTerminalSymbol[List[Any]] = newSymbol(
-      EMPTY ^^ (_ => Nil) | value_comma_list
-    )
-    val value_comma_list : GenericNonTerminalSymbol[List[Any]] = newSymbol(
-      value ^^ (List(_))
-        | value ~ "," ~ value_comma_list ^^ { case head ~ _ ~ tail => head :: tail}
-    )
-    val value : GenericNonTerminalSymbol[Any] = newSymbol(
-      "BOOLEAN" ^^ (_.value)
-        | "NUMBER" ^^ (_.value)
-        | "STRING" ^^ (_.value)
+    val array : GenericNonTerminalSymbol[List[Any]] = nonTerm(
+      "[" ~> value.repsep(",") <~ "]")
+    val dict : GenericNonTerminalSymbol[Map[String, Any]] = nonTerm(
+      "{" ~> ("STRING" ~ ":" ~ value ^^ { case key ~ _ ~ value => (key.asInstanceOf[String], value)}).repsep(",") <~ "}" ^^ (_.toMap))
+    val value : GenericNonTerminalSymbol[Any] = nonTerm(
+      "BOOLEAN"
+        | "NUMBER"
+        | "STRING"
         | array
         | dict)
 
   }.result
-
 }
 
 class JsonParser(parserType : String) {
-  private val parser = ParserFactory.get(parserType).create(JsonParser.Grammar)
+  private val parser = ParserFactory.get(parserType).create(JsonParser.Grammar, true)
   private val WS = JsonParser.ScannerBuilder.getToken("WS")
 
   def parse(input : String) : Any = {
@@ -103,7 +85,7 @@ class JsonParserTest extends FlatSpec with Matchers {
 
   behavior of "Parsers"
   it should "Work correct" in {
-    for ((_, parser) <- parsers) {
+    for ((t, parser) <- parsers) {
       parser.parse("23.5") should equal(23.5)
       parser.parse( """ "abcd efg fds" """) should equal("abcd efg fds")
       parser.parse( """ [1, 2, 3] """) should equal(List(1, 2, 3))
@@ -112,22 +94,22 @@ class JsonParserTest extends FlatSpec with Matchers {
     }
   }
 
-  behavior of "Benchmark"
-  it should "Work correct" in {
-    val kTimes = 20
-    val kLoop = 20
-
-    println("@ Json parser benchmark\n")
-    val result = pcParser.parse(source)
-
-    utils.Profiler.measure("PC", kTimes) {
-      for (_ <- 0 until kLoop) pcParser.parse(source)
-    }
-    for ((t, parser) <- parsers) {
-      result should equal(parser.parse(source))
-      utils.Profiler.measure(t, kTimes) {
-        for (_ <- 0 until kLoop) parser.parse(source)
-      }
-    }
-  }
+//  behavior of "Benchmark"
+//  it should "Pass benchmark" in {
+//    val kTimes = 20
+//    val kLoop = 20
+//
+//    println("@ Json parser benchmark\n")
+//    val result = pcParser.parse(source)
+//
+//    utils.Profiler.measure("PC", kTimes) {
+//      for (_ <- 0 until kLoop) pcParser.parse(source)
+//    }
+//    for ((t, parser) <- parsers) {
+//      result should equal(parser.parse(source))
+//      utils.Profiler.measure(t, kTimes) {
+//        for (_ <- 0 until kLoop) parser.parse(source)
+//      }
+//    }
+//  }
 }

@@ -29,7 +29,9 @@ abstract class LLParser(_grammar : Grammar) extends IParser {
 final class TableDrivenLL1Parser(_grammar : Grammar) extends LLParser(_grammar) {
 
   def parse(_scanner : Iterator[lexical.IToken]) : Any = {
-    assert(predictable)
+    if (!predictable) {
+      throw new Exception(s"Grammar is not predictable:\n $this")
+    }
 
     val scanner = _scanner.buffered
 
@@ -38,10 +40,8 @@ final class TableDrivenLL1Parser(_grammar : Grammar) extends LLParser(_grammar) 
 
     while (symbolStack.nonEmpty) {
       symbolStack.pop() match {
-        case t : TerminalSymbol if t == TerminalSymbol.EMPTY =>
-          valueStack.push(null)
         case t : TerminalSymbol if t.token == scanner.head =>
-          valueStack.push(scanner.next())
+          valueStack.push(scanner.next().value)
         case t : TerminalSymbol =>
           errors = s"Parse failed: Expected $t, but found ${scanner.head}" :: errors
           return null
@@ -60,7 +60,7 @@ final class TableDrivenLL1Parser(_grammar : Grammar) extends LLParser(_grammar) 
       }
     }
 
-    if (scanner.head != TerminalSymbol.EOF.token) {
+    if (scanner.head != lexical.IToken.Eof) {
       errors = "Parse failed: input is too long!" :: errors
       return null
     }
@@ -70,5 +70,5 @@ final class TableDrivenLL1Parser(_grammar : Grammar) extends LLParser(_grammar) 
 }
 
 object TableDrivenLL1ParserFactory extends IParserFactory {
-  def create(grammar : Grammar) : IParser = new TableDrivenLL1Parser(grammar)
+  def create(grammar : Grammar, reportConflict : Boolean) : IParser = new TableDrivenLL1Parser(grammar)
 }
