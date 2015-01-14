@@ -12,7 +12,7 @@ object LuaParser {
 
     def start : INonTerminalSymbol = chunk
 
-    val Name : GenericNonTerminalSymbol[String] = nonTerm("Name" ^^ (_.asInstanceOf[String]))
+    val Name : GenericNonTerminalSymbol[String] = nonTerm("Name".as[String])
     val fieldsep : GenericNonTerminalSymbol[Any] = nonTerm("," | ";")
     val field : GenericNonTerminalSymbol[(Expr, Expr)] = nonTerm(
       "[" ~ exp ~ "]" ~ "=" ~ exp ^^ { case _ ~ key ~ _ ~ _ ~ value => (key, value)}
@@ -34,7 +34,7 @@ object LuaParser {
         | "..." ^^ (_ => (Nil, true))
     )
     val funcbody : GenericNonTerminalSymbol[((List[String], Boolean), Block)] = nonTerm(
-      ("(" ~> parlist.opt <~ ")") ~ block <~ "end" ^^ { case plist ~ block => (plist.getOrElse((Nil, false)), block)}
+      ("(" ~> parlist.opt <~ ")") ~ block <~ "end" ^^ { case plist ~ _block => (plist.getOrElse((Nil, false)), _block)}
     )
     val function : GenericNonTerminalSymbol[Func] = nonTerm(
       "function" ~> funcbody ^^ { case ((formals, hasVarArg), body) => Func(formals, body, hasVarArg, false)}
@@ -44,9 +44,9 @@ object LuaParser {
         | tableconstructor ^^ (List(_))
         | "String" ^^ (s => List(Const(s.asInstanceOf[String]))))
     val functioncall : GenericNonTerminalSymbol[Expr] = nonTerm(
-      prefixexp ~ args ^^ { case func ~ args => Call(func, args)}
-        | prefixexp ~ ":" ~ Name ~ args ^^ { case obj ~ _ ~ methodName ~ args => MethodCall(obj, methodName, args)})
-    val prefixexp : GenericNonTerminalSymbol[Expr] = nonTerm(
+      prefixexp ~ args ^^ { case func ~ _args => Call(func, _args)}
+        | prefixexp ~ ":" ~ Name ~ args ^^ { case obj ~ _ ~ methodName ~ _args => MethodCall(obj, methodName, _args)})
+    lazy val prefixexp : GenericNonTerminalSymbol[Expr] = nonTerm(
       _var
         | functioncall
         | "(" ~> exp <~ ")")
@@ -58,24 +58,11 @@ object LuaParser {
         | "..." ^^ (_ => VarLengthArguments)
         | function
         | prefixexp
-        | tableconstructor)
-    val unary : GenericNonTerminalSymbol[Expr] = nonTerm(
-      ("-" | "UnaryOp").rep ~ factor ^^ { case ops ~ e => ops.foldLeft(e) { (e, op) => UnaryOp(op.asInstanceOf[String], e)}})
-    val pow : GenericNonTerminalSymbol[Expr] = nonTerm(
-      unary ~ ("^" ~ unary).rep ^^ { case e ~ eops => eops.foldLeft(e) { case (v, (op ~ e)) => BinaryOp(op.asInstanceOf[String], v, e)}})
-    val mul : GenericNonTerminalSymbol[Expr] = nonTerm(
-      pow ~ ("MulOp" ~ pow).rep ^^ { case e ~ eops => eops.foldLeft(e) { case (v, (op ~ e)) => BinaryOp(op.asInstanceOf[String], v, e)}})
-    val add : GenericNonTerminalSymbol[Expr] = nonTerm(
-      mul ~ (("+" | "-") ~ mul).rep ^^ { case e ~ eops => eops.foldLeft(e) { case (v, (op ~ e)) => BinaryOp(op.asInstanceOf[String], v, e)}})
-    val concat : GenericNonTerminalSymbol[Expr] = nonTerm(
-      add ~ (".." ~ add).rep ^^ { case e ~ eops => eops.foldLeft(e) { case (v, (op ~ e)) => BinaryOp(op.asInstanceOf[String], v, e)}})
-    val relat : GenericNonTerminalSymbol[Expr] = nonTerm(
-      concat ~ ("RelatOp" ~ concat).rep ^^ { case e ~ eops => eops.foldLeft(e) { case (v, (op ~ e)) => BinaryOp(op.asInstanceOf[String], v, e)}})
-    val and : GenericNonTerminalSymbol[Expr] = nonTerm(
-      relat ~ ("and" ~ relat).rep ^^ { case e ~ eops => eops.foldLeft(e) { case (v, (op ~ e)) => BinaryOp(op.asInstanceOf[String], v, e)}})
-    val or : GenericNonTerminalSymbol[Expr] = nonTerm(
-      and ~ ("or" ~ and).rep ^^ { case e ~ eops => eops.foldLeft(e) { case (v, (op ~ e)) => BinaryOp(op.asInstanceOf[String], v, e)}})
-    val exp : GenericNonTerminalSymbol[Expr] = nonTerm(or)
+        | tableconstructor
+        | ("-" | "UnaryOp") ~ factor ^^ { case op ~ e => UnaryOp(op.asInstanceOf[String], e)})
+    lazy val exp : GenericNonTerminalSymbol[Expr] = nonTerm(
+      factor
+        | exp ~ ("^" | "MulOp" | "+" | "-" | ".." | "RelatOp" | "and" | "or") ~ exp ^^ { case a ~ op ~ b => BinaryOp(op.asInstanceOf[String], a, b)})
     val _var : GenericNonTerminalSymbol[Expr] = nonTerm(
       Name ^^ Variable
         | prefixexp ~ "[" ~ exp ~ "]" ^^ { case t ~ _ ~ key ~ _ => TableLookup(t, key)}
@@ -98,13 +85,13 @@ object LuaParser {
       varlist ~ "=" ~ explist ^^ { case lefts ~ _ ~ rights => Assignments(lefts, rights)}
         | functioncall ^^ CallStatement
         | "do" ~> block <~ "end"
-        | "while" ~> exp ~ ("do" ~> block <~ "end") ^^ { case e ~ block => While(e, block)}
-        | "repeat" ~> block ~ ("until" ~> exp) ^^ { case block ~ e => Repeat(block, e)}
+        | "while" ~> exp ~ ("do" ~> block <~ "end") ^^ { case e ~ _block => While(e, _block)}
+        | "repeat" ~> block ~ ("until" ~> exp) ^^ { case _block ~ e => Repeat(_block, e)}
         | ("if" ~> exp ~ ("then" ~> block)) ~ ("elseif" ~> exp ~ ("then" ~> block)).rep ~ ("else" ~> block).opt <~ "end" ^^ {
         case case1 ~ cases ~ fallback => Cond((case1 :: cases).map { case e ~ b => (e, b)}, fallback.orNull)
       }
         | ("for" ~> Name <~ "=") ~ ((exp <~ ",") ~ exp ~ ("," ~> exp).opt) ~ ("do" ~> block <~ "end") ^^ {
-        case name ~ (first ~ last ~ step) ~ block => RangeFor(name, first, last, step.orNull, block)
+        case name ~ (first ~ last ~ step) ~ _block => RangeFor(name, first, last, step.orNull, _block)
       }
         | ("for" ~> namelist <~ "in") ~ explist ~ ("do" ~> block <~ "end") ^^ {
         case names ~ initExpr ~ body => IterateFor(names, initExpr, body)
@@ -117,17 +104,25 @@ object LuaParser {
         case l ~ Some(last) => l ::: List(last)
         case l ~ None => l
       })
-    val block : GenericNonTerminalSymbol[Block] = nonTerm(chunk ^^ Block)
+    lazy val block : GenericNonTerminalSymbol[Block] = nonTerm(chunk ^^ Block)
+
+    override def terminalsSymbol2Attribute = List[(List[TerminalSymbol], Associativity.Value)](
+      (List("or"), Associativity.Left),
+      (List("and"), Associativity.Left),
+      (List("RelatOp"), Associativity.Left),
+      (List(".."), Associativity.Left),
+      (List("+", "-"), Associativity.Left),
+      (List("MulOp"), Associativity.Left),
+      (List("^"), Associativity.Left))
 
   }.result
-
 }
 
 class LuaParser(parserType : String) {
   val parser = ParserFactory.get(parserType).create(LuaParser.grammar, false)
 
   def parse(source : String) : Any = {
-    val scanner = LuaScanner(source)
+    val scanner = LuaScanner.create(source)
     val result = parser.parse(scanner)
     if (parser.errors != Nil) {
       val message = parser.errors.mkString("\n")

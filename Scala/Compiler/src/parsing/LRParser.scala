@@ -134,6 +134,29 @@ trait ITableDrivenLRParserBuilder {
     (transitions.toArray, set2ID.toList.sortBy(_._2).map(_._1).toArray)
   }
 
+  private def resolveConflictWithAttribute(symbol : TerminalSymbol, actions : List[LRAction.Action]) : List[LRAction.Action] = {
+    val attributeActions = actions.map {
+      case a@LRAction.Accept(p) => (grammar.attributeOfProduction(p), a)
+      case a@LRAction.Reduce(p) => (grammar.attributeOfProduction(p), a)
+      case a@LRAction.Shift(target) => (grammar.attributeOfSymbol(symbol), a)
+    }
+    if (attributeActions.exists(_._1 == None)) return actions
+
+    val maxPriority = attributeActions.iterator.map(_._1.get.priority).max
+    attributeActions.filter(_._1.get.priority == maxPriority) match {
+      case List((_, a)) => List(a)
+      case l@((attr, _) :: _) if attr.get.associativity == Associativity.Left =>
+        l.collect {
+          case ((_, a : LRAction.Accept)) => a
+          case ((_, a : LRAction.Reduce)) => a
+        }
+      case l =>
+        l.collect {
+          case ((_, a : LRAction.Shift)) => a
+        }
+    }
+  }
+
   protected def create(
     transitions : Array[List[(IGrammarSymbol, Int)]],
     id2Set : Array[List[LRItem]],
@@ -153,31 +176,24 @@ trait ITableDrivenLRParserBuilder {
       val reduces = for (item <- id2Set(id).filter(_.complete);
                          action = if (item.production.left == grammar.start) LRAction.Accept(item.production) else LRAction.Reduce(item.production);
                          term <- item2LookAheads(id, item)) yield (term, action)
-      val shifts = trans.collect { case (t : TerminalSymbol, target) => (t, LRAction.Shift(target) : LRAction.Action)}
+      val shifts = trans.collect { case (t : TerminalSymbol, target) => (t, LRAction.Shift(target))}
 
-      if (reportConflict) {
-        val reduceConflicts = reduces.groupBy(_._1).iterator.filter(_._2.length > 1).toList
+      val result = (reduces ::: shifts).groupBy(_._1).toList.map { case (symbol, symbolActions) => (symbol, resolveConflictWithAttribute(symbol, symbolActions.map(_._2)))}
 
-        val shiftSet = shifts.map(_._1).toSet
-        val shiftReduceConflicts = (reduces.filter(p => shiftSet(p._1)) ::: shifts).groupBy(_._1).iterator.filter(_._2.length > 1).toList
-
-        if (reduceConflicts.nonEmpty || shiftReduceConflicts.nonEmpty) {
-          println(s"Set_$id:")
-          foundConflict = true
-        }
-        if (reduceConflicts.nonEmpty) {
-          println(s"Found Reduce-reduce conflict: \n\t${reduceConflicts.mkString("\t\n")}")
-        }
-        if (shiftReduceConflicts.nonEmpty) {
-          println(s"Found Shift-reduce conflict: \n\t${shiftReduceConflicts.mkString("\t\n")}")
-        }
+      val conflicts = result.filter(_._2.length > 1)
+      if (reportConflict && conflicts.nonEmpty) {
+        foundConflict = true
+        println(s"Set_$id Found conflicts:")
+        println(conflicts.map { case (symbol, actions) => s"\t$symbol\n\t\t${actions.mkString("\n\t\t")}"}.mkString("\n"))
       }
 
       val actions = actionTable(id)
-      for ((t, action) <- reduces ::: shifts) actions(t.token.id) = action
+      for ((t, as) <- result) actions(t.token.id) = as.last
     }
 
-    if (foundConflict && reportConflict && id2Set.size < 512) {
+    if (foundConflict && id2Set.size < 512) {
+      println("\nGrammar:\n")
+      println(grammar)
       println("\nSetTable:\n")
       println(id2Set.zipWithIndex.map { case (set, id) => s"Set_$id:\n\t$set\n"}.mkString(""))
       println("\nTransitionTable:\n")
@@ -204,15 +220,17 @@ final class TableDrivenSLRParserBuilder(val grammar : Grammar, val reportConflic
 
 final class TableDrivenLALRParserBuilder(val grammar : Grammar, val reportConflict : Boolean) extends ITableDrivenLRParserBuilder {
   def create : TableDrivenLRParser = {
-    val (transitions, id2Set) = buildCanonicalCollection(grammar.start.productions.map(LR0Item(_, 0)))
-
     import immutable.BitSet
     type LALRItem = (Int, LRItem)
-    val item2LAs = mutable.Map[LALRItem, BitSet](
-      closure(grammar.start.productions.map(LR1Item(_, 0, grammar.EOF))).map { case item : LR1Item =>
-        ((0, LR0Item(item.production, item.pos)), grammar.firstMap(item.lookAhead))
-      } : _*)
+
+    val (transitions, id2Set) = buildCanonicalCollection(grammar.start.productions.map(LR0Item(_, 0)))
     val itemSpreadMap = mutable.Map[LALRItem, List[LALRItem]]()
+    val item2LAs = mutable.Map[LALRItem, BitSet]()
+
+    closure(grammar.start.productions.map(LR1Item(_, 0, grammar.EOF))).foreach { case item : LR1Item =>
+      val lalrItem = (0, LR0Item(item.production, item.pos))
+      item2LAs(lalrItem) = grammar.firstMap(item.lookAhead) | item2LAs.getOrElse(lalrItem, BitSet.empty)
+    }
 
     for (id <- 0 until transitions.length;
          item <- id2Set(id);
@@ -278,6 +296,9 @@ final class TableDrivenLRParser(val actionTable : ILRActionTable, val gotoTable 
           p.action(valueStack)
           for (_ <- 0 until p.right.length) stateStack.pop()
           stateStack.push(gotoTable(stateStack.top, p.left.name))
+        case _ =>
+          errors = s"Parse failed: found token ${scanner.head}" :: errors
+          return null
       }
     }
 

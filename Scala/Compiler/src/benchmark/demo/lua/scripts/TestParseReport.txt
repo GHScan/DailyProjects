@@ -7,3 +7,7 @@
     (SLR [loop=10]                   ,0.0600384728,GC:(PS Scavenge,count=3,time=0.001))
     (LALR [loop=10]                  ,0.0567264502,GC:(PS Scavenge,count=2,time=0.001))
     (LR1 [loop=10]                   ,0.06221624425,GC:(PS Scavenge,count=2,time=0.001))
+
+2005.1.14 => After apply priority for binary op
+    (LALR [loop=10]                  ,0.038993674799999996,GC:)
+    (LR1 [loop=10]                   ,0.02815628605,GC:)

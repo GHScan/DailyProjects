@@ -1,0 +1,15 @@
+2015.1.14 =>
+    (PC                              ,0.10802723435,GC:(PS Scavenge,count=9,time=0.007))
+    (LALR                            ,0.0329609912,GC:(PS Scavenge,count=1,time=0.001))
+    (LR0                             ,0.02704701665,GC:(PS Scavenge,count=1,time=0.001))
+    (SLR                             ,0.02711223715,GC:(PS Scavenge,count=1,time=0.002))
+    (LL1                             ,0.029676155149999998,GC:(PS Scavenge,count=1,time=0.001))
+    (LR1                             ,0.02748306775,GC:(PS Scavenge,count=1,time=0.001))
+
+2015.1.14 => After format Test.json...
+    (PC [loop=20]                    ,0.128988214,GC:(PS Scavenge,count=6,time=0.005))
+    (SLR [loop=20]                   ,0.0469766441,GC:(PS Scavenge,count=1,time=0.000))
+    (LR0 [loop=20]                   ,0.04128389825,GC:(PS Scavenge,count=1,time=0.000))
+    (LR1 [loop=20]                   ,0.04157138945,GC:(PS Scavenge,count=1,time=0.000))
+    (LL1 [loop=20]                   ,0.0428093825,GC:(PS Scavenge,count=1,time=0.000))
+    (LALR [loop=20]                  ,0.041347034799999995,GC:(PS Scavenge,count=1,time=0.000))

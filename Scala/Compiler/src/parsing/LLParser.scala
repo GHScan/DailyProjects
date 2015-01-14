@@ -30,7 +30,7 @@ final class TableDrivenLL1Parser(_grammar : Grammar) extends LLParser(_grammar) 
 
   def parse(_scanner : Iterator[lexical.IToken]) : Any = {
     if (!predictable) {
-      throw new Exception(s"Grammar is not predictable:\n $this")
+      throw new Exception(s"Grammar is not predictable!\n Grammar=$grammar\n\nParser=$this")
     }
 
     val scanner = _scanner.buffered

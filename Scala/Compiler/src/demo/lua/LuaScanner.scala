@@ -1,6 +1,6 @@
 package demo.lua
 
-import lexical.{StringCharSource, TableDrivenScannerBuilder}
+import lexical.{TokenFactory, StringCharSource, TableDrivenScannerBuilder}
 
 object LuaScanner {
 
@@ -12,7 +12,7 @@ object LuaScanner {
     .token("UnaryOp", """#|not""", identity)
     .token("RelatOp", """<|<=|>|>=|==|~=""", identity)
     .token("MulOp", """\*|\/|\%""", identity)
-    .token("Boolean", """true|false""", _ == true)
+    .token("Boolean", """true|false""", _ == "true")
     .token("Name", """[a-zA-Z_]\w*""", identity)
     .token("Number", """((\d+)?\.)?\d+""", _.toDouble)
     .token("String", """"(\\.|[^"])*"|'(\\.|[^'])*'""", utils.Func.unescape)
@@ -20,5 +20,5 @@ object LuaScanner {
   val CommentToken = ScannerBuilder.getToken("Comment")
   val WSToken = ScannerBuilder.getToken("WS")
 
-  def apply(source : String) = ScannerBuilder.create(new StringCharSource(source)).filter(t => t != CommentToken && t != WSToken)
+  def create(source : String) = ScannerBuilder.create(new StringCharSource(source), new TokenFactory).filter(t => t != CommentToken && t != WSToken)
 }

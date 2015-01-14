@@ -35,16 +35,16 @@ class PCLuaParser extends scala.util.parsing.combinator.RegexParsers with scala.
       | "..." ^^ (_ => (Nil, true))
     )
   lazy val funcbody : Parser[((List[String], Boolean), Block)] =
-    ("(" ~> opt(parlist) <~ ")") ~ block <~ "end" ^^ { case plist ~ block => (plist.getOrElse((Nil, false)), block)}
+    ("(" ~> opt(parlist) <~ ")") ~ block <~ "end" ^^ { case plist ~ _block => (plist.getOrElse((Nil, false)), _block)}
   lazy val function : Parser[Func] =
     "function" ~> funcbody ^^ { case ((formals, hasVarArg), body) => Func(formals, body, hasVarArg, false)}
   lazy val args : Parser[List[Expr]] = (
     "(" ~> opt(explist) <~ ")" ^^ (_.getOrElse(Nil))
       | tableconstructor ^^ (List(_))
-      | "String" ^^ (s => List(Const(s.asInstanceOf[String]))))
+      | "String" ^^ (s => List(Const(s))))
   lazy val functioncall : Parser[Expr] = (
-    prefixexp ~ args ^^ { case func ~ args => Call(func, args)}
-      | prefixexp ~ ":" ~ NAME ~ args ^^ { case obj ~ _ ~ methodNAME ~ args => MethodCall(obj, methodNAME, args)})
+    prefixexp ~ args ^^ { case func ~ _args => Call(func, _args)}
+      | prefixexp ~ ":" ~ NAME ~ args ^^ { case obj ~ _ ~ methodNAME ~ _args => MethodCall(obj, methodNAME, _args)})
   lazy val prefixexp : Parser[Expr] = (
     _var
       | functioncall
@@ -54,7 +54,7 @@ class PCLuaParser extends scala.util.parsing.combinator.RegexParsers with scala.
       | "false" ^^ (_ => Const(false))
       | "true" ^^ (_ => Const(true))
       | "Number" ^^ (v => Const(v.asInstanceOf[Double]))
-      | "String" ^^ (v => Const(v.asInstanceOf[String]))
+      | "String" ^^ (v => Const(v))
       | "..." ^^ (_ => VarLengthArguments)
       | function
       | prefixexp
@@ -62,20 +62,20 @@ class PCLuaParser extends scala.util.parsing.combinator.RegexParsers with scala.
   lazy val unary : Parser[Expr] =
     rep(unop) ~ factor ^^ { case ops ~ e => ops.foldLeft(e) { (e, op) => UnaryOp(op, e)}}
   lazy val pow : Parser[Expr] =
-    unary ~ rep(powop ~ unary) ^^ { case e ~ eops => eops.foldLeft(e) { case (v, (op ~ e)) => BinaryOp(op, v, e)}}
+    unary ~ rep(powop ~ unary) ^^ { case e ~ eops => eops.foldLeft(e) { case (v, (op ~ _e)) => BinaryOp(op, v, _e)}}
   lazy val mul : Parser[Expr] =
-    pow ~ rep(mulop ~ pow) ^^ { case e ~ eops => eops.foldLeft(e) { case (v, (op ~ e)) => BinaryOp(op, v, e)}}
+    pow ~ rep(mulop ~ pow) ^^ { case e ~ eops => eops.foldLeft(e) { case (v, (op ~ _e)) => BinaryOp(op, v, _e)}}
   lazy val add : Parser[Expr] =
-    mul ~ rep(addop ~ mul) ^^ { case e ~ eops => eops.foldLeft(e) { case (v, (op ~ e)) => BinaryOp(op, v, e)}}
+    mul ~ rep(addop ~ mul) ^^ { case e ~ eops => eops.foldLeft(e) { case (v, (op ~ _e)) => BinaryOp(op, v, _e)}}
   lazy val concat : Parser[Expr] =
-    add ~ rep(concatop ~ add) ^^ { case e ~ eops => eops.foldLeft(e) { case (v, (op ~ e)) => BinaryOp(op, v, e)}}
+    add ~ rep(concatop ~ add) ^^ { case e ~ eops => eops.foldLeft(e) { case (v, (op ~ _e)) => BinaryOp(op, v, _e)}}
   lazy val relat : Parser[Expr] =
-    concat ~ rep(relatop ~ concat) ^^ { case e ~ eops => eops.foldLeft(e) { case (v, (op ~ e)) => BinaryOp(op, v, e)}}
+    concat ~ rep(relatop ~ concat) ^^ { case e ~ eops => eops.foldLeft(e) { case (v, (op ~ _e)) => BinaryOp(op, v, _e)}}
   lazy val and : Parser[Expr] =
-    relat ~ rep(andop ~ relat) ^^ { case e ~ eops => eops.foldLeft(e) { case (v, (op ~ e)) => BinaryOp(op, v, e)}}
+    relat ~ rep(andop ~ relat) ^^ { case e ~ eops => eops.foldLeft(e) { case (v, (op ~ _e)) => BinaryOp(op, v, _e)}}
   lazy val or : Parser[Expr] =
-    and ~ rep(orop ~ and) ^^ { case e ~ eops => eops.foldLeft(e) { case (v, (op ~ e)) => BinaryOp(op, v, e)}}
-  lazy val exp : Parser[Expr] = (or)
+    and ~ rep(orop ~ and) ^^ { case e ~ eops => eops.foldLeft(e) { case (v, (op ~ _e)) => BinaryOp(op, v, _e)}}
+  lazy val exp : Parser[Expr] = or
   lazy val _var : Parser[Expr] = (
     NAME ^^ Variable
       | prefixexp ~ "[" ~ exp ~ "]" ^^ { case t ~ _ ~ key ~ _ => TableLookup(t, key)}
@@ -97,13 +97,13 @@ class PCLuaParser extends scala.util.parsing.combinator.RegexParsers with scala.
     varlist ~ "=" ~ explist ^^ { case lefts ~ _ ~ rights => Assignments(lefts, rights)}
       | functioncall ^^ CallStatement
       | "do" ~> block <~ "end"
-      | "while" ~> exp ~ ("do" ~> block <~ "end") ^^ { case e ~ block => While(e, block)}
-      | "repeat" ~> block ~ ("until" ~> exp) ^^ { case block ~ e => Repeat(block, e)}
+      | "while" ~> exp ~ ("do" ~> block <~ "end") ^^ { case e ~ _block => While(e, _block)}
+      | "repeat" ~> block ~ ("until" ~> exp) ^^ { case _block ~ e => Repeat(_block, e)}
       | ("if" ~> exp ~ ("then" ~> block)) ~ rep("elseif" ~> exp ~ ("then" ~> block)) ~ opt("else" ~> block) <~ "end" ^^ {
       case case1 ~ cases ~ fallback => Cond((case1 :: cases).map { case e ~ b => (e, b)}, fallback.orNull)
     }
       | ("for" ~> NAME <~ "=") ~ ((exp <~ ",") ~ exp ~ opt("," ~> exp)) ~ ("do" ~> block <~ "end") ^^ {
-      case name ~ (first ~ last ~ step) ~ block => RangeFor(name, first, last, step.orNull, block)
+      case name ~ (first ~ last ~ step) ~ _block => RangeFor(name, first, last, step.orNull, _block)
     }
       | ("for" ~> namelist <~ "in") ~ explist ~ ("do" ~> block <~ "end") ^^ {
       case names ~ initExpr ~ body => IterateFor(names, initExpr, body)

@@ -1,5 +1,7 @@
 package parsing
 
+import lexical.IToken
+
 import scala.collection.immutable
 import scala.collection.mutable
 
@@ -57,6 +59,10 @@ trait IGrammarTree[+T] {
     } : Action))
   }
 
+  def as[U] : IGrammarTree[U] = new IGrammarTree[U] {
+    def eval() : List[(List[IGrammarSymbol], Action)] = outer.eval()
+  }
+
   def |[U >: T](other : IGrammarTree[U]) : IGrammarTree[U] = new IGrammarTree[U] {
     def eval() = outer.eval() ::: other.eval()
   }
@@ -108,8 +114,8 @@ class SuccessGrammarTree[T](val value : T) extends IGrammarTree[T] {
 abstract class GrammarBuilder {
   def start : INonTerminalSymbol
 
-  implicit def token2TerminalSymbol[T <% lexical.IToken](token : T) : TerminalSymbol = TerminalSymbol(token)
-  implicit def token2GrammarExpr[T <% lexical.IToken](token : T) : IGrammarTree[Any] = token2TerminalSymbol(token)
+  implicit def token2TerminalSymbol[T](token : T)(implicit ev1 : T => IToken) : TerminalSymbol = TerminalSymbol(token)
+  implicit def token2GrammarExpr[T](token : T)(implicit ev1 : T => IToken) : IGrammarTree[Any] = token2TerminalSymbol(token)
   implicit def grammarSymbol2GrammarExpr[T](symbol : IGenericGrammarSymbol[T]) : IGrammarTree[T] = new SymbolGrammarTree(symbol)
 
   private lazy val nonTerm2Name : immutable.Map[INonTerminalSymbol, String] = {
@@ -131,14 +137,31 @@ abstract class GrammarBuilder {
     def name = nonTerm2Name(this)
   }
 
-  def result : Grammar = new Grammar(start)
+  def terminalsSymbol2Attribute : List[(List[TerminalSymbol], Associativity.Value)] = Nil
+
+  def result : Grammar = new Grammar(start, terminalsSymbol2Attribute.zipWithIndex.flatMap { case ((l, a), i) => l.map((_, TerminalSymbolAttribute(i, a)))}.toMap)
 }
 
-class Grammar(val start : INonTerminalSymbol) {
+object Associativity extends Enumeration {
+  val Left, Right = Value
+}
+case class TerminalSymbolAttribute(priority : Int, associativity : Associativity.Value)
+
+class Grammar(
+  val start : INonTerminalSymbol,
+  val terminalSymbol2Attribute : immutable.Map[TerminalSymbol, TerminalSymbolAttribute]) {
 
   import immutable.BitSet
 
   override def toString = s"start=$start\n\t${productions.mkString("\n\t")}\n"
+
+  def attributeOfSymbol(symbol : IGrammarSymbol) : Option[TerminalSymbolAttribute] = symbol match {
+    case t : TerminalSymbol => terminalSymbol2Attribute.get(t)
+    case _ => None
+  }
+  def attributeOfProduction(p : IProduction) : Option[TerminalSymbolAttribute] = p.right.collectFirst {
+    case t : TerminalSymbol if terminalSymbol2Attribute.contains(t) => terminalSymbol2Attribute(t)
+  }
 
   val EMPTY = TerminalSymbol.EMPTY
   val EOF = TerminalSymbol.EOF
@@ -246,7 +269,7 @@ class Grammar(val start : INonTerminalSymbol) {
       i.productions = ps
     }
 
-    new Grammar(newNonTerms.find(_.name == start.name).get)
+    new Grammar(newNonTerms.find(_.name == start.name).get, terminalSymbol2Attribute)
   }
 
   def leftFactoring() : Grammar = {
@@ -276,7 +299,7 @@ class Grammar(val start : INonTerminalSymbol) {
     }
     newNonTerms.foreach(iterate)
 
-    new Grammar(newNonTerms.find(_.name == start.name).get)
+    new Grammar(newNonTerms.find(_.name == start.name).get, terminalSymbol2Attribute)
   }
 
   def firstOfSymbols(symbols : List[IGrammarSymbol], map : mutable.Map[IGrammarSymbol, BitSet]) : BitSet = symbols match {
