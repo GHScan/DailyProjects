@@ -9,6 +9,8 @@ object Associativity extends Enumeration {
 }
 case class TerminalSymbolAttribute(priority : Int, associativity : Associativity.Value)
 
+case class ErrorRecoveryAction(targetNonTerm : String, action : Any => Any, consumeSyncWord : Boolean)
+
 abstract class GrammarBuilder {
 
   def start : INonTerminalSymbol
@@ -38,9 +40,14 @@ abstract class GrammarBuilder {
     def name = nonTerm2Name(this)
   }
 
-  def terminalsSymbol2Attribute : List[(List[TerminalSymbol], Associativity.Value)] = Nil
+  def terminalSymbol2Attribute : List[(List[TerminalSymbol], Associativity.Value)] = Nil
 
-  def result : Grammar = new Grammar(start, terminalsSymbol2Attribute.zipWithIndex.flatMap { case ((l, a), i) => l.map((_, TerminalSymbolAttribute(i, a)))}.toMap)
+  def syncWord2ErrorRecoveryAction : Map[lexical.IToken, ErrorRecoveryAction] = Map.empty
+
+  def result : Grammar = new Grammar(
+    start,
+    terminalSymbol2Attribute.zipWithIndex.flatMap { case ((l, a), i) => l.map((_, TerminalSymbolAttribute(i, a)))}.toMap,
+    syncWord2ErrorRecoveryAction)
 
   def success[T](value : T) : IGrammarExpr[T] = new IGrammarExpr[T] {
     def eval() = List((Nil, { stack =>

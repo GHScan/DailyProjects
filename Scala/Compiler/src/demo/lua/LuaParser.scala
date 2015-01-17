@@ -106,7 +106,7 @@ object LuaParser {
       })
     lazy val block : GenericNonTerminalSymbol[Block] = nonTerm(chunk ^^ Block)
 
-    override def terminalsSymbol2Attribute = List[(List[TerminalSymbol], Associativity.Value)](
+    override def terminalSymbol2Attribute = List[(List[TerminalSymbol], Associativity.Value)](
       (List("or"), Associativity.Left),
       (List("and"), Associativity.Left),
       (List("RelatOp"), Associativity.Left),
@@ -114,6 +114,13 @@ object LuaParser {
       (List("+", "-"), Associativity.Left),
       (List("MulOp"), Associativity.Left),
       (List("^"), Associativity.Left))
+
+    override def syncWord2ErrorRecoveryAction = Map[lexical.IToken, ErrorRecoveryAction]()
+      .updated("end", ErrorRecoveryAction(block.name, _ => Block(Nil), consumeSyncWord = false))
+      .updated("elseif", ErrorRecoveryAction(block.name, _ => Block(Nil), consumeSyncWord = false))
+      .updated("else", ErrorRecoveryAction(block.name, _ => Block(Nil), consumeSyncWord = false))
+      .updated("until", ErrorRecoveryAction(block.name, _ => Block(Nil), consumeSyncWord = false))
+      .updated(";", ErrorRecoveryAction(stat.name, _ => Break, consumeSyncWord = false))
 
   }.result
 
@@ -249,7 +256,7 @@ class LuaParser(val name : String) {
 
   def parse(source : String) : Any = {
     val result = parser.parse(LuaScanner.create(source))
-    if (parser.errors != Nil) throw new Exception(parser.errors.mkString("\n"))
+    if (parser.errors.nonEmpty) throw new Exception(parser.errors.mkString("\n"))
     else result
   }
 }

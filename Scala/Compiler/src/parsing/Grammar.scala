@@ -1,12 +1,12 @@
 package parsing
 
-import scala.collection.immutable
-import scala.collection.mutable
-import immutable.BitSet
+import scala.collection.immutable.BitSet
+import scala.collection.{immutable, mutable}
 
 class Grammar(
   val start : INonTerminalSymbol,
-  val terminalSymbol2Attribute : immutable.Map[TerminalSymbol, TerminalSymbolAttribute]) {
+  val terminalSymbol2Attribute : immutable.Map[TerminalSymbol, TerminalSymbolAttribute],
+  val syncWord2ErrorRecoveryAction : Map[lexical.IToken, ErrorRecoveryAction]) {
 
   override def toString = s"start=$start\n\t${productions.mkString("\n\t")}\n"
 
@@ -118,7 +118,7 @@ class Grammar(
       i.productions = ps
     }
 
-    new Grammar(newNonTerms.find(_.name == start.name).get, terminalSymbol2Attribute)
+    new Grammar(newNonTerms.find(_.name == start.name).get, terminalSymbol2Attribute, syncWord2ErrorRecoveryAction)
   }
 
   def leftFactoring() : Grammar = {
@@ -148,7 +148,7 @@ class Grammar(
     }
     newNonTerms.foreach(iterate)
 
-    new Grammar(newNonTerms.find(_.name == start.name).get, terminalSymbol2Attribute)
+    new Grammar(newNonTerms.find(_.name == start.name).get, terminalSymbol2Attribute, syncWord2ErrorRecoveryAction)
   }
 
   def firstOfSymbols(symbols : List[IGrammarSymbol], map : mutable.Map[IGrammarSymbol, BitSet]) : BitSet = symbols match {

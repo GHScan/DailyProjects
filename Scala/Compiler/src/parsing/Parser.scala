@@ -1,7 +1,9 @@
 package parsing
 
+import scala.collection.immutable
+
 trait IParser {
-  var errors : List[String] = Nil
+  var errors = immutable.Queue[String]()
   def name : String
   def parse(scanner : Iterator[lexical.IToken]) : Any
 }

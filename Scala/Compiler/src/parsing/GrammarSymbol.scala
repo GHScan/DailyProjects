@@ -1,7 +1,5 @@
 package parsing
 
-import scala.collection.mutable
-
 case class ~[+T, +U](first : T, second : U)
 
 trait IGrammarSymbol
@@ -12,9 +10,9 @@ case class TerminalSymbol(token : lexical.IToken) extends IGenericGrammarSymbol[
   def compare(that : TerminalSymbol) : Int = token.compare(that.token)
 }
 object TerminalSymbol {
-  val EMPTY = TerminalSymbol(lexical.IToken.Empty)
-  val EOF = TerminalSymbol(lexical.IToken.Eof)
-  val ERROR = TerminalSymbol(lexical.IToken.Error)
+  val EMPTY = TerminalSymbol(lexical.IToken.EMPTY)
+  val EOF = TerminalSymbol(lexical.IToken.EOF)
+  val ERROR = TerminalSymbol(lexical.IToken.ERROR)
 }
 
 trait INonTerminalSymbol extends IGrammarSymbol with Ordered[INonTerminalSymbol] {
@@ -26,8 +24,7 @@ trait INonTerminalSymbol extends IGrammarSymbol with Ordered[INonTerminalSymbol]
 }
 final class NonTerminalSymbol(val name : String, var productions : List[IProduction]) extends INonTerminalSymbol
 abstract class GenericNonTerminalSymbol[T](expr : => IGrammarExpr[T]) extends INonTerminalSymbol with IGenericGrammarSymbol[T] {
-  outer =>
-  lazy val productions : List[IProduction] = expr.eval().map(p => new Production(outer, p._1, p._2))
+  lazy val productions : List[IProduction] = expr.eval().map(p => new Production(this, p._1, p._2))
 }
 
 trait IProduction {

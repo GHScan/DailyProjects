@@ -6,6 +6,7 @@ trait IToken extends Ordered[IToken] {
   def id : Int
   def name : String
   def value : Any
+  def locationText : String
   override def equals(other : Any) = other match {
     case o : IToken => id == o.id
     case _ => false
@@ -16,19 +17,20 @@ trait IToken extends Ordered[IToken] {
 
 object IToken {
 
-  val Eof = new Token(0, "EOF", null)
-  val Error = new Token(1, "ERROR", null)
-  val Empty = new Token(2, "ε", null)
+  val EOF = new Token(0, "EOF", null)
+  val ERROR = new Token(1, "ERROR", null)
+  val EMPTY = new Token(2, "ε", null)
 
-  val FirstTokenID = 3
+  val NextTokenID = 3
 
 }
 
 final class Token(val id : Int, val name : String, val value : Any) extends IToken {
   override def toString = s"Token($name,$value)"
+  def locationText : String = "<Unkown>"
 }
 
-final class FileToken(val id : Int, val name : String, val value : Any, val startLoc : (Int, Int), val endLoc : (Int, Int)) extends IToken {
+abstract class FileToken(val id : Int, val name : String, val value : Any, val startLoc : (Int, Int), val endLoc : (Int, Int)) extends IToken {
   override def toString = s"Token($name,$value,start=$startLoc,end=$endLoc)"
 }
 
@@ -40,33 +42,52 @@ trait ITokenFactory {
 
 final class TokenFactory extends ITokenFactory {
   def create(id : Int, name : String, value : Any, lexeme : String) : IToken = new Token(id, name, value)
-  def eof() : IToken = IToken.Eof
-  def error(lexeme : String) : IToken = new Token(IToken.Error.id, IToken.Error.name, lexeme)
+  def eof() : IToken = IToken.EOF
+  def error(lexeme : String) : IToken = new Token(IToken.ERROR.id, IToken.ERROR.name, lexeme)
 }
 
 final class FileTokenFactory extends ITokenFactory {
   var line = 1
   var column = 1
+  val lastLineText = new StringBuilder()
 
   private def nextLocation(lexeme : String) : ((Int, Int), (Int, Int)) = {
     val startLoc = (line, column)
     lexeme.foreach {
-      case '\n' => line += 1; column = 1
-      case _ => column += 1
+      case '\n' =>
+        line += 1
+        column = 1
+        lastLineText.clear()
+      case c =>
+        column += 1
+        lastLineText += c
     }
     (startLoc, (line, column))
   }
 
-  def create(id : Int, name : String, value : Any, lexeme : String) : IToken = {
-    val (startLoc, endLoc) = nextLocation(lexeme)
-    new FileToken(id, name, value, startLoc, endLoc)
+  private def getLocationText(start : (Int, Int), end : (Int, Int)) : String = {
+    if (line < start._1 || line > end._1) return "<Unkown>"
+
+    def getMark(column : Int) = if (column >= start._2 && column < end._2) '~' else ' '
+
+    val lineText = lastLineText.toString()
+    s"$lineText\n${new String((1 to column).map(getMark).toArray)}"
   }
 
-  def eof() : IToken = IToken.Eof
+  def create(id : Int, name : String, value : Any, lexeme : String) : IToken = {
+    val (startLoc, endLoc) = nextLocation(lexeme)
+    new FileToken(id, name, value, startLoc, endLoc) {
+      def locationText : String = getLocationText(this.startLoc, this.endLoc)
+    }
+  }
+
+  def eof() : IToken = IToken.EOF
 
   def error(lexeme : String) : IToken = {
     val (startLoc, endLoc) = nextLocation(lexeme)
-    new FileToken(IToken.Error.id, IToken.Error.name, lexeme, startLoc, endLoc)
+    new FileToken(IToken.ERROR.id, IToken.ERROR.name, lexeme, startLoc, endLoc) {
+      def locationText : String = getLocationText(this.startLoc, this.endLoc)
+    }
   }
 }
 
@@ -89,7 +110,7 @@ abstract class ScannerBuilder {
   def _create(source : ICharSource, tokenFactory : ITokenFactory) : IScanner
 
   private final var nextPriority = 0
-  private final var nextTokenID = IToken.FirstTokenID
+  private final var nextTokenID = IToken.NextTokenID
   private final var name2Token = immutable.Map[String, IToken]()
   private final var regexNFAs : List[TokenizedNFA] = Nil
 

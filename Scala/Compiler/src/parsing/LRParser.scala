@@ -1,7 +1,6 @@
 package parsing
 
 import scala.collection.mutable
-import scala.collection.immutable
 
 abstract class LRParser extends IParser {
   def actionTable : ILRActionTable
@@ -36,9 +35,11 @@ final class CompressedLRActionTable(_table : Array[Array[LRAction.Action]]) exte
 }
 
 trait ILRGotoTable extends ((Int, String) => Int) {
+  def tryApply(state : Int, nonTerm : String) : Option[Int]
 }
 final class LRGotoTable(table : Array[mutable.HashMap[String, Int]]) extends ILRGotoTable {
   def apply(state : Int, nonTerm : String) = table(state)(nonTerm)
+  def tryApply(state : Int, nonTerm : String) = table(state).get(nonTerm)
 }
 final class CompressedLRGotoTable(_table : Array[mutable.HashMap[String, Int]]) extends ILRGotoTable {
   val (table, state2Row) = {
@@ -53,4 +54,5 @@ final class CompressedLRGotoTable(_table : Array[mutable.HashMap[String, Int]]) 
   }
 
   def apply(state : Int, nonTerm : String) = table(state2Row(state))(nonTerm)
+  def tryApply(state : Int, nonTerm : String) : Option[Int] = table(state2Row(state)).get(nonTerm)
 }

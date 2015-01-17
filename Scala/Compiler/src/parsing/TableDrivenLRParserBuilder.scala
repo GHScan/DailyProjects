@@ -1,6 +1,6 @@
 package parsing
 
-import scala.collection.{immutable, mutable}
+import scala.collection.mutable
 
 abstract class TableDrivenLRParserBuilder {
   def name : String
@@ -148,7 +148,7 @@ abstract class TableDrivenLRParserBuilder {
       println(transitions.zipWithIndex.map { case (trans, id) => s"Set_$id:\n\t$trans\n"}.mkString(""))
     }
 
-    new TableDrivenLRParser(name, new CompressedLRActionTable(actionTable), new CompressedLRGotoTable(gotoTable))
+    new TableDrivenLRParser(name, grammar, new CompressedLRActionTable(actionTable), new CompressedLRGotoTable(gotoTable))
   }
 }
 
@@ -179,7 +179,7 @@ final class TableDrivenLR1ParserBuilder(val grammar : Grammar, val reportConflic
 final class TableDrivenLALRParserBuilder(val grammar : Grammar, val reportConflict : Boolean) extends TableDrivenLRParserBuilder {
   def name : String = TableDrivenLALRParserFactory.name
   def create : TableDrivenLRParser = {
-    import immutable.BitSet
+    import scala.collection.immutable.BitSet
     type LALRItem = (Int, LRItem)
 
     val (transitions, id2Set) = buildCanonicalCollection(grammar.start.productions.map(LR0Item(_, 0)))

@@ -25,7 +25,7 @@ class TableDrivenScannerTest extends FlatSpec with Matchers {
   it should "Enable Error input" in {
     val scanner = createScanner("123 abc <>")
     val expectTokens = List[IToken](
-      "int", "ident", IToken.Error)
+      "int", "ident", IToken.ERROR)
     scanner.toList should equal(expectTokens)
   }
 
@@ -35,7 +35,7 @@ class TableDrivenScannerTest extends FlatSpec with Matchers {
       "def",
       "ident", "(", "ident", ",", "def", ")",
       "=",
-      "ident", "(", "ident", ",", "def", "+", "int", ")", IToken.Eof)
+      "ident", "(", "ident", ",", "def", "+", "int", ")", IToken.EOF)
     scanner.toList should equal(expectTokens)
   }
 }

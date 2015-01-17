@@ -26,6 +26,9 @@ object JsonParser {
     lazy val value : GenericNonTerminalSymbol[Any] = nonTerm(
       "BOOLEAN" | "NUMBER" | "STRING" | array | dict)
 
+    override def syncWord2ErrorRecoveryAction = Map[lexical.IToken, ErrorRecoveryAction]()
+      .updated("}", ErrorRecoveryAction(value.name, _ => Map.empty, consumeSyncWord = true))
+
   }.result
 }
 
@@ -34,6 +37,6 @@ class JsonParser(val name : String) {
 
   def parse(input : String) : Any = {
     val result = parser.parse(JsonParser.ScannerBuilder.create(new StringCharSource(input), new TokenFactory))
-    if (parser.errors != Nil) throw new Exception(parser.errors.mkString("\n")) else result
+    if (parser.errors.nonEmpty) throw new Exception(parser.errors.mkString("\n")) else result
   }
 }
