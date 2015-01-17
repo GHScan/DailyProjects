@@ -6,7 +6,7 @@ import org.scalatest.{Matchers, FlatSpec}
 class TableDrivenScannerTest extends FlatSpec with Matchers {
 
   val scannerBuilder = new TableDrivenScannerBuilder()
-    .token("ws", """[\t\n\r ]+""", _ => null)
+    .token("ws", """[\t\n\r ]+""", IgnoreHandler)
     .token(",")
     .token(")")
     .token("(")
@@ -16,9 +16,7 @@ class TableDrivenScannerTest extends FlatSpec with Matchers {
     .token("int", """\d+""", _.toInt)
     .token("ident", """\w+""", identity)
 
-  val wsToken = scannerBuilder.getToken("ws")
-
-  def createScanner(input : String) = scannerBuilder.create(new StringCharSource(input), new TokenFactory()).filter(_ != wsToken)
+  def createScanner(input : String) = scannerBuilder.create(new StringCharSource(input), new TokenFactory())
 
   import scannerBuilder.Implicits._
 

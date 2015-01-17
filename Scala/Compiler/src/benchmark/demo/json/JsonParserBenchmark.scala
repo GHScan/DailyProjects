@@ -7,7 +7,7 @@ import demo.json._
 class JsonParserBenchmark extends FlatSpec with Matchers {
 
   val pcParser = new PCJsonParser
-  val parsers = ParserFactory.get.keys.map(t => (t, new JsonParser(t)))
+  val parsers = ParserFactory.names.map(name => new JsonParser(name))
 
   val source = scala.io.Source.fromFile("src/benchmark/demo/json/scripts/Test.json").mkString
 
@@ -22,9 +22,9 @@ class JsonParserBenchmark extends FlatSpec with Matchers {
     utils.Profiler.measure(s"PC [loop=$kLoop]", kTimes) {
       for (_ <- 0 until kLoop) pcParser.parse(source)
     }
-    for ((t, parser) <- parsers) {
+    for (parser <- parsers) {
       result should equal(parser.parse(source))
-      utils.Profiler.measure(s"$t [loop=$kLoop]", kTimes) {
+      utils.Profiler.measure(s"${parser.name} [loop=$kLoop]", kTimes) {
         for (_ <- 0 until kLoop) parser.parse(source)
       }
     }

@@ -47,6 +47,5 @@ private final class TableDrivenScanner(source : ICharSource, tokenFactory : ITok
 }
 
 class TableDrivenScannerBuilder extends ScannerBuilder {
-
-  override def create(source : ICharSource, tokenFactory : ITokenFactory = new FileTokenFactory) : IScanner = new TableDrivenScanner(source, tokenFactory, dfaEmulator)
+  def _create(source : ICharSource, tokenFactory : ITokenFactory) : IScanner = new TableDrivenScanner(source, tokenFactory, dfaEmulator)
 }

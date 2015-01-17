@@ -11,3 +11,9 @@
 2005.1.14 => After apply priority for binary op
     (LALR [loop=10]                  ,0.038993674799999996,GC:)
     (LR1 [loop=10]                   ,0.02815628605,GC:)
+
+2005.1.17 => 1. Use immutable ValueStack 2. Add LLBacktracking parser
+    (LLBacktracking [loop=10]        ,0.31127315094999997,GC:(PS Scavenge,count=9,time=0.075))              // Full tracking
+    (LLBacktracking [loop=10]        ,0.1136591102,GC:(PS Scavenge,count=3,time=0.013))                     // Use predicate table
+    (LALR [loop=10]                  ,0.0354685916,GC:)
+    (LR1 [loop=10]                   ,0.0314285538,GC:)

@@ -6,8 +6,8 @@ object LuaAST {
 
   sealed abstract class Expr extends Tree
   case class Variable(name : String) extends Expr
-  case object VarLengthArguments extends Expr
-  case class Const(value : Any) extends Expr
+  case object VarArgument extends Expr
+  case class Constant(value : Any) extends Expr
   case class MethodCall(obj : Expr, methodName : String, args : List[Expr]) extends Expr
   case class FieldOf(obj : Expr, fieldName : String) extends Expr
   case class TableLookup(table : Expr, key : Expr) extends Expr
@@ -21,8 +21,8 @@ object LuaAST {
   case class Block(statements : List[Statement]) extends Statement
   case object Break extends Statement
   case class Return(values : List[Expr]) extends Statement
-  case class Assignments(lefts : List[Expr], rights : List[Expr]) extends Statement
-  case class LocalDefines(names : List[String], rights : List[Expr]) extends Statement
+  case class Assign(lefts : List[Expr], rights : List[Expr]) extends Statement
+  case class LocalDef(names : List[String], rights : List[Expr]) extends Statement
   case class CallStatement(call : Expr) extends Statement
   case class While(cond : Expr, body : Block) extends Statement
   case class Repeat(body : Block, cond : Expr) extends Statement

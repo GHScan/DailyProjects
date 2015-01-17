@@ -21,8 +21,8 @@ class PCLuaParser extends scala.util.parsing.combinator.RegexParsers with scala.
   val fieldsep : Parser[Any] = "," | ";"
   lazy val field : Parser[(Expr, Expr)] = (
     "[" ~ exp ~ "]" ~ "=" ~ exp ^^ { case _ ~ key ~ _ ~ _ ~ value => (key, value)}
-      | NAME ~ "=" ~ exp ^^ { case key ~ _ ~ value => (Const(key), value)}
-      | exp ^^ { e => (Const(-1), e)})
+      | NAME ~ "=" ~ exp ^^ { case key ~ _ ~ value => (Constant(key), value)}
+      | exp ^^ { e => (Constant(-1), e)})
   lazy val fieldlist : Parser[List[(Expr, Expr)]] = field ~ rep(fieldsep ~> field) <~ opt(fieldsep) ^^ { case head ~ tail => head :: tail}
   lazy val tableconstructor : Parser[TableConstructor] = "{" ~> opt(fieldlist) <~ "}" ^^ (e => TableConstructor(e.getOrElse(Nil)))
   lazy val namelist : Parser[List[String]] = rep1sep(NAME, ",")
@@ -37,11 +37,11 @@ class PCLuaParser extends scala.util.parsing.combinator.RegexParsers with scala.
   lazy val funcbody : Parser[((List[String], Boolean), Block)] =
     ("(" ~> opt(parlist) <~ ")") ~ block <~ "end" ^^ { case plist ~ _block => (plist.getOrElse((Nil, false)), _block)}
   lazy val function : Parser[Func] =
-    "function" ~> funcbody ^^ { case ((formals, hasVarArg), body) => Func(formals, body, hasVarArg, false)}
+    "function" ~> funcbody ^^ { case ((formals, hasVarArg), body) => Func(formals, body, hasVarArg, hasSelf = false)}
   lazy val args : Parser[List[Expr]] = (
     "(" ~> opt(explist) <~ ")" ^^ (_.getOrElse(Nil))
       | tableconstructor ^^ (List(_))
-      | "String" ^^ (s => List(Const(s))))
+      | "String" ^^ (s => List(Constant(s))))
   lazy val functioncall : Parser[Expr] = (
     prefixexp ~ args ^^ { case func ~ _args => Call(func, _args)}
       | prefixexp ~ ":" ~ NAME ~ args ^^ { case obj ~ _ ~ methodNAME ~ _args => MethodCall(obj, methodNAME, _args)})
@@ -50,12 +50,12 @@ class PCLuaParser extends scala.util.parsing.combinator.RegexParsers with scala.
       | functioncall
       | "(" ~> exp <~ ")")
   lazy val factor : Parser[Expr] = (
-    "nil" ^^ (_ => Const(null))
-      | "false" ^^ (_ => Const(false))
-      | "true" ^^ (_ => Const(true))
-      | "Number" ^^ (v => Const(v.asInstanceOf[Double]))
-      | "String" ^^ (v => Const(v))
-      | "..." ^^ (_ => VarLengthArguments)
+    "nil" ^^ (_ => Constant(null))
+      | "false" ^^ (_ => Constant(false))
+      | "true" ^^ (_ => Constant(true))
+      | "Number" ^^ (v => Constant(v.asInstanceOf[Double]))
+      | "String" ^^ (v => Constant(v))
+      | "..." ^^ (_ => VarArgument)
       | function
       | prefixexp
       | tableconstructor)
@@ -94,7 +94,7 @@ class PCLuaParser extends scala.util.parsing.combinator.RegexParsers with scala.
     "return" ~> opt(explist) ^^ (es => Return(es.getOrElse(Nil)))
       | "break" ^^ (_ => Break))
   lazy val stat : Parser[Statement] = (
-    varlist ~ "=" ~ explist ^^ { case lefts ~ _ ~ rights => Assignments(lefts, rights)}
+    varlist ~ "=" ~ explist ^^ { case lefts ~ _ ~ rights => Assign(lefts, rights)}
       | functioncall ^^ CallStatement
       | "do" ~> block <~ "end"
       | "while" ~> exp ~ ("do" ~> block <~ "end") ^^ { case e ~ _block => While(e, _block)}
@@ -108,9 +108,9 @@ class PCLuaParser extends scala.util.parsing.combinator.RegexParsers with scala.
       | ("for" ~> namelist <~ "in") ~ explist ~ ("do" ~> block <~ "end") ^^ {
       case names ~ initExpr ~ body => IterateFor(names, initExpr, body)
     }
-      | "function" ~> funcname ~ funcbody ^^ { case (left, hasSelf) ~ (((formals, hasVarArg), body)) => Assignments(List(left), List(Func(formals, body, hasVarArg, hasSelf)))}
-      | "local" ~> "function" ~> NAME ~ funcbody ^^ { case name ~ (((formals, hasVarArg), body)) => LocalDefines(List(name), List(Func(formals, body, hasVarArg, false)))}
-      | "local" ~> namelist ~ opt("=" ~> explist) ^^ { case names ~ exprs => LocalDefines(names, exprs.getOrElse(Nil))})
+      | "function" ~> funcname ~ funcbody ^^ { case (left, hasSelf) ~ (((formals, hasVarArg), body)) => Assign(List(left), List(Func(formals, body, hasVarArg, hasSelf)))}
+      | "local" ~> "function" ~> NAME ~ funcbody ^^ { case name ~ (((formals, hasVarArg), body)) => LocalDef(List(name), List(Func(formals, body, hasVarArg, hasSelf = false)))}
+      | "local" ~> namelist ~ opt("=" ~> explist) ^^ { case names ~ exprs => LocalDef(names, exprs.getOrElse(Nil))})
   lazy val chunk : Parser[List[Statement]] =
     rep(stat <~ opt(";")) ~ opt(laststat <~ opt(";")) ^^ {
       case l ~ Some(last) => l ::: List(last)
@@ -120,6 +120,6 @@ class PCLuaParser extends scala.util.parsing.combinator.RegexParsers with scala.
 
   def parse(input : String) : Any = {
     val result = parseAll(chunk, input)
-    if (result.successful) result.get else throw new Exception(result.toString())
+    if (result.successful) result.get else throw new Exception(result.toString)
   }
 }

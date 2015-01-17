@@ -7,7 +7,7 @@ import parsing.ParserFactory
 class JsonParserTest extends FlatSpec with Matchers {
 
   val pcParser = new PCJsonParser
-  val parsers = ParserFactory.get.keys.map(t => (t, new JsonParser(t)))
+  val parsers = ParserFactory.names.map(name => new JsonParser(name))
 
   behavior of "PCJsonParser"
   it should "Work correct" in {
@@ -20,7 +20,7 @@ class JsonParserTest extends FlatSpec with Matchers {
 
   behavior of "Parsers"
   it should "Work correct" in {
-    for ((t, parser) <- parsers) {
+    for (parser <- parsers) {
       parser.parse("23.5") should equal(23.5)
       parser.parse( """ "abcd efg fds" """) should equal("abcd efg fds")
       parser.parse( """ [1, 2, 3] """) should equal(List(1, 2, 3))

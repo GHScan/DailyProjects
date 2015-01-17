@@ -8,26 +8,28 @@ final class RegexParser extends RegexParsers with PackratParsers {
 
   override val whiteSpace = """""".r
 
-  private val charParser : Parser[Seq[Char]] =
-    (("""\\.""".r ^^ { s =>
-      s.charAt(1) match {
-        case 't' => List('\t')
-        case 'n' => List('\n')
-        case 'r' => List('\r')
-        case 'a' => Letters
-        case 'A' => NoneLetters
-        case 'd' => Digits
-        case 'D' => NoneDigits
-        case 'w' => LetterOrDigits
-        case 'W' => NoneLetterOrDigits
-        case 's' => Whitespaces
-        case 'S' => NoneWhitespaces
-        case c => List(c)
-      }
-    } : Parser[Seq[Char]])
-      | """[^\[\]\(\)\?\*\+\.\|\-]""".r ^^ (s => s.toList))
+  private val escapedCharParser : Parser[Seq[Char]] = """\\.""".r ^^ { s =>
+    s.charAt(1) match {
+      case 't' => List('\t')
+      case 'n' => List('\n')
+      case 'r' => List('\r')
+      case 'a' => Letters
+      case 'A' => NoneLetters
+      case 'd' => Digits
+      case 'D' => NoneDigits
+      case 'w' => LetterOrDigits
+      case 'W' => NoneLetterOrDigits
+      case 's' => Whitespaces
+      case 'S' => NoneWhitespaces
+      case c => List(c)
+    }
+  }
 
-  private val rangeParser : Parser[Seq[Char]] = charParser ~ opt("-" ~! charParser) ^^ {
+  private val charParser : Parser[Seq[Char]] = escapedCharParser | """[^\[\]\(\)\?\*\+\.\|]""".r ^^ (s => s.toList)
+
+  private val rangeCharParser : Parser[Seq[Char]] = escapedCharParser | """[^\]\-]""".r ^^ (s => s.toList)
+
+  private val rangeParser : Parser[Seq[Char]] = rangeCharParser ~ opt("-" ~! rangeCharParser) ^^ {
     case c1 ~ None => c1
     case c1 ~ Some(_ ~ c2) =>
       assert(c1.size == 1 && c2.size == 1 && c1.head < c2.head, s"Invalid Character range : $c1-$c2")

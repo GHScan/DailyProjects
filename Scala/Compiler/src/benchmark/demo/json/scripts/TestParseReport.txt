@@ -13,3 +13,12 @@
     (LR1 [loop=20]                   ,0.04157138945,GC:(PS Scavenge,count=1,time=0.000))
     (LL1 [loop=20]                   ,0.0428093825,GC:(PS Scavenge,count=1,time=0.000))
     (LALR [loop=20]                  ,0.041347034799999995,GC:(PS Scavenge,count=1,time=0.000))
+
+2015.1.17 => Add LLBacktracking parser
+    (PC [loop=20]                    ,0.13659804855000002,GC:(PS Scavenge,count=8,time=0.006))
+    (LL1 [loop=20]                   ,0.04246631195,GC:)
+    (LLBacktracking [loop=20]        ,0.045951992899999995,GC:(PS Scavenge,count=1,time=0.001))
+    (LR0 [loop=20]                   ,0.046136116049999995,GC:)
+    (SLR [loop=20]                   ,0.04179778025,GC:)
+    (LALR [loop=20]                  ,0.0409571469,GC:)
+    (LR1 [loop=20]                   ,0.04121984365,GC:)

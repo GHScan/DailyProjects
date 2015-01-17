@@ -12,6 +12,6 @@ class PCJsonParser extends scala.util.parsing.combinator.RegexParsers with scala
 
   def parse(input : String) = {
     val result = parseAll(value, input)
-    if (result.successful) result.get else throw new Exception(result.toString())
+    if (result.successful) result.get else throw new Exception(result.toString)
   }
 }

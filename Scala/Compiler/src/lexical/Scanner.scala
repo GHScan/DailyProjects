@@ -72,7 +72,7 @@ final class FileTokenFactory extends ITokenFactory {
 
 trait IScanner extends Iterator[IToken]
 
-class TokenFAStateAttribute(
+final class TokenFAStateAttribute(
   val priority : Int,
   val id : Int,
   val name : String,
@@ -80,13 +80,22 @@ class TokenFAStateAttribute(
   override def toString = name
 }
 
-trait ScannerBuilder {
-  def create(source : ICharSource, tokenFactory : ITokenFactory) : IScanner
+object IgnoreHandler extends (String => Any) {
+  val IgnoreResult = {}
+  def apply(s : String) : Any = IgnoreResult
+}
+
+abstract class ScannerBuilder {
+  def _create(source : ICharSource, tokenFactory : ITokenFactory) : IScanner
 
   private final var nextPriority = 0
   private final var nextTokenID = IToken.FirstTokenID
   private final var name2Token = immutable.Map[String, IToken]()
   private final var regexNFAs : List[TokenizedNFA] = Nil
+
+  def create(source : ICharSource, tokenFactory : ITokenFactory = new FileTokenFactory) : Iterator[IToken] = {
+    _create(source, tokenFactory).filter(_.value != IgnoreHandler.IgnoreResult)
+  }
 
   def token(name : String, pattern : String, lexemeHandler : (String) => Any) : this.type = {
     regexNFAs = TokenizedNFA.fromPattern(pattern, new TokenFAStateAttribute(nextPriority, nextTokenID, name, lexemeHandler)) :: regexNFAs
