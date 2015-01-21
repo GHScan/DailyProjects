@@ -2,11 +2,11 @@ package parsing
 
 import scala.collection.mutable
 
-final class TableDrivenLL1Parser(_grammar : Grammar) extends LLParser(_grammar) {
+final class TableDrivenLL1Parser(_grammar : Grammar) extends TableDrivenLLParser(_grammar) {
 
   def name : String = TableDrivenLL1ParserFactory.name
 
-  def recoverFromError(scanner : BufferedIterator[lexical.IToken], _valueStack : List[Any], symbolStack : mutable.Stack[Any]) : Option[List[Any]] = {
+  def recoverFromError(scanner : BufferedIterator[lexical.Token], _valueStack : List[Any], symbolStack : mutable.Stack[Any]) : Option[List[Any]] = {
 
     var valueStack = _valueStack
 
@@ -28,7 +28,7 @@ final class TableDrivenLL1Parser(_grammar : Grammar) extends LLParser(_grammar) 
     None
   }
 
-  def parse(_scanner : Iterator[lexical.IToken]) : Any = {
+  def parse(_scanner : Iterator[lexical.Token]) : Any = {
     if (!predictable) {
       throw new Exception(s"Grammar is not predictable!\n Grammar=$grammar\n\nParser=$this")
     }
@@ -73,7 +73,7 @@ final class TableDrivenLL1Parser(_grammar : Grammar) extends LLParser(_grammar) 
         return null
     }
 
-    if (scanner.head != lexical.IToken.EOF) {
+    if (scanner.head != lexical.Token.EOF) {
       errors :+= "Parse failed: input is too long!"
       return null
     }

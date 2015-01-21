@@ -1,7 +1,7 @@
 package demo.json
 
 
-class PCJsonParser extends scala.util.parsing.combinator.RegexParsers with scala.util.parsing.combinator.PackratParsers {
+class PCJsonParser extends scala.util.parsing.combinator.RegexParsers {
 
   private val NUMBER : Parser[Double] = """\d+(\.\d+)?""".r ^^ (_.toDouble)
   private val STRING : Parser[String] = """"(\\.|[^"])*"""".r ^^ { s => s.substring(1, s.length - 1)}

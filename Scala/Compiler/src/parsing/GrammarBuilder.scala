@@ -1,6 +1,6 @@
 package parsing
 
-import lexical.IToken
+import lexical.Token
 
 import scala.collection.immutable
 
@@ -15,8 +15,8 @@ abstract class GrammarBuilder {
 
   def start : INonTerminalSymbol
 
-  implicit def token2TerminalSymbol[T](token : T)(implicit ev1 : T => IToken) : TerminalSymbol = TerminalSymbol(token)
-  implicit def token2GrammarExpr[T](token : T)(implicit ev1 : T => IToken) : IGrammarExpr[Any] = token2TerminalSymbol(token)
+  implicit def token2TerminalSymbol[T](token : T)(implicit ev1 : T => Token) : TerminalSymbol = TerminalSymbol(token)
+  implicit def token2GrammarExpr[T](token : T)(implicit ev1 : T => Token) : IGrammarExpr[Any] = token2TerminalSymbol(token)
   implicit def grammarSymbol2GrammarExpr[T](symbol : IGenericGrammarSymbol[T]) : IGrammarExpr[T] = new IGrammarExpr[T] {
     def eval() = List((List(symbol), identity : Action))
   }
@@ -42,7 +42,7 @@ abstract class GrammarBuilder {
 
   def terminalSymbol2Attribute : List[(List[TerminalSymbol], Associativity.Value)] = Nil
 
-  def syncWord2ErrorRecoveryAction : Map[lexical.IToken, ErrorRecoveryAction] = Map.empty
+  def syncWord2ErrorRecoveryAction : Map[lexical.Token, ErrorRecoveryAction] = Map.empty
 
   def result : Grammar = new Grammar(
     start,

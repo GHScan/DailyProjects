@@ -1,87 +1,90 @@
 package demo.lua
 
+import scala.util.parsing.input.CharSequenceReader
+
 class PCLuaParser extends scala.util.parsing.combinator.RegexParsers with scala.util.parsing.combinator.PackratParsers {
 
   import demo.lua.LuaAST._
 
-  override val whiteSpace = """\s+|\-\-[^\n]*|\[\[([^\]]|\][^\]])*\]\]|\[=\[([^\]]|\][^\]])*\]=\]""".r
+  override val whiteSpace = """(\s|--[^\n]*|\[\[([^\]]|\][^\]])*\]\]|\[=\[([^\]]|\][^\]])*\]=\])+""".r
 
-  private val NAME : Parser[String] = """[a-zA-Z_]\w*""".r
-  private val NUMBER : Parser[Double] = """((\d+)?\.)?\d+""".r ^^ (_.toDouble)
-  private val STRING : Parser[String] = """"(\\.|[^"])*"|'(\\.|[^'])*'""".r ^^ utils.Func.unescape
+  private val NAME : PackratParser[String] = """[a-zA-Z_]\w*""".r : Parser[String]
+  private val NUMBER : PackratParser[Double] = """((\d+)?\.)?\d+""".r ^^ (_.toDouble)
+  private val STRING : PackratParser[String] = """"(\\.|[^"])*"|'(\\.|[^'])*'""".r ^^ utils.Func.unescape
 
-  val unop : Parser[String] = "-" | "not" | "#"
-  val powop : Parser[String] = "^"
-  val mulop : Parser[String] = "*" | "/" | "%"
-  val addop : Parser[String] = "+" | "-"
-  val concatop : Parser[String] = ".."
-  val relatop : Parser[String] = "<" | "<=" | ">" | ">=" | "==" | "~="
-  val andop : Parser[String] = "and"
-  val orop : Parser[String] = "or"
-  val fieldsep : Parser[Any] = "," | ";"
-  lazy val field : Parser[(Expr, Expr)] = (
+  private val unop : PackratParser[String] = "-" | "not" | "#"
+  private val powop : PackratParser[String] = "^" : Parser[String]
+  private val mulop : PackratParser[String] = "*" | "/" | "%"
+  private val addop : PackratParser[String] = "+" | "-"
+  private val concatop : PackratParser[String] = ".." : Parser[String]
+  private val relatop : PackratParser[String] = "<" | "<=" | ">" | ">=" | "==" | "~="
+  private val andop : PackratParser[String] = "and" : Parser[String]
+  private val orop : PackratParser[String] = "or" : Parser[String]
+  private val fieldsep : PackratParser[Any] = "," | ";"
+  private lazy val field : PackratParser[(Expr, Expr)] = (
     "[" ~ exp ~ "]" ~ "=" ~ exp ^^ { case _ ~ key ~ _ ~ _ ~ value => (key, value)}
       | NAME ~ "=" ~ exp ^^ { case key ~ _ ~ value => (Constant(key), value)}
       | exp ^^ { e => (Constant(-1), e)})
-  lazy val fieldlist : Parser[List[(Expr, Expr)]] = field ~ rep(fieldsep ~> field) <~ opt(fieldsep) ^^ { case head ~ tail => head :: tail}
-  lazy val tableconstructor : Parser[TableConstructor] = "{" ~> opt(fieldlist) <~ "}" ^^ (e => TableConstructor(e.getOrElse(Nil)))
-  lazy val namelist : Parser[List[String]] = rep1sep(NAME, ",")
-  lazy val explist : Parser[List[Expr]] = rep1sep(exp, ",")
-  lazy val parlist : Parser[(List[String], Boolean)] = (
-    namelist ~ opt("," ~ "...") ^^ {
+  private lazy val fieldlist : PackratParser[List[(Expr, Expr)]] = field ~ rep(fieldsep ~> field) <~ opt(fieldsep) ^^ { case head ~ tail => head :: tail}
+  private lazy val tableconstructor : PackratParser[TableConstructor] = "{" ~> opt(fieldlist) <~ "}" ^^ (e => TableConstructor(e.getOrElse(Nil)))
+  private lazy val namelist : PackratParser[List[String]] = rep1sep(NAME, ",")
+  private lazy val explist : PackratParser[List[Expr]] = rep1sep(exp, ",")
+  private lazy val parlist : PackratParser[(List[String], Boolean)] = (
+    "..." ^^ (_ => (Nil, true))
+      | namelist ~ opt("," ~ "...") ^^ {
       case list ~ Some(_) => (list, true)
       case list ~ None => (list, false)
-    }
-      | "..." ^^ (_ => (Nil, true))
-    )
-  lazy val funcbody : Parser[((List[String], Boolean), Block)] =
+    })
+  private lazy val funcbody : PackratParser[((List[String], Boolean), Block)] =
     ("(" ~> opt(parlist) <~ ")") ~ block <~ "end" ^^ { case plist ~ _block => (plist.getOrElse((Nil, false)), _block)}
-  lazy val function : Parser[Func] =
+  private lazy val function : PackratParser[Func] =
     "function" ~> funcbody ^^ { case ((formals, hasVarArg), body) => Func(formals, body, hasVarArg, hasSelf = false)}
-  lazy val args : Parser[List[Expr]] = (
+  private lazy val args : PackratParser[List[Expr]] = (
     "(" ~> opt(explist) <~ ")" ^^ (_.getOrElse(Nil))
       | tableconstructor ^^ (List(_))
-      | "String" ^^ (s => List(Constant(s))))
-  lazy val functioncall : Parser[Expr] = (
-    prefixexp ~ args ^^ { case func ~ _args => Call(func, _args)}
-      | prefixexp ~ ":" ~ NAME ~ args ^^ { case obj ~ _ ~ methodNAME ~ _args => MethodCall(obj, methodNAME, _args)})
-  lazy val prefixexp : Parser[Expr] = (
-    _var
+      | STRING ^^ (s => List(Constant(s)))
+      | failure("parse args failed"))
+  private lazy val functioncall : PackratParser[Expr] = (
+    prefixexp ~ ":" ~ NAME ~ args ^^ { case obj ~ _ ~ methodNAME ~ _args => MethodCall(obj, methodNAME, _args)}
+      | prefixexp ~ args ^^ { case func ~ _args => Call(func, _args)})
+  private lazy val prefixexp : PackratParser[Expr] = (
+    "(" ~> exp <~ ")"
       | functioncall
-      | "(" ~> exp <~ ")")
-  lazy val factor : Parser[Expr] = (
+      | _var)
+  private lazy val factor : PackratParser[Expr] = (
     "nil" ^^ (_ => Constant(null))
       | "false" ^^ (_ => Constant(false))
       | "true" ^^ (_ => Constant(true))
-      | "Number" ^^ (v => Constant(v.asInstanceOf[Double]))
-      | "String" ^^ (v => Constant(v))
+      | NUMBER ^^ (v => Constant(v.asInstanceOf[Double]))
+      | STRING ^^ (v => Constant(v))
       | "..." ^^ (_ => VarArgument)
       | function
+      | tableconstructor
       | prefixexp
-      | tableconstructor)
-  lazy val unary : Parser[Expr] =
+      | failure("factor parse failed"))
+  private lazy val unary : PackratParser[Expr] =
     rep(unop) ~ factor ^^ { case ops ~ e => ops.foldLeft(e) { (e, op) => UnaryOp(op, e)}}
-  lazy val pow : Parser[Expr] =
+  private lazy val pow : PackratParser[Expr] =
     unary ~ rep(powop ~ unary) ^^ { case e ~ eops => eops.foldLeft(e) { case (v, (op ~ _e)) => BinaryOp(op, v, _e)}}
-  lazy val mul : Parser[Expr] =
+  private lazy val mul : PackratParser[Expr] =
     pow ~ rep(mulop ~ pow) ^^ { case e ~ eops => eops.foldLeft(e) { case (v, (op ~ _e)) => BinaryOp(op, v, _e)}}
-  lazy val add : Parser[Expr] =
+  private lazy val add : PackratParser[Expr] =
     mul ~ rep(addop ~ mul) ^^ { case e ~ eops => eops.foldLeft(e) { case (v, (op ~ _e)) => BinaryOp(op, v, _e)}}
-  lazy val concat : Parser[Expr] =
+  private lazy val concat : PackratParser[Expr] =
     add ~ rep(concatop ~ add) ^^ { case e ~ eops => eops.foldLeft(e) { case (v, (op ~ _e)) => BinaryOp(op, v, _e)}}
-  lazy val relat : Parser[Expr] =
+  private lazy val relat : PackratParser[Expr] =
     concat ~ rep(relatop ~ concat) ^^ { case e ~ eops => eops.foldLeft(e) { case (v, (op ~ _e)) => BinaryOp(op, v, _e)}}
-  lazy val and : Parser[Expr] =
+  private lazy val and : PackratParser[Expr] =
     relat ~ rep(andop ~ relat) ^^ { case e ~ eops => eops.foldLeft(e) { case (v, (op ~ _e)) => BinaryOp(op, v, _e)}}
-  lazy val or : Parser[Expr] =
+  private lazy val or : PackratParser[Expr] =
     and ~ rep(orop ~ and) ^^ { case e ~ eops => eops.foldLeft(e) { case (v, (op ~ _e)) => BinaryOp(op, v, _e)}}
-  lazy val exp : Parser[Expr] = or
-  lazy val _var : Parser[Expr] = (
-    NAME ^^ Variable
-      | prefixexp ~ "[" ~ exp ~ "]" ^^ { case t ~ _ ~ key ~ _ => TableLookup(t, key)}
-      | prefixexp ~ "." ~ NAME ^^ { case obj ~ _ ~ fieldNAME => FieldOf(obj, fieldNAME)})
-  lazy val varlist : Parser[List[Expr]] = rep1sep(_var, ",")
-  lazy val funcname : Parser[(Expr, Boolean)] =
+  private lazy val exp : PackratParser[Expr] = or
+  private lazy val _var : PackratParser[Expr] = (
+    prefixexp ~ "[" ~ exp ~ "]" ^^ { case t ~ _ ~ key ~ _ => TableLookup(t, key)}
+      | prefixexp ~ "." ~ NAME ^^ { case obj ~ _ ~ fieldNAME => FieldOf(obj, fieldNAME)}
+      | NAME ^^ Variable)
+  private lazy val varlist : PackratParser[List[Expr]] = rep1sep(_var, ",")
+  private lazy val funcname : PackratParser[(Expr, Boolean)] =
     NAME ~ rep("." ~> NAME) ~ opt(":" ~> NAME) ^^ {
       case name ~ fields ~ method =>
         val prefix = fields.foldLeft(Variable(name) : Expr) { (e, name) => FieldOf(e, name)}
@@ -90,13 +93,11 @@ class PCLuaParser extends scala.util.parsing.combinator.RegexParsers with scala.
           case None => (prefix, false)
         }
     }
-  lazy val laststat : Parser[Statement] = (
+  private lazy val laststat : PackratParser[Statement] = (
     "return" ~> opt(explist) ^^ (es => Return(es.getOrElse(Nil)))
       | "break" ^^ (_ => Break))
-  lazy val stat : Parser[Statement] = (
-    varlist ~ "=" ~ explist ^^ { case lefts ~ _ ~ rights => Assign(lefts, rights)}
-      | functioncall ^^ CallStatement
-      | "do" ~> block <~ "end"
+  private lazy val stat : PackratParser[Statement] = (
+    "do" ~> block <~ "end"
       | "while" ~> exp ~ ("do" ~> block <~ "end") ^^ { case e ~ _block => While(e, _block)}
       | "repeat" ~> block ~ ("until" ~> exp) ^^ { case _block ~ e => Repeat(_block, e)}
       | ("if" ~> exp ~ ("then" ~> block)) ~ rep("elseif" ~> exp ~ ("then" ~> block)) ~ opt("else" ~> block) <~ "end" ^^ {
@@ -110,16 +111,19 @@ class PCLuaParser extends scala.util.parsing.combinator.RegexParsers with scala.
     }
       | "function" ~> funcname ~ funcbody ^^ { case (left, hasSelf) ~ (((formals, hasVarArg), body)) => Assign(List(left), List(Func(formals, body, hasVarArg, hasSelf)))}
       | "local" ~> "function" ~> NAME ~ funcbody ^^ { case name ~ (((formals, hasVarArg), body)) => LocalDef(List(name), List(Func(formals, body, hasVarArg, hasSelf = false)))}
-      | "local" ~> namelist ~ opt("=" ~> explist) ^^ { case names ~ exprs => LocalDef(names, exprs.getOrElse(Nil))})
-  lazy val chunk : Parser[List[Statement]] =
+      | "local" ~> namelist ~ opt("=" ~> explist) ^^ { case names ~ exprs => LocalDef(names, exprs.getOrElse(Nil))}
+      | functioncall ^^ CallStatement
+      | varlist ~ "=" ~ explist ^^ { case lefts ~ _ ~ rights => Assign(lefts, rights)}
+      | failure("parse stat failed!"))
+  private lazy val chunk : PackratParser[List[Statement]] =
     rep(stat <~ opt(";")) ~ opt(laststat <~ opt(";")) ^^ {
       case l ~ Some(last) => l ::: List(last)
       case l ~ None => l
     }
-  lazy val block : Parser[Block] = chunk ^^ Block
+  private lazy val block : PackratParser[Block] = chunk ^^ Block
 
   def parse(input : String) : Any = {
-    val result = parseAll(chunk, input)
+    val result = phrase(chunk)(new PackratReader(new CharSequenceReader(input)))
     if (result.successful) result.get else throw new Exception(result.toString)
   }
 }

@@ -9,7 +9,7 @@ private final class TableDrivenScanner(source : ICharSource, tokenFactory : ITok
 
   override def hasNext : Boolean = !errorFound && (source.hasNext || !eofFound)
 
-  override def next() : IToken = {
+  override def next() : Token = {
     var state = dfaEmulator.start
     var matchState = 0
     var matchLen = 0

@@ -1,6 +1,6 @@
 package demo.json
 
-import lexical.{IgnoreHandler, TokenFactory, StringCharSource, TableDrivenScannerBuilder}
+import lexical.{IgnoreHandler, FastTokenFactory, StringCharSource, TableDrivenScannerBuilder}
 import parsing.{ParserFactory, GrammarBuilder}
 
 object JsonParser {
@@ -26,7 +26,7 @@ object JsonParser {
     lazy val value : GenericNonTerminalSymbol[Any] = nonTerm(
       "BOOLEAN" | "NUMBER" | "STRING" | array | dict)
 
-    override def syncWord2ErrorRecoveryAction = Map[lexical.IToken, ErrorRecoveryAction]()
+    override def syncWord2ErrorRecoveryAction = Map[lexical.Token, ErrorRecoveryAction]()
       .updated("}", ErrorRecoveryAction(value.name, _ => Map.empty, consumeSyncWord = true))
 
   }.result
@@ -36,7 +36,7 @@ class JsonParser(val name : String) {
   private val parser = ParserFactory.get(name).create(JsonParser.Grammar, reportConflict = true)
 
   def parse(input : String) : Any = {
-    val result = parser.parse(JsonParser.ScannerBuilder.create(new StringCharSource(input), new TokenFactory))
+    val result = parser.parse(JsonParser.ScannerBuilder.create(new StringCharSource(input), new FastTokenFactory))
     if (parser.errors.nonEmpty) throw new Exception(parser.errors.mkString("\n")) else result
   }
 }

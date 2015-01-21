@@ -1,6 +1,6 @@
 package demo.lua
 
-import lexical.{IgnoreHandler, TokenFactory, StringCharSource, TableDrivenScannerBuilder}
+import lexical._
 
 object LuaScanner {
 
@@ -8,7 +8,7 @@ object LuaScanner {
     .literals(";", "=", ",", ".", ":", "...", "(", ")", "{", "}", "[", "]", "+", "-", "^", "..")
     .literals("and", "or", "break", "do", "else", "elseif", "end", "for", "function", "if", "in", "local", "nil", "repeat", "return", "then", "until", "while")
     .token("WS", """\s+""", IgnoreHandler)
-    .token("Comment", """\-\-[^\n]*|\[\[([^\]]|\][^\]])*\]\]|\[=\[([^\]]|\][^\]])*\]=\]""", IgnoreHandler)
+    .token("Comment", """--[^\n]*|\[\[([^\]]|\][^\]])*\]\]|\[=\[([^\]]|\][^\]])*\]=\]""", IgnoreHandler)
     .token("UnaryOp", """#|not""", identity)
     .token("RelatOp", """<|<=|>|>=|==|~=""", identity)
     .token("MulOp", """\*|\/|\%""", identity)
@@ -17,5 +17,5 @@ object LuaScanner {
     .token("Number", """((\d+)?\.)?\d+""", _.toDouble)
     .token("String", """"(\\.|[^"])*"|'(\\.|[^'])*'""", utils.Func.unescape)
 
-  def create(source : String) = ScannerBuilder.create(new StringCharSource(source), new TokenFactory)
+  def create(source : String) = ScannerBuilder.create(new StringCharSource(source), new FastTokenFactory)
 }

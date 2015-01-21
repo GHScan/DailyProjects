@@ -2,48 +2,46 @@ package lexical
 
 import scala.collection.immutable
 
-trait IToken extends Ordered[IToken] {
+trait Token extends Ordered[Token] {
   def id : Int
   def name : String
   def value : Any
   def locationText : String
   override def equals(other : Any) = other match {
-    case o : IToken => id == o.id
+    case o : Token => id == o.id
     case _ => false
   }
   override def hashCode() = id.hashCode()
-  def compare(that : IToken) : Int = id.compare(that.id)
+  def compare(that : Token) : Int = id.compare(that.id)
 }
 
-object IToken {
-
-  val EOF = new Token(0, "EOF", null)
-  val ERROR = new Token(1, "ERROR", null)
-  val EMPTY = new Token(2, "ε", null)
+object Token {
+  val EOF = new FastToken(0, "EOF", null)
+  val ERROR = new FastToken(1, "ERROR", null)
+  val EMPTY = new FastToken(2, "ε", null)
 
   val NextTokenID = 3
-
 }
 
-final class Token(val id : Int, val name : String, val value : Any) extends IToken {
+final class FastToken(val id : Int, val name : String, val value : Any) extends Token {
   override def toString = s"Token($name,$value)"
   def locationText : String = "<Unkown>"
 }
 
-abstract class FileToken(val id : Int, val name : String, val value : Any, val startLoc : (Int, Int), val endLoc : (Int, Int)) extends IToken {
+abstract class FileToken(val id : Int, val name : String, val value : Any, val startLoc : (Int, Int), val endLoc : (Int, Int)) extends Token {
   override def toString = s"Token($name,$value,start=$startLoc,end=$endLoc)"
 }
 
 trait ITokenFactory {
-  def create(id : Int, name : String, value : Any, lexeme : String) : IToken
-  def eof() : IToken
-  def error(lexeme : String) : IToken
+  def create(id : Int, name : String, value : Any, lexeme : String) : Token
+  def eof() : Token
+  def error(lexeme : String) : Token
 }
 
-final class TokenFactory extends ITokenFactory {
-  def create(id : Int, name : String, value : Any, lexeme : String) : IToken = new Token(id, name, value)
-  def eof() : IToken = IToken.EOF
-  def error(lexeme : String) : IToken = new Token(IToken.ERROR.id, IToken.ERROR.name, lexeme)
+final class FastTokenFactory extends ITokenFactory {
+  def create(id : Int, name : String, value : Any, lexeme : String) : Token = new FastToken(id, name, value)
+  def eof() : Token = Token.EOF
+  def error(lexeme : String) : Token = new FastToken(Token.ERROR.id, Token.ERROR.name, lexeme)
 }
 
 final class FileTokenFactory extends ITokenFactory {
@@ -74,24 +72,24 @@ final class FileTokenFactory extends ITokenFactory {
     s"$lineText\n${new String((1 to column).map(getMark).toArray)}"
   }
 
-  def create(id : Int, name : String, value : Any, lexeme : String) : IToken = {
+  def create(id : Int, name : String, value : Any, lexeme : String) : Token = {
     val (startLoc, endLoc) = nextLocation(lexeme)
     new FileToken(id, name, value, startLoc, endLoc) {
       def locationText : String = getLocationText(this.startLoc, this.endLoc)
     }
   }
 
-  def eof() : IToken = IToken.EOF
+  def eof() : Token = Token.EOF
 
-  def error(lexeme : String) : IToken = {
+  def error(lexeme : String) : Token = {
     val (startLoc, endLoc) = nextLocation(lexeme)
-    new FileToken(IToken.ERROR.id, IToken.ERROR.name, lexeme, startLoc, endLoc) {
+    new FileToken(Token.ERROR.id, Token.ERROR.name, lexeme, startLoc, endLoc) {
       def locationText : String = getLocationText(this.startLoc, this.endLoc)
     }
   }
 }
 
-trait IScanner extends Iterator[IToken]
+trait IScanner extends Iterator[Token]
 
 final class TokenFAStateAttribute(
   val priority : Int,
@@ -110,17 +108,17 @@ abstract class ScannerBuilder {
   def _create(source : ICharSource, tokenFactory : ITokenFactory) : IScanner
 
   private final var nextPriority = 0
-  private final var nextTokenID = IToken.NextTokenID
-  private final var name2Token = immutable.Map[String, IToken]()
+  private final var nextTokenID = Token.NextTokenID
+  private final var name2Token = immutable.Map[String, Token]()
   private final var regexNFAs : List[TokenizedNFA] = Nil
 
-  def create(source : ICharSource, tokenFactory : ITokenFactory = new FileTokenFactory) : Iterator[IToken] = {
+  def create(source : ICharSource, tokenFactory : ITokenFactory = new FileTokenFactory) : Iterator[Token] = {
     _create(source, tokenFactory).filter(_.value != IgnoreHandler.IgnoreResult)
   }
 
   def token(name : String, pattern : String, lexemeHandler : (String) => Any) : this.type = {
     regexNFAs = TokenizedNFA.fromPattern(pattern, new TokenFAStateAttribute(nextPriority, nextTokenID, name, lexemeHandler)) :: regexNFAs
-    name2Token += ((name, new Token(nextTokenID, name, null)))
+    name2Token += ((name, new FastToken(nextTokenID, name, null)))
     nextPriority -= 1
     nextTokenID += 1
     this
@@ -141,6 +139,6 @@ abstract class ScannerBuilder {
   }
 
   object Implicits {
-    implicit def string2Token(name : String) : IToken = getToken(name)
+    implicit def string2Token(name : String) : Token = getToken(name)
   }
 }

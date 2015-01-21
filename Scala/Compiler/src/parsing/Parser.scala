@@ -5,7 +5,7 @@ import scala.collection.immutable
 trait IParser {
   var errors = immutable.Queue[String]()
   def name : String
-  def parse(scanner : Iterator[lexical.IToken]) : Any
+  def parse(scanner : Iterator[lexical.Token]) : Any
 }
 
 trait IParserFactory {

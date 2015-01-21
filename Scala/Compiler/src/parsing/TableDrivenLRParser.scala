@@ -8,7 +8,7 @@ final class TableDrivenLRParser(
   val actionTable : ILRActionTable,
   val gotoTable : ILRGotoTable) extends LRParser {
 
-  def recoverFromError(scanner : BufferedIterator[lexical.IToken], _valueStack : List[Any], stateStack : mutable.Stack[Int]) : Option[List[Any]] = {
+  def recoverFromError(scanner : BufferedIterator[lexical.Token], _valueStack : List[Any], stateStack : mutable.Stack[Int]) : Option[List[Any]] = {
 
     var valueStack = _valueStack
 
@@ -33,7 +33,7 @@ final class TableDrivenLRParser(
     None
   }
 
-  def parse(_scanner : Iterator[lexical.IToken]) : Any = {
+  def parse(_scanner : Iterator[lexical.Token]) : Any = {
     val scanner = _scanner.buffered
 
     val stateStack = mutable.Stack[Int](0)
@@ -49,7 +49,7 @@ final class TableDrivenLRParser(
             valueStack = p.action(valueStack)
             for (_ <- 0 until p.right.length) stateStack.pop()
             stateStack.push(gotoTable(stateStack.top, p.left.name))
-          case LRAction.Accept(p) if scanner.head == lexical.IToken.EOF =>
+          case LRAction.Accept(p) if scanner.head == lexical.Token.EOF =>
             valueStack = p.action(valueStack)
             return if (errors.isEmpty) valueStack.ensuring(_.length == 1).head else null
           case LRAction.Accept(p) =>

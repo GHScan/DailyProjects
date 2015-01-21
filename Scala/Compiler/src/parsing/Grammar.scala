@@ -6,7 +6,7 @@ import scala.collection.{immutable, mutable}
 class Grammar(
   val start : INonTerminalSymbol,
   val terminalSymbol2Attribute : immutable.Map[TerminalSymbol, TerminalSymbolAttribute],
-  val syncWord2ErrorRecoveryAction : Map[lexical.IToken, ErrorRecoveryAction]) {
+  val syncWord2ErrorRecoveryAction : Map[lexical.Token, ErrorRecoveryAction]) {
 
   override def toString = s"start=$start\n\t${productions.mkString("\n\t")}\n"
 
@@ -92,13 +92,13 @@ class Grammar(
           case Some(pl) =>
             val nnt = new NonTerminalSymbol(s"${i.name}_rr$id", Nil)
             nnt.productions = List(
-              new Production(nnt, Nil, { stack =>
-                Nil :: stack
-              }),
               new Production(nnt, pl.right.tail ::: List(nnt), { stack =>
                 val ll = stack.head.asInstanceOf[List[List[Any]]]
                 val (values, stack2) = stack.tail.splitAt(pl.right.tail.length)
                 (values :: ll) :: stack2
+              }),
+              new Production(nnt, Nil, { stack =>
+                Nil :: stack
               }))
 
             ps = ps.filter(_ != pl).map(p => new Production(i, p.right ::: List(nnt), { stack =>
@@ -126,7 +126,7 @@ class Grammar(
 
     def iterate(nt : NonTerminalSymbol) : Unit = {
       var id = 0
-      nt.productions = nt.productions.groupBy(_.rightHead).map {
+      nt.productions = nt.productions.groupBy(_.rightHead).toList.map {
         case (_, List(p)) => p
         case (_, ps) =>
           var len = 1
@@ -144,7 +144,7 @@ class Grammar(
             val action = stack.head.asInstanceOf[List[Any] => List[Any]]
             action(stack.tail)
           })
-      }.toList
+      }
     }
     newNonTerms.foreach(iterate)
 

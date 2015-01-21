@@ -6,6 +6,7 @@ import demo.lua._
 class LuaParserTest extends FlatSpec with Matchers {
 
   val parsers = List("LLBacktracking", "LALR", "LR1").map(t => new LuaParser(t))
+  val pcParser = new PCLuaParser
 
   behavior of "LuaParser"
 
@@ -33,13 +34,12 @@ class LuaParserTest extends FlatSpec with Matchers {
       """
     )
 
+
     for (source <- sources) {
-      val result = parsers.head.parse(source)
-      for (parser <- parsers.tail) {
+      val result = pcParser.parse(source)
+      for (parser <- parsers) {
         result should equal(parser.parse(source))
       }
     }
   }
-
-
 }
