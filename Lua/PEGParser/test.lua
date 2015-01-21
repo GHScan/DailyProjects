@@ -1,5 +1,8 @@
 -- vim:fileencoding=gbk
 
+require 'PEG'
+------------------------------
+
 function value2String(v)
     if type(v) == 'string' then
         return string.format('%q', v)
@@ -23,11 +26,10 @@ function printValue(v)
     print(value2String(v))
 end
 
-identity = function() end
+identity = function(v) return v end
 ------------------------------
 
 local jsonParser = (function()
-    require 'PEG'
     setfenv(1, PEG)
 
     local array, dict, value, keyValuePair, STRING, INTEGER, FLOAT, BOOLEAN
@@ -78,6 +80,7 @@ local jsonStrs = {
     [==[ [1, {"a":1, "b":2}, 3] ]==],
     [==[ [1, {"a":{"a":1, "b":"def"}, "b":[2,3]}, 3] ]==],
 }
+print('##  Json parsing...')
 for _, s in ipairs(jsonStrs) do
     jsonParser(s, printValue, print)
 end
@@ -86,6 +89,68 @@ local start = os.clock()
 for i = 1, 1000 do
     for _, s in ipairs(jsonStrs) do
         jsonParser(s, identity, identity)
+    end
+end
+print(os.clock() - start)
+
+------------------------------
+local exprParser = (function()
+    setfenv(1, PEG)
+
+    local factor, mul, add, INTEGER, FLOAT
+    INTEGER = map(term('%d+'), tonumber)
+    FLOAT = map(term('%d+%.%d+'), tonumber)
+    factor = lazy(function()
+        return choice(right(term('%('),
+                left(add, term('%)'))),
+                choice(INTEGER, FLOAT))
+    end)
+    mul = lazy(function() 
+        return chain(factor, term('[*/%%]'), identity, function(r, op, v) 
+            if op == '*' then
+                return r * v
+            elseif op == '/' then
+                return r / v
+            elseif op == '%' then
+                return r % v
+            else
+                assert(false)
+            end
+        end)
+    end)
+    add = lazy(function()
+        return chain(mul, term('[+-]'), identity, function(r, op, v) 
+            if op == '+' then
+                return r + v
+            elseif op == '-' then
+                return r - v
+            else
+                assert(false)
+            end
+        end)
+    end)
+
+    return phrase(add)
+end)()
+
+------------------------------
+local exprStrs = {
+    [==[3]==],
+    [==[ 2+3 ]==],
+    [==[ 2 - 3 * 2 ]==],
+    [==[ 3 - 5 * (4 - 8) ]==],
+    [==[ 9-8+7*6% 5 -4 +3 ]==],
+}
+
+print('##  Expr parsing...')
+for _, s in ipairs(exprStrs) do
+    exprParser(s, printValue, print)
+end
+
+local start = os.clock()
+for i = 1, 1000 do
+    for _, s in ipairs(exprStrs) do
+        exprParser(s, identity, identity)
     end
 end
 print(os.clock() - start)

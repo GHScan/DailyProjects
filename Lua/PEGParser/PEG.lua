@@ -158,3 +158,16 @@ function phrase(a)
         end, onFail)
     end
 end
+
+function log(a, name)
+    return function(input, onSuccess, onFail)
+        print(string.format('# Try parse %s on %s', name, input))
+        return a(input, function(result, input)
+            print(string.format('# Parse %s success: %s', name, result))
+            return onSuccess(result, input)
+        end, function(serr)
+            print(string.format('# Parse %s fail: %s', name, serr))
+            return onFail(serr)
+        end)
+    end
+end
