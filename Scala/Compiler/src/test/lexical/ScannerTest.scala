@@ -1,7 +1,7 @@
 package test.lexical
 
 import lexical._
-import org.scalatest.{Matchers, FlatSpec}
+import org.scalatest.{FlatSpec, Matchers}
 
 class TableDrivenScannerTest extends FlatSpec with Matchers {
 
@@ -24,18 +24,18 @@ class TableDrivenScannerTest extends FlatSpec with Matchers {
 
   it should "Enable Error input" in {
     val scanner = createScanner("123 abc <>")
-    val expectTokens = List[Token](
-      "int", "ident", Token.ERROR)
+    val expectTokens = List[IToken](
+      "int", "ident", IToken.ERROR)
     scanner.toList should equal(expectTokens)
   }
 
   it should "Pass simple test case" in {
     val scanner = createScanner("def func(abc, def) = println(abc, def + 1234)")
-    val expectTokens = List[Token](
+    val expectTokens = List[IToken](
       "def",
       "ident", "(", "ident", ",", "def", ")",
       "=",
-      "ident", "(", "ident", ",", "def", "+", "int", ")", Token.EOF)
+      "ident", "(", "ident", ",", "def", "+", "int", ")", IToken.EOF)
     scanner.toList should equal(expectTokens)
   }
 }

@@ -1,7 +1,6 @@
 package lexical
 
-import scala.collection.mutable
-import scala.collection.immutable
+import scala.collection.{immutable, mutable}
 
 trait IDFA[T] extends INFA[T] {
   lazy val dead : IFAState[T] = (unaccepts.filter(s => s.transitions.forall(t => t.target == s)) ::: List(null)).head

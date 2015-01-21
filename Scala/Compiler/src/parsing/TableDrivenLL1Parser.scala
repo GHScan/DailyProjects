@@ -6,7 +6,9 @@ final class TableDrivenLL1Parser(_grammar : Grammar) extends TableDrivenLLParser
 
   def name : String = TableDrivenLL1ParserFactory.name
 
-  def recoverFromError(scanner : BufferedIterator[lexical.Token], _valueStack : List[Any], symbolStack : mutable.Stack[Any]) : Option[List[Any]] = {
+  private case class DummyProductionSymbol(production : IProduction) extends IGrammarSymbol
+
+  def recoverFromError(scanner : BufferedIterator[lexical.IToken], _valueStack : List[Any], symbolStack : mutable.Stack[IGrammarSymbol]) : Option[List[Any]] = {
 
     var valueStack = _valueStack
 
@@ -17,8 +19,8 @@ final class TableDrivenLL1Parser(_grammar : Grammar) extends TableDrivenLLParser
           if (consumeSyncWord) scanner.next()
           while (symbolStack.nonEmpty) {
             symbolStack.pop() match {
-              case p : IProduction if p.left.name == targetNonTerm => return Some(action(null) :: valueStack)
-              case p : IProduction =>
+              case DummyProductionSymbol(p) if p.left.name == targetNonTerm => return Some(action(null) :: valueStack)
+              case DummyProductionSymbol(p) =>
               case _ => valueStack = valueStack.tail
             }
           }
@@ -28,7 +30,7 @@ final class TableDrivenLL1Parser(_grammar : Grammar) extends TableDrivenLLParser
     None
   }
 
-  def parse(_scanner : Iterator[lexical.Token]) : Any = {
+  def parse(_scanner : Iterator[lexical.IToken]) : Any = {
     if (!predictable) {
       throw new Exception(s"Grammar is not predictable!\n Grammar=$grammar\n\nParser=$this")
     }
@@ -36,44 +38,38 @@ final class TableDrivenLL1Parser(_grammar : Grammar) extends TableDrivenLLParser
     val scanner = _scanner.buffered
 
     var valueStack = List[Any]()
-    val symbolStack = mutable.Stack[Any](grammar.start)
+    val symbolStack = mutable.Stack[IGrammarSymbol](grammar.start)
 
-    try {
-      while (symbolStack.nonEmpty) {
-        symbolStack.pop() match {
-          case t : TerminalSymbol if t.token == scanner.head =>
-            valueStack = scanner.next().value :: valueStack
-          case t : TerminalSymbol =>
-            errors :+= s"Parse failed: Expected $t, but found ${scanner.head} in \n${scanner.head.locationText}"
+    while (symbolStack.nonEmpty) {
+      symbolStack.pop() match {
+        case t : TerminalSymbol if t.token == scanner.head =>
+          valueStack = scanner.next().value :: valueStack
+        case t : TerminalSymbol =>
+          errors :+= s"Parse failed: Expected $t, but found ${scanner.head} in \n${scanner.head.locationText}"
+          recoverFromError(scanner, valueStack, symbolStack) match {
+            case None => return null
+            case Some(newValueStack) => valueStack = newValueStack
+          }
+        case nt : INonTerminalSymbol =>
+          val table = nt.context.asInstanceOf[Array[List[IProduction]]]
+          val ps = table(scanner.head.id)
+          if (ps == Nil) {
+            errors :+= s"Parse failed: miss predicate while parsing $nt, ${scanner.head} in \n${scanner.head.locationText}"
             recoverFromError(scanner, valueStack, symbolStack) match {
               case None => return null
               case Some(newValueStack) => valueStack = newValueStack
             }
-          case nt : INonTerminalSymbol =>
-            val table = nt.context.asInstanceOf[Array[List[IProduction]]]
-            val ps = table(scanner.head.id)
-            if (ps == Nil) {
-              errors :+= s"Parse failed: miss predicate while parsing $nt, ${scanner.head} in \n${scanner.head.locationText}"
-              recoverFromError(scanner, valueStack, symbolStack) match {
-                case None => return null
-                case Some(newValueStack) => valueStack = newValueStack
-              }
-            } else {
-              val p = ps.head
-              symbolStack.push(p)
-              symbolStack.pushAll(p.right.reverseIterator)
-            }
-          case p : IProduction =>
-            valueStack = p.action(valueStack)
-        }
+          } else {
+            val p = ps.head
+            symbolStack.push(DummyProductionSymbol(p))
+            symbolStack.pushAll(p.right.reverseIterator)
+          }
+        case DummyProductionSymbol(p) =>
+          valueStack = p.action(valueStack)
       }
-    } catch {
-      case e : Exception =>
-        errors :+= e.toString
-        return null
     }
 
-    if (scanner.head != lexical.Token.EOF) {
+    if (scanner.head != lexical.IToken.EOF) {
       errors :+= "Parse failed: input is too long!"
       return null
     }

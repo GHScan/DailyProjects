@@ -1,46 +1,45 @@
 package parsing
 
-import scala.collection.immutable
-
 final class TableDrivenLLBacktrackingParser(_grammar : Grammar) extends TableDrivenLLParser(_grammar) {
 
   def name : String = TableDrivenLLBacktrackingParserFactory.name
 
-  private var error : String = ""
+  private case class DummyProductionSymbol(production : IProduction) extends IGrammarSymbol
 
-  def parse(_scanner : Iterator[lexical.Token]) : Any = {
+  private sealed abstract class Context
+  private case class Process(symbolStack : List[IGrammarSymbol], scanner : List[lexical.IToken], valueStack : List[Any]) extends Context
+  private case class Success(value : Any) extends Context
 
-    def parseSymbols(symbols : List[IGrammarSymbol], scanner : List[lexical.Token], valueStack : List[Any]) : Stream[(List[lexical.Token], List[Any])] = symbols match {
-      case Nil => Stream((scanner, valueStack))
-      case head :: tail => parseSymbol(head, scanner, valueStack).flatMap { case (scanner2, valueStack2) =>
-        parseSymbols(tail, scanner2, valueStack2)
-      }
-    }
-    def parseSymbol(symbol : IGrammarSymbol, scanner : List[lexical.Token], valueStack : List[Any]) : Stream[(List[lexical.Token], List[Any])] = symbol match {
-      case t : TerminalSymbol if scanner.head == t.token =>
-        Stream((scanner.tail, scanner.head.value :: valueStack))
-      case t : TerminalSymbol =>
-        error = s"Parse failed: expected $t, but found ${scanner.head}"
-        Stream.empty
-      case nt : INonTerminalSymbol =>
+  def parse(_scanner : Iterator[lexical.IToken]) : Any = {
+
+    def deriveContext(symbolStack : List[IGrammarSymbol], scanner : List[lexical.IToken], valueStack : List[Any]) : List[Context] = symbolStack match {
+      case Nil if scanner.head == lexical.IToken.EOF =>
+        List(Success(valueStack.ensuring(_.length == 1).head))
+      case Nil => Nil
+      case (t : TerminalSymbol) :: tail if t.token == scanner.head =>
+        List(Process(tail, scanner.tail, scanner.head.value :: valueStack))
+      case (t : TerminalSymbol) :: tail => Nil
+      case (nt : INonTerminalSymbol) :: tail =>
         val table = nt.context.asInstanceOf[Array[List[IProduction]]]
-        val ps = table(scanner.head.id)
-        if (ps == Nil) {
-          error = s"Parse failed: miss predicate while parsing $nt, ${scanner.head}"
-          return Stream.empty
+        table(scanner.head.id).map { p =>
+          Process(p.right ::: DummyProductionSymbol(p) :: tail, scanner, valueStack)
         }
-        ps.toStream.flatMap { p =>
-          parseSymbols(p.right, scanner, valueStack).map { case (scanner2, valueStack2) => (scanner2, p.action(valueStack2))}
-        }
+      case DummyProductionSymbol(p) :: tail =>
+        List(Process(tail, scanner, p.action(valueStack)))
     }
 
-    parseSymbol(grammar.start, _scanner.toList, Nil).find(_._1.head == lexical.Token.EOF) match {
-      case Some((_, valueStack)) if valueStack.length == 1 =>
-        valueStack.head
-      case None =>
-        errors = immutable.Queue[String](error)
+    def iterate(contexts : List[Context]) : Any = contexts match {
+      case Nil =>
+        errors :+= "Parse failed..."
         null
+      case Success(value) :: tail =>
+        value
+      case Process(symbolStack, scanner, valueStack) :: tail =>
+        iterate(deriveContext(symbolStack, scanner, valueStack) ::: tail)
     }
+
+    iterate(List(Process(List(grammar.start), _scanner.toList, Nil)))
+
   }
 }
 

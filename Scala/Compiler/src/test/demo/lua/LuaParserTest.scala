@@ -1,11 +1,11 @@
 package test.demo.lua
 
-import org.scalatest._
 import demo.lua._
+import org.scalatest._
 
 class LuaParserTest extends FlatSpec with Matchers {
 
-  val parsers = List("LLBacktracking", "LALR", "LR1").map(t => new LuaParser(t))
+  val parsers = List("LLBacktracking", "LALR", "LR1", "GLALR", "GLR1").map(t => new LuaParser(t))
   val pcParser = new PCLuaParser
 
   behavior of "LuaParser"

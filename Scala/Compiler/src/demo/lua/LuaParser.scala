@@ -1,6 +1,6 @@
 package demo.lua
 
-import parsing.{ParserFactory, GrammarBuilder}
+import parsing.{GrammarBuilder, ParserFactory}
 
 object LuaParser {
 
@@ -115,7 +115,7 @@ object LuaParser {
       (List("MulOp"), Associativity.Left),
       (List("^"), Associativity.Left))
 
-    override def syncWord2ErrorRecoveryAction = Map[lexical.Token, ErrorRecoveryAction]()
+    override def syncWord2ErrorRecoveryAction = Map[lexical.IToken, ErrorRecoveryAction]()
       .updated("end", ErrorRecoveryAction(block.name, _ => Block(Nil), consumeSyncWord = false))
       .updated("elseif", ErrorRecoveryAction(block.name, _ => Block(Nil), consumeSyncWord = false))
       .updated("else", ErrorRecoveryAction(block.name, _ => Block(Nil), consumeSyncWord = false))

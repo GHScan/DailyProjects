@@ -22,3 +22,14 @@
     (SLR [loop=20]                   ,0.04179778025,GC:)
     (LALR [loop=20]                  ,0.0409571469,GC:)
     (LR1 [loop=20]                   ,0.04121984365,GC:)
+
+2015.1.21 => Add GLR parser, Remove Packrat for PCParser
+    (PC [loop=20]                    ,0.0760865387,GC:(PS Scavenge,count=1,time=0.001))
+    (LL1 [loop=20]                   ,0.04651851835,GC:)
+    (LLBacktracking [loop=20]        ,0.05562630975,GC:)
+    (LR0 [loop=20]                   ,0.0488316848,GC:)
+    (SLR [loop=20]                   ,0.04223613675,GC:)
+    (LALR [loop=20]                  ,0.042194496,GC:)
+    (LR1 [loop=20]                   ,0.0427693626,GC:)
+    (GLALR [loop=20]                 ,0.04389406875,GC:)
+    (GLR1 [loop=20]                  ,0.04265493725,GC:)

@@ -1,10 +1,6 @@
 package test.lexical
 
 import org.scalatest._
-import lexical.{TokenizedNFA, TokenizedNFAEmulator}
-import lexical.TokenizedDFAEmulator
-import lexical.NFAVisualizer
-import lexical.DFAVisualizer
 
 class DFAVisualizerTest extends FlatSpec with Matchers {
   behavior of "basic visualizer"

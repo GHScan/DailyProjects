@@ -1,7 +1,6 @@
 package test.lexical
 
-import lexical._
-import org.scalatest.{Matchers, FlatSpec}
+import org.scalatest.{FlatSpec, Matchers}
 
 class DFASetOpsTest extends FlatSpec with Matchers {
   //  behavior of "NFA union"

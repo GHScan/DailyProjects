@@ -2,8 +2,8 @@ package parsing
 
 import scala.collection.mutable
 
-abstract class LRParser extends IParser {
-  def actionTable : ILRActionTable
+abstract class LRParser[ActionT] extends IParser {
+  def actionTable : ILRActionTable[ActionT]
   def gotoTable : ILRGotoTable
 }
 
@@ -14,12 +14,12 @@ object LRAction {
   case class Accept(production : IProduction) extends Action
 }
 
-trait ILRActionTable extends ((Int, Int) => LRAction.Action) {
+trait ILRActionTable[ActionT] extends ((Int, Int) => ActionT) {
 }
-final class LRActionTable(table : Array[Array[LRAction.Action]]) extends ILRActionTable {
+final class LRActionTable[ActionT](table : Array[Array[ActionT]]) extends ILRActionTable[ActionT] {
   def apply(state : Int, tid : Int) = table(state)(tid)
 }
-final class CompressedLRActionTable(_table : Array[Array[LRAction.Action]]) extends ILRActionTable {
+final class CompressedLRActionTable[ActionT](_table : Array[Array[ActionT]]) extends ILRActionTable[ActionT] {
   val (table, state2Row) = {
     val state2Row = Array.fill(_table.length)(0)
     var id = 0

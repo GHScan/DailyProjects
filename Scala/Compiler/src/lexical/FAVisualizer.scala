@@ -8,8 +8,8 @@ class NFAVisualizer(nfa : TokenizedNFA) {
 
     val state2ID = nfa.states.zipWithIndex.toMap
 
-    case class State(state : IFAState[CharCategory]) extends graphvisualize.IState {
-      override def shape = if (nfa.acceptsAttr.exists(_._1 == state)) graphvisualize.Shape.DoubleCircle else super.shape
+    case class State(state : IFAState[CharCategory]) extends graphviz.IState {
+      override def shape = if (nfa.acceptsAttr.exists(_._1 == state)) graphviz.Shape.DoubleCircle else super.shape
 
       def label : String = state2ID(state).toString + nfa.acceptsAttr.find(_._1 == state).map(p => s" (${p._2.toString.take(16)})").getOrElse("")
 

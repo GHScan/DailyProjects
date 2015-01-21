@@ -1,6 +1,7 @@
 package lexical
 
 import java.io.{InputStream, InputStreamReader}
+
 import scala.io.Codec
 
 trait ICharSource extends Iterator[Char] {

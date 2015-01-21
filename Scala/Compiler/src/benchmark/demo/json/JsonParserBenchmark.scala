@@ -1,8 +1,8 @@
 package benchmark.demo.json
 
+import demo.json._
 import org.scalatest._
 import parsing.ParserFactory
-import demo.json._
 
 class JsonParserBenchmark extends FlatSpec with Matchers {
 

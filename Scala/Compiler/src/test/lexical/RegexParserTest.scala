@@ -1,8 +1,8 @@
 package test.lexical
 
-import org.scalatest._
-import lexical.RegexParser
 import lexical.RegexAST._
+import lexical.RegexParser
+import org.scalatest._
 import utils.Characters._
 
 class RegexParserTest extends FlatSpec with Matchers {

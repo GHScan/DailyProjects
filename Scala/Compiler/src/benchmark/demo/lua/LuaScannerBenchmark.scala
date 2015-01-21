@@ -1,7 +1,7 @@
 package benchmark.demo.lua
 
-import org.scalatest._
 import demo.lua._
+import org.scalatest._
 
 class LuaScannerBenchmark extends FlatSpec with Matchers {
 

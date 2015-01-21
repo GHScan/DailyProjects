@@ -1,7 +1,7 @@
 package test.lexical
 
+import lexical.{DFARegex, NFARegex, Regex, RegexParser}
 import org.scalatest._
-import lexical.{RegexParser, NFARegex, DFARegex, Regex}
 
 class NFARegexTest extends FlatSpec with Matchers {
   behavior of "Prefix matcher"

@@ -1,7 +1,8 @@
 package lexical
 
-import scala.collection.immutable
 import utils.Characters._
+
+import scala.collection.immutable
 
 object RegexAST {
 

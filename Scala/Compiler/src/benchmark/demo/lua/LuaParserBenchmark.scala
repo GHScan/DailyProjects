@@ -1,11 +1,11 @@
 package benchmark.demo.lua
 
-import org.scalatest._
 import demo.lua._
+import org.scalatest._
 
 class LuaParserBenchmark extends FlatSpec with Matchers {
 
-  val parsers = List("LLBacktracking", "LALR", "LR1").map(t => new LuaParser(t))
+  val parsers = List("LLBacktracking", "LALR", "LR1", "GLALR", "GLR1").map(t => new LuaParser(t))
 
   val source = scala.io.Source.fromFile("src/benchmark/demo/lua/scripts/Test.lua").mkString
 

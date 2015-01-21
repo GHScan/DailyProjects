@@ -6,7 +6,7 @@ import scala.collection.{immutable, mutable}
 class Grammar(
   val start : INonTerminalSymbol,
   val terminalSymbol2Attribute : immutable.Map[TerminalSymbol, TerminalSymbolAttribute],
-  val syncWord2ErrorRecoveryAction : Map[lexical.Token, ErrorRecoveryAction]) {
+  val syncWord2ErrorRecoveryAction : Map[lexical.IToken, ErrorRecoveryAction]) {
 
   override def toString = s"start=$start\n\t${productions.mkString("\n\t")}\n"
 

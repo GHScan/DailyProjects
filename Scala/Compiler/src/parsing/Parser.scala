@@ -5,7 +5,7 @@ import scala.collection.immutable
 trait IParser {
   var errors = immutable.Queue[String]()
   def name : String
-  def parse(scanner : Iterator[lexical.Token]) : Any
+  def parse(scanner : Iterator[lexical.IToken]) : Any
 }
 
 trait IParserFactory {
@@ -22,7 +22,9 @@ object ParserFactory {
     TableDrivenLR0ParserFactory,
     TableDrivenSLRParserFactory,
     TableDrivenLALRParserFactory,
-    TableDrivenLR1ParserFactory)
+    TableDrivenLR1ParserFactory,
+    TableDrivenGLALRParserFactory,
+    TableDrivenGLR1ParserFactory)
 
   val names : List[String] = instances.map(_.name)
   def get(name : String) : IParserFactory = instances.filter(_.name == name).head

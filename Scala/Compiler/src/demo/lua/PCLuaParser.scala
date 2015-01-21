@@ -55,8 +55,8 @@ class PCLuaParser extends scala.util.parsing.combinator.RegexParsers with scala.
     "nil" ^^ (_ => Constant(null))
       | "false" ^^ (_ => Constant(false))
       | "true" ^^ (_ => Constant(true))
-      | NUMBER ^^ (v => Constant(v.asInstanceOf[Double]))
-      | STRING ^^ (v => Constant(v))
+      | NUMBER ^^ Constant
+      | STRING ^^ Constant
       | "..." ^^ (_ => VarArgument)
       | function
       | tableconstructor

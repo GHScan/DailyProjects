@@ -5,10 +5,10 @@ import scala.collection.mutable
 final class TableDrivenLRParser(
   val name : String,
   val grammar : Grammar,
-  val actionTable : ILRActionTable,
-  val gotoTable : ILRGotoTable) extends LRParser {
+  val actionTable : ILRActionTable[LRAction.Action],
+  val gotoTable : ILRGotoTable) extends LRParser[LRAction.Action] {
 
-  def recoverFromError(scanner : BufferedIterator[lexical.Token], _valueStack : List[Any], stateStack : mutable.Stack[Int]) : Option[List[Any]] = {
+  def recoverFromError(scanner : BufferedIterator[lexical.IToken], _valueStack : List[Any], stateStack : mutable.Stack[Int]) : Option[List[Any]] = {
 
     var valueStack = _valueStack
 
@@ -33,41 +33,35 @@ final class TableDrivenLRParser(
     None
   }
 
-  def parse(_scanner : Iterator[lexical.Token]) : Any = {
+  def parse(_scanner : Iterator[lexical.IToken]) : Any = {
     val scanner = _scanner.buffered
 
     val stateStack = mutable.Stack[Int](0)
     var valueStack = List[Any]()
 
-    try {
-      while (stateStack.nonEmpty) {
-        actionTable(stateStack.top, scanner.head.id) match {
-          case LRAction.Shift(target) =>
-            valueStack = scanner.next().value :: valueStack
-            stateStack.push(target)
-          case LRAction.Reduce(p) =>
-            valueStack = p.action(valueStack)
-            for (_ <- 0 until p.right.length) stateStack.pop()
-            stateStack.push(gotoTable(stateStack.top, p.left.name))
-          case LRAction.Accept(p) if scanner.head == lexical.Token.EOF =>
-            valueStack = p.action(valueStack)
-            return if (errors.isEmpty) valueStack.ensuring(_.length == 1).head else null
-          case LRAction.Accept(p) =>
-            valueStack = p.action(valueStack)
-            for (_ <- 0 until p.right.length) stateStack.pop()
-            stateStack.push(gotoTable(stateStack.top, p.left.name))
-          case _ =>
-            errors :+= s"Parse failed: found token ${scanner.head} in \n${scanner.head.locationText}"
-            recoverFromError(scanner, valueStack, stateStack) match {
-              case None => return null
-              case Some(newValueStack) => valueStack = newValueStack
-            }
-        }
+    while (stateStack.nonEmpty) {
+      actionTable(stateStack.top, scanner.head.id) match {
+        case LRAction.Shift(target) =>
+          valueStack = scanner.next().value :: valueStack
+          stateStack.push(target)
+        case LRAction.Reduce(p) =>
+          valueStack = p.action(valueStack)
+          for (_ <- 0 until p.right.length) stateStack.pop()
+          stateStack.push(gotoTable(stateStack.top, p.left.name))
+        case LRAction.Accept(p) if scanner.head == lexical.IToken.EOF =>
+          valueStack = p.action(valueStack)
+          return if (errors.isEmpty) valueStack.ensuring(_.length == 1).head else null
+        case LRAction.Accept(p) =>
+          valueStack = p.action(valueStack)
+          for (_ <- 0 until p.right.length) stateStack.pop()
+          stateStack.push(gotoTable(stateStack.top, p.left.name))
+        case _ =>
+          errors :+= s"Parse failed: found token ${scanner.head} in \n${scanner.head.locationText}"
+          recoverFromError(scanner, valueStack, stateStack) match {
+            case None => return null
+            case Some(newValueStack) => valueStack = newValueStack
+          }
       }
-    } catch {
-      case e : Exception =>
-        errors :+= e.toString
-        return null
     }
 
     errors :+= s"Parse failed: input is too long, ${scanner.head}"

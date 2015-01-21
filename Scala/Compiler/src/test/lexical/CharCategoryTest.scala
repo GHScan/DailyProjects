@@ -1,7 +1,7 @@
 package test.lexical
 
-import org.scalatest._
 import lexical.CharClassifyTableBuilder
+import org.scalatest._
 
 class CharCategoryTest extends FlatSpec with Matchers {
 

@@ -1,4 +1,4 @@
-package graphvisualize
+package graphviz
 
 import scala.collection.mutable
 

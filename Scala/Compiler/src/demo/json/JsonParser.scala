@@ -1,7 +1,7 @@
 package demo.json
 
-import lexical.{IgnoreHandler, FastTokenFactory, StringCharSource, TableDrivenScannerBuilder}
-import parsing.{ParserFactory, GrammarBuilder}
+import lexical.{FastTokenFactory, IgnoreHandler, StringCharSource, TableDrivenScannerBuilder}
+import parsing.{GrammarBuilder, ParserFactory}
 
 object JsonParser {
 
@@ -26,7 +26,7 @@ object JsonParser {
     lazy val value : GenericNonTerminalSymbol[Any] = nonTerm(
       "BOOLEAN" | "NUMBER" | "STRING" | array | dict)
 
-    override def syncWord2ErrorRecoveryAction = Map[lexical.Token, ErrorRecoveryAction]()
+    override def syncWord2ErrorRecoveryAction = Map[lexical.IToken, ErrorRecoveryAction]()
       .updated("}", ErrorRecoveryAction(value.name, _ => Map.empty, consumeSyncWord = true))
 
   }.result

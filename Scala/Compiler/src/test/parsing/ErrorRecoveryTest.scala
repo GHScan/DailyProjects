@@ -1,7 +1,5 @@
 package test.parsing
 
-import demo.json.JsonParser
-import demo.lua.LuaParser
 import org.scalatest.{FlatSpec, Matchers}
 
 class ErrorRecoveryTest extends FlatSpec with Matchers {

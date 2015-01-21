@@ -5,14 +5,14 @@ case class ~[+T, +U](first : T, second : U)
 trait IGrammarSymbol
 trait IGenericGrammarSymbol[T] extends IGrammarSymbol
 
-case class TerminalSymbol(token : lexical.Token) extends IGenericGrammarSymbol[Any] with Ordered[TerminalSymbol] {
+case class TerminalSymbol(token : lexical.IToken) extends IGenericGrammarSymbol[Any] with Ordered[TerminalSymbol] {
   override def toString = s"'${token.name}'"
   def compare(that : TerminalSymbol) : Int = token.compare(that.token)
 }
 object TerminalSymbol {
-  val EMPTY = TerminalSymbol(lexical.Token.EMPTY)
-  val EOF = TerminalSymbol(lexical.Token.EOF)
-  val ERROR = TerminalSymbol(lexical.Token.ERROR)
+  val EMPTY = TerminalSymbol(lexical.IToken.EMPTY)
+  val EOF = TerminalSymbol(lexical.IToken.EOF)
+  val ERROR = TerminalSymbol(lexical.IToken.ERROR)
 }
 
 trait INonTerminalSymbol extends IGrammarSymbol with Ordered[INonTerminalSymbol] {

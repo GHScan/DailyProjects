@@ -1,19 +1,26 @@
-2005.1.14 =>
+2015.1.14 =>
     (SLR [loop=10]                   ,0.07033950929999999,GC:(PS Scavenge,count=2,time=0.002))
     (LALR [loop=10]                  ,0.06395929115,GC:(PS Scavenge,count=1,time=0.001))
     (LR1 [loop=10]                   ,0.06874002629999999,GC:)
 
-2005.1.14 => After merge token
+2015.1.14 => After merge token
     (SLR [loop=10]                   ,0.0600384728,GC:(PS Scavenge,count=3,time=0.001))
     (LALR [loop=10]                  ,0.0567264502,GC:(PS Scavenge,count=2,time=0.001))
     (LR1 [loop=10]                   ,0.06221624425,GC:(PS Scavenge,count=2,time=0.001))
 
-2005.1.14 => After apply priority for binary op
+2015.1.14 => After apply priority for binary op
     (LALR [loop=10]                  ,0.038993674799999996,GC:)
     (LR1 [loop=10]                   ,0.02815628605,GC:)
 
-2005.1.17 => 1. Use immutable ValueStack 2. Add LLBacktracking parser
+2015.1.17 => 1. Use immutable ValueStack 2. Add LLBacktracking parser
     (LLBacktracking [loop=10]        ,0.31127315094999997,GC:(PS Scavenge,count=9,time=0.075))              // Full tracking
     (LLBacktracking [loop=10]        ,0.1136591102,GC:(PS Scavenge,count=3,time=0.013))                     // Use predicate table
     (LALR [loop=10]                  ,0.0354685916,GC:)
     (LR1 [loop=10]                   ,0.0314285538,GC:)
+
+2015.1.17 => Add GLR parser
+    (LLBacktracking [loop=10]        ,0.11776656465,GC:(PS Scavenge,count=2,time=0.002))
+    (LALR [loop=10]                  ,0.048262877200000005,GC:)
+    (LR1 [loop=10]                   ,0.03209900005,GC:)
+    (GLALR [loop=10]                 ,0.030703435850000002,GC:)
+    (GLR1 [loop=10]                  ,0.02915512445,GC:)
