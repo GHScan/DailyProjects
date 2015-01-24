@@ -46,67 +46,67 @@
 (define (swap-if-less a b less)
   (if (less a b) (values a b) (values b a)))
 
-(define (final-type t t->t2)
-  (define (final-type-1 t t->t2 occurs)
+(define (final-type t tenv)
+  (define (final-type-1 t tenv occurs)
     (match 
       t
-      [`(,t1 -> ,t2) `(,(final-type-1 t1 t->t2 occurs) -> ,(final-type-1 t2 t->t2 occurs))]
-      [_ (let ([t2 (lookup t t->t2)])
+      [`(,t1 -> ,t2) `(,(final-type-1 t1 tenv occurs) -> ,(final-type-1 t2 tenv occurs))]
+      [_ (let ([t2 (lookup t tenv)])
            (cond
              [(not t2) t]
              [(memq t2 occurs) (begin (pretty-print `("Found recursive type:" ,t2)) t2)]
-             [else (final-type-1 t2 t->t2 (cons t2 occurs))]))]))
-  (final-type-1 t t->t2 empty))
+             [else (final-type-1 t2 tenv (cons t2 occurs))]))]))
+  (final-type-1 t tenv empty))
 
-(define (unify t1 t2 t->t2)
+(define (unify t1 t2 tenv)
   (match 
-    `(,(final-type t1 t->t2) ,(final-type t2 t->t2))
+    `(,(final-type t1 tenv) ,(final-type t2 tenv))
     [`(,(? type-variable? t1) ,(? type-variable? t2)) 
       (letv* ([(t1 t2) (swap-if-less t1 t2 symbol-less)])
-             (values (not (eq? t1 t2)) (ext-table t2 t1 t->t2)))]
-    [`(,(? type-variable? t1) ,t2) (values #t (ext-table t1 t2 t->t2))]
-    [`(,t1 ,(? type-variable? t2)) (values #t (ext-table t2 t1 t->t2))]
-    [`(,(? builtin-type? t1) ,(? builtin-type? t2)) (values (eq? t1 t2) t->t2)]
+             (values (not (eq? t1 t2)) (ext-table t2 t1 tenv)))]
+    [`(,(? type-variable? t1) ,t2) (values #t (ext-table t1 t2 tenv))]
+    [`(,t1 ,(? type-variable? t2)) (values #t (ext-table t2 t1 tenv))]
+    [`(,(? builtin-type? t1) ,(? builtin-type? t2)) (values (eq? t1 t2) tenv)]
     [`((,t11 -> ,t12) (,t21 -> ,t22)) 
-      (letv* ([(v1 t->t2) (unify t11 t21 t->t2)]
-              [(v2 t->t2) (unify t12 t22 t->t2)])
-             (values (and v1 v2) t->t2))]
-    [_ (values #f t->t2)]))
+      (letv* ([(v1 tenv) (unify t11 t21 tenv)]
+              [(v2 tenv) (unify t12 t22 tenv)])
+             (values (and v1 v2) tenv))]
+    [_ (values #f tenv)]))
 
 (define (infer v)
-  (define (infer-1 v v->t t->t2)
+  (define (infer-1 v venv tenv)
     (match 
       v
-      [(? boolean?) (values 'bool t->t2)]
-      [(? number?) (values 'int t->t2)]
-      [(? string?) (values 'string t->t2)]
-      [(? symbol?) (values (lookup v v->t) t->t2)]
+      [(? boolean?) (values 'bool tenv)]
+      [(? number?) (values 'int tenv)]
+      [(? string?) (values 'string tenv)]
+      [(? symbol?) (values (lookup v venv) tenv)]
       [`(if ,test ,conseq ,alt) 
-        (letv* ([(testt t->t2) (infer-1 test v->t t->t2)]
-                [(u1 t->t2) (unify testt 'bool t->t2)]
-                [(conseqt t->t2) (infer-1 conseq v->t t->t2)]
-                [(altt t->t2) (infer-1 alt v->t t->t2)]
-                [(u2 t->t2) (unify conseqt altt t->t2)])
+        (letv* ([(testt tenv) (infer-1 test venv tenv)]
+                [(u1 tenv) (unify testt 'bool tenv)]
+                [(conseqt tenv) (infer-1 conseq venv tenv)]
+                [(altt tenv) (infer-1 alt venv tenv)]
+                [(u2 tenv) (unify conseqt altt tenv)])
                (cond
-                 [(not u1) (values (pretty-print `("infer failed:" ,test"(",(final-type testt t->t2)")" "should be bool")) t->t2)]
-                 [(not u2) (values (pretty-print `("infer failed:" ,conseq"(",(final-type conseqt t->t2)")" ,alt"(",(final-type altt t->t2)")" "should be same type")) t->t2) ]
-                 [else (values altt t->t2)]))]
+                 [(not u1) (values (pretty-print `("infer failed:" ,test"(",(final-type testt tenv)")" "should be bool")) tenv)]
+                 [(not u2) (values (pretty-print `("infer failed:" ,conseq"(",(final-type conseqt tenv)")" ,alt"(",(final-type altt tenv)")" "should be same type")) tenv) ]
+                 [else (values altt tenv)]))]
       [`(lambda (,formal) ,body) 
-        (letv* ([(v->t) (ext-table formal (gensym) v->t)]
-                [(bodyt t->t2) (infer-1 body v->t t->t2)])
-               (values `(,(lookup formal v->t) -> ,bodyt) t->t2))]
+        (letv* ([(venv) (ext-table formal (gensym) venv)]
+                [(bodyt tenv) (infer-1 body venv tenv)])
+               (values `(,(lookup formal venv) -> ,bodyt) tenv))]
       [`(,f ,actual)
-        (letv* ([(ft t->t2) (infer-1 f v->t t->t2)]
+        (letv* ([(ft tenv) (infer-1 f venv tenv)]
                 [(formalt resultt) (values (gensym) (gensym))]
-                [(u1 t->t2) (unify ft `(,formalt -> ,resultt) t->t2)]
-                [(actualt t->t2) (infer-1 actual v->t t->t2)]
-                [(u2 t->t2) (unify formalt actualt t->t2)])
+                [(u1 tenv) (unify ft `(,formalt -> ,resultt) tenv)]
+                [(actualt tenv) (infer-1 actual venv tenv)]
+                [(u2 tenv) (unify formalt actualt tenv)])
                (cond
-                 [(not u1) (values (pretty-print `("infer failed: " ,f"(",(final-type ft t->t2)")" "should be a function")) t->t2)]
-                 [(not u2) (values (pretty-print `("infer failed: " ,f"(",(final-type ft t->t2)")" ,actual"(",(final-type actualt t->t2)")" "application type mismatch")) t->t2)] 
-                 [else (values resultt t->t2)]))]))
-  (letv* ([(t t->t2) (infer-1 v builtin-values-type empty)])
-         (final-type t t->t2)))
+                 [(not u1) (values (pretty-print `("infer failed: " ,f"(",(final-type ft tenv)")" "should be a function")) tenv)]
+                 [(not u2) (values (pretty-print `("infer failed: " ,f"(",(final-type ft tenv)")" ,actual"(",(final-type actualt tenv)")" "application type mismatch")) tenv)] 
+                 [else (values resultt tenv)]))]))
+  (letv* ([(t tenv) (infer-1 v builtin-values-type empty)])
+         (final-type t tenv)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; tests ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; correct programs
