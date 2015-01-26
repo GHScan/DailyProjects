@@ -1,6 +1,6 @@
 #lang racket
 
-; Hindly-Milner style type inferencer for lambda calculus (without let-polymorphism)
+; Hindley-Milner style type inferencer for lambda calculus (without let-polymorphism)
 
 (define-syntax letv*
   (syntax-rules 
