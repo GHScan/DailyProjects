@@ -1,5 +1,3 @@
-#include <iostream>
-using namespace std;
 
 struct True {
 	static const int value = 1;
@@ -134,5 +132,17 @@ int main() {
 						Application<Application<add, x>, Const<2>>>>,
 				Const<3>>,
 			InitialEnv>::Result::value 
+		<< endl;
+
+	cout 
+		<< "(((lambda (x) (lambda (y) (+ x y))) 2) 3)"
+		<< " ==> "
+		<< Eval<
+			Application<
+				Application<
+					Lambda<x, Lambda<y, Application<Application<add, x>, y>>>,
+					Const<2>>,
+				Const<3>>, 
+			InitialEnv>::Result::value
 		<< endl;
 }
