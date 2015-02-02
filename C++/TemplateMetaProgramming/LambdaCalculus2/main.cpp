@@ -29,6 +29,28 @@ static void testInterpreter() {
                         APP<add, List<x, y>>>,
                     IntList<2, 3>>,
                 G>::value));
+
+    PRINT((Eval<Branch<APP<lt, IntList<3, 2>>, Const<2>, Const<3>>,
+                G>::value));
+
+    PRINT((Eval<
+            APP<
+                APP<
+                    LAM<List<f>,
+                        APP<
+                        LAM<List<g>, APP<g, List<g>>>,
+                        List<LAM<List<g>,
+                                APP<f, List<
+                                        LAM<List<arg>, 
+                                            APP<APP<g, List<g>>, List<arg>>>>>>>>>,
+                    List<LAM<List<f>, 
+                            LAM<List<x>, 
+                                Branch<APP<lt, List<x, Const<2>>>,
+                                    Const<1>,
+                                    APP<add, List<APP<f, List<APP<sub, List<x, Const<1>>>>>,
+                                                  APP<f, List<APP<sub, List<x, Const<2>>>>>>>>>>>>,
+                IntList<10>>,
+            G>::value));
 }
 
 int main() {

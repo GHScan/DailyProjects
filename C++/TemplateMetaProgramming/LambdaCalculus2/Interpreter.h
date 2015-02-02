@@ -43,12 +43,22 @@ struct Closure {
     };
 };
 
-template<typename _Func, typename _Actuals>
-struct Application {
-    typedef _Func Func;
-    typedef _Actuals Actuals;
+template<typename Func, typename Actuals>
+struct Application { 
 };
 
+template<typename Test, typename Conseq, typename Alt>
+struct Branch { 
+};
+
+template<typename Env>
+struct _Eval<True, Env> {
+    typedef True Type;
+};
+template<typename Env>
+struct _Eval<False, Env> {
+    typedef False Type;
+};
 template<int n, typename Env>
 struct _Eval<Const<n>, Env> {
     typedef Const<n> Type;
@@ -66,6 +76,11 @@ struct _Eval<Application<Func, Actuals>, Env> {
     typedef typename _Eval<Func, Env>::Type FuncResult;
     typedef EvalList<Actuals, Env> ActualsResult;
     typedef typename FuncResult::template Apply<ActualsResult>::Type Type;
+};
+template<typename Test, typename Conseq, typename Alt, typename Env>
+struct _Eval<Branch<Test, Conseq, Alt>, Env> {
+    typedef typename _Eval<Test, Env>::Type TestResult;
+    typedef typename If<TestResult, _Eval<Conseq, Env>, _Eval<Alt, Env>>::Type Type;
 };
 
 template<template<typename T1, typename ...Tn> class F>
@@ -111,6 +126,9 @@ namespace Implicits {
     typedef Var<19> geq;
     typedef Var<20> eq;
     typedef Var<21> neq;
+    typedef Var<22> f;
+    typedef Var<23> g;
+    typedef Var<24> arg;
 
     typedef 
         List<
