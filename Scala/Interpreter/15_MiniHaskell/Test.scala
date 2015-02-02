@@ -104,7 +104,7 @@ object TypeSystem {
   def substitute(ty : Type, env : TypeEnv) : Type = {
     def iterate(ty : Type, env : TypeEnv, occurs : List[String]) : Type = ty match {
       case _ : TyConstant => ty
-      case TyVar(name) if occurs.contains(name) => throw new Exception("Illegal: Recursive type")
+      case TyVar(name) if occurs.contains(name) => throw new Exception(s"Illegal: Recursive type $ty")
       case TyVar(name) => env.get(name) match {
         case None => ty
         case Some(target) => iterate(target, env, name :: occurs)
@@ -146,6 +146,7 @@ object TypeSystem {
 
   def unify(ty1 : Type, ty2 : Type, env : TypeEnv)(implicit pos : scala.util.parsing.input.Position) : ErrorList[TypeEnv] =
     (substitute(ty1, env), substitute(ty2, env)) match {
+      case (TyVar(name1), TyVar(name2)) if name1 == name2 => Left(List(env))
       case (TyVar(name1), TyVar(name2)) => Left(List(env + (if (name1 < name2) (name2, TyVar(name1)) else (name1, TyVar(name2)))))
       case (TyVar(name1), _ty2) => Left(List(env +(name1, _ty2)))
       case (_ty1, TyVar(name2)) => Left(List(env +(name2, _ty1)))
@@ -406,88 +407,92 @@ class MiniHaskellParser extends scala.util.parsing.combinator.RegexParsers with 
 object Test extends App {
   val sources = List(
     """
-    var v = \x-> x
+        var v = \x-> x
     """,
     """
-    var v = \f-> \x-> f(x)
+        var v = \f-> \x-> f(x)
     """,
     """
-    var v = \f-> \x-> f(f(x))
+        var v = \f-> \x-> f(f(x))
     """,
     """
-    var v = (\f-> \x-> f(f(x)))(add1)
+        var v = (\f-> \x-> f(f(x)))(add1)
     """,
     """
-    var v = if zero(0) then true else false
+        var v = if zero(0) then true else false
     """,
     """
-    var v = \f-> \x-> f(x + 1)
+        var v = \f-> \x-> f(x + 1)
     """,
     """
-    var v = \m-> \n-> \f-> \x-> m(n(f))(x)
+        var v = \m-> \n-> \f-> \x-> m(n(f))(x)
     """,
     """
-    var v = (\f-> f(1))(\x->x)
+        var v = (\f-> f(1))(\x->x)
     """,
     """
-    var S = \x-> \y-> \z-> x(z)(y(z))
+        var S = \x-> \y-> \z-> x(z)(y(z))
     """,
     """
-    var SK = (\x-> \y-> \z-> x(z)(y(z)))(\x-> \y-> x)
+        var SK = (\x-> \y-> \z-> x(z)(y(z)))(\x-> \y-> x)
     """,
     """
-    var SKK = (\x-> \y-> \z-> x(z)(y(z)))(\x-> \y-> x)(\x-> \y-> x)
+        var SKK = (\x-> \y-> \z-> x(z)(y(z)))(\x-> \y-> x)(\x-> \y-> x)
     """,
     """
-    identity x = x
-    identity("abcdef")
-    identity(2)
-    identity(true)
+        identity x = x
+        identity("abcdef")
+        identity(2)
+        identity(true)
     """,
     """
-    fib n 
-      | n < 2 = 1
-      | otherwise = fib(n - 1) + fib(n - 2)
+        fib n | n < 2 = 1 | otherwise = fib(n - 1) + fib(n - 2)
     """,
     """
-    var even =
-      let
-        even x | x < 2 = x == 0 | otherwise = odd(x - 1)
-        odd x | x < 2 = x == 1 | otherwise = even(x - 1)
-        in even
-    even(5)
-    even(10)
+        var even =
+          let
+            even x | x < 2 = x == 0 | otherwise = odd(x - 1)
+            odd x | x < 2 = x == 1 | otherwise = even(x - 1)
+            in even
+        even(5)
+        even(10)
     """,
     """
-    var t1 = 3 + 2
-    var t2 = 3.14 + 2.48
+    Y f = \x->f(Y(f))(x)
+    var fib = Y(\f->\x->if x < 2 then 1 else f(x - 1) + f(x - 2))
+    fib(2)
+    fib(3)
     """,
     """
-    var d = 3.14 + 3
+        var t1 = 3 + 2
+        var t2 = 3.14 + 2.48
     """,
     """
-    f x = x + 1
-    f(1)
-    f(1.2)
+        var d = 3.14 + 3
     """,
     """
-    f x = x + 1
-    f x = x == 1
-    f(2)
+        f x = x + 1
+        f(1)
+        f(1.2)
     """,
     """
-    f x = x + 1
-    f x = x and false
-    f(3.14)
-    f(false)
+        f x = x + 1
+        f x = x == 1
+        f(2)
     """,
     """
-    f n | n == 0 = true | otherwise = not f(n - 1)
-    f n | n < 2 = 1 | otherwise = f(n - 1) + f(n - 2)
-    f a b | a == 0 = b | otherwise = f(b % a, a)
-    var t = f(3.14) and f(3)
-    var t2 = f(3.14) + f(3.14)
-    f(18, 32)
+        f x = x + 1
+        f x = x and false
+        f(3.14)
+        f(false)
+    """,
+    """
+        f n | n == 0 = true | otherwise = not f(n - 1)
+        f n | n < 2 = 1 | otherwise = f(n - 1) + f(n - 2)
+        f a b | a == 0 = b | otherwise = f(b % a, a)
+        var t = f(3.14) and f(3)
+        var t2 = f(3.14) + f(3.14)
+        f(18, 32)
     """
   )
 
