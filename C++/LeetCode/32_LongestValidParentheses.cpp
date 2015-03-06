@@ -5,60 +5,55 @@
 
 class Solution {
 public:
+    string const *mStr;
     int longestValidParentheses(string const &s) {
-        int maxLen = 0;
+        mStr = &s;
 
-        vector<pair<int, int>> workList;
-
-        vector<int> markVec(s.size(), 0);
-        for (int i = 0; i < (int)s.size() - 1; ++i) {
+        vector<pair<int, int>> parentheses;
+        for (int i = 0; i < (int)s.size() - 1; ) {
             if (s[i] == '(' && s[i + 1] == ')') {
-                markVec[i] = markVec[i + 1] = 2;
-                maxLen = 2;
-                workList.push_back(make_pair(i, 2));
+                addParenthese(parentheses, i, 2);
+                i = parentheses.back().first + parentheses.back().second;
+            } else {
+                ++i;
             }
         }
 
-        while (!workList.empty()) {
-            auto seg = workList.back();
-            workList.pop_back();
-            int off = seg.first, len = seg.second;
-            if (markVec[off] != len || markVec[off + len - 1] != len) continue;
-            markVec[off] = markVec[off + len - 1] = 0;
-
-            while (off - 1 >= 0 && off + len < (int)s.size() && s[off - 1] == '(' && s[off + len] == ')') {
-                off -= 1;
-                len += 2;
-            }
-
-            bool combine = false;
-            while (off - 1 >= 0 && markVec[off - 1] != 0) {
-                int leftLen = markVec[off - 1];
-                markVec[off - 1] = 0;
-                off -= leftLen;
-                markVec[off] = 0;
-                len += leftLen;
-                combine = true;
-            }
-            while (off + len < (int)s.size() && markVec[off + len] != 0) {
-                int rightLen = markVec[off + len];
-                markVec[off + len] = 0;
-                len += rightLen;
-                markVec[off + len - 1] = 0;
-                combine = true;
-            }
-
-            markVec[off] = len;
-            markVec[off + len - 1] = len;
-
-            maxLen = max(len, maxLen);
-
-            if (combine) {
-                workList.push_back(make_pair(off, len));
-            }
-        }
-
+        int maxLen = 0;
+        for (auto p : parentheses) maxLen = max(maxLen, p.second);
         return maxLen;
+    }
+    void addParenthese(vector<pair<int, int>> &parentheses, int off, int len) {
+        parentheses.push_back(make_pair(off, len));
+        do {
+            parentheses.back() = extend(parentheses.back());
+        } while(combineSuffix(parentheses));
+    }
+    pair<int, int> extend(pair<int, int> parenthese) {
+        int off = parenthese.first, len = parenthese.second;
+        while (off - 1 >= 0 && off + len < (int)mStr->size() && (*mStr)[off - 1] == '(' && (*mStr)[off + len] == ')') {
+            --off;
+            len += 2;
+        }
+        return make_pair(off, len);
+    }
+    bool combineSuffix(vector<pair<int, int>> &parentheses) {
+        if (parentheses.empty()) return false;
+
+        bool combined = false;
+
+        int off = parentheses.back().first, len = parentheses.back().second;
+        parentheses.pop_back();
+        while (!parentheses.empty()) {
+            if (parentheses.back().first + parentheses.back().second != off) break;
+            len += parentheses.back().second;
+            off = parentheses.back().first;
+            parentheses.pop_back();
+            combined = true;
+        }
+        parentheses.push_back(make_pair(off, len));
+
+        return combined;
     }
 };
 
