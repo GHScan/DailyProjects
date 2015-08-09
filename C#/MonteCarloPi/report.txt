@@ -1,0 +1,2 @@
+Naive                    => Time: 1214.20042ms, GC counts: 0,0,0
+Parallel                 => Time: 262.38514ms, GC counts: 0,0,0

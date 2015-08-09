@@ -1,23 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Diagnostics;
 
-namespace CSharp13
+namespace CSharp2013
 {
-    public static class Utils
+    public static class Utility
     {
-        public static void Print(params object[] args)
-        {
-            Console.WriteLine(string.Join("\t", args));
-        }
-
-        public static void Timeit(int times, Action a)        
+        public static void Timeit(string name, int times, Action action)
         {
             // JIT、Warm up cache
-            if (times > 1) a();
+            if (times > 1) action();
 
             GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
             var gcCounts = new int[GC.MaxGeneration + 1];
@@ -25,11 +16,16 @@ namespace CSharp13
 
             var stopwatch = new Stopwatch();
             stopwatch.Start();
-            for (var i = 0; i < times; ++i) a();
+            for (var i = 0; i < times; ++i) action();
             stopwatch.Stop();
 
             for (var i = 0; i < gcCounts.Length; ++i) gcCounts[i] = GC.CollectionCount(i) - gcCounts[i];
-            Console.WriteLine(string.Format("Time: {0:0.######}ms, GC counts: {1}", stopwatch.Elapsed.TotalMilliseconds / times, string.Join(",", gcCounts)));
+
+            Console.WriteLine(
+                "{0,-24} => Time: {1:0.######}ms, GC counts: {2}", 
+                name,
+                stopwatch.Elapsed.TotalMilliseconds/times,
+                string.Join(",", gcCounts));
         }
     }
 }
