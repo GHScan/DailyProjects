@@ -1,12 +1,41 @@
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
-static int CalculateColor(double iteration, double maxIteration)
+static int HSV2RGB(double H, double S, double V)
 {
-    double bright = iteration / maxIteration;
-    int r = (int)(sqrt(bright) * 256);
-    int g = (int)((1 - bright) * 256);
-    int b = (int)(0 * 256);
+    double C = V * S;
+    double H1 = H * 6;
+    double X = C * (1 - fabs(fmod(H1, 2) - 1));
+    double R1, G1, B1;
+    switch ((int)floor(H1))
+    {
+    case 0:
+        R1 = C; G1 = X; B1 = 0;
+        break;
+    case 1:
+        R1 = X; G1 = C; B1 = 0;
+        break;
+    case 2:
+        R1 = 0; G1 = C; B1 = X;
+        break;
+    case 3:
+        R1 = 0; G1 = X; B1 = C;
+        break;
+    case 4:
+        R1 = X; G1 = 0; B1 = C;
+        break;
+    case 5:
+        R1 = C; G1 = 0; B1 = X;
+        break;
+    default:
+        R1 = 0; G1 = 0; B1 = 0;
+        break;
+    }
+
+    double m = V - C;
+    int r = (int)((R1 + m) * 255);
+    int g = (int)((G1 + m) * 255);
+    int b = (int)((B1 + m) * 255);
     return (0 << 24) | (r << 16) | (g << 8) | (b << 0);
 }
 
@@ -23,8 +52,8 @@ __kernel void main(__global int *buffer, int maxIteration, double cx, double cy,
 
     double zx = fx;
     double zy = fy;
-    int iteration = 0;
-    for (; iteration < maxIteration && zx * zx + zy * zy < 4; ++iteration)
+    double iteration = 0;
+    for (; iteration < maxIteration && zx * zx + zy * zy < 4; iteration += 1)
     {
         double newZx = zx * zx - zy * zy + cx;
         zy = 2 * zx * zy + cy;
@@ -38,5 +67,6 @@ __kernel void main(__global int *buffer, int maxIteration, double cx, double cy,
         iteration = iteration + 1 - nu;
     }
 
-    buffer[idx] = CalculateColor(iteration, maxIteration);
+    double value = iteration / maxIteration;
+    buffer[idx] = HSV2RGB(value, 1 - value * value, sqrt(value));
 }

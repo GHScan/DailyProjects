@@ -48,7 +48,7 @@ public:
         }
         else if (key == 'S')
         {
-            mMaxIteration = std::max(mMaxIteration - 1, 1);
+            mMaxIteration = max(mMaxIteration - 1, 1);
             cout << "Max iteration:" << mMaxIteration << endl;
         }
         else if (key == 'Q')
@@ -77,6 +77,11 @@ public:
         {
             mRenderer = make_unique<OpenCLFractalRenderer>(GetFrameBufferPtr(), GetWidth(), GetHeight());
             cout << "Switch to OpenCL renderer" << endl;
+        }
+        else if (key == '3')
+        {
+            mRenderer = make_unique<CppAMPFractalRenderer>(GetFrameBufferPtr(), GetWidth(), GetHeight());
+            cout << "Switch to C++AMP renderer" << endl;
         }
     }
 
@@ -118,7 +123,7 @@ public:
             TFloat moveScale = 1 / GetScale() * 2;
             mMinX += -dx * moveScale, mMaxX += -dx * moveScale;
             mMinY += -dy * moveScale, mMaxY += -dy * moveScale;
-            cout << "minX:" << mMinX<< ", minY" << mMinY << ", maxX" << mMaxX << ", maxY" << mMaxY << endl;
+            cout << "minX:" << mMinX<< ", minY:" << mMinY << ", maxX:" << mMaxX << ", maxY:" << mMaxY << endl;
         }
         else
         {
