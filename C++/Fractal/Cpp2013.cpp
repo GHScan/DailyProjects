@@ -6,7 +6,11 @@
 #include <memory>
 
 #include "RenderWindow.h"
-#include "FractialRenderer.h"
+#include "OpenMPFractalRenderer.h"
+#include "OpenCLFractalRenderer.h"
+#include "CppAMPFractalRenderer.h"
+
+extern IFractalRenderer* CreateCUDAFractalRenderer(int *buffer, int width, int height);
 
 class FractalRenderWindow : public RenderWindow
 {
@@ -82,6 +86,11 @@ public:
         {
             mRenderer = make_unique<CppAMPFractalRenderer>(GetFrameBufferPtr(), GetWidth(), GetHeight());
             cout << "Switch to C++AMP renderer" << endl;
+        }
+        else if (key == '4')
+        {
+            mRenderer.reset(CreateCUDAFractalRenderer(GetFrameBufferPtr(), GetWidth(), GetHeight()));
+            cout << "Switch to CUDA renderer" << endl;
         }
     }
 

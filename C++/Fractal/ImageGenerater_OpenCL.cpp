@@ -5,6 +5,7 @@
 #include <string>
 
 #include "ImageGenerater_OpenCL.h"
+#include "FractalRenderer.h"
 
 static inline void CheckCLError(cl_int err, char const * name)
 {
@@ -50,7 +51,12 @@ ImageGenerater_OpenCL::ImageGenerater_OpenCL(char const *sourceFile, char const 
         CheckCLError(err, "clCreateProgramWithSource");
     }
 
-    err = clBuildProgram(mProgram, 1, &mDevice, "", nullptr, nullptr);
+#if USE_DOUBLE
+    char const *options = "-D USE_DOUBLE=1";
+#else
+    char const *options = "-D USE_DOUBLE=0";
+#endif
+    err = clBuildProgram(mProgram, 1, &mDevice, options, nullptr, nullptr);
     if (err != CL_SUCCESS)
     {
         size_t logSize;

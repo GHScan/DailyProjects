@@ -1,7 +1,11 @@
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
+#if USE_DOUBLE
 typedef double TFloat;
+#else
+typedef float TFloat;
+#endif
 
 static int HSV2RGB(TFloat H, TFloat S, TFloat V)
 {
