@@ -29,10 +29,10 @@ std::string ReadFile(char const *fileName)
     return content;
 }
 
-ImageGenerater_OpenCL::ImageGenerater_OpenCL(char const *sourceFile, char const *kernelName, int *buffer, int width, int height)
-    : mBuffer(buffer), mWidth(width), mHeight(height)
+ImageGenerater_OpenCL::ImageGenerater_OpenCL(char const *sourceFile, char const *kernelName, int width, int height)
+    : mWidth(width), mHeight(height)
 {
-    int size = width * height * sizeof(*mBuffer);
+    int size = width * height * 4;
 
     cl_int err = clGetPlatformIDs(1, &mPlatform, nullptr);
     CheckCLError(err, "clGetPlatformIDs");
@@ -99,7 +99,7 @@ ImageGenerater_OpenCL::~ImageGenerater_OpenCL()
     CheckCLError(err, "clReleaseContext");
 }
 
-void ImageGenerater_OpenCL::RunImpl(const void* args[], size_t sizes[], int count)
+void ImageGenerater_OpenCL::RunImpl(int *buffer, const void* args[], size_t sizes[], int count)
 {
     cl_int err;
     for (int i = 0; i < count; ++i)
@@ -112,6 +112,6 @@ void ImageGenerater_OpenCL::RunImpl(const void* args[], size_t sizes[], int coun
     err = clEnqueueNDRangeKernel(mQueue, mKernel, 2, nullptr, globalSizes, nullptr, 0, nullptr, nullptr);
     CheckCLError(err, "clEnqueueNDRangeKernel");
 
-    clEnqueueReadBuffer(mQueue, mMem, CL_TRUE, 0, mWidth * mHeight * sizeof(*mBuffer), mBuffer, 0, nullptr, nullptr);
+    clEnqueueReadBuffer(mQueue, mMem, CL_TRUE, 0, mWidth * mHeight * 4, buffer, 0, nullptr, nullptr);
     CheckCLError(err, "clEnqueueReadBuffer");
 }

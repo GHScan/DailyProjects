@@ -26,20 +26,20 @@ private:
     };
     
 public:
-    ImageGenerater_OpenCL(char const *sourceFile, char const *kernelName, int *buffer, int width, int height);
+    ImageGenerater_OpenCL(char const *sourceFile, char const *kernelName, int width, int height);
     ~ImageGenerater_OpenCL();
 
     template<typename ...TArgs>
-    void Run(TArgs ...args)
+    void Run(int *buffer, TArgs ...args)
     {
         const void* ptrArray[sizeof ...(args)];
         size_t sizeArray[sizeof ...(args)];
         FillArray<TArgs...>::Invoke(ptrArray, sizeArray, &args...);
-        RunImpl(ptrArray, sizeArray, sizeof...(args));
+        RunImpl(buffer, ptrArray, sizeArray, sizeof...(args));
     }
 
 private:
-    void RunImpl(const void* args[], size_t sizes[], int count);
+    void RunImpl(int *buffer, const void* args[], size_t sizes[], int count);
 
 private:
     cl_platform_id mPlatform;
@@ -49,7 +49,6 @@ private:
     cl_command_queue mQueue;
     cl_kernel mKernel;
     cl_mem mMem;
-    int *mBuffer;
     int mWidth, mHeight;
 };
 

@@ -10,7 +10,7 @@
 #include "OpenCLFractalRenderer.h"
 #include "CppAMPFractalRenderer.h"
 
-extern IFractalRenderer* CreateCUDAFractalRenderer(int *buffer, int width, int height);
+extern IFractalRenderer* CreateCUDAFractalRenderer(int width, int height);
 extern IFractalRenderer* CreateOpenGLFractalRenderer();
 
 class FractalRenderWindow : public RenderWindow
@@ -80,17 +80,17 @@ public:
         }
         else if (key == '2')
         {
-            mRenderer = make_unique<OpenCLFractalRenderer>(GetFrameBufferPtr(), GetWidth(), GetHeight());
+            mRenderer = make_unique<OpenCLFractalRenderer>(GetWidth(), GetHeight());
             cout << "Switch to OpenCL renderer" << endl;
         }
         else if (key == '3')
         {
-            mRenderer = make_unique<CppAMPFractalRenderer>(GetFrameBufferPtr(), GetWidth(), GetHeight());
+            mRenderer = make_unique<CppAMPFractalRenderer>(GetWidth(), GetHeight());
             cout << "Switch to C++AMP renderer" << endl;
         }
         else if (key == '4')
         {
-            mRenderer.reset(CreateCUDAFractalRenderer(GetFrameBufferPtr(), GetWidth(), GetHeight()));
+            mRenderer.reset(CreateCUDAFractalRenderer(GetWidth(), GetHeight()));
             cout << "Switch to CUDA renderer" << endl;
         }
         else if (key == '5')
@@ -162,13 +162,17 @@ public:
     virtual void Resize(int width, int height) override
     {
         RenderWindow::Resize(width, height);
-        mRenderer->ResetBuffer(GetFrameBufferPtr(), GetWidth(), GetHeight());
+        mRenderer->ResetBuffer(GetWidth(), GetHeight());
         cout << "Resize window to width:" << GetWidth() << ", height" << GetHeight() << endl;
     }
 
-    virtual bool Paint() override
+    virtual bool RenderToBuffer() override
     {
-        int* buffer = GetFrameBufferPtr();
+        return mRenderer->RenderToBuffer();
+    }
+
+    virtual void Render(int *buffer) override
+    {
         int width = GetWidth(), height = GetHeight();
         switch (((mRenderShape % 8) + 8) % 8)
         {
@@ -198,10 +202,7 @@ public:
             break;
         default:
             throw std::exception("Invlaid shape");
-            break;
         }
-
-        return mRenderer->RenderedToBuffer();
     }
 };
 

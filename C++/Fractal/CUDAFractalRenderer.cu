@@ -127,7 +127,7 @@ __global__ void mandelbrot(int *buffer, int width, int height,
 class CUDAFractalRenderer : public IFractalRenderer
 {
 public:
-    CUDAFractalRenderer(int *buffer, int width, int height)
+    CUDAFractalRenderer(int width, int height)
     {
         cudaCheck(cudaMalloc(&mDeviceBuffer, width * height * sizeof(*mDeviceBuffer)));
     }
@@ -137,7 +137,7 @@ public:
         cudaCheck(cudaFree(mDeviceBuffer));
     }
 
-    virtual void ResetBuffer(int *buffer, int width, int height)
+    virtual void ResetBuffer(int width, int height)
     {
         cudaCheck(cudaFree(mDeviceBuffer));
         cudaCheck(cudaMalloc(&mDeviceBuffer, width * height * sizeof(*mDeviceBuffer)));
@@ -170,7 +170,7 @@ private:
     int *mDeviceBuffer;
 };
 
-IFractalRenderer* CreateCUDAFractalRenderer(int *buffer, int width, int height)
+IFractalRenderer* CreateCUDAFractalRenderer(int width, int height)
 {
-    return new CUDAFractalRenderer(buffer, width, height);
+    return new CUDAFractalRenderer(width, height);
 }

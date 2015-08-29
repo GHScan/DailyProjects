@@ -14,13 +14,74 @@
 
 static RenderWindow *gWindow = nullptr;
 
+GLuint gPboArray[2] = {0};
+int gPboIndex = 0;
+GLuint gTexture = 0;
+
+static void SetupTextureAndPbo(int width, int height)
+{
+    if (gTexture != 0)
+    {
+        glDeleteTextures(1, &gTexture);
+        glDeleteBuffers(sizeof(gPboArray) / sizeof(gPboArray[0]), gPboArray);
+        gTexture = 0;
+    }
+
+    glGenTextures(1, &gTexture);
+    glBindTexture(GL_TEXTURE_2D, gTexture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    glGenBuffers(sizeof(gPboArray) / sizeof(gPboArray[0]), gPboArray);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, gPboArray[0]);
+    glBufferData(GL_PIXEL_UNPACK_BUFFER, width * height * 4, nullptr, GL_STREAM_DRAW);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, gPboArray[1]);
+    glBufferData(GL_PIXEL_UNPACK_BUFFER, width * height * 4, nullptr, GL_STREAM_DRAW);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+}
+
 static void OnDisplay()
 {
-    glClear(GL_COLOR_BUFFER_BIT);
-
-    if (gWindow->Paint())
+    if (gWindow->RenderToBuffer())
     {
-        glDrawPixels(gWindow->GetWidth(), gWindow->GetHeight(), GL_BGRA_EXT, GL_UNSIGNED_BYTE, gWindow->GetFrameBufferPtr());
+        int prevIndex = gPboIndex;
+        gPboIndex = 1 - gPboIndex;
+
+        glBindTexture(GL_TEXTURE_2D, gTexture);
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, gPboArray[prevIndex]);
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, gWindow->GetWidth(), gWindow->GetHeight(), GL_BGRA, GL_UNSIGNED_BYTE, nullptr);
+
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        glColor4f(1, 1, 1, 1);
+        glBegin(GL_QUADS);
+        glNormal3f(0, 0, 1);
+        glTexCoord2f(0.0f, 0.0f);   glVertex3f(-1.0f, -1.0f, 0.0f);
+        glTexCoord2f(1.0f, 0.0f);   glVertex3f(1.0f, -1.0f, 0.0f);
+        glTexCoord2f(1.0f, 1.0f);   glVertex3f(1.0f, 1.0f, 0.0f);
+        glTexCoord2f(0.0f, 1.0f);   glVertex3f(-1.0f, 1.0f, 0.0f);
+        glEnd();
+
+        int size = gWindow->GetWidth() * gWindow->GetHeight() * 4;
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, gPboArray[gPboIndex]);
+        glBufferData(GL_PIXEL_UNPACK_BUFFER, size, nullptr, GL_STREAM_DRAW);
+        auto ptr = glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
+        if (ptr)
+        {
+            gWindow->Render(reinterpret_cast<int*>(ptr));
+            glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER); // release pointer to mapping buffer
+        }
+
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
+    else
+    {
+        gWindow->Render(nullptr);
     }
 
     glutSwapBuffers();
@@ -28,7 +89,8 @@ static void OnDisplay()
     GLenum err = glGetError();
     if (err != GL_NO_ERROR)
     {
-        throw std::exception(reinterpret_cast<char const *>(gluErrorString(err)));
+        GLubyte const *message = gluErrorString(err);
+        throw std::exception(reinterpret_cast<char const *>(message));
     }
 }
 
@@ -55,6 +117,7 @@ static void OnReshape(int width, int height)
     glMatrixMode(GL_MODELVIEW);
 
     gWindow->Resize(width, height);
+    SetupTextureAndPbo(width, height);
 }
 
 static void OnKeyDown(unsigned char key, int x, int y)
@@ -106,7 +169,7 @@ static void OnMouseMove(int x, int y)
 }
 
 RenderWindow::RenderWindow(char const *title, int width, int height)
-: mTitle(title), mWidth(width), mHeight(height), mFrameBuffer(mWidth * mHeight * 4)
+: mTitle(title), mWidth(width), mHeight(height)
 {
     gWindow = this;
 }
@@ -140,8 +203,6 @@ void RenderWindow::Run(char *argv[], int argc)
     glutMouseFunc(OnMouseFunc);
     glutMotionFunc(OnMouseMove);
 
-    glClearColor(0, 0, 0, 0);
-
     typedef void(__stdcall *PFNWGLEXTSWAPCONTROLPROC) (int);
     PFNWGLEXTSWAPCONTROLPROC wglSwapIntervalEXT = NULL;
     if (strstr(const_cast<char*>(reinterpret_cast<char const*>(glGetString(GL_EXTENSIONS))), "WGL_EXT_swap_control") != nullptr)
@@ -150,8 +211,9 @@ void RenderWindow::Run(char *argv[], int argc)
         wglSwapIntervalEXT(0);
     }
 
-    glRasterPos2f(-1, 1);
-    glPixelZoom(1, -1);
+    glEnable(GL_TEXTURE_2D);
+
+    SetupTextureAndPbo(mWidth, mHeight);
 
     Setup();
 
@@ -166,4 +228,8 @@ void RenderWindow::Run(char *argv[], int argc)
     }
 
     Cleanup();
+
+    glDeleteTextures(1, &gTexture);
+    glDeleteBuffers(sizeof(gPboArray) / sizeof(gPboArray[0]), gPboArray);
+    gTexture = 0;
 }

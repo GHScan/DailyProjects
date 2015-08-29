@@ -1,6 +1,8 @@
 #ifndef CPPAMP_FRACTAL_RENDERER_H
 #define CPPAMP_FRACTAL_RENDERER_H
 
+#include <vector>
+
 #include <amp.h>
 #include <amp_math.h>
 
@@ -9,14 +11,12 @@
 class CppAMPFractalRenderer : public IFractalRenderer
 {
 public:
-    CppAMPFractalRenderer(int *buffer, int width, int height)
-        : mView(height, width, buffer)
+    CppAMPFractalRenderer(int width, int height)
     {
     }
 
-    virtual void ResetBuffer(int *buffer, int width, int height)
+    virtual void ResetBuffer(int width, int height)
     {
-        mView = concurrency::array_view<int, 2>(height, width, buffer);
     }
 
     virtual void RenderMandelbrot(
@@ -28,8 +28,8 @@ public:
 
         float minX = (float)_minX, maxX = (float)_maxX, minY = (float)_minY, maxY = (float)_maxY;
 
-        array_view<int, 2> view = mView;
-        parallel_for_each(mView.extent, [=](index<2> idx) restrict(amp)
+        array_view<int, 2> &view = GetViewFromCache(buffer, width, height);
+        parallel_for_each(view.extent, [=](index<2> idx) restrict(amp)
         {
             int y = idx[0];
             int x = idx[1];
@@ -69,8 +69,8 @@ public:
         float minX = (float)_minX, maxX = (float)_maxX, minY = (float)_minY, maxY = (float)_maxY;
         float cx = (float)_cx, cy = (float)_cy;
 
-        array_view<int, 2> view = mView;
-        parallel_for_each(mView.extent, [=](index<2> idx) restrict(amp)
+        array_view<int, 2> &view = GetViewFromCache(buffer, width, height);
+        parallel_for_each(view.extent, [=](index<2> idx) restrict(amp)
         {
             int y = idx[0];
             int x = idx[1];
@@ -142,7 +142,24 @@ private:
     }
 
 private:
-    concurrency::array_view<int, 2> mView;
+    concurrency::array_view<int, 2>& GetViewFromCache(int *buffer, int width, int height)
+    {
+        int idx = -1;
+        for (int i = 0; i < (int)mViewCache.size(); ++i)
+        {
+            if (mViewCache[i].first == buffer) idx = i;
+        }
+        if (idx == -1)
+        {
+            if (mViewCache.size() == 4) mViewCache.pop_back();
+            mViewCache.insert(mViewCache.begin(), make_pair(buffer, concurrency::array_view<int, 2>(height, width, buffer)));
+            idx = 0;
+        }
+        return mViewCache[idx].second;
+    }
+
+private:
+    std::vector<pair<int*, concurrency::array_view<int, 2>>> mViewCache;
 };
 
 #endif

@@ -24,18 +24,17 @@ public:
     int GetWidth() const { return mWidth; }
     int GetHeight() const { return mHeight; }
     char const* GetTitle() const { return mTitle.c_str(); }
-    int* GetFrameBufferPtr() { return &mFrameBuffer[0]; }
     virtual void Resize(int width, int height)
     {
         mWidth = width;
         mHeight = height;
-        mFrameBuffer.resize(mWidth * mHeight);
     }
     float GetFps() const { return mFps; }
 
     virtual void Setup() = 0;
     virtual void Cleanup() = 0;
-    virtual bool Paint() = 0;
+    virtual bool RenderToBuffer() = 0;
+    virtual void Render(int *buffer) = 0;
     virtual void KeyDown(int key) = 0;
     virtual void KeyUp(int key) = 0;
     virtual void MouseButtonDown(MouseButton button, float x, float y) = 0;
@@ -58,7 +57,6 @@ public:
 private:
     std::string mTitle;
     int mWidth, mHeight;
-    std::vector<int> mFrameBuffer;
     float mElapseSeconds = 0;
     int mElapseFrames = 0;
     float mFps;

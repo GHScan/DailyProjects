@@ -6,7 +6,7 @@
 class OpenMPFractalRenderer : public IFractalRenderer
 {
 public:
-    virtual void ResetBuffer(int *buffer, int width, int height)
+    virtual void ResetBuffer(int width, int height)
     {
     }
 

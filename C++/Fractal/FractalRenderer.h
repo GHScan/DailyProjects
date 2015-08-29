@@ -12,8 +12,8 @@ typedef float TFloat;
 struct IFractalRenderer
 {
     virtual ~IFractalRenderer() {}
-    virtual bool RenderedToBuffer() const { return true;  }
-    virtual void ResetBuffer(int *buffer, int width, int height) = 0;
+    virtual bool RenderToBuffer() { return true;  }
+    virtual void ResetBuffer(int width, int height) = 0;
     virtual void RenderMandelbrot(
         int *buffer, int width, int height, int maxIteration,
         TFloat minX, TFloat maxX, TFloat minY, TFloat maxY) = 0;

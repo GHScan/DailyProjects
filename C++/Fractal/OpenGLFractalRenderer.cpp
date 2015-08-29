@@ -67,12 +67,12 @@ public:
         glDeleteProgram(mJuliasetProgram);
     }
 
-    virtual bool RenderedToBuffer() const
+    virtual bool RenderToBuffer() override 
     {
         return false;
     }
 
-    virtual void ResetBuffer(int *buffer, int width, int height)
+    virtual void ResetBuffer(int width, int height) override
     {
     }
 
@@ -92,6 +92,8 @@ public:
         glVertex2f(-1, -1);
         glVertex2f(1, -1);
         glEnd();
+
+        glUseProgram(0);
     }
 
     virtual void RenderJuliaSet(
@@ -110,6 +112,8 @@ public:
         glVertex2f(-1, -1);
         glVertex2f(1, -1);
         glEnd();
+
+        glUseProgram(0);
     }
 
 private:
