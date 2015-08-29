@@ -5,6 +5,7 @@
 
 #include <exception>
 
+#include <gl/glew.h>
 #include <gl/glut.h>
 
 #include <windows.h>
@@ -17,8 +18,10 @@ static void OnDisplay()
 {
     glClear(GL_COLOR_BUFFER_BIT);
 
-    gWindow->Paint();
-    glDrawPixels(gWindow->GetWidth(), gWindow->GetHeight(), GL_BGRA_EXT, GL_UNSIGNED_BYTE, gWindow->GetFrameBufferPtr());
+    if (gWindow->Paint())
+    {
+        glDrawPixels(gWindow->GetWidth(), gWindow->GetHeight(), GL_BGRA_EXT, GL_UNSIGNED_BYTE, gWindow->GetFrameBufferPtr());
+    }
 
     glutSwapBuffers();
 
@@ -123,6 +126,11 @@ void RenderWindow::Run(char *argv[], int argc)
         (GetSystemMetrics(SM_CYSCREEN) - mHeight) / 2);
 
     glutCreateWindow(mTitle.c_str());
+
+    cout << "GL Version: " << glGetString(GL_VERSION) << endl;
+    cout << "GL Shading Language Version: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << endl;
+
+    glewInit();
 
     glutDisplayFunc(OnDisplay);
     glutIdleFunc(OnIdle);

@@ -17,7 +17,7 @@ static inline void CheckCLError(cl_int err, char const * name)
     }
 }
 
-static std::string ReadFile(char const *fileName)
+std::string ReadFile(char const *fileName)
 {
     std::string content;
     std::ifstream fi(fileName);

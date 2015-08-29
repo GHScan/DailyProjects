@@ -145,6 +145,4 @@ private:
     concurrency::array_view<int, 2> mView;
 };
 
-
-
 #endif

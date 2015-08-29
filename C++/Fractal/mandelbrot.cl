@@ -1,7 +1,6 @@
 
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable
-
 #if USE_DOUBLE
+#pragma OPENCL EXTENSION cl_khr_fp64 : enable
 typedef double TFloat;
 #else
 typedef float TFloat;

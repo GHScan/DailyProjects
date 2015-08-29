@@ -11,6 +11,7 @@
 #include "CppAMPFractalRenderer.h"
 
 extern IFractalRenderer* CreateCUDAFractalRenderer(int *buffer, int width, int height);
+extern IFractalRenderer* CreateOpenGLFractalRenderer();
 
 class FractalRenderWindow : public RenderWindow
 {
@@ -92,6 +93,11 @@ public:
             mRenderer.reset(CreateCUDAFractalRenderer(GetFrameBufferPtr(), GetWidth(), GetHeight()));
             cout << "Switch to CUDA renderer" << endl;
         }
+        else if (key == '5')
+        {
+            mRenderer.reset(CreateOpenGLFractalRenderer());
+            cout << "Switch to OpenGL renderer" << endl;
+        }
     }
 
     virtual void KeyUp(int k) override
@@ -160,7 +166,7 @@ public:
         cout << "Resize window to width:" << GetWidth() << ", height" << GetHeight() << endl;
     }
 
-    virtual void Paint() override
+    virtual bool Paint() override
     {
         int* buffer = GetFrameBufferPtr();
         int width = GetWidth(), height = GetHeight();
@@ -194,6 +200,8 @@ public:
             throw std::exception("Invlaid shape");
             break;
         }
+
+        return mRenderer->RenderedToBuffer();
     }
 };
 

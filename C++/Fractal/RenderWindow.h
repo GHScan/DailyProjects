@@ -35,7 +35,7 @@ public:
 
     virtual void Setup() = 0;
     virtual void Cleanup() = 0;
-    virtual void Paint() = 0;
+    virtual bool Paint() = 0;
     virtual void KeyDown(int key) = 0;
     virtual void KeyUp(int key) = 0;
     virtual void MouseButtonDown(MouseButton button, float x, float y) = 0;
