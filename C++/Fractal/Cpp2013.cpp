@@ -127,6 +127,8 @@ public:
         mMouseX = x;
         mMouseY = y;
 
+        dy = -dy;
+
         if (mTuneJuliaParameter)
         {
             mJuliaCx += dx;

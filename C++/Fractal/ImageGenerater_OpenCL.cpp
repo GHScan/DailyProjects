@@ -21,11 +21,7 @@ std::string ReadFile(char const *fileName)
 {
     std::string content;
     std::ifstream fi(fileName);
-    for (std::string line; getline(fi, line);)
-    {
-        content += line;
-        content += '\n';
-    }
+    for (std::string line; getline(fi, line); content += '\n') content += line;
     return content;
 }
 
@@ -112,6 +108,6 @@ void ImageGenerater_OpenCL::RunImpl(int *buffer, const void* args[], size_t size
     err = clEnqueueNDRangeKernel(mQueue, mKernel, 2, nullptr, globalSizes, nullptr, 0, nullptr, nullptr);
     CheckCLError(err, "clEnqueueNDRangeKernel");
 
-    clEnqueueReadBuffer(mQueue, mMem, CL_TRUE, 0, mWidth * mHeight * 4, buffer, 0, nullptr, nullptr);
+    err = clEnqueueReadBuffer(mQueue, mMem, CL_TRUE, 0, mWidth * mHeight * 4, buffer, 0, nullptr, nullptr);
     CheckCLError(err, "clEnqueueReadBuffer");
 }

@@ -52,7 +52,7 @@ void main()
 	TFloat cx = gWindowSize.z, cy = gWindowSize.w;
 
     TFloat fx = minX + (maxX - minX) * gl_FragCoord.x / gWindowSize.x;
-    TFloat fy = minY + (maxY - minY) * (1.0 - gl_FragCoord.y / gWindowSize.y);
+    TFloat fy = minY + (maxY - minY) * gl_FragCoord.y / gWindowSize.y;
 
     TFloat zx = fx;
     TFloat zy = fy;

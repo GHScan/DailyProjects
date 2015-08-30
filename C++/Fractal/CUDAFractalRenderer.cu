@@ -2,6 +2,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <vector>
+#include <memory>
+
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include "FractalRenderer.h"
@@ -124,23 +127,50 @@ __global__ void mandelbrot(int *buffer, int width, int height,
     buffer[idx] = HSV2RGB(value, 1 - value * value, sqrt(value));
 }
 
+class CUDAPinnedPtr
+{
+public:
+    CUDAPinnedPtr(void *hostPtr, int size)
+        : mHostPtr(hostPtr), mDevicePtr(nullptr)
+    {
+        cudaCheck(cudaHostRegister(mHostPtr, size, cudaHostRegisterMapped));
+        cudaCheck(cudaHostGetDevicePointer(&mDevicePtr, mHostPtr, 0));
+    }
+
+    ~CUDAPinnedPtr()
+    {
+        cudaCheck(cudaHostUnregister(mHostPtr));
+    }
+
+    void *HostPtr() const
+    {
+        return mHostPtr;
+    }
+
+    void *DevicePtr() const
+    {
+        return mDevicePtr;
+    }
+
+private:
+    void *mHostPtr;
+    void *mDevicePtr;
+};
+
 class CUDAFractalRenderer : public IFractalRenderer
 {
 public:
     CUDAFractalRenderer(int width, int height)
     {
-        cudaCheck(cudaMalloc(&mDeviceBuffer, width * height * sizeof(*mDeviceBuffer)));
+        
     }
 
     ~CUDAFractalRenderer()
     {
-        cudaCheck(cudaFree(mDeviceBuffer));
     }
 
     virtual void ResetBuffer(int width, int height)
-    {
-        cudaCheck(cudaFree(mDeviceBuffer));
-        cudaCheck(cudaMalloc(&mDeviceBuffer, width * height * sizeof(*mDeviceBuffer)));
+    {   
     }
 
     virtual void RenderMandelbrot(
@@ -149,9 +179,9 @@ public:
     {
         dim3 dimBlock(kBlockSize, kBlockSize);
         dim3 dimGrid((width + dimBlock.x - 1) / dimBlock.x, (height + dimBlock.y - 1) / dimBlock.y);
-        mandelbrot << <dimGrid, dimBlock >> >(mDeviceBuffer, width, height, maxIteration, minX, maxX, minY, maxY);
-
-        cudaCheck(cudaMemcpy(buffer, mDeviceBuffer, width * height * sizeof(*mDeviceBuffer), cudaMemcpyDeviceToHost));        
+        
+        auto deviceBuffer = (int*)GetCachedDevicePtr(buffer, width, height);
+        mandelbrot << <dimGrid, dimBlock >> >(deviceBuffer, width, height, maxIteration, minX, maxX, minY, maxY);
     }
 
     virtual void RenderJuliaSet(
@@ -160,14 +190,31 @@ public:
     {
         dim3 dimBlock(kBlockSize, kBlockSize);
         dim3 dimGrid((width + dimBlock.x - 1) / dimBlock.x, (height + dimBlock.y - 1) / dimBlock.y);
-        juliaset << <dimGrid, dimBlock >> >(mDeviceBuffer, width, height, maxIteration, cx, cy, minX, maxX, minY, maxY);
 
-        cudaCheck(cudaMemcpy(buffer, mDeviceBuffer, width * height * sizeof(*mDeviceBuffer), cudaMemcpyDeviceToHost));
+        auto deviceBuffer = (int*)GetCachedDevicePtr(buffer, width, height);
+        juliaset << <dimGrid, dimBlock >> >(deviceBuffer, width, height, maxIteration, cx, cy, minX, maxX, minY, maxY);
+    }
+
+private:
+    void *GetCachedDevicePtr(int *buffer, int width, int height)
+    {
+        int index = -1;
+        for (int i = 0; i < (int)mPinnedPtrs.size(); ++i)
+        {
+            if (mPinnedPtrs[i]->HostPtr() == buffer) index = i;
+        }
+        if (index == -1)
+        {
+            if (mPinnedPtrs.size() == 4) mPinnedPtrs.pop_back();
+            mPinnedPtrs.insert(mPinnedPtrs.begin(), std::make_unique<CUDAPinnedPtr>(buffer, width * height * sizeof(*buffer)));
+            index = 0;
+        }
+        return mPinnedPtrs[index]->DevicePtr();
     }
 
 private:
     int mWidth, mHeight;
-    int *mDeviceBuffer;
+    std::vector<std::unique_ptr<CUDAPinnedPtr>> mPinnedPtrs;
 };
 
 IFractalRenderer* CreateCUDAFractalRenderer(int width, int height)

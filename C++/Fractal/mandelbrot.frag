@@ -51,7 +51,7 @@ void main()
 	TFloat minX = gRange[0], maxX = gRange[1], minY = gRange[2], maxY = gRange[3];
 
     TFloat fx = minX + (maxX - minX) * gl_FragCoord.x / gWindowSize.x;
-    TFloat fy = minY + (maxY - minY) * (1.0 - gl_FragCoord.y / gWindowSize.y);
+    TFloat fy = minY + (maxY - minY) * gl_FragCoord.y / gWindowSize.y;
 
     TFloat zx = 0.0;
     TFloat zy = 0.0;
