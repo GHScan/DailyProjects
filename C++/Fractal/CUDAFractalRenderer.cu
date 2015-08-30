@@ -18,12 +18,12 @@
 static const int kBlockSize = 32;
 
 #define cudaCheck(call) { cudaCheckError((call), __FILE__, __LINE__); }
-inline void cudaCheckError(cudaError_t error, const char *file, int line, bool abort = true)
+inline void cudaCheckError(cudaError_t error, const char *file, int line)
 {
     if (error != cudaSuccess)
     {
         fprintf(stderr, "CUDA error: %s %s %d\n", cudaGetErrorString(error), file, line);
-        if (abort) exit(error);
+        throw std::exception(cudaGetErrorString(error));
     }
 }
 
@@ -162,11 +162,20 @@ class CUDAFractalRenderer : public IFractalRenderer
 public:
     CUDAFractalRenderer(int width, int height)
     {
-        
+        for (int i = 0; i < 2; ++i)
+        {
+            mStreams.push_back(0);
+            cudaCheck(cudaStreamCreate(&mStreams.back()));
+        }
     }
 
     ~CUDAFractalRenderer()
     {
+        for (auto stream : mStreams)
+        {
+            cudaStreamDestroy(stream);
+        }
+        mStreams.clear();
     }
 
     virtual void ResetBuffer(int width, int height)
@@ -177,22 +186,50 @@ public:
         int *buffer, int width, int height, int maxIteration,
         TFloat minX, TFloat maxX, TFloat minY, TFloat maxY)
     {
-        dim3 dimBlock(kBlockSize, kBlockSize);
-        dim3 dimGrid((width + dimBlock.x - 1) / dimBlock.x, (height + dimBlock.y - 1) / dimBlock.y);
-        
         auto deviceBuffer = (int*)GetCachedDevicePtr(buffer, width, height);
-        mandelbrot << <dimGrid, dimBlock >> >(deviceBuffer, width, height, maxIteration, minX, maxX, minY, maxY);
+
+        int tileHeight = height / (int)mStreams.size();
+        TFloat tileY = (maxY - minY) / (int)mStreams.size();
+        for (int i = 0; i < (int)mStreams.size(); ++i)
+        {
+            dim3 dimBlock(kBlockSize, kBlockSize);
+            dim3 dimGrid((width + dimBlock.x - 1) / dimBlock.x, (tileHeight + dimBlock.y - 1) / dimBlock.y);
+
+            TFloat tileMinY = minY + tileY * i;
+            TFloat tileMaxY = tileMinY + tileY;
+
+            mandelbrot << <dimGrid, dimBlock, 0, mStreams[i] >> >(deviceBuffer + i * tileHeight * width, width, tileHeight, maxIteration, minX, maxX, tileMinY, tileMaxY);
+        }
+
+        for (auto stream : mStreams)
+        {
+            cudaCheck(cudaStreamSynchronize(stream));
+        }
     }
 
     virtual void RenderJuliaSet(
         int *buffer, int width, int height, int maxIteration, TFloat cx, TFloat cy,
         TFloat minX, TFloat maxX, TFloat minY, TFloat maxY)
     {
-        dim3 dimBlock(kBlockSize, kBlockSize);
-        dim3 dimGrid((width + dimBlock.x - 1) / dimBlock.x, (height + dimBlock.y - 1) / dimBlock.y);
-
         auto deviceBuffer = (int*)GetCachedDevicePtr(buffer, width, height);
-        juliaset << <dimGrid, dimBlock >> >(deviceBuffer, width, height, maxIteration, cx, cy, minX, maxX, minY, maxY);
+
+        int tileHeight = height / (int)mStreams.size();
+        TFloat tileY = (maxY - minY) / (int)mStreams.size();
+        for (int i = 0; i < (int)mStreams.size(); ++i)
+        {
+            dim3 dimBlock(kBlockSize, kBlockSize);
+            dim3 dimGrid((width + dimBlock.x - 1) / dimBlock.x, (tileHeight + dimBlock.y - 1) / dimBlock.y);
+
+            TFloat tileMinY = minY + tileY * i;
+            TFloat tileMaxY = tileMinY + tileY;
+
+            juliaset << <dimGrid, dimBlock, 0, mStreams[i] >> >(deviceBuffer + i * tileHeight * width, width, tileHeight, maxIteration, cx, cy, minX, maxX, tileMinY, tileMaxY);
+        }
+
+        for (auto stream : mStreams)
+        {
+            cudaCheck(cudaStreamSynchronize(stream));
+        }
     }
 
 private:
@@ -214,6 +251,7 @@ private:
 
 private:
     int mWidth, mHeight;
+    std::vector<cudaStream_t> mStreams;
     std::vector<std::unique_ptr<CUDAPinnedPtr>> mPinnedPtrs;
 };
 
