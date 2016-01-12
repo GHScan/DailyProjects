@@ -1,4 +1,4 @@
-colorscheme molokai
+colorscheme desert
 
 set nocompatible
 
@@ -21,6 +21,15 @@ set guifont=Monaco\ 10
 set completeopt=menu,longest,preview
 
 syntax on
+filetype off
+
+set rtp+=~/.vim/bundle/Vundle.vim
+call vundle#begin()
+
+Plugin 'VundleVim/Vundle.vim'
+
+call vundle#end()
+
 filetype plugin indent on
 
 set incsearch		" do incremental searching
