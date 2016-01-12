@@ -1,0 +1,8 @@
+[package]
+name = "algorithms"
+version = "0.1.0"
+authors = ["GHScan <ppscan@qq.com>"]
+
+[dependencies]
+rand = "0.3"
+time = "0.1"
