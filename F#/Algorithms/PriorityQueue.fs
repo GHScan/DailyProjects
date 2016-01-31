@@ -6,6 +6,7 @@ open NUnit.Framework
 
 type internal KBasedArray<'a>(k : int, length : int, initValue : 'a) = 
     let array = Array.create length initValue
+
     member this.Length = length
     
     member this.Item 
@@ -19,6 +20,7 @@ type internal KBasedArray<'a>(k : int, length : int, initValue : 'a) =
 
 type internal OneBasedList<'a>() = 
     let list = new List<'a>()
+
     member this.Length = list.Count
     member this.PushBack(value) = list.Add(value)
     
@@ -37,7 +39,7 @@ type internal OneBasedList<'a>() =
         this.[i] <- b
         this.[j] <- a
 
-let internal swap(a, b) = (b, a)
+let internal swap (a, b) = (b, a)
 
 let internal sink (list : OneBasedList<'a>) (index : int) (onSwap : 'a -> 'a -> unit) : unit = 
     let rec loop index = 
@@ -50,7 +52,7 @@ let internal sink (list : OneBasedList<'a>) (index : int) (onSwap : 'a -> 'a -> 
                 list.Swap(index, smallChild)
                 loop smallChild
     loop index
-    
+
 let internal lift (list : OneBasedList<'a>) (index : int) (onSwap : 'a -> 'a -> unit) : unit = 
     let mutable index = index
     while index / 2 >= 1 && list.[index] < list.[index / 2] do
@@ -60,6 +62,7 @@ let internal lift (list : OneBasedList<'a>) (index : int) (onSwap : 'a -> 'a -> 
 
 type PriorityQueue<'a when 'a : comparison>() = 
     let list = new OneBasedList<'a>()
+
     member this.Length = list.Length
     member this.Empty = this.Length = 0
     
@@ -77,6 +80,7 @@ type PriorityQueue<'a when 'a : comparison>() =
 type IndexablePriorityQueue<'a when 'a : comparison>(minIndex : int, maxIndex : int) = 
     let index2QueueIndex = new KBasedArray<int>(minIndex, maxIndex - minIndex + 1, 0)
     let list = new OneBasedList<'a * int>()
+
     member this.Length = list.Length
     member this.Empty = this.Length = 0
     
@@ -88,6 +92,7 @@ type IndexablePriorityQueue<'a when 'a : comparison>(minIndex : int, maxIndex : 
     member this.Pop() : int * 'a = this.Remove(snd list.[1])
     member this.Contains(index : int) : bool = index2QueueIndex.[index] <> 0
     member this.Get(index : int) : 'a = fst list.[index2QueueIndex.[index]]
+
     member this.Remove(index : int) : int * 'a = 
         let queueIndex = index2QueueIndex.[index]
         index2QueueIndex.Swap(index, snd list.[list.Length])
@@ -140,6 +145,7 @@ type IndexablePriorityQueueTest() =
     [<Test>]
     member this.TestSort() = 
         let q = new IndexablePriorityQueue<_>(0, 5)
+        
         let tuples = 
             [ 3, 5
               5, 2

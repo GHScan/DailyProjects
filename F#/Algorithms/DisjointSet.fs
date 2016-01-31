@@ -2,35 +2,42 @@
 
 open NUnit.Framework
 
-type DisjointSet(count: int) =
+type DisjointSet(count : int) = 
     let mutable count = count
-    let parents = [|0..count - 1|]
+    let parents = [| 0..count - 1 |]
     let weights = Array.create count 1
-
+    
     let rec root index = 
         let parent = parents.[index]
-        if parent = index then index else root parent
-
+        if parent = index then index
+        else root parent
+    
     member this.Count = count
-
+    
     member this.Union(a, b) = 
         let ra, rb = root a, root b
-        if ra <> rb then
+        if ra <> rb then 
             count <- count - 1
-            if weights.[ra] >= weights.[rb] then
+            if weights.[ra] >= weights.[rb] then 
                 weights.[ra] <- weights.[ra] + weights.[rb]
                 parents.[rb] <- ra
-            else
+            else 
                 weights.[rb] <- weights.[rb] + weights.[ra]
                 parents.[ra] <- rb
-
+    
     member this.IsSame(a, b) = root a = root b
 
-[<TestFixture>]
-type DisjointSetTest() =
+    override this.ToString() = 
+        sprintf "DisjoinSet(%A)" ({ 0..parents.Length - 1 }
+                                  |> Seq.groupBy root
+                                  |> Seq.map (fun (_, v) -> Seq.length v)
+                                  |> List.ofSeq)
 
+[<TestFixture>]
+type DisjointSetTest() = 
+    
     [<Test>]
-    member this.TestUnion() =
+    member this.TestUnion() = 
         let set = new DisjointSet(10)
         Assert.AreEqual(10, set.Count)
         for i in 0..2..9 do
@@ -47,9 +54,9 @@ type DisjointSetTest() =
         Assert.AreEqual(2, set.Count)
         set.Union(0, 9)
         Assert.AreEqual(1, set.Count)
-
+    
     [<Test>]
-    member this.TestIsSame() =
+    member this.TestIsSame() = 
         let set = new DisjointSet(5)
         for i in 1..4 do
             Assert.IsFalse(set.IsSame(0, i))
