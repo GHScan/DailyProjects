@@ -23,11 +23,14 @@ let runUnitTests() =
         |> Array.filter (fun t -> t.GetCustomAttribute<TestFixtureAttribute>() <> null))
 
     for t in types do
-        let obj = Activator.CreateInstance(t)
         let methods = (t.GetMethods(BindingFlags.Instance ||| BindingFlags.NonPublic ||| BindingFlags.Public) 
             |> Array.filter (fun m -> m.GetCustomAttribute<TestAttribute>() <> null))
+
+        let obj = Activator.CreateInstance(t)
+        printfn "%s" t.Name
         for m in methods do
             try
                 m.Invoke(obj, null) |> ignore
             with | :? TargetInvocationException as e -> raise (e.GetBaseException())
                  | e -> raise e
+            printfn "\t%s : pass" m.Name

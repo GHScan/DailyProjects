@@ -4,8 +4,6 @@ open System
 open System.Collections.Generic
 open NUnit.Framework
 
-let internal Swap(a, b) = (b, a)
-
 type internal KBasedArray<'a>(k : int, length : int, initValue : 'a) = 
     let array = Array.create length initValue
     member this.Length = length
@@ -39,26 +37,26 @@ type internal OneBasedList<'a>() =
         this.[i] <- b
         this.[j] <- a
 
-type internal QueueHelper<'a when 'a : comparison> = 
+let internal swap(a, b) = (b, a)
+
+let internal sink (list : OneBasedList<'a>) (index : int) (onSwap : 'a -> 'a -> unit) : unit = 
+    let rec loop index = 
+        if index * 2 <= list.Length then 
+            let mutable smallChild = index * 2
+            if smallChild + 1 <= list.Length && list.[smallChild + 1] < list.[smallChild] then 
+                smallChild <- smallChild + 1
+            if list.[index] > list.[smallChild] then 
+                onSwap list.[index] list.[smallChild]
+                list.Swap(index, smallChild)
+                loop smallChild
+    loop index
     
-    static member Sink(list : OneBasedList<'a>, index : int, onSwap : 'a * 'a -> unit) : unit = 
-        let rec sink index = 
-            if index * 2 <= list.Length then 
-                let mutable smallChild = index * 2
-                if smallChild + 1 <= list.Length && list.[smallChild + 1] < list.[smallChild] then 
-                    smallChild <- smallChild + 1
-                if list.[index] > list.[smallChild] then 
-                    onSwap (list.[index], list.[smallChild])
-                    list.Swap(index, smallChild)
-                    sink smallChild
-        sink index
-    
-    static member Lift(list : OneBasedList<'a>, index : int, onSwap : 'a * 'a -> unit) : unit = 
-        let mutable index = index
-        while index / 2 >= 1 && list.[index] < list.[index / 2] do
-            onSwap (list.[index], list.[index / 2])
-            list.Swap(index, index / 2)
-            index <- index / 2
+let internal lift (list : OneBasedList<'a>) (index : int) (onSwap : 'a -> 'a -> unit) : unit = 
+    let mutable index = index
+    while index / 2 >= 1 && list.[index] < list.[index / 2] do
+        onSwap list.[index] list.[index / 2]
+        list.Swap(index, index / 2)
+        index <- index / 2
 
 type PriorityQueue<'a when 'a : comparison>() = 
     let list = new OneBasedList<'a>()
@@ -67,13 +65,13 @@ type PriorityQueue<'a when 'a : comparison>() =
     
     member this.Push(value) = 
         list.PushBack(value)
-        QueueHelper<'a>.Lift(list, list.Length, fun _ -> ())
+        lift list list.Length (fun _ _ -> ())
     
     member this.Pop() = 
         if this.Empty then invalidOp "Could not pop item from an empty queue"
         list.Swap(1, list.Length)
         let value = list.PopBack()
-        QueueHelper<'a>.Sink(list, 1, fun _ -> ())
+        sink list 1 (fun _ _ -> ())
         value
 
 type IndexablePriorityQueue<'a when 'a : comparison>(minIndex : int, maxIndex : int) = 
@@ -85,7 +83,7 @@ type IndexablePriorityQueue<'a when 'a : comparison>(minIndex : int, maxIndex : 
     member this.Push(index : int, value : 'a) : unit = 
         index2QueueIndex.[index] <- list.Length + 1
         list.PushBack(value, index)
-        QueueHelper<'a * int>.Lift(list, list.Length, fun (a, b) -> index2QueueIndex.Swap(snd a, snd b))
+        lift list list.Length (fun a b -> index2QueueIndex.Swap(snd a, snd b))
     
     member this.Pop() : int * 'a = this.Delete(snd list.[1])
     member this.Contains(index : int) : bool = index2QueueIndex.[index] <> 0
@@ -96,8 +94,8 @@ type IndexablePriorityQueue<'a when 'a : comparison>(minIndex : int, maxIndex : 
         list.Swap(queueIndex, list.Length)
         let value = list.PopBack()
         index2QueueIndex.[snd value] <- 0
-        QueueHelper<'a * int>.Sink(list, queueIndex, fun (a, b) -> index2QueueIndex.Swap(snd a, snd b))
-        Swap value
+        sink list queueIndex (fun a b -> index2QueueIndex.Swap(snd a, snd b))
+        swap value
 
 [<TestFixture>]
 type internal PriorityQueueTest() = 
@@ -142,7 +140,6 @@ type IndexablePriorityQueueTest() =
     [<Test>]
     member this.TestSort() = 
         let q = new IndexablePriorityQueue<_>(0, 5)
-        
         let tuples = 
             [ 3, 5
               5, 2
