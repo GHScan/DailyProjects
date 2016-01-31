@@ -55,6 +55,8 @@
     <None Include="packages.config" />
     <Compile Include="Utility.fs" />
     <Compile Include="PriorityQueue.fs" />
+    <Compile Include="DisjointSet.fs" />
+    <Compile Include="SkipList.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <PropertyGroup>

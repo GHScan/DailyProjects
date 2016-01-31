@@ -85,10 +85,10 @@ type IndexablePriorityQueue<'a when 'a : comparison>(minIndex : int, maxIndex : 
         list.PushBack(value, index)
         lift list list.Length (fun a b -> index2QueueIndex.Swap(snd a, snd b))
     
-    member this.Pop() : int * 'a = this.Delete(snd list.[1])
+    member this.Pop() : int * 'a = this.Remove(snd list.[1])
     member this.Contains(index : int) : bool = index2QueueIndex.[index] <> 0
     member this.Get(index : int) : 'a = fst list.[index2QueueIndex.[index]]
-    member this.Delete(index : int) : int * 'a = 
+    member this.Remove(index : int) : int * 'a = 
         let queueIndex = index2QueueIndex.[index]
         index2QueueIndex.Swap(index, snd list.[list.Length])
         list.Swap(queueIndex, list.Length)
@@ -175,7 +175,7 @@ type IndexablePriorityQueueTest() =
         Assert.AreEqual(1, q.Get(3))
     
     [<Test>]
-    member this.TestDelete() = 
+    member this.TestRemove() = 
         let q = new IndexablePriorityQueue<_>(0, 9)
         let ints = [ 3; 1; 0; 4; 2; 5; 9; 6; 7; 8 ]
         let dels = [ 3; 8; 7; 5; 4 ]
@@ -183,7 +183,7 @@ type IndexablePriorityQueueTest() =
         for i in ints do
             q.Push(i, i * i)
         for d in dels do
-            q.Delete(d) |> ignore
+            q.Remove(d) |> ignore
         Assert.AreEqual(alives
                         |> List.map (fun x -> (x, x * x))
                         |> List.sortBy snd, 
