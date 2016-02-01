@@ -5,12 +5,12 @@ open System.Reflection
 open NUnit.Framework
 
 let timeit name times f = 
-    if times > 1 then f()
+    if times > 1 then f() |> ignore
 
     let gcCounts = [ for i in 0..GC.MaxGeneration -> GC.CollectionCount(i) ]
     
     let stopwatch = System.Diagnostics.Stopwatch.StartNew()
-    for _ in 1..times do f()
+    for _ in 1..times do f() |> ignore
     stopwatch.Stop()
 
     let deltaCounts = gcCounts |> List.mapi (fun i c -> GC.CollectionCount(i) - c)

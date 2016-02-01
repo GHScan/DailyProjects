@@ -57,6 +57,8 @@
     <Compile Include="PriorityQueue.fs" />
     <Compile Include="DisjointSet.fs" />
     <Compile Include="SkipList.fs" />
+    <Compile Include="Graphs.fs" />
+    <Compile Include="MinimalSpanningTree.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <PropertyGroup>
