@@ -1,6 +1,6 @@
 ﻿module Graphs
 
-let internal load (path : string) : int * list<int * int * float> =
+let private load (path : string) : int * list<int * int * float> =
     use reader = System.IO.File.OpenText(path)
     let vertexCount = int (reader.ReadLine())
     let edgeCount = int (reader.ReadLine())

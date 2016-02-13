@@ -2,9 +2,9 @@
 
 open NUnit.Framework
 
-type internal SkipListNode<'k, 'v when 'k : comparison>(key : 'k, value : 'v, height : int) = 
+type private Node<'k, 'v when 'k : comparison>(key : 'k, value : 'v, height : int) = 
     let mutable value = value
-    let links : SkipListNode<'k, 'v> option [] = Array.create height None
+    let links : Node<'k, 'v> option [] = Array.create height None
 
     member this.Links = links
     member this.Key = key
@@ -14,15 +14,15 @@ type internal SkipListNode<'k, 'v when 'k : comparison>(key : 'k, value : 'v, he
 
 type SkipList<'k, 'v when 'k : comparison>(height : int) = 
     let mutable count = 0
-    let head = new SkipListNode<_, _>(Unchecked.defaultof<'k>, Unchecked.defaultof<'v>, height)
+    let head = new Node<_, _>(Unchecked.defaultof<'k>, Unchecked.defaultof<'v>, height)
     let random = new System.Random()
     
-    let rec forward (prev : SkipListNode<'k, 'v>) (index : int) (key : 'k) : SkipListNode<'k, 'v> = 
+    let rec forward (prev : Node<'k, 'v>) (index : int) (key : 'k) : Node<'k, 'v> = 
         match prev.Links.[index] with
         | Some next when next.Key < key -> forward next index key
         | _ -> prev
     
-    let rec insert (prev : SkipListNode<'k, 'v>) (index : int) (node : SkipListNode<'k, 'v>) (nodeHeight : int) : bool = 
+    let rec insert (prev : Node<'k, 'v>) (index : int) (node : Node<'k, 'v>) (nodeHeight : int) : bool = 
         let prev = forward prev index (node.Key)
         let succ = 
             if index = 0 then 
@@ -36,7 +36,7 @@ type SkipList<'k, 'v when 'k : comparison>(height : int) =
             prev.Links.[index] <- Some node
         succ
     
-    let rec remove (prev : SkipListNode<'k, 'v>) (index : int) (key : 'k) : bool = 
+    let rec remove (prev : Node<'k, 'v>) (index : int) (key : 'k) : bool = 
         let prev = forward prev index key
         let succ = 
             if index = 0 then 
@@ -51,7 +51,7 @@ type SkipList<'k, 'v when 'k : comparison>(height : int) =
             | _ -> ()
         succ
     
-    let rec get (prev : SkipListNode<'k, 'v>) (index : int) (key : 'k) : SkipListNode<'k, 'v> option = 
+    let rec get (prev : Node<'k, 'v>) (index : int) (key : 'k) : Node<'k, 'v> option = 
         let prev = forward prev index key
         if index = 0 then 
             match prev.Links.[index] with
@@ -68,8 +68,8 @@ type SkipList<'k, 'v when 'k : comparison>(height : int) =
                 height
         loop 1 (random.Next())
     
-    let getNodeCount (prev : SkipListNode<'k, 'v>) (index : int) = 
-        let rec loop (prev : SkipListNode<'k, 'v>) (acc : int) = 
+    let getNodeCount (prev : Node<'k, 'v>) (index : int) = 
+        let rec loop (prev : Node<'k, 'v>) (acc : int) = 
             match prev.Links.[index] with
             | Some next -> loop next (acc + 1)
             | _ -> acc
@@ -79,7 +79,7 @@ type SkipList<'k, 'v when 'k : comparison>(height : int) =
     
     member this.Add(key, value) : bool = 
         let nodeHeight = newNodeHeight height random
-        let node = new SkipListNode<_, _>(key, value, nodeHeight)
+        let node = new Node<_, _>(key, value, nodeHeight)
         let succ = insert head (height - 1) node nodeHeight
         if succ then count <- count + 1
         succ

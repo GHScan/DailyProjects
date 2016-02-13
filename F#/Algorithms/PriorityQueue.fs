@@ -4,7 +4,7 @@ open System
 open System.Collections.Generic
 open NUnit.Framework
 
-type internal KBasedArray<'a>(k : int, length : int, initValue : 'a) = 
+type private KBasedArray<'a>(k : int, length : int, initValue : 'a) = 
     let array = Array.create length initValue
 
     member this.Length = length
@@ -18,7 +18,7 @@ type internal KBasedArray<'a>(k : int, length : int, initValue : 'a) =
         this.[i] <- b
         this.[j] <- a
 
-type internal OneBasedList<'a>() = 
+type private OneBasedList<'a>() = 
     let list = new List<'a>()
 
     member this.Length = list.Count
@@ -39,9 +39,9 @@ type internal OneBasedList<'a>() =
         this.[i] <- b
         this.[j] <- a
 
-let internal swap (a, b) = (b, a)
+let inline private swap (a, b) = (b, a)
 
-let internal sink (list : OneBasedList<'a>) (index : int) (onSwap : 'a -> 'a -> unit) : unit = 
+let private sink (list : OneBasedList<'a>) (index : int) (onSwap : 'a -> 'a -> unit) : unit = 
     let rec loop index = 
         if index * 2 <= list.Length then 
             let mutable smallChild = index * 2
@@ -53,7 +53,7 @@ let internal sink (list : OneBasedList<'a>) (index : int) (onSwap : 'a -> 'a -> 
                 loop smallChild
     loop index
 
-let internal lift (list : OneBasedList<'a>) (index : int) (onSwap : 'a -> 'a -> unit) : unit = 
+let private lift (list : OneBasedList<'a>) (index : int) (onSwap : 'a -> 'a -> unit) : unit = 
     let mutable index = index
     while index / 2 >= 1 && list.[index] < list.[index / 2] do
         onSwap list.[index] list.[index / 2]

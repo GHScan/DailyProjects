@@ -16,7 +16,7 @@ let timeit name times f =
     let deltaCounts = gcCounts |> List.mapi (fun i c -> GC.CollectionCount(i) - c)
     printfn "%s : Latency=%fs GC=%A" name (stopwatch.Elapsed.TotalSeconds / float times) deltaCounts
 
-let runUnitTests() = 
+let runUnitTests () = 
     let types = 
         (Assembly.GetCallingAssembly().GetTypes() 
          |> Array.filter (fun t -> t.GetCustomAttribute<TestFixtureAttribute>() <> null))
@@ -34,3 +34,7 @@ let runUnitTests() =
             with | :? TargetInvocationException as e -> raise (e.GetBaseException())
                  | e -> raise e
             printfn "\t%s : pass" m.Name
+
+let genRandoms count minVal maxVal =
+    let random = new System.Random()
+    seq { for i in 1..count -> random.Next(minVal, maxVal) }
