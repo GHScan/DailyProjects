@@ -10,7 +10,8 @@ open NUnit.Framework
 type private ListSegment<'a>(list : IList<'a>, offset : int, count : int) =
     new (list : IList<'a>) = ListSegment<'a>(list, 0, list.Count)
 
-    member this.Length = count
+    member this.Length = 
+        count
 
     member this.GetSlice(first : int option, last : int option) =
         let first, last = defaultArg first 0, defaultArg last (count - 1)
@@ -49,7 +50,8 @@ let inline private digit (s : string) (i : int) =
     elif int s.[i] > kMaxChar then invalidArg "s" "found invalid char"
     else int s.[i] + 1
 
-let inline private swapPair (a,b) = (b,a)
+let inline private swapPair (a,b) = 
+    (b,a)
 
 let private insertionSort (list : ListSegment<_>) =
     for i in 1..list.Length-1 do 
