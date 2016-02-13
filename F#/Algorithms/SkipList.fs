@@ -3,14 +3,11 @@
 open NUnit.Framework
 
 type private Node<'k, 'v when 'k : comparison>(key : 'k, value : 'v, height : int) = 
-    let mutable value = value
     let links : Node<'k, 'v> option [] = Array.create height None
 
     member this.Links = links
     member this.Key = key
-    member this.Value 
-        with get () = value
-        and set (_value) = value <- _value
+    member val Value = value with get, set
 
 type SkipList<'k, 'v when 'k : comparison>(height : int) = 
     let mutable count = 0
