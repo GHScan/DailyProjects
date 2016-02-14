@@ -1,4 +1,4 @@
-﻿module Trie
+﻿module StringMap
 
 open System.Collections
 open System.Collections.Generic

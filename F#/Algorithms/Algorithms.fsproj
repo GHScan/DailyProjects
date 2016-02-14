@@ -60,7 +60,7 @@
     <Compile Include="Graphs.fs" />
     <Compile Include="MinimalSpanningTree.fs" />
     <Compile Include="StringSort.fs" />
-    <Compile Include="Trie.fs" />
+    <Compile Include="StringMap.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <PropertyGroup>
