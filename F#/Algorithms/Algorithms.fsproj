@@ -61,6 +61,9 @@
     <Compile Include="MinimalSpanningTree.fs" />
     <Compile Include="StringSort.fs" />
     <Compile Include="StringMap.fs" />
+    <Compile Include="FullTextSearch.fs" />
+    <Compile Include="StringSearch.fs" />
+    <Compile Include="MultipleStringSearch.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <PropertyGroup>

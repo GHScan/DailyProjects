@@ -2,6 +2,7 @@
 
 open System
 open System.Reflection
+open System.Collections.Generic
 open NUnit.Framework
 
 let timeit name times f = 
@@ -35,6 +36,23 @@ let runUnitTests () =
                  | e -> raise e
             printfn "\t%s : pass" m.Name
 
+let private sRandom = new System.Random()
 let genRandoms count minVal maxVal =
-    let random = new System.Random()
-    seq { for i in 1..count -> random.Next(minVal, maxVal) }
+    seq { for i in 1..count -> sRandom.Next(minVal, maxVal) }
+
+let lowerBound<'a, 'b> (list : IList<'a>) (v : 'b) (compare : 'a -> 'b -> int) : int =
+    let mutable lo, hi = 0, list.Count - 1
+    if list.Count = 0 then
+        0
+    elif compare list.[lo] v >= 0 then
+        0
+    elif compare list.[hi] v < 0 then
+        list.Count
+    else
+        while lo + 1 < hi do
+            let mid = (hi - lo) / 2 + lo
+            if compare list.[mid] v < 0 then
+                lo <- mid
+            else
+                hi <- mid
+        hi

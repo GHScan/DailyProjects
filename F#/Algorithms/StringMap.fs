@@ -277,7 +277,7 @@ let newStringTST<'v>() = TSTMap<string, 'v>(ANSIAlphabet()) :> IMap<string, 'v>
 // Unit test
 
 [<TestFixture>]
-type StringMapTest() =
+type internal StringMapTest() =
 
     [<Test>]
     member this.TestWithFixedStrings() =
