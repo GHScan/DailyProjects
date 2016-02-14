@@ -21,15 +21,15 @@ type private BruteForceSearcher(document : string) =
 type private SuffixArraySearcher(document : string) = 
     let suffixArray = [|0..document.Length-1|]
     do
-        Array.sortInPlaceWith (fun i j -> System.String.Compare(document, i, document, j, document.Length)) suffixArray
+        Array.sortInPlaceWith (fun i j -> System.String.CompareOrdinal(document, i, document, j, document.Length)) suffixArray
 
     interface ISearcher with
         member this.Lookup(word : string) : seq<int> = 
-            let mutable pos = Utility.lowerBound suffixArray word (fun i word -> System.String.Compare(document, i, word, 0, word.Length))
+            let mutable pos = Utility.lowerBound suffixArray word (fun i word -> System.String.CompareOrdinal(document, i, word, 0, word.Length))
             [|
                 while pos < suffixArray.Length 
                     && document.Length - suffixArray.[pos] >= word.Length 
-                    && System.String.Compare(word, 0, document, suffixArray.[pos], word.Length) = 0
+                    && System.String.CompareOrdinal(word, 0, document, suffixArray.[pos], word.Length) = 0
                     do
                         yield suffixArray.[pos]
                         pos <- pos + 1
