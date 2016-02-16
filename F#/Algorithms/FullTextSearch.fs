@@ -6,8 +6,8 @@ type ISearcher =
     abstract Lookup : string -> seq<int>
 
 type SearcherType =
-    | BruteForce = 0
-    | SuffixArray = 1
+    | BruteForce
+    | SuffixArray
 
 type private BruteForceSearcher(document : string) = 
     interface ISearcher with
@@ -39,7 +39,6 @@ let newSearcher (searcherType : SearcherType) (document : string) =
     match searcherType with
     | SearcherType.BruteForce -> BruteForceSearcher(document) :> ISearcher
     | SearcherType.SuffixArray -> SuffixArraySearcher(document) :> ISearcher
-    | _ -> failwith (sprintf "Invalid type %A" searcherType)
 
 [<TestFixture>]
 type internal FullTextSearchTest() =
