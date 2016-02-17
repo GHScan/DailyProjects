@@ -100,8 +100,8 @@ type KruskalMST(graph : UndirectedGraph) =
 [<TestFixture>]
 type internal MinimalSpanningTreeTest() = 
     [<Test>]
-    member this.TestThreeApproach() = 
-        let fileNames = ["TinyWUG.txt"; "MediumWUG.txt"; "10000WUG.txt"]
+    member this.TestWithGraphFile() = 
+        let fileNames = ["TinyWUG.txt"; "MediumWUG.txt"]
         for fileName in fileNames do
             let graph = UndirectedGraph.Load (sprintf "../../Data/%s" fileName)
 
@@ -111,3 +111,10 @@ type internal MinimalSpanningTreeTest() =
 
             Assert.IsTrue(System.Math.Abs(lazyPrimMst.TotalWeight - primMst.TotalWeight) < 0.05)
             Assert.IsTrue(System.Math.Abs(lazyPrimMst.TotalWeight - kruskalMst.TotalWeight) < 0.05)
+
+    member this.BenchWithGraphFile() = 
+        let graph = UndirectedGraph.Load (sprintf "../../Data/%s" "10000WUG.txt")
+
+        Utility.timeit "Bench MST : LazyPrim" 3 (fun ()-> new LazyPrimMST(graph))
+        Utility.timeit "Bench MST : Prim" 3 (fun ()-> new PrimMST(graph))
+        Utility.timeit "Bench MST : Kruskal" 3 (fun ()-> new KruskalMST(graph))

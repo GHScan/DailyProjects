@@ -6,9 +6,9 @@ type ISearcher =
     abstract LookupFrom : string -> seq<int * int>
 
 type SearcherType =
-    | BruteForce
-    | ACAutomaton
-    | RK
+    | BruteForce = 0
+    | ACAutomaton = 1
+    | RK = 2
 
 type private BruteForceSearcher(words : seq<string>) =
     interface ISearcher with
@@ -34,6 +34,7 @@ let newSeacher (searcherType : SearcherType) (words : seq<string>) =
     | SearcherType.BruteForce -> BruteForceSearcher(words) :> ISearcher
     | SearcherType.ACAutomaton -> ACAutomatonSearcher(words) :> ISearcher
     | SearcherType.RK -> RKSearcher(words) :> ISearcher
+    | _ -> failwith (sprintf "Invalid type %A" searcherType)
 
 [<TestFixture>]
 type MultipleStringSearcherTest() =

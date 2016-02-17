@@ -36,6 +36,20 @@ let runUnitTests () =
                  | e -> raise e
             printfn "\t%s : pass" m.Name
 
+let runBenchmarks () = 
+    let types = 
+        (Assembly.GetCallingAssembly().GetTypes() 
+         |> Array.filter (fun t -> t.GetCustomAttribute<TestFixtureAttribute>() <> null))
+
+    for t in types do
+        let methods = 
+            (t.GetMethods(BindingFlags.Instance ||| BindingFlags.NonPublic ||| BindingFlags.Public) 
+             |> Array.filter (fun m -> m.Name.StartsWith("Bench")))
+
+        let obj = Activator.CreateInstance(t)
+        for m in methods do
+            m.Invoke(obj, null) |> ignore
+
 let private sRandom = new System.Random()
 let genRandoms count minVal maxVal =
     seq { for i in 1..count -> sRandom.Next(minVal, maxVal) }

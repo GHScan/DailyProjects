@@ -223,7 +223,6 @@ type internal StringSortTest() =
                     sort testArray
                     Assert.AreEqual(orderedList, testArray |> List.ofArray)
         
-    // [<Test>]
     member this.BenchSortFixedLengString() =
         let sortFuncs : list<string * (IList<string> -> unit)> = 
             [
