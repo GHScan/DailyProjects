@@ -31,7 +31,7 @@ type private BruteForceSearcher(word : string) =
 
             seq {
                 for i in 0..document.Length-word.Length do
-                    if System.String.Compare(word, 0, document, i, word.Length) = 0 then
+                    if System.String.CompareOrdinal(word, 0, document, i, word.Length) = 0 then
                         yield i
             }
 
@@ -112,16 +112,15 @@ type private BMSearcher(word : string) =
 
     let goodSuffixSkip = 
         let a = Array.create word.Length 0
-        do 
-            let mutable skip = word.Length
-            for len in 1..word.Length-1 do
-                if word.StartsWith(word.[word.Length-len..]) then
-                    skip <- word.Length - len
-                a.[word.Length-1-len] <- skip
-            for i in 1..word.Length-2 do
-                let len = longestSuffix word word.[..i]
-                if len > 0 && len <= i then
-                    a.[word.Length-1-len] <- word.Length - 1 - i
+        let mutable skip = word.Length
+        for len in 1..word.Length-1 do
+            if word.StartsWith(word.[word.Length-len..]) then
+                skip <- word.Length - len
+            a.[word.Length-1-len] <- skip
+        for i in 1..word.Length-2 do
+            let len = longestSuffix word word.[..i]
+            if len > 0 && len <= i then
+                a.[word.Length-1-len] <- word.Length - 1 - i
         a
 
     interface ISearcher with
@@ -157,7 +156,7 @@ type private BMHSearcher(word : string) =
             let mutable i = 0
             seq {
                 while i <= document.Length - word.Length do
-                    if System.String.Compare(word, 0, document, i, word.Length) = 0 then
+                    if System.String.CompareOrdinal(word, 0, document, i, word.Length) = 0 then
                         yield i
                     i <- i + skipTable.[getChar document (i + word.Length)]
             }
@@ -181,9 +180,9 @@ type private RKSearcher(word : string) =
                     for i in 0..document.Length-word.Length do
                         hash <- hash * R + int document.[i+word.Length-1]
                         if hash = wordHash 
-                            && System.String.Compare(word, 0, document, i, word.Length) = 0 then
+                            && System.String.CompareOrdinal(word, 0, document, i, word.Length) = 0 then
                                 yield i
-                        hash <- hash- RM * int document.[i]
+                        hash <- hash - RM * int document.[i]
                 }
 
 let newSearcher (searcherType : SearcherType) (word : string) =
@@ -242,7 +241,7 @@ type internal StringSearchTest() =
                             searcher.LookupFrom doc |> Seq.length |> ignore)
 
     member this.BenchNormalWord() =
-        let words = [| for _ in 0..100 -> new string(Utility.genRandoms 16 0 25 |> Seq.map ((+) 97 >> char) |> Array.ofSeq) |]
+        let words = [| for _ in 0..100 -> new string(Utility.genRandoms 8 0 25 |> Seq.map ((+) 97 >> char) |> Array.ofSeq) |]
         let docs = [| for _ in 0..10 -> new string(Utility.genRandoms 1000 0 25 |> Seq.map ((+) 97 >> char) |> Array.ofSeq) |]
         
         for t in System.Enum.GetValues(typeof<SearcherType>) do
