@@ -28,7 +28,7 @@ type UndirectedGraph(vertexCount : int, edges : seq<int * int * float>) =
                     |> Seq.map (fun (_, b, w) -> (b, w))
                     |> List.ofSeq))
             |> Map.ofSeq
-        [| 0..vertexCount - 1 |] |> Array.map (fun i -> groups.[i])
+        [| for i in 0..vertexCount - 1 -> groups.[i] |]
     
     member this.VertexCount = vertexCount
     member this.Adjacencies(vertexIndex) : list<int * float> = adjacencies.[vertexIndex]
@@ -48,7 +48,12 @@ type DirectedGraph(vertexCount : int, edges : seq<int * int * float>) =
                     |> Seq.map (fun (_, b, w) -> (b, w))
                     |> List.ofSeq))
             |> Map.ofSeq
-        [| 0..vertexCount - 1 |] |> Array.map (fun i -> groups.[i])
+        [| 
+            for i in 0..vertexCount - 1 ->
+                match groups.TryFind(i) with
+                | Some l -> l
+                | None -> List.empty
+        |] 
     
     member this.VertexCount = vertexCount
     member this.Adjacencies(vertexIndex) : list<int * float> = adjacencies.[vertexIndex]

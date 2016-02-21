@@ -64,6 +64,7 @@
     <Compile Include="FullTextSearch.fs" />
     <Compile Include="StringSearch.fs" />
     <Compile Include="MultipleStringSearch.fs" />
+    <Compile Include="FlowNetwork.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <PropertyGroup>
