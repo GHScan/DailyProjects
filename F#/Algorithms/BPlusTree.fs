@@ -3,7 +3,7 @@
 open System.Collections.Generic
 open NUnit.Framework
 
-type MutableList<'a> = System.Collections.Generic.List<'a>
+type private MutableList<'a> = System.Collections.Generic.List<'a>
 
 let private kPageSize = 4 * 1024
 
@@ -461,59 +461,6 @@ type internal BPlusTreeTest() =
 
         Assert.AreEqual(0, tree.Count)
 
-
-    [<Test>]
-    member this.TestCache() =
-        InternalNode<int, int>.FullCount <- 4
-        LeafNode<int, int>.FullCount <- 4
-
-        let adds = Utility.randomShuffle [|0..1000|]
-        let gets = Utility.genRandoms 10000 0 1000 |> List.ofSeq
-        let dels = Utility.randomShuffle [|0..1000|]
-
-        do
-            let stopwatch = System.Diagnostics.Stopwatch.StartNew()
-
-            let counter = IOCounter.New()
-            let tree = Tree(PersistentNodeStore(counter))
-            for i in adds do
-                tree.Add(i, i * i)
-            for i in gets do
-                tree.Get(i) |> ignore
-            for i in dels do
-                tree.Delete(i) |> ignore
-
-            // printfn "The counter without cache:\nElapse=%f\n%A" stopwatch.Elapsed.TotalSeconds counter
-
-        do 
-            let stopwatch = System.Diagnostics.Stopwatch.StartNew()
-
-            let counter = IOCounter.New()
-            let tree = Tree(CacheNodeStore(PersistentNodeStore(counter), 256, 4))
-            for i in adds do
-                tree.Add(i, i * i)
-            for i in gets do
-                tree.Get(i) |> ignore
-            for i in dels do
-                tree.Delete(i) |> ignore
-
-            // printfn "The counter with cache:\nElapse=%f\n%A" stopwatch.Elapsed.TotalSeconds counter
-
-        do 
-            let stopwatch = System.Diagnostics.Stopwatch.StartNew()
-
-            let counter = IOCounter.New()
-            let tree = Tree(CacheNodeStore(PersistentNodeStore(counter), 256, 4))
-            for i in adds |> Seq.sort do
-                tree.Add(i, i * i)
-            for i in gets |> Seq.sort do
-                tree.Get(i) |> ignore
-            for i in dels |> Seq.sort do
-                tree.Delete(i) |> ignore
-
-            // printfn "The counter with cache (Sequential access):\nElapse=%f\n%A" stopwatch.Elapsed.TotalSeconds counter
-
-
     [<Test>]
     member this.TestWithLargeData() =
         InternalNode<int, int>.FullCount <- 4
@@ -541,3 +488,51 @@ type internal BPlusTreeTest() =
         for i in 0..3000 do
             Assert.AreEqual(dict.Remove(i), tree.Delete(i))
         Assert.AreEqual(0, tree.Count)
+
+    member this.BenchCache() =
+        InternalNode<int, int>.FullCount <- 4
+        LeafNode<int, int>.FullCount <- 4
+
+        let adds = Utility.randomShuffle [|0..1000|] :?> int[]
+        let gets = Utility.genRandoms 10000 0 1000 |> Array.ofSeq
+        let dels = Utility.randomShuffle [|0..1000|] :?> int[]
+
+        for (name, storeMaker) in 
+            [
+            "Counter without cache", (fun counter -> PersistentNodeStore(counter) :> INodeStore<_, _>)
+            "Counter with cache", (fun counter -> CacheNodeStore(PersistentNodeStore(counter), 256, 4) :> INodeStore<_, _>)
+            ] do    
+            Utility.timeit name 1 
+                (fun () ->
+                    let counter = IOCounter.New()
+                    let tree = Tree(storeMaker(counter))
+                    for i in adds do
+                        tree.Add(i, i * i)
+                    for i in gets do
+                        tree.Get(i) |> ignore
+                    for i in dels do
+                        tree.Delete(i) |> ignore
+                    printfn "%A" counter
+                )
+
+        Array.sortInPlace adds
+        Array.sortInPlace gets
+        Array.sortInPlace dels
+
+        for (name, storeMaker) in 
+            [
+            "Counter without cache [Seq]", (fun counter -> PersistentNodeStore(counter) :> INodeStore<_, _>)
+            "Counter with cache [Seq]", (fun counter -> CacheNodeStore(PersistentNodeStore(counter), 256, 4) :> INodeStore<_, _>)
+            ] do    
+            Utility.timeit name 1 
+                (fun () ->
+                    let counter = IOCounter.New()
+                    let tree = Tree(storeMaker(counter))
+                    for i in adds do
+                        tree.Add(i, i * i)
+                    for i in gets do
+                        tree.Get(i) |> ignore
+                    for i in dels do
+                        tree.Delete(i) |> ignore
+                    printfn "%A" counter
+                )
