@@ -46,41 +46,41 @@
 
         function onChartsLoad() {
 
-			<?php  
+            <?php  
 
-				$labels = array('GDP', 'GDP_PPP', 'GDP_growth_rate', 'Area', 'Population', 'Population_growth_rate', 'Population_density', 'GDP_per_capita', 'GDP_PPP_per_capita');
-				foreach ($labels as $label) {
-					?>
+                $labels = array('GDP', 'GDP_PPP', 'GDP_growth_rate', 'Area', 'Population', 'Population_growth_rate', 'Population_density', 'GDP_per_capita', 'GDP_PPP_per_capita');
+                foreach ($labels as $label) {
+                    ?>
 
-					(function() {
-						var records = [
-							['Country', <?php echo "'$label'" ?>],
+                    (function() {
+                        var records = [
+                            ['Country', <?php echo "'$label'" ?>],
 
-							<?php
-								foreach (file($label . '.csv') as $line) {
-									$tokens = explode(',', $line);
-									$country = $tokens[0];
-									$number = (float)$tokens[1];
-									echo "['$country', $number],\n";
-								}
-							?>
-						];
+                            <?php
+                                foreach (file($label . '.csv') as $line) {
+                                    $tokens = explode(',', $line);
+                                    $country = $tokens[0];
+                                    $number = (float)$tokens[1];
+                                    echo "['$country', $number],\n";
+                                }
+                            ?>
+                        ];
 
-	                    var panel = $('#' + <?php echo "'$label'" ?>).attr('align', 'center');
+                        var panel = $('#' + <?php echo "'$label'" ?>).attr('align', 'center');
 
-	                    var data = google.visualization.arrayToDataTable(records);
-	                    var chart = new google.visualization.GeoChart(panel[0]);
-	                    chart.draw(data, {
-	                        width: $(window).width(),
-	                        keepAspectRatio: true,
-	                        colorAxis: { colors: panel.attr('colors').split(';')}
-	                    });
-                	})();
+                        var data = google.visualization.arrayToDataTable(records);
+                        var chart = new google.visualization.GeoChart(panel[0]);
+                        chart.draw(data, {
+                            width: $(window).width(),
+                            keepAspectRatio: true,
+                            colorAxis: { colors: panel.attr('colors').split(';')}
+                        });
+                    })();
 
-					<?php
-				}
+                    <?php
+                }
 
-			?>
+            ?>
         }
     </script>
 </body>
