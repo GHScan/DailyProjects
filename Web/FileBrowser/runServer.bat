@@ -1,1 +1,1 @@
-php -S localhost:8000 -dextension=ext\php_fileinfo.dll
+php -S 0.0.0.0:8000 -dextension=ext\php_fileinfo.dll
