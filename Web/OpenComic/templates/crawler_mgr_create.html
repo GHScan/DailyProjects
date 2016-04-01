@@ -1,0 +1,51 @@
+{% extends "layout.html" %}
+
+
+{% block body %}
+  
+<div class="container body-content">
+
+<h2>Create</h2>
+
+<form id="mainform" action="{{url_for('controller_crawler_mgr_create')}}" method="post" enctype="multipart/form-data" >
+    <div class="form-horizontal">
+        <h4>Crawler</h4>
+        <hr />
+
+        <div class="form-group">
+            <label class="control-label col-md-2" for="name">Name</label>
+            <div class="col-md-10">
+                <input class="form-control text-box single-line" name="name" type="text" required value="" />
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="control-label col-md-2" for="author_email">Author</label>
+            <div class="col-md-10">
+                <input class="form-control text-box single-line" name="author_email" type="email" required value="" />
+            </div>
+        </div>
+
+         <div class="form-group">
+            <label class="control-label col-md-2" for="source">Source</label>
+            <div class="col-md-10">
+                <input type="file" name="source" id="source" required>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <div class="col-md-offset-2 col-md-10">
+                <input type="submit" value="Create" class="btn btn-default" />
+            </div>
+        </div>
+    </div>
+</form>
+
+<p>
+    <a href="{{url_for('controller_crawler_mgr_index')}}">Back to List</a>
+</p>
+
+    </div>
+
+
+{% endblock %}

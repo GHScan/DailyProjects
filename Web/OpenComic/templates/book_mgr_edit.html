@@ -1,0 +1,79 @@
+{% extends "layout.html" %}
+
+
+{% block body %}
+  
+<div class="container body-content">
+
+<h2>Edit</h2>
+<hr/>
+<form id="mainform" action="{{url_for('controller_book_mgr_edit_confirmed', name=book.name)}}" method="post" enctype="multipart/form-data" >
+    <div class="form-horizontal">
+        <h4>Book</h4>
+        <hr />
+
+        <div class="form-group">
+            <label class="control-label col-md-2" for="name">Name</label>
+            <div class="col-md-10">
+                <input class="form-control text-box single-line" name="name" type="text" disabled value="{{book.name}}" />
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="control-label col-md-2" for="description">Description</label>
+            <div class="col-md-10">
+                <input class="form-control text-box" name="description" type="text" maxlength="64" value="{{book.description}}" />
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="control-label col-md-2" for="directory_url">DirectoryUrl</label>
+            <div class="col-md-10">
+                <input class="form-control text-box single-line" name="directory_url" type="url" required value="{{book.directory_url}}" />
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="control-label col-md-2" for="crawler_name">Crawler</label>
+            <div class="col-md-10">
+                <input class="form-control text-box single-line" name="crawler_name" type="text" required value="{{book.crawler_name}}" />
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="control-label col-md-2" for="thumbnail">Thumbnail</label>
+            <div class="col-md-10">
+                <input type="file" name="thumbnail" id="thumbnail">
+                <dd><img id="thumbnail_img" class="img-thumbnail" src="{{url_for('controller_book_mgr_thumbnail', name=book.thumbnail_filename)}}"></dd>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <div class="col-md-offset-2 col-md-10">
+                <input type="submit" value="Save" class="btn btn-default" />
+            </div>
+        </div>
+    </div>
+</form>
+<hr/>
+    <p>
+        <a href="{{url_for('controller_book_mgr_index')}}">Back to List</a>
+    </p>
+
+    </div>
+
+    <script type="text/javascript">
+
+        $("#thumbnail").change(function() {
+            if (this.files && this.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function (e) {
+                    $('#thumbnail_img').attr('src', e.target.result);
+                }
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
+
+    </script>
+
+{% endblock %}

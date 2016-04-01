@@ -1,0 +1,77 @@
+{% extends "layout.html" %}
+
+{% block head %}
+
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.2.0/styles/default.min.css">
+
+{% endblock %}
+
+
+{% block body %}
+  
+<div class="container body-content">
+
+<h2>Edit</h2>
+<hr/>
+<form id="mainform" action="{{url_for('controller_crawler_mgr_edit_confirmed', name=crawler.name)}}" method="post" enctype="multipart/form-data" >
+    <div class="form-horizontal">
+        <h4>Crawler</h4>
+        <hr />
+
+        <div class="form-group">
+            <label class="control-label col-md-2" for="name">Name</label>
+            <div class="col-md-10">
+                <input class="form-control text-box single-line" name="name" type="text" disabled value="{{crawler.name}}" />
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="control-label col-md-2" for="author_email">Author</label>
+            <div class="col-md-10">
+                <input class="form-control text-box single-line" name="author_email" type="email" required value="{{crawler.author_email}}" />
+            </div>
+        </div>
+
+         <div class="form-group">
+            <label class="control-label col-md-2" for="source">Source</label>
+            <div class="col-md-10">
+                <input type="file" name="source" id="source">
+                <dd><pre><code id="source_code" class="python">{{ crawler.src_content }}</code></pre></dd>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <div class="col-md-offset-2 col-md-10">
+                <input type="submit" value="Save" class="btn btn-default" />
+            </div>
+        </div>
+    </div>
+</form>
+
+<hr/>
+<p>
+    <a href="{{url_for('controller_crawler_mgr_index')}}">Back to List</a>
+</p>
+
+    </div>
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.2.0/highlight.min.js"></script>
+    <script>
+        hljs.initHighlightingOnLoad();
+
+        $("#source").change(function() {
+            if (this.files && this.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function () {
+                    $('#source_code').get(0).innerText = reader.result;
+                    $('pre code').each(function(i, block) {
+                      hljs.highlightBlock(block);
+                    });
+                }
+                reader.readAsText(this.files[0]);
+            }
+        });
+    </script>
+
+
+{% endblock %}

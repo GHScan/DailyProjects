@@ -1,0 +1,31 @@
+{% extends "layout.html" %}
+{% block body %}
+  
+  <div class="container body-content">
+        
+
+
+<h2>Books</h2>
+
+    <table class="table table-striped table-hover">
+    <tbody>
+
+    <tr>
+        <th></th>
+        <th>Book</th>
+        <th>Description</th>
+    </tr>
+
+    {% for book in books %}
+        <tr onclick="window.document.location='/books/details/{{book.name}}';">
+            <td> <img class="thumbnail" src="/book_mgr/thumbnail/{{book.thumbnail_filename}}" width="64" height="64"> </td>
+            <td> <a href="#"><h2> {{book.name}} </h2> </a> </td>
+            <td> {{book.description}} </td>
+        </tr>
+    {% endfor %}
+
+</tbody></table>
+
+    </div>
+
+{% endblock %}

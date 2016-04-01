@@ -1,0 +1,65 @@
+{% extends "layout.html" %}
+
+
+{% block body %}
+  
+<div class="container body-content">
+
+<h2>Create</h2>
+
+<form id="mainform" action="{{url_for('controller_book_mgr_create')}}" method="post" enctype="multipart/form-data" >
+    <div class="form-horizontal">
+        <h4>Book</h4>
+        <hr />
+
+        <div class="form-group">
+            <label class="control-label col-md-2" for="name">Name</label>
+            <div class="col-md-10">
+                <input class="form-control text-box single-line" name="name" type="text" required value="" />
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="control-label col-md-2" for="description">Description</label>
+            <div class="col-md-10">
+                <input class="form-control text-box" name="description" type="text" maxlength="64" value="" />
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="control-label col-md-2" for="thumbnail">Thumbnail</label>
+            <div class="col-md-10">
+                <input type="file" name="thumbnail" id="thumbnail">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="control-label col-md-2" for="directory_url">DirectoryUrl</label>
+            <div class="col-md-10">
+                <input class="form-control text-box single-line" name="directory_url" type="url" required value="" />
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="control-label col-md-2" for="crawler_name">Crawler</label>
+            <div class="col-md-10">
+                <input class="form-control text-box single-line" name="crawler_name" type="text" required value="" />
+            </div>
+        </div>
+
+        <div class="form-group">
+            <div class="col-md-offset-2 col-md-10">
+                <input type="submit" value="Create" class="btn btn-default" />
+            </div>
+        </div>
+    </div>
+</form>
+
+<p>
+    <a href="{{url_for('controller_book_mgr_index')}}">Back to List</a>
+</p>
+
+    </div>
+
+
+{% endblock %}

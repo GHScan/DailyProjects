@@ -1,0 +1,32 @@
+{% extends "layout.html" %}
+{% block body %}
+
+<div class="container body-content">
+        
+
+
+<h2>{{book.name}}</h2>
+
+    <table class="table table-striped table-hover">
+    <tbody>
+
+    <tr>
+        <th></th>
+        <th>Chapter</th>
+    </tr>
+
+    {% for chapter in book.chapters %}
+        <tr onclick="window.document.location='/books/chapter/{{book.name}}/{{chapter.name}}';">
+            <td> <img class="thumbnail" src="/books/img/{{book.name}}/{{chapter.name}}/{{chapter.first_page}}" width="64" height="64"> </td>
+            <td> <a href="#"><h2> {{chapter.name}} </h2> </a>  </td>
+        </tr>
+    {% endfor %}
+
+</tbody></table>
+
+<p>
+    <a href="/books">Back to List</a>
+</p>
+    </div>
+
+{% endblock %}

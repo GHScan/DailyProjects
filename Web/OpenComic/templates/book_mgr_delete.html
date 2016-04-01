@@ -1,0 +1,40 @@
+{% extends "layout.html" %}
+
+
+{% block body %}
+  
+<div class="container body-content">
+
+<h2>Delete</h2>
+<hr/>
+<div class="alert alert-danger" role="alert">
+        <strong>Oh snap!</strong> Are you sure you want to delete this?
+      </div>
+
+ <div>
+    <hr>
+    <dl class="dl-horizontal">
+        <dt>Name</dt>
+        <dd>{{book.name}}</dd>
+        <dt>Description</dt>
+        <dd>{{book.description}}</dd>
+        <dt>DirectoryUrl</dt>
+        <dd>{{book.directory_url}}</dd>
+        <dt>Crawler</dt>
+        <dd>{{book.crawler_name}}</dd>
+    </dl>
+</div>
+
+<form action="{{url_for('controller_book_mgr_delete_confirmed', name=book.name)}}" method="post">
+    <div class="form-actions no-color">
+            <input class="btn btn-danger" type="submit" value="Delete" class="btn btn-default"> 
+        
+        </div>
+</form>
+
+<hr/>
+<a href="{{url_for('controller_book_mgr_index')}}">Back to List</a>
+
+    </div>
+
+{% endblock %}
