@@ -36,14 +36,14 @@
               <span class="icon-bar"></span>
               <span class="icon-bar"></span>
             </button>
-            <a class="navbar-brand" href="{{url_for('controller_books_index')}}">{{ title }}</a>
+            <a class="navbar-brand" href="{{url_for('books.index')}}">{{ title }}</a>
           </div>
           <div class="navbar-collapse collapse">
             <ul class="nav navbar-nav">
 
-              {% set nav_pages = [(url_for('controller_books_index'), 'Books'), 
-                                  (url_for('controller_book_mgr_index'), 'Book Manage'), 
-                                  (url_for('controller_crawler_mgr_index'), 'Crawler Manage')] %}
+              {% set nav_pages = [(url_for('books.index'), 'Books'), 
+                                  (url_for('book_mgr.index'), 'Book Manage'), 
+                                  (url_for('crawler_mgr.index'), 'Crawler Manage')] %}
                                   
               {% for href, caption in nav_pages %}
                <li{% if href == request.path %} class="active" {% endif %}><a href="{{ href }}">{{ caption }}</a></li>

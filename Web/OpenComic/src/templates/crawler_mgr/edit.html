@@ -13,7 +13,7 @@
 
 <h2>Edit</h2>
 <hr/>
-<form id="mainform" action="{{url_for('controller_crawler_mgr_edit_confirmed', name=crawler.name)}}" method="post" enctype="multipart/form-data" >
+<form id="mainform" action="{{url_for('.edit_confirmed', name=crawler.name)}}" method="post" enctype="multipart/form-data" >
     <div class="form-horizontal">
         <h4>Crawler</h4>
         <hr />
@@ -50,7 +50,7 @@
 
 <hr/>
 <p>
-    <a href="{{url_for('controller_crawler_mgr_index')}}">Back to List</a>
+    <a href="{{url_for('.index')}}">Back to List</a>
 </p>
 
     </div>

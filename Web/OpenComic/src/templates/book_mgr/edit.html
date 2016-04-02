@@ -7,7 +7,7 @@
 
 <h2>Edit</h2>
 <hr/>
-<form id="mainform" action="{{url_for('controller_book_mgr_edit_confirmed', name=book.name)}}" method="post" enctype="multipart/form-data" >
+<form id="mainform" action="{{url_for('.edit_confirmed', name=book.name)}}" method="post" enctype="multipart/form-data" >
     <div class="form-horizontal">
         <h4>Book</h4>
         <hr />
@@ -44,7 +44,7 @@
             <label class="control-label col-md-2" for="thumbnail">Thumbnail</label>
             <div class="col-md-10">
                 <input type="file" name="thumbnail" id="thumbnail">
-                <dd><img id="thumbnail_img" class="img-thumbnail" src="{{url_for('controller_book_mgr_thumbnail', name=book.thumbnail_filename)}}"></dd>
+                <dd><img id="thumbnail_img" class="img-thumbnail" src="{{url_for('.thumbnail', name=book.thumbnail_filename)}}"></dd>
             </div>
         </div>
 
@@ -57,7 +57,7 @@
 </form>
 <hr/>
     <p>
-        <a href="{{url_for('controller_book_mgr_index')}}">Back to List</a>
+        <a href="{{url_for('.index')}}">Back to List</a>
     </p>
 
     </div>

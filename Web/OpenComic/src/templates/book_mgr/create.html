@@ -7,7 +7,7 @@
 
 <h2>Create</h2>
 
-<form id="mainform" action="{{url_for('controller_book_mgr_create')}}" method="post" enctype="multipart/form-data" >
+<form id="mainform" action="{{url_for('.create')}}" method="post" enctype="multipart/form-data" >
     <div class="form-horizontal">
         <h4>Book</h4>
         <hr />
@@ -56,7 +56,7 @@
 </form>
 
 <p>
-    <a href="{{url_for('controller_book_mgr_index')}}">Back to List</a>
+    <a href="{{url_for('.index')}}">Back to List</a>
 </p>
 
     </div>

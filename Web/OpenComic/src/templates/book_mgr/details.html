@@ -20,13 +20,13 @@
         <dt>Crawler</dt>
         <dd>{{book.crawler_name}}</dd>
         <dt>Thumbnail</dt>
-        <dd><img class="img-thumbnail" src="{{url_for('controller_book_mgr_thumbnail', name=book.thumbnail_filename)}}"></dd>
+        <dd><img class="img-thumbnail" src="{{url_for('.thumbnail', name=book.thumbnail_filename)}}"></dd>
     </dl>
 </div>
 <hr/>
 <p>
-    <a class="btn btn-primary" href="{{url_for('controller_book_mgr_edit', name=book.name)}}">Edit</a>
-    <a href="{{url_for('controller_book_mgr_index')}}">Back to List</a>
+    <a class="btn btn-primary" href="{{url_for('.edit', name=book.name)}}">Edit</a>
+    <a href="{{url_for('.index')}}">Back to List</a>
 </p>
 
     </div>

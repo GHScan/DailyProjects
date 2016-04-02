@@ -7,7 +7,7 @@
 <h2>Book</h2>
 <hr/>
     <p>
-        <a class="btn btn-default" href="{{url_for('controller_book_mgr_create')}}">Create New</a>
+        <a class="btn btn-default" href="{{url_for('.create')}}">Create New</a>
     </p>
     <table class="table table-striped table-hover">
     <tbody>
@@ -25,9 +25,9 @@
             <td> {{book.directory_url}} </td>
             <td> {{book.crawler_name}} </td>
             <td>
-                <a class="btn btn-primary" href="{{url_for('controller_book_mgr_edit', name=book.name)}}">Edit</a>
-                <a class="btn btn-info" href="{{url_for('controller_book_mgr_details', name=book.name)}}">Details</a>
-                <a class="btn btn-danger" href="{{url_for('controller_book_mgr_delete', name=book.name)}}">Delete</a>
+                <a class="btn btn-primary" href="{{url_for('.edit', name=book.name)}}">Edit</a>
+                <a class="btn btn-info" href="{{url_for('.details', name=book.name)}}">Details</a>
+                <a class="btn btn-danger" href="{{url_for('.delete', name=book.name)}}">Delete</a>
             </td>
         </tr>
     {% endfor %}

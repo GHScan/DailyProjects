@@ -1,0 +1,43 @@
+{% extends "layout.html" %}
+{% block body %}
+
+<div class="container body-content">
+
+    <h2>{{chapter.name}}</h2>
+    
+    <hr/>
+    <p>
+        {% if chapter.prev_chapter %}
+            <a class="btn btn-primary" href="{{url_for('.chapter', book=chapter.book_name, name=chapter.prev_chapter)}}" role="button">Previous</a>
+            
+        {% endif %}
+
+        <a href="{{url_for('.details', name=chapter.book_name)}}">Back to List</a>
+
+        {% if chapter.next_chapter %}
+            <a class="btn btn-primary" href="{{url_for('.chapter', book=chapter.book_name, name=chapter.next_chapter)}}" role="button">Next</a>
+        {% endif %}
+    </p>
+
+<hr/>
+    {% for image_name in chapter.img_names %}
+        <img class="img-responsive" src="{{url_for('.img', book=chapter.book_name, chapter=chapter.name, name=image_name)}}">
+    {% endfor %}
+
+<hr/>
+    <p>
+        {% if chapter.prev_chapter %}
+            <a class="btn btn-primary" href="{{url_for('.chapter', book=chapter.book_name, name=chapter.prev_chapter)}}" role="button">Previous</a>
+            
+        {% endif %}
+
+        <a href="{{url_for('.details', name=chapter.book_name)}}">Back to List</a>
+
+        {% if chapter.next_chapter %}
+            <a class="btn btn-primary" href="{{url_for('.chapter', book=chapter.book_name, name=chapter.next_chapter)}}" role="button">Next</a>
+        {% endif %}
+    </p>
+
+</div>
+
+{% endblock %}

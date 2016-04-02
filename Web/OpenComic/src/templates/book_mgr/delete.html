@@ -25,7 +25,7 @@
     </dl>
 </div>
 
-<form action="{{url_for('controller_book_mgr_delete_confirmed', name=book.name)}}" method="post">
+<form action="{{url_for('.delete_confirmed', name=book.name)}}" method="post">
     <div class="form-actions no-color">
             <input class="btn btn-danger" type="submit" value="Delete" class="btn btn-default"> 
         
@@ -33,7 +33,7 @@
 </form>
 
 <hr/>
-<a href="{{url_for('controller_book_mgr_index')}}">Back to List</a>
+<a href="{{url_for('.index')}}">Back to List</a>
 
     </div>
 

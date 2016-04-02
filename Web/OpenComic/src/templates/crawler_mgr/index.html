@@ -8,7 +8,7 @@
 <h2>Crawler</h2>
 <hr/>
     <p>
-        <a class="btn btn-default" href="{{url_for('controller_crawler_mgr_create')}}">Create New</a>
+        <a class="btn btn-default" href="{{url_for('.create')}}">Create New</a>
     </p>
     <table class="table table-striped table-hover">
     <tbody>
@@ -26,9 +26,9 @@
             <td> {{crawler.author_email}} </td>
             <td> {{crawler.last_modified}} </td>
             <td>
-                <a class="btn btn-primary" href="{{url_for('controller_crawler_mgr_edit', name=crawler.name)}}">Edit</a>
-                <a class="btn btn-info" href="{{url_for('controller_crawler_mgr_details', name=crawler.name)}}">Details</a>
-                <a class="btn btn-danger" href="{{url_for('controller_crawler_mgr_delete', name=crawler.name)}}">Delete</a>
+                <a class="btn btn-primary" href="{{url_for('.edit', name=crawler.name)}}">Edit</a>
+                <a class="btn btn-info" href="{{url_for('.details', name=crawler.name)}}">Details</a>
+                <a class="btn btn-danger" href="{{url_for('.delete', name=crawler.name)}}">Delete</a>
             </td>
         </tr>
     {% endfor %}

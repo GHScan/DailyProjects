@@ -16,8 +16,8 @@
     </tr>
 
     {% for chapter in book.chapters %}
-        <tr onclick="window.document.location='/books/chapter/{{book.name}}/{{chapter.name}}';">
-            <td> <img class="thumbnail" src="/books/img/{{book.name}}/{{chapter.name}}/{{chapter.first_page}}" width="64" height="64"> </td>
+        <tr onclick="window.document.location='{{url_for('.chapter', book=book.name, name=chapter.name)}}';">
+            <td> <img class="thumbnail" src="{{url_for('.img', book=book.name, chapter=chapter.name, name=chapter.first_page)}}" width="64" height="64"> </td>
             <td> <a href="#"><h2> {{chapter.name}} </h2> </a>  </td>
         </tr>
     {% endfor %}
@@ -25,7 +25,7 @@
 </tbody></table>
 
 <p>
-    <a href="/books">Back to List</a>
+    <a href="{{url_for('.index')}}">Back to List</a>
 </p>
     </div>
 
