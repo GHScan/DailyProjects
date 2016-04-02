@@ -8,7 +8,10 @@ DB_FILE_PATH = DATA_PATH + '/website/comic.db'
 CRAWLER_SRCS_PATH = DATA_PATH + '/website/crawler_srcs'
 BOOK_THUMBNAILS_PATH = DATA_PATH + '/website/book_thumbnails'
 BOOK_IMGS_PATH = DATA_PATH + '/book_imgs'
+SECRET_KEY_FILE_PATH = DATA_PATH + '/website/secret_key.txt'
+
 LOGS_PATH = 'logs'
+
 DB_FILE_URI = 'sqlite:///' + DB_FILE_PATH
 
 #---------------------------------------------
@@ -238,6 +241,9 @@ if len(sys.argv) <= 1:
 
 else:
     if sys.argv[1] == 'run':
+
+        app.secret_key = file(SECRET_KEY_FILE_PATH, 'r').read()
+
         app.run(host='0.0.0.0', port=80, debug = True)
 
     elif sys.argv[1] == 'run_release':
@@ -248,10 +254,12 @@ else:
         file_handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s\n\n"))
         app.logger.addHandler(file_handler)
 
+        app.secret_key = file(SECRET_KEY_FILE_PATH, 'r').read()
+
         app.run(host='0.0.0.0', port=80, threaded=True)
 
     elif sys.argv[1] == 'setup':
-        raw_input('press enter to terminate...')
+        raw_input('press any key to continue...')
 
         os.makedirs(BOOK_IMGS_PATH)
         os.makedirs(BOOK_THUMBNAILS_PATH)
@@ -259,8 +267,10 @@ else:
         os.makedirs(LOGS_PATH)
         db.create_all()
 
+        file(SECRET_KEY_FILE_PATH, 'w').write(os.urandom(24).encode('base-64'))
+
     elif sys.argv[1] == 'cleanup':
-        raw_input('press enter to terminate...')
+        raw_input('press any key to continue...')
 
         db.drop_all()
         shutil.rmtree(DATA_PATH)
