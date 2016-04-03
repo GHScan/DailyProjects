@@ -2,7 +2,7 @@
 
 import uuid, os, functools, logging
 from logging.handlers import RotatingFileHandler
-from flask import session, Response
+from flask import session, Response, request
 
 def gen_unique_filename(origin_filename):
     return str(uuid.uuid4()).replace('-', '_') + os.path.splitext(origin_filename)[1]
@@ -13,7 +13,7 @@ def gen_random_string():
 def require_login(f):
     @functools.wraps(f)
     def decorated(*args, **kwargs):
-        if not 'account_name' in session:
+        if request.remote_addr != '127.0.0.1' and not 'account_name' in session:
             return Response(
                 'Could not verify your access level for that URL.\n'
                 'You have to login with proper credentials', 401,

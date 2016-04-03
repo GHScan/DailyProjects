@@ -1,45 +1,58 @@
 # vim:fileencoding=utf-8
 
-import os, shutil, imp, traceback
+import os, shutil, imp, traceback, sys
 from multiprocessing import Process, Queue
 from flask import Blueprint, request, jsonify
 from models.book import Book
 from models.crawler import Crawler
 from app import db
-import constants
+import constants, utils
 
 '''
-    Crawler Specification
+    Crawler Specification 
+        (unicode in memory, UTF-8 in file)
 
         - get_chapters(book_directory_url) -> [{name=chapter_name, url=chapter_url}]
         - download_chapter(chapter_url, chapter_directory_path) -> ()
 
 '''
 #----------------------------------------------------------------------------
-# enable to load crawler source code in an isolated process space
+def crawler_get_chapters(crawler, url):
+    for i in range(constants.CRAWL_MAX_RETRY):
+        try:
+            return crawler.get_chapters(url)
+        except:
+            pass
+
+def crawler_download_chapter(crawler, chapter_url, chapter_directory_path):
+    for i in range(constants.CRAWL_MAX_RETRY):
+        try:
+            os.mkdir(chapter_directory_path)
+            crawler.download_chapter(chapter_url, chapter_directory_path)
+            return
+        except:
+            shutil.rmtree(chapter_directory_path)
+
 def crawl_book_process(output_queue, crawler_source_path, directory_url, book_directory_path):
     try:
-        crawler = imp.load_source('crawler', crawler_source_path)
-
-        net_chapters = crawler.get_chapters(directory_url)
-        net_chapter_names = set(chapter.name for chapter in net_chapters)
+        crawler = imp.load_source('crawler', crawler_source_path) 
+        net_chapters = crawler_get_chapters(crawler, directory_url)
+        net_chapter_names = set(chapter['name'] for chapter in net_chapters)
 
         local_chapter_names = set(chapter_name for chapter_name in os.listdir(book_directory_path)
                             if os.path.isdir(os.path.join(book_directory_path, chapter_name)))
 
-        final_chapter_names = set(reversed(sorted(list(local_chapter_names + net_chapter_names)))[:constants.CHAPTERS_TO_KEEP])
+        final_chapter_names = set(list(reversed(sorted(local_chapter_names | net_chapter_names)))[:constants.CHAPTERS_TO_KEEP])
 
         for chapter in net_chapters:
-            if chapter.name in final_chapter_names and not chapter.name in local_chapter_names:
+            if chapter['name'] in final_chapter_names and not chapter['name'] in local_chapter_names:
 
-                chapter_directory_path = os.path.join(book_directory_path, chapter.name)
-                os.mkdir(chapter_directory_path)
-
-                crawler.download_chapter(chapter.url, chapter_directory_path)
+                crawler_download_chapter(crawler, chapter['url'], os.path.join(book_directory_path, chapter['name']))
 
         for chapter_name in local_chapter_names:
             if not chapter_name in final_chapter_names:
                 shutil.rmtree(os.path.join(book_directory_path, chapter_name))
+
 
         output_queue.put(None)
     except:
@@ -53,10 +66,8 @@ def books():
     return jsonify(books=[book.name for book in Book.query.all()])
 
 @crawler_ctrl.route('/crawl_book/<name>', methods=['POST'])
+@utils.require_login
 def crawl_book(name):
-    if request.remote_addr != '127.0.0.1':
-        return jsonify(result='fatal', message='access deny')
-
     book = Book.query.filter_by(name=name).first_or_404()
     crawler = Crawler.query.filter_by(name=book.crawler_name).first_or_404()
     if crawler.error_message:

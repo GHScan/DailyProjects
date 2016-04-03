@@ -10,15 +10,11 @@ def schedule_thread():
         books = json.loads(urllib2.urlopen(url).read())['books']
 
         for book in books:
-            book = book.encode('utf-8')
-
-            url = ('http://localhost:%s/crawler_ctrl/crawl_book/' % constants.PORT) + urllib.quote(book)
+            url = ('http://localhost:%s/crawler_ctrl/crawl_book/' % constants.PORT) + urllib.quote(book.encode('utf-8'))
             response = json.loads(urllib2.urlopen(url, data="").read())
-            result = response['result'].encode('utf-8')
-            message = response['message'].encode('utf-8')
 
-            if result == 'fatal':
-                raise Exception('fatal error: book=%s, message=%s' % (book, message))
+            if response['result'] == 'fatal':
+                raise Exception('fatal error: book=%s, message=%s' % (book, response['message']))
 
         time.sleep(constants.CRAWLER_SCHEDULE_INTERVAL_IN_MIN * 60)
 
