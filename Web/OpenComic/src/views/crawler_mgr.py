@@ -1,7 +1,7 @@
 # vim:fileencoding=utf-8
 
 import os, datetime
-from flask import Blueprint, render_template, request, redirect, url_for
+from flask import Blueprint, render_template, request, redirect, url_for, session
 from app import db
 from models.crawler import Crawler
 from werkzeug import secure_filename
@@ -24,7 +24,7 @@ def create_confirmed():
     filename = utils.gen_unique_filename(secure_filename(file.filename))
     file.save(os.path.join(constants.CRAWLER_SRC_PATH, filename))
 
-    crawler = Crawler(request.form['name'].strip(), request.form['author_email'].strip(), filename)
+    crawler = Crawler(request.form['name'].strip(), session['account_name'], filename)
     db.session.add(crawler)
     db.session.commit()
     return redirect(url_for('.index'))
@@ -39,7 +39,7 @@ def edit(name):
 @utils.require_login
 def edit_confirmed(name):
     crawler = Crawler.query.filter_by(name=name).first_or_404()
-    crawler.author_email = request.form['author_email'].strip()
+    crawler.author_account = session['account_name']
     file = request.files['source']
     if file:
         filename = utils.gen_unique_filename(secure_filename(file.filename))

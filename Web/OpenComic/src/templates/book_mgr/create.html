@@ -43,7 +43,11 @@
         <div class="form-group">
             <label class="control-label col-md-2" for="crawler_name">Crawler</label>
             <div class="col-md-10">
-                <input class="form-control text-box single-line" name="crawler_name" type="text" required value="" placeholder="Crawler" />
+                <select name="crawler_name" id="crawler_name" class="form-control">
+                {% for name in crawler_names %}
+                    <option>{{ name }}</option>
+                {% endfor %}
+                </select>
             </div>
         </div>
 

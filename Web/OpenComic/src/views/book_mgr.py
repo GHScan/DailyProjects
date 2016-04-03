@@ -4,6 +4,7 @@ import os, shutil
 from flask import Blueprint, render_template, request, redirect, url_for, send_from_directory
 from app import db
 from models.book import Book
+from models.crawler import Crawler
 from werkzeug import secure_filename
 import utils, constants
 
@@ -15,7 +16,8 @@ def index():
 
 @book_mgr.route('/create')
 def create():
-    return render_template('book_mgr/create.html')
+    crawler_names = [crawler.name for crawler in Crawler.query.with_entities(Crawler.name)]
+    return render_template('book_mgr/create.html', crawler_names=crawler_names)
 
 @book_mgr.route('/create', methods=['POST'])
 @utils.require_login
@@ -35,7 +37,8 @@ def create_confirmed():
 @book_mgr.route('/edit/<name>')
 def edit(name):
     book = Book.query.filter_by(name=name).first_or_404()
-    return render_template('book_mgr/edit.html', book = book)
+    crawler_names = [crawler.name for crawler in Crawler.query.with_entities(Crawler.name)]
+    return render_template('book_mgr/edit.html', book = book, crawler_names=crawler_names)
 
 @book_mgr.route('/edit/<name>', methods=['POST'])
 @utils.require_login

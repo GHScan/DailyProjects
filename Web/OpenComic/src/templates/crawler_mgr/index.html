@@ -23,7 +23,7 @@
     {% for crawler in crawlers %}
         <tr>
             <td> {{crawler.name}} </td>
-            <td> {{crawler.author_email}} </td>
+            <td> {{crawler.author_account}} </td>
             <td> {{crawler.last_modified}} </td>
             <td>
                 <a class="btn btn-primary" href="{{url_for('.edit', name=crawler.name)}}">Edit</a>
