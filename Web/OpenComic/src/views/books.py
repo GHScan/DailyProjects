@@ -21,7 +21,7 @@ def details(name):
         for chapter_name in reversed(sorted(os.listdir(root))) if os.path.isdir(os.path.join(root, chapter_name))]
     return render_template('books/details.html', book={ 'name' : name, 'chapters' : chapters})
 
-@books.route('chapter/<book>/<name>')
+@books.route('/chapter/<book>/<name>')
 def chapter(book, name):
     root = os.path.join(constants.BOOK_IMGS_PATH, book)
     chapters = [chapter_name for chapter_name in sorted(os.listdir(root)) if os.path.isdir(os.path.join(root, chapter_name))]
@@ -35,6 +35,6 @@ def chapter(book, name):
     return render_template('books/chapter.html', chapter=
         {'name' : name, 'book_name' : book, 'img_names' : img_names, 'prev_chapter' : prev_chapter, 'next_chapter' : next_chapter })
 
-@books.route('img/<book>/<chapter>/<name>')
+@books.route('/img/<book>/<chapter>/<name>')
 def img(book, chapter, name):
     return send_from_directory(os.path.join(constants.BOOK_IMGS_PATH, book, chapter), name)

@@ -1,12 +1,12 @@
 # vim:fileencoding=utf-8
 
-import sys, os, shutil, datetime
+import sys, os, shutil, datetime, getpass
 from flask import redirect, url_for
 from app import flask, db
 from views.books import books
 from views.book_mgr import book_mgr
 from views.crawler_mgr import crawler_mgr
-import constants
+import constants, utils
 
 flask.register_blueprint(books, url_prefix='/books')
 flask.register_blueprint(book_mgr, url_prefix='/book_mgr')
@@ -24,6 +24,8 @@ if len(sys.argv) <= 1:
         setup
         cleanup
         backup
+        add_user name email
+        sql_query query
     """
     exit(0)
 
@@ -56,7 +58,7 @@ else:
         os.makedirs(constants.LOG_PATH)
         db.create_all()
 
-        file(constants.SECRET_KEY_FILE_PATH, 'w').write(os.urandom(24).encode('base-64'))
+        file(constants.SECRET_KEY_FILE_PATH, 'w').write(utils.gen_random_string())
 
     elif cmd == 'cleanup':
         raw_input('press any key to continue...')
@@ -67,3 +69,11 @@ else:
 
     elif cmd == 'backup':
         shutil.make_archive(datetime.datetime.now().strftime("backup_%Y%m%d_%H%M%S"), 'zip', '.', constants.WEBSITE_DATA_PATH)
+
+    elif cmd == 'add_user':
+        user = User(sys.argv[2], sys.argv[3], getpass.getpass())
+        db.session.add(user)
+        db.session.commit()
+
+    elif cmd == 'sql_query':
+        print db.engine.execute(sys.argv[2]).fetchall()

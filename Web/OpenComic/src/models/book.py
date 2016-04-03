@@ -3,8 +3,8 @@
 from app import db
 
 class Book(db.Model):
-    name = db.Column(db.String(64), primary_key = True)
-    description = db.Column(db.String(64))
+    name = db.Column(db.String(32), primary_key = True)
+    description = db.Column(db.String(96))
     thumbnail_filename = db.Column(db.String(64))
     directory_url = db.Column(db.Text, nullable = False)
     crawler_name = db.Column(db.String(32), nullable = False)
