@@ -24,7 +24,10 @@
         <tr>
             <td> {{crawler.name}} </td>
             <td> {{crawler.author_account}} </td>
-            <td> {{crawler.last_modified}} </td>
+            <td>
+                {% if crawler.error_message %} <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span> {% endif %}
+                {{crawler.last_modified}} 
+            </td>
             <td>
                 <a class="btn btn-primary" href="{{url_for('.edit', name=crawler.name)}}">Edit</a>
                 <a class="btn btn-info" href="{{url_for('.details', name=crawler.name)}}">Details</a>

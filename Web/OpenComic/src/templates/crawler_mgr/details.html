@@ -23,6 +23,10 @@
         <dd>{{crawler.author_account}}</dd>
         <dt>LastModified</dt>
         <dd>{{crawler.last_modified}}</dd>
+        <div {% if not crawler.error_message %} class="hidden" {% endif %}>
+            <dt>Error Message</dt>
+            <dd><pre><code>{{crawler.error_message}}</code></pre></dd>
+        </div>
         <dt>Source</dt>
         <dd><pre><code class="python">{{ crawler.src_content }}</code></pre></dd>
     </dl>

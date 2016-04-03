@@ -16,7 +16,7 @@ def index():
 
 @book_mgr.route('/create')
 def create():
-    crawler_names = [crawler.name for crawler in Crawler.query.with_entities(Crawler.name)]
+    crawler_names = [crawler.name for crawler in Crawler.query.all()]
     return render_template('book_mgr/create.html', crawler_names=crawler_names)
 
 @book_mgr.route('/create', methods=['POST'])
@@ -37,7 +37,7 @@ def create_confirmed():
 @book_mgr.route('/edit/<name>')
 def edit(name):
     book = Book.query.filter_by(name=name).first_or_404()
-    crawler_names = [crawler.name for crawler in Crawler.query.with_entities(Crawler.name)]
+    crawler_names = [crawler.name for crawler in Crawler.query.all()]
     return render_template('book_mgr/edit.html', book = book, crawler_names=crawler_names)
 
 @book_mgr.route('/edit/<name>', methods=['POST'])

@@ -1,6 +1,7 @@
 # vim:fileencoding=utf-8
 
-import uuid, os, functools
+import uuid, os, functools, logging
+from logging.handlers import RotatingFileHandler
 from flask import session, Response
 
 def gen_unique_filename(origin_filename):
@@ -19,3 +20,9 @@ def require_login(f):
                 {'WWW-Authenticate': 'Basic realm="Login Required"'})
         return f(*args, **kwargs)
     return decorated
+
+def add_file_handler_to_logger(logger, file_path):
+    file_handler = RotatingFileHandler(file_path, maxBytes=1024 * 1024 * 10, backupCount=5)
+    file_handler.setLevel(logging.ERROR)
+    file_handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s\n\n"))
+    logger.addHandler(file_handler)

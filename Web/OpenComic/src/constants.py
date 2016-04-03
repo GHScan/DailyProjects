@@ -2,6 +2,8 @@
 
 import os
 
+PORT = 80
+
 DATA_PATH = os.path.join('..', 'data')
 
 WEBSITE_DATA_PATH = os.path.join(DATA_PATH, 'website')
@@ -14,5 +16,10 @@ INGESTION_DATA_PATH = os.path.join(DATA_PATH, 'ingestion')
 BOOK_IMGS_PATH = os.path.join(INGESTION_DATA_PATH, 'book_imgs')
 
 LOG_PATH = os.path.join('..', 'log')
+FLASK_LOG_FILE_PATH = os.path.join(LOG_PATH, 'flask.log')
 
 DB_FILE_URI = 'sqlite:///' + DB_FILE_PATH
+
+CHAPTERS_TO_KEEP = 10
+
+CRAWLER_SCHEDULE_INTERVAL_IN_MIN = 10

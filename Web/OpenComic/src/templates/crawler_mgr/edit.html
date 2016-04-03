@@ -32,6 +32,13 @@
             </div>
         </div>
 
+        <div id="error_message-div" class="form-group {% if not crawler.error_message %}hidden{% endif %}">
+            <label class="control-label col-md-2" for="error_message">Error Message</label>
+            <div class="col-md-10">
+                <pre><code>{{crawler.error_message}}</code></pre>
+            </div>
+        </div>
+
          <div class="form-group">
             <label class="control-label col-md-2" for="source">Source</label>
             <div class="col-md-10">
@@ -60,6 +67,8 @@
         hljs.initHighlightingOnLoad();
 
         $("#source").change(function() {
+            $("#error_message-div").hide();
+
             if (this.files && this.files[0]) {
                 var reader = new FileReader();
                 reader.onload = function () {

@@ -47,6 +47,7 @@ def edit_confirmed(name):
         os.remove(os.path.join(constants.CRAWLER_SRC_PATH, crawler.src_filename))
         crawler.src_filename = filename
     crawler.last_modified = datetime.datetime.now()
+    crawler.error_message = None
     db.session.commit()
     return redirect(url_for('.index'))
 
