@@ -18,6 +18,7 @@ def create():
     return render_template('book_mgr/create.html')
 
 @book_mgr.route('/create', methods=['POST'])
+@utils.require_login
 def create_confirmed():
     book = Book(request.form['name'].strip(), request.form['directory_url'].strip(), request.form['crawler_name'].strip())
     book.description = request.form['description'].strip()
@@ -37,6 +38,7 @@ def edit(name):
     return render_template('book_mgr/edit.html', book = book)
 
 @book_mgr.route('/edit/<name>', methods=['POST'])
+@utils.require_login
 def edit_confirmed(name):
     book = Book.query.filter_by(name=name).first_or_404()
     book.description = request.form['description'].strip()
@@ -52,6 +54,7 @@ def edit_confirmed(name):
     return redirect(url_for('.index'))
 
 @book_mgr.route('/delete/<name>')
+@utils.require_login
 def delete(name):
     book = Book.query.filter_by(name=name).first_or_404()
     return render_template('book_mgr/delete.html', book = book)

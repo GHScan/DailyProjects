@@ -4,7 +4,7 @@ import hashlib
 from app import db
 import utils
 
-class User(db.Model):
+class Account(db.Model):
     name = db.Column(db.String(32), primary_key = True)
     email = db.Column(db.String(96), nullable = False)
     password_hash = db.Column(db.String(64), nullable = False)
@@ -23,4 +23,4 @@ class User(db.Model):
         return self.password_hash == hashlib.sha1(self.salt + ',' + password).hexdigest()
 
     def __repr__(self):
-        return '<User %r>' % self.name
+        return '<Account %r>' % self.name

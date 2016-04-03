@@ -1,0 +1,50 @@
+{% extends "layout.html" %}
+
+{% block body %}
+  
+<div class="container body-content">
+
+<h2>Edit</h2>
+<hr/>
+<form id="mainform" action="{{url_for('.edit_confirmed')}}" method="post" enctype="multipart/form-data" >
+    <div class="form-horizontal">
+        <h4>Account</h4>
+        <hr />
+
+        <div class="form-group">
+            <label class="control-label col-md-2" for="name">Name</label>
+            <div class="col-md-10">
+                <input class="form-control text-box single-line" name="name" type="text" disabled value="{{account.name}}" />
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="control-label col-md-2" for="email">Email</label>
+            <div class="col-md-10">
+                <input class="form-control text-box" name="email" type="email" maxlength="96" required value="{{account.email}}" placeholder="Email"  />
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="control-label col-md-2" for="password">Password</label>
+            <div class="col-md-10">
+                <input class="form-control text-box single-line" name="password" type="password" value="" placeholder="Password" />
+            </div>
+        </div>
+
+        <div class="form-group">
+            <div class="col-md-offset-2 col-md-10">
+                <input type="submit" value="Save" class="btn btn-default" />
+            </div>
+        </div>
+    </div>
+</form>
+<hr/>
+
+<p>
+    <a href="{{url_for('books.index')}}">Back</a>
+</p>
+
+    </div>
+
+{% endblock %}

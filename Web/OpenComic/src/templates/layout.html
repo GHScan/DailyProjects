@@ -26,48 +26,67 @@
   </head>
   <body>
 
-<div class="container">
-  <nav class="navbar navbar-default">
-        <div class="container">
-          <div class="navbar-header">
-            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target=".navbar-collapse">
-              <span class="sr-only">Toggle navigation</span>
-              <span class="icon-bar"></span>
-              <span class="icon-bar"></span>
-              <span class="icon-bar"></span>
-            </button>
-            <a class="navbar-brand" href="{{url_for('books.index')}}">{{ title }}</a>
-          </div>
-          <div class="navbar-collapse collapse">
-            <ul class="nav navbar-nav">
-
-              {% set nav_pages = [(url_for('books.index'), 'Books'), 
-                                  (url_for('book_mgr.index'), 'Book Manage'), 
-                                  (url_for('crawler_mgr.index'), 'Crawler Manage')] %}
-                                  
-              {% for href, caption in nav_pages %}
-               <li{% if href == request.path %} class="active" {% endif %}><a href="{{ href }}">{{ caption }}</a></li>
-              {% endfor %}
-
-            </ul>
-          </div><!--/.nav-collapse -->
-        </div>
-      </nav>
-
-<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
     <script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.11.3.min.js"></script>
 
+    {% if 'account_name' in session %}
 
-  {% block body %}{% endblock %}
+    <div class="container">
+      <nav class="navbar navbar-default">
+            <div class="container">
+              <div class="navbar-header">
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target=".navbar-collapse">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="{{url_for('books.index')}}">{{ title }}</a>
+              </div>
+              <div class="navbar-collapse collapse">
+                <ul class="nav navbar-nav">
 
-<!-- Include all compiled plugins (below), or include individual files as needed -->
-    <script src="http://ajax.aspnetcdn.com/ajax/bootstrap/3.3.6/bootstrap.min.js"> </script>
+                  {% set nav_pages = [(url_for('books.index'), 'Books'), 
+                                      (url_for('book_mgr.index'), 'Book Manage'), 
+                                      (url_for('crawler_mgr.index'), 'Crawler Manage')] %}
+                                      
+                  {% for href, caption in nav_pages %}
+                   <li{% if href == request.path %} class="active" {% endif %}><a href="{{ href }}">{{ caption }}</a></li>
+                  {% endfor %}
 
-    <hr>
+                  <li class="dropdown">
+                      <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><span class="glyphicon glyphicon-user" aria-hidden="true"></span> <span class="glyphicon-class">{{ session['account_name'] }}</span> <span class="caret"></span></a>
+                      <ul class="dropdown-menu">
+                        <li><a href="{{url_for('account.edit')}}">Edit</a></li>
+                        <li><a href="#" onclick="document.forms['account-logout-form'].submit(); return false;">Logout</a></li>
+                      </ul>
+                    </li>
+                </ul>
+              </div><!--/.nav-collapse -->
+            </div>
+          </nav>
+
+        <form id="account-logout-form" action="{{url_for('account.logout')}}" method="post" enctype="multipart/form-data" >
+        </form>
+
+      {% block body %}{% endblock %}
+
+        <hr>
+
         <footer>
             <p>© 2016 - {{ title }}</p>
         </footer>
-  </div>
+
+      </div>
+
+    {% else %}
+
+      {% include "account/login.html" %}
+
+    {% endif %}
+
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+      <script src="http://ajax.aspnetcdn.com/ajax/bootstrap/3.3.6/bootstrap.min.js"> </script>
 
   </body>
 </html>

@@ -18,6 +18,7 @@ def create():
     return render_template('crawler_mgr/create.html')
 
 @crawler_mgr.route('/create', methods=['POST'])
+@utils.require_login
 def create_confirmed():
     file = request.files['source']
     filename = utils.gen_unique_filename(secure_filename(file.filename))
@@ -35,6 +36,7 @@ def edit(name):
     return render_template('crawler_mgr/edit.html', crawler = crawler)
 
 @crawler_mgr.route('/edit/<name>', methods=['POST'])
+@utils.require_login
 def edit_confirmed(name):
     crawler = Crawler.query.filter_by(name=name).first_or_404()
     crawler.author_email = request.form['author_email'].strip()
@@ -54,6 +56,7 @@ def delete(name):
     return render_template('crawler_mgr/delete.html', crawler = crawler)
 
 @crawler_mgr.route('/delete/<name>', methods=['POST'])
+@utils.require_login
 def delete_confirmed(name):
     crawler = Crawler.query.filter_by(name=name).first_or_404()
     os.remove(os.path.join(constants.CRAWLER_SRC_PATH, crawler.src_filename))
