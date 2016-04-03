@@ -33,7 +33,7 @@ def crawler_download_chapter(crawler, chapter_url, chapter_directory_path):
         except:
             shutil.rmtree(chapter_directory_path)
 
-def crawl_book_process(output_queue, crawler_source_path, directory_url, book_directory_path):
+def crawl_book_process(output_queue, crawler_source_path, directory_url, book_directory_path, exclude_chapters):
     try:
         crawler = imp.load_source('crawler', crawler_source_path) 
         net_chapters = crawler_get_chapters(crawler, directory_url)
@@ -42,7 +42,9 @@ def crawl_book_process(output_queue, crawler_source_path, directory_url, book_di
         local_chapter_names = set(chapter_name for chapter_name in os.listdir(book_directory_path)
                             if os.path.isdir(os.path.join(book_directory_path, chapter_name)))
 
-        final_chapter_names = set(list(reversed(sorted(local_chapter_names | net_chapter_names)))[:constants.CHAPTERS_TO_KEEP])
+        exclude_chapter_names = set(exclude_chapters.split())
+
+        final_chapter_names = set(list(reversed(sorted((local_chapter_names | net_chapter_names) - exclude_chapter_names)))[:constants.CHAPTERS_TO_KEEP])
 
         for chapter in net_chapters:
             if chapter['name'] in final_chapter_names and not chapter['name'] in local_chapter_names:
@@ -78,7 +80,8 @@ def crawl_book(name):
         args=(q, 
             os.path.join(constants.CRAWLER_SRC_PATH, crawler.src_filename),
             book.directory_url,
-            os.path.join(constants.BOOK_IMGS_PATH, book.name)))
+            os.path.join(constants.BOOK_IMGS_PATH, book.name),
+            book.exclude_chapters))
     p.start()
     error_message = q.get()
     p.join()

@@ -47,6 +47,7 @@ def edit_confirmed(name):
     book.description = request.form['description'].strip()
     book.directory_url = request.form['directory_url'].strip()
     book.crawler_name = request.form['crawler_name'].strip()
+    book.exclude_chapters = request.form['exclude_chapters'].strip()
     file = request.files['thumbnail']
     if file:
         filename = utils.gen_unique_filename(secure_filename(file.filename))

@@ -21,6 +21,8 @@
         <dd>{{book.crawler_name}}</dd>
         <dt>Thumbnail</dt>
         <dd><img class="img-thumbnail" src="{{url_for('.thumbnail', name=book.thumbnail_filename)}}"></dd>
+        <dt>Excluded Chapters</dt>
+        <dd><pre>{{book.exclude_chapters}}</pre></dd>
     </dl>
 </div>
 <hr/>

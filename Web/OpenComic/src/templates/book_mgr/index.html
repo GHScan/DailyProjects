@@ -25,6 +25,7 @@
             <td> {{book.directory_url}} </td>
             <td> {{book.crawler_name}} </td>
             <td>
+                <a class="btn btn-default crawl-link" data-loading-text="Crawling..." data-url="{{url_for('crawler_ctrl.crawl_book', name=book.name)}}" href="#">Crawl</a>
                 <a class="btn btn-primary" href="{{url_for('.edit', name=book.name)}}">Edit</a>
                 <a class="btn btn-info" href="{{url_for('.details', name=book.name)}}">Details</a>
                 <a class="btn btn-danger" href="{{url_for('.delete', name=book.name)}}">Delete</a>
@@ -35,5 +36,17 @@
 </tbody></table>
 
 </div>
+
+<script type="text/javascript">
+    $('.crawl-link').click(function(e) {
+        e.preventDefault();
+        
+        var btn = $(this);
+        btn.button('loading');
+        $.post(btn.attr('data-url'), {}, function(data) {
+            btn.button('reset');
+        });
+    });
+</script>
 
 {% endblock %}
