@@ -2,26 +2,26 @@
 
 import sys, os, shutil, datetime, getpass
 from flask import redirect, url_for
-from app import flask, db
+from singleton import app, db
 from views.books import books
 from views.book_mgr import book_mgr
 from views.crawler_mgr import crawler_mgr
 from views.account import account
 from views.crawler_ctrl import crawler_ctrl
 from models.account import Account
-import constants, utils, crawler_schedule
+import constants, utils, background_crawl
 
-@flask.route('/')
+@app.route('/')
 def index():
     return redirect(url_for('books.index'))
 
 if __name__ == '__main__':
 
-    flask.register_blueprint(books, url_prefix='/books')
-    flask.register_blueprint(book_mgr, url_prefix='/book_mgr')
-    flask.register_blueprint(crawler_mgr, url_prefix='/crawler_mgr')
-    flask.register_blueprint(account, url_prefix='/account')
-    flask.register_blueprint(crawler_ctrl, url_prefix='/crawler_ctrl')
+    app.register_blueprint(books, url_prefix='/books')
+    app.register_blueprint(book_mgr, url_prefix='/book_mgr')
+    app.register_blueprint(crawler_mgr, url_prefix='/crawler_mgr')
+    app.register_blueprint(account, url_prefix='/account')
+    app.register_blueprint(crawler_ctrl, url_prefix='/crawler_ctrl')
 
     if len(sys.argv) <= 1:
         print """
@@ -40,22 +40,22 @@ if __name__ == '__main__':
         cmd = sys.argv[1] 
         if cmd == 'run':
 
-            crawler_schedule.start()
+            background_crawl.start()
 
-            flask.secret_key = file(constants.SECRET_KEY_FILE_PATH, 'r').read()
-            flask.run(host='0.0.0.0', port=constants.PORT, debug = True)
+            app.secret_key = file(constants.SECRET_KEY_FILE_PATH, 'r').read()
+            app.run(host='0.0.0.0', port=constants.PORT, debug = True)
 
-            crawler_schedule.stop()
+            background_crawl.stop()
 
         elif cmd == 'run_release':
             
-            crawler_schedule.start()
+            background_crawl.start()
 
-            utils.add_file_handler_to_logger(flask.logger, constants.FLASK_LOG_FILE_PATH)
-            flask.secret_key = file(constants.SECRET_KEY_FILE_PATH, 'r').read()
-            flask.run(host='0.0.0.0', port=constants.PORT, threaded=True)
+            utils.add_file_handler_to_logger(app.logger, constants.FLASK_LOG_FILE_PATH)
+            app.secret_key = file(constants.SECRET_KEY_FILE_PATH, 'r').read()
+            app.run(host='0.0.0.0', port=constants.PORT, threaded=True)
 
-            crawler_schedule.stop()
+            background_crawl.stop()
 
         elif cmd == 'setup':
             raw_input('press any key to continue...')

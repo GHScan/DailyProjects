@@ -2,7 +2,7 @@
 
 import os
 from flask import Blueprint, render_template, redirect, url_for, request, session
-from app import db
+from singleton import db
 from models.account import Account
 import constants, utils
 

@@ -6,7 +6,7 @@ import constants
 
 running = False
 
-def schedule_thread():
+def crawl_thread():
     time.sleep(1)
 
     while running:
@@ -22,7 +22,7 @@ def schedule_thread():
             if response['result'] == 'fatal':
                 raise Exception('fatal error: book=%s, message=%s' % (book, response['message']))
 
-        for _ in range(constants.CRAWLER_SCHEDULE_INTERVAL_IN_MIN * 60):
+        for _ in range(constants.BACKGROUND_CRAWL_INTERVAL_IN_MIN * 60):
             if not running: break
             time.sleep(1)
 
@@ -30,7 +30,7 @@ def start():
     global running
     running = True
 
-    Thread(target = schedule_thread).start()
+    Thread(target = crawl_thread).start()
 
 def stop():
     global running

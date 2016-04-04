@@ -2,7 +2,7 @@
 
 import os, shutil
 from flask import Blueprint, render_template, request, redirect, url_for, send_from_directory
-from app import db
+from singleton import db
 from models.book import Book
 from models.crawler import Crawler
 from werkzeug import secure_filename

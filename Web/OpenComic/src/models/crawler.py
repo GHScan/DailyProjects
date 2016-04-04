@@ -1,7 +1,7 @@
 # vim:fileencoding=utf-8
 
 import datetime
-from app import db
+from singleton import db
 
 class Crawler(db.Model):
     name = db.Column(db.String(32), primary_key = True)

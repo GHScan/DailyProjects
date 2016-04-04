@@ -5,7 +5,7 @@ from multiprocessing import Process, Queue
 from flask import Blueprint, request, jsonify, redirect, url_for
 from models.book import Book
 from models.crawler import Crawler
-from app import db
+from singleton import db
 import constants, utils
 
 '''

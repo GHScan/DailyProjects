@@ -1,7 +1,7 @@
 # vim:fileencoding=utf-8
 
 import hashlib
-from app import db
+from singleton import db
 import utils
 
 class Account(db.Model):

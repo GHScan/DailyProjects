@@ -2,7 +2,7 @@
 
 import os, datetime
 from flask import Blueprint, render_template, request, redirect, url_for, session
-from app import db
+from singleton import db
 from models.crawler import Crawler
 from werkzeug import secure_filename
 import utils, constants

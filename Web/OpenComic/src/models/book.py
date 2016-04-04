@@ -1,6 +1,6 @@
 # vim:fileencoding=utf-8
 
-from app import db
+from singleton import db
 
 class Book(db.Model):
     name = db.Column(db.String(32), primary_key = True)
