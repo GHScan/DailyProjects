@@ -13,7 +13,7 @@ def get_chapters(dir_url):
     content = _download_url(dir_url).decode('gb18030')
     start = content.index('<ul class="bi">')
     end = content.index('</ul>', start)
-    content = content[start:end - start]
+    content = content[start:end]
 
     chs = []
     for m in re.finditer('<li><a href=([^ ]+) target=_blank>([^<]+)</a>', content): 
