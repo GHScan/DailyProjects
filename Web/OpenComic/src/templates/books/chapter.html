@@ -21,7 +21,7 @@
 
 <hr/>
     {% for image_name in chapter.img_names %}
-        <img class="img-responsive" src="{{url_for('.img', book=chapter.book_name, chapter=chapter.name, name=chapter.img_names[0])}}" data-src="{{url_for('.img', book=chapter.book_name, chapter=chapter.name, name=image_name)}}" />
+        <img class="img-responsive" src="/static/img/loading.gif" data-src="{{url_for('.img', book=chapter.book_name, chapter=chapter.name, name=image_name)}}" />
     {% endfor %}
 
 <hr/>
