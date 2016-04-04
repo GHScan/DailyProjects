@@ -2,7 +2,7 @@
 
 import os, shutil, imp, traceback, sys
 from multiprocessing import Process, Queue
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, redirect, url_for
 from models.book import Book
 from models.crawler import Crawler
 from app import db
@@ -58,7 +58,7 @@ def crawl_book_process(output_queue, crawler_source_path, directory_url, book_di
 
         output_queue.put(None)
     except:
-        output_queue.put(traceback.format_exc())
+        output_queue.put('book_directory_path=%s\nstack_trace=%s' % (book_directory_path, traceback.format_exc()))
 #----------------------------------------------------------------------------        
 
 crawler_ctrl = Blueprint('crawler_ctrl', __name__)
@@ -92,3 +92,13 @@ def crawl_book(name):
         return jsonify(result='failed', message='error')
     else:
         return jsonify(result='success')
+
+@crawler_ctrl.route('/force_crawl_book/<name>', methods=['POST'])
+@utils.require_login
+def force_crawl_book(name):
+    book = Book.query.filter_by(name=name).first_or_404()
+    crawler = Crawler.query.filter_by(name=book.crawler_name).first_or_404()
+    if crawler.error_message:
+        crawler.error_message = None
+        db.session.commit()
+    return redirect(url_for('.crawl_book', name=name), code=307)
