@@ -45,6 +45,8 @@ if __name__ == '__main__':
             flask.secret_key = file(constants.SECRET_KEY_FILE_PATH, 'r').read()
             flask.run(host='0.0.0.0', port=constants.PORT, debug = True)
 
+            crawler_schedule.stop()
+
         elif cmd == 'run_release':
             
             crawler_schedule.start()
@@ -52,6 +54,8 @@ if __name__ == '__main__':
             utils.add_file_handler_to_logger(flask.logger, constants.FLASK_LOG_FILE_PATH)
             flask.secret_key = file(constants.SECRET_KEY_FILE_PATH, 'r').read()
             flask.run(host='0.0.0.0', port=constants.PORT, threaded=True)
+
+            crawler_schedule.stop()
 
         elif cmd == 'setup':
             raw_input('press any key to continue...')
