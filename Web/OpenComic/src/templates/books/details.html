@@ -18,7 +18,12 @@
     {% for chapter in book.chapters %}
         <tr onclick="window.document.location='{{url_for('.chapter', book=book.name, name=chapter.name)}}';">
             <td> <img class="thumbnail" src="{{url_for('.img', book=book.name, chapter=chapter.name, name=chapter.first_page)}}" width="64" height="64"> </td>
-            <td> <a href="#"><h2> {{chapter.name}} </h2> </a>  </td>
+            <td> 
+                <h3> 
+                    <a href="#">{{chapter.name}} </a>  
+                    {% if chapter.is_new %} <small><span class="label label-success">New</span></small> {% endif %}
+                </h3> 
+            </td>
         </tr>
     {% endfor %}
 

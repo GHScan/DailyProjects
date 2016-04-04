@@ -1,24 +1,51 @@
 # vim:fileencoding=utf-8
 
 import os
-from flask import Blueprint, render_template, send_from_directory
+from flask import Blueprint, render_template, send_from_directory, session
 from models.book import Book
+from models.read_history import ReadHistory
+from singleton import db
 import constants
 
 books = Blueprint('books', __name__)
 
 @books.route('/')
 def index():
-    return render_template('books/index.html', books = Book.query.all())
+    def _compare_book(a, b):
+        if a.has_new == b.has_new:
+            return -cmp(a.name, b.name)
+        return -1 if a.has_new else 1
+
+    book_2_latest_read_chapter = { history.book: history.latest_chapter 
+        for history in ReadHistory.query.filter_by(account = session['account_name']).all() }
+
+    books = Book.query.all()
+    for book in books:
+        root = os.path.join(constants.BOOK_IMGS_PATH, book.name)
+        chapter_names = [chapter_name 
+            for chapter_name in reversed(sorted(os.listdir(root))) if os.path.isdir(os.path.join(root, chapter_name))]
+
+        book.has_new = len(chapter_names) > 0 and (
+            book.name not in book_2_latest_read_chapter or chapter_names[0] > book_2_latest_read_chapter[book.name])
+
+    books.sort(cmp=_compare_book)
+        
+    return render_template('books/index.html', books = books)
 
 @books.route('/details/<name>')
 def details(name):
+    history = ReadHistory.query.filter(
+        ReadHistory.account==session['account_name'], ReadHistory.book==name).first()
+    latest_read_chapter = history.latest_chapter if history else ''
+
     root = os.path.join(constants.BOOK_IMGS_PATH, name)
     chapters = [{ 
             'name': chapter_name, 
             'first_page' : [img_name for img_name in sorted(os.listdir(os.path.join(root, chapter_name))) 
-                                if os.path.isfile(os.path.join(root, chapter_name, img_name))][0] } 
+                                if os.path.isfile(os.path.join(root, chapter_name, img_name))][0],
+            'is_new' : chapter_name > latest_read_chapter }
         for chapter_name in reversed(sorted(os.listdir(root))) if os.path.isdir(os.path.join(root, chapter_name))]
+
     return render_template('books/details.html', book={ 'name' : name, 'chapters' : chapters})
 
 @books.route('/chapter/<book>/<name>')
@@ -31,6 +58,16 @@ def chapter(book, name):
 
     root = os.path.join(constants.BOOK_IMGS_PATH, book, name)
     img_names = [img_name for img_name in sorted(os.listdir(root)) if os.path.isfile(os.path.join(root, img_name))]
+
+    history = ReadHistory.query.filter(
+        ReadHistory.account==session['account_name'], ReadHistory.book==book).first()
+    if not history:
+        history = ReadHistory(session['account_name'], book, name)
+        db.session.add(history)
+        db.session.commit()
+    elif name > history.latest_chapter:
+        history.latest_chapter = name
+        db.session.commit()
 
     return render_template('books/chapter.html', chapter=
         {'name' : name, 'book_name' : book, 'img_names' : img_names, 'prev_chapter' : prev_chapter, 'next_chapter' : next_chapter })

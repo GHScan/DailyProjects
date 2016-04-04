@@ -17,7 +17,12 @@
     {% for book in books %}
         <tr onclick="window.document.location='{{url_for('.details', name=book.name)}}';">
             <td> <img class="thumbnail" src="{{url_for('book_mgr.thumbnail', name=book.thumbnail_filename)}}" width="64" height="64"> </td>
-            <td> <a href="#"><h2> {{book.name}} </h2> </a> </td>
+            <td> 
+                <h3> 
+                    <a href="#">{{book.name}}</a>
+                    {% if book.has_new %} <small><span class="label label-success">New</span></small> {% endif %}
+                </h3> 
+            </td>
             <td> {{book.description}} </td>
         </tr>
     {% endfor %}
