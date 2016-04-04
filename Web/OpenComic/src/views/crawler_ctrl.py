@@ -36,13 +36,15 @@ def crawler_download_chapter(crawler, chapter_url, chapter_directory_path):
 def crawl_book_process(output_queue, crawler_source_path, directory_url, book_directory_path, exclude_chapters):
     try:
         crawler = imp.load_source('crawler', crawler_source_path) 
-        net_chapters = crawler_get_chapters(crawler, directory_url)
+
+        net_chapters = [{'name':chapter['name'].strip(), 'url':chapter['url'].strip()} 
+                for chapter in crawler_get_chapters(crawler, directory_url)]
         net_chapter_names = set(chapter['name'] for chapter in net_chapters)
 
         local_chapter_names = set(chapter_name for chapter_name in os.listdir(book_directory_path)
                             if os.path.isdir(os.path.join(book_directory_path, chapter_name)))
 
-        exclude_chapter_names = set(exclude_chapters.split())
+        exclude_chapter_names = set(name.strip() for name in exclude_chapters.split('\n'))
 
         final_chapter_names = set(list(reversed(sorted((local_chapter_names | net_chapter_names) - exclude_chapter_names)))[:constants.CHAPTERS_TO_KEEP])
 
