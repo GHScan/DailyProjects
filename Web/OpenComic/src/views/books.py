@@ -16,8 +16,10 @@ def index():
             return -cmp(a.name, b.name)
         return -1 if a.has_new else 1
 
+    account_name = session['account_name'] if 'account_name' in session else ''
+
     book_2_latest_read_chapter = { history.book: history.latest_chapter 
-        for history in ReadHistory.query.filter_by(account = session['account_name']).all() }
+        for history in ReadHistory.query.filter_by(account = account_name).all() }
 
     books = Book.query.all()
     for book in books:
