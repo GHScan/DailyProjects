@@ -5,38 +5,42 @@
 
     <h2>{{chapter.name}}</h2>
     
-    <hr/>
-    <p>
-        {% if chapter.prev_chapter %}
-            <a class="btn btn-primary" href="{{url_for('.chapter', book=chapter.book_name, name=chapter.prev_chapter)}}" role="button">Previous</a>
-            
-        {% endif %}
+    <a href="{{url_for('.details', name=chapter.book_name)}}">Back to List</a>
 
-        <a href="{{url_for('.details', name=chapter.book_name)}}">Back to List</a>
+    <hr/>
+
+    <nav>
+      <ul class="pager">
+        {% if chapter.prev_chapter %}
+            <li class="previous"><a href="{{url_for('.chapter', book=chapter.book_name, name=chapter.prev_chapter)}}"><span aria-hidden="true">&larr;</span> Previous</a></li>
+        {% endif %}
 
         {% if chapter.next_chapter %}
-            <a class="btn btn-primary" href="{{url_for('.chapter', book=chapter.book_name, name=chapter.next_chapter)}}" role="button">Next</a>
-        {% endif %}
-    </p>
+            <li class="next"><a href="{{url_for('.chapter', book=chapter.book_name, name=chapter.next_chapter)}}">Next <span aria-hidden="true">&rarr;</span></a></li>
+        {% endif %}            
+      </ul>
+    </nav>
 
-<hr/>
+
     {% for image_name in chapter.img_names %}
         <img class="img-responsive" src="/static/img/loading.gif" data-src="{{url_for('.img', book=chapter.book_name, chapter=chapter.name, name=image_name)}}" />
     {% endfor %}
 
-<hr/>
-    <p>
+    <nav>
+      <ul class="pager">
         {% if chapter.prev_chapter %}
-            <a class="btn btn-primary" href="{{url_for('.chapter', book=chapter.book_name, name=chapter.prev_chapter)}}" role="button">Previous</a>
-            
+            <li class="previous"><a href="{{url_for('.chapter', book=chapter.book_name, name=chapter.prev_chapter)}}"><span aria-hidden="true">&larr;</span> Previous</a></li>
         {% endif %}
-
-        <a href="{{url_for('.details', name=chapter.book_name)}}">Back to List</a>
 
         {% if chapter.next_chapter %}
-            <a class="btn btn-primary" href="{{url_for('.chapter', book=chapter.book_name, name=chapter.next_chapter)}}" role="button">Next</a>
-        {% endif %}
-    </p>
+            <li class="next"><a href="{{url_for('.chapter', book=chapter.book_name, name=chapter.next_chapter)}}">Next <span aria-hidden="true">&rarr;</span></a></li>
+        {% endif %}            
+      </ul>
+    </nav>
+
+    <hr/>
+
+    <a href="{{url_for('.details', name=chapter.book_name)}}">Back to List</a>
 
 </div>
 
