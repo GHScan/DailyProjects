@@ -1,13 +1,14 @@
-import urllib2, re, os
+import urllib2, re, os, sys
 from multiprocessing.pool import ThreadPool
 from urlparse import parse_qs, urlparse
 
 def _download_url(url):
-    for i in range(3):
+    for i in range(sys.maxint):
         try:
             return urllib2.urlopen(url, timeout = 10).read()
         except:
-            pass
+            if i == 2:
+                raise
 
 def get_chapters(dir_url):
     content = _download_url(dir_url).decode('gb18030')
