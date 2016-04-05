@@ -18,20 +18,23 @@ import constants, utils
 '''
 #----------------------------------------------------------------------------
 def crawler_get_chapters(crawler, url):
-    for i in range(constants.CRAWL_MAX_RETRY):
+    for i in range(sys.maxint):
         try:
             return crawler.get_chapters(url)
         except:
-            pass
+            if i == constants.CRAWL_MAX_RETRY - 1:
+                raise
 
 def crawler_download_chapter(crawler, chapter_url, chapter_directory_path):
-    for i in range(constants.CRAWL_MAX_RETRY):
+    for i in range(sys.maxint):
         try:
             os.mkdir(chapter_directory_path)
             crawler.download_chapter(chapter_url, chapter_directory_path)
             return
         except:
             shutil.rmtree(chapter_directory_path)
+            if i == constants.CRAWL_MAX_RETRY - 1:
+                raise
 
 def crawl_book_process(output_queue, crawler_source_path, directory_url, book_directory_path, exclude_chapters):
     try:
