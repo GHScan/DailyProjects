@@ -3,7 +3,7 @@ from multiprocessing.pool import ThreadPool
 from urlparse import parse_qs, urlparse
 
 def _download_url(url):
-    for i in range(sys.maxint):
+    for i in xrange(sys.maxint):
         try:
             return urllib2.urlopen(url, timeout = 10).read()
         except:

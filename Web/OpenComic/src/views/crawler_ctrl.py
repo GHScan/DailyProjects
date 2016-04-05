@@ -18,7 +18,7 @@ import constants, utils
 '''
 #----------------------------------------------------------------------------
 def crawler_get_chapters(crawler, url):
-    for i in range(sys.maxint):
+    for i in xrange(sys.maxint):
         try:
             return crawler.get_chapters(url)
         except:
@@ -26,7 +26,7 @@ def crawler_get_chapters(crawler, url):
                 raise
 
 def crawler_download_chapter(crawler, chapter_url, chapter_directory_path):
-    for i in range(sys.maxint):
+    for i in xrange(sys.maxint):
         try:
             os.mkdir(chapter_directory_path)
             crawler.download_chapter(chapter_url, chapter_directory_path)
