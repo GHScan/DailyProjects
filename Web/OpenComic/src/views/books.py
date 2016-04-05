@@ -36,8 +36,10 @@ def index():
 
 @books.route('/details/<name>')
 def details(name):
+    account_name = session['account_name'] if 'account_name' in session else ''
+    
     history = ReadHistory.query.filter(
-        ReadHistory.account==session['account_name'], ReadHistory.book==name).first()
+        ReadHistory.account==account_name, ReadHistory.book==name).first()
     latest_read_chapter = history.latest_chapter if history else ''
 
     root = os.path.join(constants.BOOK_IMGS_PATH, name)
