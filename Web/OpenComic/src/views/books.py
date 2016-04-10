@@ -5,7 +5,7 @@ from flask import Blueprint, render_template, send_from_directory, session
 from models.book import Book
 from models.read_history import ReadHistory
 from singleton import db
-import constants
+import constants, utils
 
 books = Blueprint('books', __name__)
 
@@ -45,8 +45,10 @@ def details(name):
     root = os.path.join(constants.BOOK_IMGS_PATH, name)
     chapters = [{ 
             'name': chapter_name, 
-            'first_page' : [img_name for img_name in sorted(os.listdir(os.path.join(root, chapter_name))) 
-                                if os.path.isfile(os.path.join(root, chapter_name, img_name))][0],
+            'first_page' : utils.first_or_default(
+                    [img_name for img_name in sorted(os.listdir(os.path.join(root, chapter_name))) 
+                        if os.path.isfile(os.path.join(root, chapter_name, img_name))], 
+                    '_'),
             'is_new' : chapter_name > latest_read_chapter }
         for chapter_name in reversed(sorted(os.listdir(root))) if os.path.isdir(os.path.join(root, chapter_name))]
 

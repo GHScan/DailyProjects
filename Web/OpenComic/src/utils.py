@@ -26,3 +26,8 @@ def add_file_handler_to_logger(logger, file_path):
     file_handler.setLevel(logging.ERROR)
     file_handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s\n\n"))
     logger.addHandler(file_handler)
+
+def first_or_default(a, default):
+    for v in a:
+        return v
+    return default
