@@ -11,3 +11,5 @@
 	showbranch = auto
 	status = auto
     ui = auto
+[push]
+	default = simple
