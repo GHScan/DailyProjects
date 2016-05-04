@@ -13,7 +13,7 @@ def img(chapter_name, img_name):
 def chapter(chapter_name):
     root = os.path.join(sys.argv[1], chapter_name)
 
-    img_names = [img_name
+    img_names = [img_name.decode('utf-8')
         for img_name in sorted(os.listdir(root)) if os.path.isfile(os.path.join(root, img_name))]
 
     template = """
@@ -46,7 +46,7 @@ def chapter(chapter_name):
 def index():
     root = sys.argv[1]
 
-    chapter_names = [chapter_name
+    chapter_names = [chapter_name.decode('utf-8')
         for chapter_name in sorted(os.listdir(root)) if os.path.isdir(os.path.join(root, chapter_name))]
 
     template = """
@@ -72,4 +72,4 @@ def index():
     return render_template_string(template, chapter_names=chapter_names)
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=12345, debug = True)
+    app.run(host='0.0.0.0', port=12345, threaded=True)
