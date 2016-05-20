@@ -51,7 +51,7 @@ EXPORT_API size_t IndexOf16_SSE2(uint16_t* array, size_t length, uint16_t value)
 }
 
 EXPORT_API size_t IndexOf16_AVX(uint16_t* array, size_t length, uint16_t value) {
-    static int sIndexMapping[] = {
+    static uint8_t sIndexMapping[] = {
         0, 1, 2, 3, 4, 5, 6, 7,
         16, 17, 18, 19, 20, 21, 22, 23,
         8, 9, 10, 11, 12, 13, 14, 15,
