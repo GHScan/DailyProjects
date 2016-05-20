@@ -1,0 +1,56 @@
+Len - 1
+	IndexOf16 : 0.0362062 s
+	IndexOf16_SSE2 : 0.12291 s
+	IndexOf16_AVX : 0.128375 s
+Len - 3
+	IndexOf16 : 0.0610368 s
+	IndexOf16_SSE2 : 0.150472 s
+	IndexOf16_AVX : 0.148971 s
+Len - 5
+	IndexOf16 : 0.0844423 s
+	IndexOf16_SSE2 : 0.192385 s
+	IndexOf16_AVX : 0.181515 s
+Len - 10
+	IndexOf16 : 0.154115 s
+	IndexOf16_SSE2 : 0.261817 s
+	IndexOf16_AVX : 0.302539 s
+Len - 20
+	IndexOf16 : 0.293088 s
+	IndexOf16_SSE2 : 0.256411 s
+	IndexOf16_AVX : 0.572678 s
+Len - 30
+	IndexOf16 : 0.525119 s
+	IndexOf16_SSE2 : 0.389524 s
+	IndexOf16_AVX : 0.769772 s
+Len - 45
+	IndexOf16 : 0.585058 s
+	IndexOf16_SSE2 : 0.40465 s
+	IndexOf16_AVX : 0.401007 s
+Len - 60
+	IndexOf16 : 1.05814 s
+	IndexOf16_SSE2 : 0.418315 s
+	IndexOf16_AVX : 0.652825 s
+Len - 100
+	IndexOf16 : 1.53697 s
+	IndexOf16_SSE2 : 0.409848 s
+	IndexOf16_AVX : 0.36821 s
+Len - 200
+	IndexOf16 : 2.55739 s
+	IndexOf16_SSE2 : 0.626357 s
+	IndexOf16_AVX : 0.50999 s
+Len - 300
+	IndexOf16 : 3.4686 s
+	IndexOf16_SSE2 : 0.814789 s
+	IndexOf16_AVX : 0.65077 s
+Len - 500
+	IndexOf16 : 4.90253 s
+	IndexOf16_SSE2 : 0.98405 s
+	IndexOf16_AVX : 0.860425 s
+Len - 1000
+	IndexOf16 : 6.08892 s
+	IndexOf16_SSE2 : 1.37513 s
+	IndexOf16_AVX : 0.899893 s
+Len - 2048
+	IndexOf16 : 0.00927234 s
+	IndexOf16_SSE2 : 0.00199096 s
+	IndexOf16_AVX : 0.00127567 s

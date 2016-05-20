@@ -1,0 +1,84 @@
+Len - 1
+	IndexOf16 Managed : 0.3543795 s
+	IndexOf16 : 0.3951702 s
+	Native IndexOf16 : 1.9680294 s
+	Native IndexOf16_SSE2 : 2.0146451 s
+	Native IndexOf16_AVX : 2.0688453 s
+Len - 3
+	IndexOf16 Managed : 0.5594627 s
+	IndexOf16 : 0.5397301 s
+	Native IndexOf16 : 2.0086909 s
+	Native IndexOf16_SSE2 : 2.0408563 s
+	Native IndexOf16_AVX : 2.0356713 s
+Len - 5
+	IndexOf16 Managed : 0.7742864 s
+	IndexOf16 : 0.7072912 s
+	Native IndexOf16 : 2.0314371 s
+	Native IndexOf16_SSE2 : 2.1013498 s
+	Native IndexOf16_AVX : 2.1019326 s
+Len - 10
+	IndexOf16 Managed : 1.3033787 s
+	IndexOf16 : 1.2436038 s
+	Native IndexOf16 : 2.2363576 s
+	Native IndexOf16_SSE2 : 2.278958 s
+	Native IndexOf16_AVX : 2.2718425 s
+Len - 20
+	IndexOf16 Managed : 3.7839252 s
+	IndexOf16 : 3.0383942 s
+	Native IndexOf16 : 2.5579038 s
+	Native IndexOf16_SSE2 : 2.298478 s
+	Native IndexOf16_AVX : 2.9084825 s
+Len - 30
+	IndexOf16 Managed : 3.9343245 s
+	IndexOf16 : 3.8849133 s
+	Native IndexOf16 : 3.1003454 s
+	Native IndexOf16_SSE2 : 2.55066 s
+	Native IndexOf16_AVX : 3.6045162 s
+Len - 45
+	IndexOf16 Managed : 7.231568 s
+	IndexOf16 : 4.9203952 s
+	Native IndexOf16 : 3.5519951 s
+	Native IndexOf16_SSE2 : 2.640963 s
+	Native IndexOf16_AVX : 2.5963001 s
+Len - 60
+	IndexOf16 Managed : 9.2453648 s
+	IndexOf16 : 5.9318726 s
+	Native IndexOf16 : 5.0491708 s
+	Native IndexOf16_SSE2 : 2.649108 s
+	Native IndexOf16_AVX : 3.2075865 s
+Len - 100
+	IndexOf16 Managed : 10.3443917 s
+	IndexOf16 : 8.5492664 s
+	Native IndexOf16 : 6.6494052 s
+	Native IndexOf16_SSE2 : 2.5980256 s
+	Native IndexOf16_AVX : 3.7298524 s
+Len - 200
+	IndexOf16 Managed : 15.2707002 s
+	IndexOf16 : 14.638198 s
+	Native IndexOf16 : 9.6371369 s
+	Native IndexOf16_SSE2 : 3.1602723 s
+	Native IndexOf16_AVX : 3.9773056 s
+Len - 300
+	IndexOf16 Managed : 20.5675775 s
+	IndexOf16 : 20.0116777 s
+	Native IndexOf16 : 12.1417887 s
+	Native IndexOf16_SSE2 : 3.6801445 s
+	Native IndexOf16_AVX : 3.2140186 s
+Len - 500
+	IndexOf16 Managed : 29.1587108 s
+	IndexOf16 : 28.6518935 s
+	Native IndexOf16 : 16.211134 s
+	Native IndexOf16_SSE2 : 4.0360947 s
+	Native IndexOf16_AVX : 3.6505488 s
+Len - 1000
+	IndexOf16 Managed : 36.1839422 s
+	IndexOf16 : 35.9261473 s
+	Native IndexOf16 : 19.1675668 s
+	Native IndexOf16_SSE2 : 4.8870959 s
+	Native IndexOf16_AVX : 3.7595692 s
+Len - 2048
+	IndexOf16 Managed : 0.0564938 s
+	IndexOf16 : 0.0540863 s
+	Native IndexOf16 : 0.0286831 s
+	Native IndexOf16_SSE2 : 0.006923 s
+	Native IndexOf16_AVX : 0.0051127 s
