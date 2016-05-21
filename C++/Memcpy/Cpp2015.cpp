@@ -69,6 +69,7 @@ static void benchmarkMemcpy() {
     auto buffer = static_cast<uint8_t*>(_aligned_malloc(bufferSize, alignment));
 
     std::vector<size_t> lens{ 20, 63, 129, 256, 511, 1024, 4096, 16384, 32768, 262144, 1048576, 4194304, 8388608 };
+    int randoms[] = { 13, 2, 11, 6, 4, 8, 7, 15, 9, 5, 10, 3, 14, 12, 0, 1, };
 
     auto bytesToCopy = (size_t(1) << 28);
     for (auto len : lens) {
@@ -82,9 +83,9 @@ static void benchmarkMemcpy() {
                 size_t dstOff = 0, srcOff = bufferSize - len; \
                 while (copied < bytesToCopy) { \
                     dstOff = dstOff + len + alignment > bufferSize ? 0 : dstOff; \
-                    dstOff += (alignFlag & 1) == 1 ? (alignment - (dstOff & (alignment - 1))) : 0; \
+                    dstOff += (alignFlag & 1) == 1 ? (alignment - (dstOff & (alignment - 1))) : randoms[srcOff & 0xf]; \
                     srcOff = srcOff < len + alignment ? bufferSize - len : srcOff; \
-                    srcOff -= (alignFlag & 2) == 2 ? (srcOff & (alignment - 1)) : 0; \
+                    srcOff -= (alignFlag & 2) == 2 ? (srcOff & (alignment - 1)) : randoms[dstOff & 0xf]; \
                     func(buffer + dstOff, buffer + srcOff, len); \
                     dstOff += len; \
                     srcOff -= len; \

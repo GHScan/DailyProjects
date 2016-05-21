@@ -22,20 +22,7 @@ _label_switch:
     switch (num) {
     default:
     {
-        if (num < 256 + 16) {
-            for (; num >= 64; num -= 64) {
-                auto a = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src));
-                auto b = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src) + 1);
-                auto c = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src) + 2);
-                auto d = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src) + 3);
-                _mm_storeu_si128(reinterpret_cast<__m128i*>(dst), a);
-                _mm_storeu_si128(reinterpret_cast<__m128i*>(dst) + 1, b);
-                _mm_storeu_si128(reinterpret_cast<__m128i*>(dst) + 2, c);
-                _mm_storeu_si128(reinterpret_cast<__m128i*>(dst) + 3, d);
-                src += 64;
-                dst += 64;
-            }
-        } else {
+        if (num >= 256 + 16) {
             auto alignStep = (16 - (reinterpret_cast<uintptr_t>(dst) & 0xf)) & 0xf;
 
             if (alignStep > 0) {
@@ -48,36 +35,67 @@ _label_switch:
 
             _mm_prefetch(reinterpret_cast<char const *>(src), _MM_HINT_NTA);
             if ((reinterpret_cast<uintptr_t>(src) & 0xf) == 0) {
-                for (; num >= 64; num -= 64) {
-                    _mm_prefetch(reinterpret_cast<char const *>(src + 64), _MM_HINT_NTA);
+                for (; num >= 128; num -= 128) {
+                    _mm_prefetch(reinterpret_cast<char const *>(src + 128), _MM_HINT_NTA);
+                    _mm_prefetch(reinterpret_cast<char const *>(src + 128), _MM_HINT_NTA);
                     auto a = _mm_load_si128(reinterpret_cast<__m128i const*>(src));
                     auto b = _mm_load_si128(reinterpret_cast<__m128i const*>(src) + 1);
                     auto c = _mm_load_si128(reinterpret_cast<__m128i const*>(src) + 2);
                     auto d = _mm_load_si128(reinterpret_cast<__m128i const*>(src) + 3);
+                    auto e = _mm_load_si128(reinterpret_cast<__m128i const*>(src) + 4);
+                    auto f = _mm_load_si128(reinterpret_cast<__m128i const*>(src) + 5);
+                    auto g = _mm_load_si128(reinterpret_cast<__m128i const*>(src) + 6);
+                    auto h = _mm_load_si128(reinterpret_cast<__m128i const*>(src) + 7);
                     _mm_stream_si128(reinterpret_cast<__m128i*>(dst), a);
                     _mm_stream_si128(reinterpret_cast<__m128i*>(dst) + 1, b);
                     _mm_stream_si128(reinterpret_cast<__m128i*>(dst) + 2, c);
                     _mm_stream_si128(reinterpret_cast<__m128i*>(dst) + 3, d);
-                    src += 64;
-                    dst += 64;
+                    _mm_stream_si128(reinterpret_cast<__m128i*>(dst) + 4, e);
+                    _mm_stream_si128(reinterpret_cast<__m128i*>(dst) + 5, f);
+                    _mm_stream_si128(reinterpret_cast<__m128i*>(dst) + 6, g);
+                    _mm_stream_si128(reinterpret_cast<__m128i*>(dst) + 7, h);
+                    src += 128;
+                    dst += 128;
                 }
             }
             else {
-                for (; num >= 64; num -= 64) {
-                    _mm_prefetch(reinterpret_cast<char const *>(src + 64), _MM_HINT_NTA);
+                for (; num >= 128; num -= 128) {
+                    _mm_prefetch(reinterpret_cast<char const *>(src + 128), _MM_HINT_NTA);
+                    _mm_prefetch(reinterpret_cast<char const *>(src + 192), _MM_HINT_NTA);
                     auto a = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src));
                     auto b = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src) + 1);
                     auto c = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src) + 2);
                     auto d = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src) + 3);
+                    auto e = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src) + 4);
+                    auto f = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src) + 5);
+                    auto g = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src) + 6);
+                    auto h = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src) + 7);
                     _mm_stream_si128(reinterpret_cast<__m128i*>(dst), a);
                     _mm_stream_si128(reinterpret_cast<__m128i*>(dst) + 1, b);
                     _mm_stream_si128(reinterpret_cast<__m128i*>(dst) + 2, c);
                     _mm_stream_si128(reinterpret_cast<__m128i*>(dst) + 3, d);
-                    src += 64;
-                    dst += 64;
+                    _mm_stream_si128(reinterpret_cast<__m128i*>(dst) + 4, e);
+                    _mm_stream_si128(reinterpret_cast<__m128i*>(dst) + 5, f);
+                    _mm_stream_si128(reinterpret_cast<__m128i*>(dst) + 6, g);
+                    _mm_stream_si128(reinterpret_cast<__m128i*>(dst) + 7, h);
+                    src += 128;
+                    dst += 128;
                 }
             }
             _mm_sfence();
+        }
+
+        for (; num >= 64; num -= 64) {
+            auto a = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src));
+            auto b = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src) + 1);
+            auto c = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src) + 2);
+            auto d = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src) + 3);
+            _mm_storeu_si128(reinterpret_cast<__m128i*>(dst), a);
+            _mm_storeu_si128(reinterpret_cast<__m128i*>(dst) + 1, b);
+            _mm_storeu_si128(reinterpret_cast<__m128i*>(dst) + 2, c);
+            _mm_storeu_si128(reinterpret_cast<__m128i*>(dst) + 3, d);
+            src += 64;
+            dst += 64;
         }
     }
     goto _label_switch;
@@ -234,17 +252,7 @@ _label_switch:
     switch (num) {
     default:
     {
-        if (num < 256 + 32) {
-            for (; num >= 64; num -= 64) {
-                auto a = _mm256_loadu_si256(reinterpret_cast<__m256i const*>(src));
-                auto b = _mm256_loadu_si256(reinterpret_cast<__m256i const*>(src) + 1);
-                _mm256_storeu_si256(reinterpret_cast<__m256i*>(dst), a);
-                _mm256_storeu_si256(reinterpret_cast<__m256i*>(dst) + 1, b);
-                src += 64;
-                dst += 64;
-            }
-        }
-        else {
+        if (num >= 256 + 32) {
             auto alignStep = (32 - (reinterpret_cast<uintptr_t>(dst) & 0x1f)) & 0x1f;
 
             if (alignStep > 0) {
@@ -257,28 +265,47 @@ _label_switch:
 
             _mm_prefetch(reinterpret_cast<char const *>(src), _MM_HINT_NTA);
             if ((reinterpret_cast<uintptr_t>(src) & 0x1f) == 0) {
-                for (; num >= 64; num -= 64) {
-                    _mm_prefetch(reinterpret_cast<char const *>(src + 64), _MM_HINT_NTA);
+                for (; num >= 128; num -= 128) {
+                    _mm_prefetch(reinterpret_cast<char const *>(src + 128), _MM_HINT_NTA);
+                    _mm_prefetch(reinterpret_cast<char const *>(src + 192), _MM_HINT_NTA);
                     auto a = _mm256_stream_load_si256(reinterpret_cast<__m256i const*>(src));
                     auto b = _mm256_stream_load_si256(reinterpret_cast<__m256i const*>(src) + 1);
+                    auto c = _mm256_stream_load_si256(reinterpret_cast<__m256i const*>(src) + 2);
+                    auto d = _mm256_stream_load_si256(reinterpret_cast<__m256i const*>(src) + 3);
                     _mm256_stream_si256(reinterpret_cast<__m256i*>(dst), a);
                     _mm256_stream_si256(reinterpret_cast<__m256i*>(dst) + 1, b);
-                    src += 64;
-                    dst += 64;
+                    _mm256_stream_si256(reinterpret_cast<__m256i*>(dst) + 2, c);
+                    _mm256_stream_si256(reinterpret_cast<__m256i*>(dst) + 3, d);
+                    src += 128;
+                    dst += 128;
                 }
             }
             else {
-                for (; num >= 64; num -= 64) {
-                    _mm_prefetch(reinterpret_cast<char const *>(src + 64), _MM_HINT_NTA);
+                for (; num >= 128; num -= 128) {
+                    _mm_prefetch(reinterpret_cast<char const *>(src + 128), _MM_HINT_NTA);
+                    _mm_prefetch(reinterpret_cast<char const *>(src + 192), _MM_HINT_NTA);
                     auto a = _mm256_loadu_si256(reinterpret_cast<__m256i const*>(src));
                     auto b = _mm256_loadu_si256(reinterpret_cast<__m256i const*>(src) + 1);
+                    auto c = _mm256_loadu_si256(reinterpret_cast<__m256i const*>(src) + 2);
+                    auto d = _mm256_loadu_si256(reinterpret_cast<__m256i const*>(src) + 3);
                     _mm256_stream_si256(reinterpret_cast<__m256i*>(dst), a);
                     _mm256_stream_si256(reinterpret_cast<__m256i*>(dst) + 1, b);
-                    src += 64;
-                    dst += 64;
+                    _mm256_stream_si256(reinterpret_cast<__m256i*>(dst) + 2, c);
+                    _mm256_stream_si256(reinterpret_cast<__m256i*>(dst) + 3, d);
+                    src += 128;
+                    dst += 128;
                 }
             }
             _mm_sfence();
+        }
+
+        for (; num >= 64; num -= 64) {
+            auto a = _mm256_loadu_si256(reinterpret_cast<__m256i const*>(src));
+            auto b = _mm256_loadu_si256(reinterpret_cast<__m256i const*>(src) + 1);
+            _mm256_storeu_si256(reinterpret_cast<__m256i*>(dst), a);
+            _mm256_storeu_si256(reinterpret_cast<__m256i*>(dst) + 1, b);
+            src += 64;
+            dst += 64;
         }
     }
     goto _label_switch;
