@@ -1,338 +1,736 @@
-Len - 20
+Len - 5
+	wyx::memcpy_fast
+		dst(not aligned), src(not aligned) : 0.453455 s
+		dst(aligned), src(not aligned) : 0.941007 s
+		dst(not aligned), src(aligned) : 0.767056 s
+		dst(aligned), src(aligned) : 1.32068 s
 	memcpy
-		dst(not aligned), src(not aligned) : 0.161003 s
-		dst(aligned), src(not aligned) : 0.259092 s
-		dst(not aligned), src(aligned) : 0.235862 s
-		dst(aligned), src(aligned) : 0.350615 s
-	memcpy_for
-		dst(not aligned), src(not aligned) : 0.259086 s
-		dst(aligned), src(not aligned) : 0.298152 s
-		dst(not aligned), src(aligned) : 0.318693 s
-		dst(aligned), src(aligned) : 0.378194 s
-	memcpy_wyx
-		dst(not aligned), src(not aligned) : 0.120375 s
-		dst(aligned), src(not aligned) : 0.255176 s
-		dst(not aligned), src(aligned) : 0.232852 s
-		dst(aligned), src(aligned) : 0.343357 s
-	memcpy_sse2
-		dst(not aligned), src(not aligned) : 0.131652 s
-		dst(aligned), src(not aligned) : 0.253575 s
-		dst(not aligned), src(aligned) : 0.246506 s
-		dst(aligned), src(aligned) : 0.338645 s
-	memcpy_avx
-		dst(not aligned), src(not aligned) : 0.129234 s
-		dst(aligned), src(not aligned) : 0.256877 s
-		dst(not aligned), src(aligned) : 0.243184 s
-		dst(aligned), src(aligned) : 0.337989 s
+		dst(not aligned), src(not aligned) : 0.472129 s
+		dst(aligned), src(not aligned) : 0.92905 s
+		dst(not aligned), src(aligned) : 0.812997 s
+		dst(aligned), src(aligned) : 1.309 s
+	scan::memcpy_for
+		dst(not aligned), src(not aligned) : 0.492897 s
+		dst(aligned), src(not aligned) : 0.907837 s
+		dst(not aligned), src(aligned) : 0.864317 s
+		dst(aligned), src(aligned) : 1.41644 s
+	scan::memcpy_sse2
+		dst(not aligned), src(not aligned) : 0.615917 s
+		dst(aligned), src(not aligned) : 0.961406 s
+		dst(not aligned), src(aligned) : 0.801477 s
+		dst(aligned), src(aligned) : 1.3133 s
+	scan::memcpy_sse2_prefetch
+		dst(not aligned), src(not aligned) : 0.626212 s
+		dst(aligned), src(not aligned) : 0.924664 s
+		dst(not aligned), src(aligned) : 0.771905 s
+		dst(aligned), src(aligned) : 1.29287 s
+	scan::memcpy_sse2_prefetch_2line
+		dst(not aligned), src(not aligned) : 0.637921 s
+		dst(aligned), src(not aligned) : 0.943228 s
+		dst(not aligned), src(aligned) : 0.711345 s
+		dst(aligned), src(aligned) : 1.26828 s
+	scan::memcpy_sse2_stream
+		dst(not aligned), src(not aligned) : 0.605156 s
+		dst(aligned), src(not aligned) : 0.935299 s
+		dst(not aligned), src(aligned) : 0.80061 s
+		dst(aligned), src(aligned) : 1.32194 s
+	scan::memcpy_sse2_fast
+		dst(not aligned), src(not aligned) : 0.446083 s
+		dst(aligned), src(not aligned) : 0.924418 s
+		dst(not aligned), src(aligned) : 0.757691 s
+		dst(aligned), src(aligned) : 1.27562 s
+	scan::memcpy_avx_fast
+		dst(not aligned), src(not aligned) : 0.446115 s
+		dst(aligned), src(not aligned) : 0.927321 s
+		dst(not aligned), src(aligned) : 0.740918 s
+		dst(aligned), src(aligned) : 1.27714 s
+Len - 17
+	wyx::memcpy_fast
+		dst(not aligned), src(not aligned) : 0.143549 s
+		dst(aligned), src(not aligned) : 0.283335 s
+		dst(not aligned), src(aligned) : 0.232502 s
+		dst(aligned), src(aligned) : 0.379967 s
+	memcpy
+		dst(not aligned), src(not aligned) : 0.182363 s
+		dst(aligned), src(not aligned) : 0.292948 s
+		dst(not aligned), src(aligned) : 0.239117 s
+		dst(aligned), src(aligned) : 0.38659 s
+	scan::memcpy_for
+		dst(not aligned), src(not aligned) : 0.261882 s
+		dst(aligned), src(not aligned) : 0.311815 s
+		dst(not aligned), src(aligned) : 0.317687 s
+		dst(aligned), src(aligned) : 0.397673 s
+	scan::memcpy_sse2
+		dst(not aligned), src(not aligned) : 0.151368 s
+		dst(aligned), src(not aligned) : 0.283832 s
+		dst(not aligned), src(aligned) : 0.226111 s
+		dst(aligned), src(aligned) : 0.380331 s
+	scan::memcpy_sse2_prefetch
+		dst(not aligned), src(not aligned) : 0.16289 s
+		dst(aligned), src(not aligned) : 0.284999 s
+		dst(not aligned), src(aligned) : 0.239492 s
+		dst(aligned), src(aligned) : 0.377618 s
+	scan::memcpy_sse2_prefetch_2line
+		dst(not aligned), src(not aligned) : 0.153991 s
+		dst(aligned), src(not aligned) : 0.282155 s
+		dst(not aligned), src(aligned) : 0.200179 s
+		dst(aligned), src(aligned) : 0.368397 s
+	scan::memcpy_sse2_stream
+		dst(not aligned), src(not aligned) : 0.144333 s
+		dst(aligned), src(not aligned) : 0.278025 s
+		dst(not aligned), src(aligned) : 0.256876 s
+		dst(aligned), src(aligned) : 0.387014 s
+	scan::memcpy_sse2_fast
+		dst(not aligned), src(not aligned) : 0.141028 s
+		dst(aligned), src(not aligned) : 0.278738 s
+		dst(not aligned), src(aligned) : 0.234338 s
+		dst(aligned), src(aligned) : 0.37401 s
+	scan::memcpy_avx_fast
+		dst(not aligned), src(not aligned) : 0.141255 s
+		dst(aligned), src(not aligned) : 0.284142 s
+		dst(not aligned), src(aligned) : 0.283555 s
+		dst(aligned), src(aligned) : 0.397173 s
+Len - 26
+	wyx::memcpy_fast
+		dst(not aligned), src(not aligned) : 0.100933 s
+		dst(aligned), src(not aligned) : 0.188265 s
+		dst(not aligned), src(aligned) : 0.160332 s
+		dst(aligned), src(aligned) : 0.247828 s
+	memcpy
+		dst(not aligned), src(not aligned) : 0.14724 s
+		dst(aligned), src(not aligned) : 0.195297 s
+		dst(not aligned), src(aligned) : 0.180552 s
+		dst(aligned), src(aligned) : 0.254624 s
+	scan::memcpy_for
+		dst(not aligned), src(not aligned) : 0.219286 s
+		dst(aligned), src(not aligned) : 0.23858 s
+		dst(not aligned), src(aligned) : 0.261346 s
+		dst(aligned), src(aligned) : 0.293391 s
+	scan::memcpy_sse2
+		dst(not aligned), src(not aligned) : 0.165818 s
+		dst(aligned), src(not aligned) : 0.196806 s
+		dst(not aligned), src(aligned) : 0.184872 s
+		dst(aligned), src(aligned) : 0.253577 s
+	scan::memcpy_sse2_prefetch
+		dst(not aligned), src(not aligned) : 0.164838 s
+		dst(aligned), src(not aligned) : 0.201444 s
+		dst(not aligned), src(aligned) : 0.189274 s
+		dst(aligned), src(aligned) : 0.259271 s
+	scan::memcpy_sse2_prefetch_2line
+		dst(not aligned), src(not aligned) : 0.165592 s
+		dst(aligned), src(not aligned) : 0.203654 s
+		dst(not aligned), src(aligned) : 0.171394 s
+		dst(aligned), src(aligned) : 0.243934 s
+	scan::memcpy_sse2_stream
+		dst(not aligned), src(not aligned) : 0.164617 s
+		dst(aligned), src(not aligned) : 0.197068 s
+		dst(not aligned), src(aligned) : 0.184223 s
+		dst(aligned), src(aligned) : 0.250956 s
+	scan::memcpy_sse2_fast
+		dst(not aligned), src(not aligned) : 0.10675 s
+		dst(aligned), src(not aligned) : 0.190506 s
+		dst(not aligned), src(aligned) : 0.183631 s
+		dst(aligned), src(aligned) : 0.255731 s
+	scan::memcpy_avx_fast
+		dst(not aligned), src(not aligned) : 0.107665 s
+		dst(aligned), src(not aligned) : 0.190351 s
+		dst(not aligned), src(aligned) : 0.184153 s
+		dst(aligned), src(aligned) : 0.256467 s
+Len - 33
+	wyx::memcpy_fast
+		dst(not aligned), src(not aligned) : 0.0853256 s
+		dst(aligned), src(not aligned) : 0.151196 s
+		dst(not aligned), src(aligned) : 0.131684 s
+		dst(aligned), src(aligned) : 0.193109 s
+	memcpy
+		dst(not aligned), src(not aligned) : 0.0898275 s
+		dst(aligned), src(not aligned) : 0.150912 s
+		dst(not aligned), src(aligned) : 0.145034 s
+		dst(aligned), src(aligned) : 0.199606 s
+	scan::memcpy_for
+		dst(not aligned), src(not aligned) : 0.198699 s
+		dst(aligned), src(not aligned) : 0.210614 s
+		dst(not aligned), src(aligned) : 0.264618 s
+		dst(aligned), src(aligned) : 0.246029 s
+	scan::memcpy_sse2
+		dst(not aligned), src(not aligned) : 0.0913431 s
+		dst(aligned), src(not aligned) : 0.152715 s
+		dst(not aligned), src(aligned) : 0.131619 s
+		dst(aligned), src(aligned) : 0.19799 s
+	scan::memcpy_sse2_prefetch
+		dst(not aligned), src(not aligned) : 0.0896571 s
+		dst(aligned), src(not aligned) : 0.151831 s
+		dst(not aligned), src(aligned) : 0.122254 s
+		dst(aligned), src(aligned) : 0.196437 s
+	scan::memcpy_sse2_prefetch_2line
+		dst(not aligned), src(not aligned) : 0.0916275 s
+		dst(aligned), src(not aligned) : 0.152784 s
+		dst(not aligned), src(aligned) : 0.119378 s
+		dst(aligned), src(aligned) : 0.191887 s
+	scan::memcpy_sse2_stream
+		dst(not aligned), src(not aligned) : 0.0892807 s
+		dst(aligned), src(not aligned) : 0.152645 s
+		dst(not aligned), src(aligned) : 0.1268 s
+		dst(aligned), src(aligned) : 0.194512 s
+	scan::memcpy_sse2_fast
+		dst(not aligned), src(not aligned) : 0.0852036 s
+		dst(aligned), src(not aligned) : 0.149962 s
+		dst(not aligned), src(aligned) : 0.131078 s
+		dst(aligned), src(aligned) : 0.195461 s
+	scan::memcpy_avx_fast
+		dst(not aligned), src(not aligned) : 0.0840181 s
+		dst(aligned), src(not aligned) : 0.151234 s
+		dst(not aligned), src(aligned) : 0.133433 s
+		dst(aligned), src(aligned) : 0.194743 s
 Len - 63
+	wyx::memcpy_fast
+		dst(not aligned), src(not aligned) : 0.0645154 s
+		dst(aligned), src(not aligned) : 0.0889125 s
+		dst(not aligned), src(aligned) : 0.0772398 s
+		dst(aligned), src(aligned) : 0.102164 s
 	memcpy
-		dst(not aligned), src(not aligned) : 0.0793422 s
-		dst(aligned), src(not aligned) : 0.0964631 s
-		dst(not aligned), src(aligned) : 0.0901931 s
-		dst(aligned), src(aligned) : 0.113751 s
-	memcpy_for
-		dst(not aligned), src(not aligned) : 0.188474 s
-		dst(aligned), src(not aligned) : 0.187027 s
-		dst(not aligned), src(aligned) : 0.193828 s
-		dst(aligned), src(aligned) : 0.196348 s
-	memcpy_wyx
-		dst(not aligned), src(not aligned) : 0.0658904 s
-		dst(aligned), src(not aligned) : 0.0908783 s
-		dst(not aligned), src(aligned) : 0.0911126 s
-		dst(aligned), src(aligned) : 0.107417 s
-	memcpy_sse2
-		dst(not aligned), src(not aligned) : 0.071305 s
-		dst(aligned), src(not aligned) : 0.0933523 s
-		dst(not aligned), src(aligned) : 0.0882544 s
-		dst(aligned), src(aligned) : 0.113694 s
-	memcpy_avx
-		dst(not aligned), src(not aligned) : 0.0708287 s
-		dst(aligned), src(not aligned) : 0.092033 s
-		dst(not aligned), src(aligned) : 0.0956715 s
-		dst(aligned), src(aligned) : 0.113385 s
+		dst(not aligned), src(not aligned) : 0.0751751 s
+		dst(aligned), src(not aligned) : 0.0894286 s
+		dst(not aligned), src(aligned) : 0.0838754 s
+		dst(aligned), src(aligned) : 0.10295 s
+	scan::memcpy_for
+		dst(not aligned), src(not aligned) : 0.178278 s
+		dst(aligned), src(not aligned) : 0.182192 s
+		dst(not aligned), src(aligned) : 0.182937 s
+		dst(aligned), src(aligned) : 0.183326 s
+	scan::memcpy_sse2
+		dst(not aligned), src(not aligned) : 0.0887915 s
+		dst(aligned), src(not aligned) : 0.0976449 s
+		dst(not aligned), src(aligned) : 0.0936577 s
+		dst(aligned), src(aligned) : 0.113671 s
+	scan::memcpy_sse2_prefetch
+		dst(not aligned), src(not aligned) : 0.0874154 s
+		dst(aligned), src(not aligned) : 0.0960155 s
+		dst(not aligned), src(aligned) : 0.0926315 s
+		dst(aligned), src(aligned) : 0.109595 s
+	scan::memcpy_sse2_prefetch_2line
+		dst(not aligned), src(not aligned) : 0.0867249 s
+		dst(aligned), src(not aligned) : 0.0943271 s
+		dst(not aligned), src(aligned) : 0.0864688 s
+		dst(aligned), src(aligned) : 0.1024 s
+	scan::memcpy_sse2_stream
+		dst(not aligned), src(not aligned) : 0.0861716 s
+		dst(aligned), src(not aligned) : 0.0994943 s
+		dst(not aligned), src(aligned) : 0.0969552 s
+		dst(aligned), src(aligned) : 0.11576 s
+	scan::memcpy_sse2_fast
+		dst(not aligned), src(not aligned) : 0.0678261 s
+		dst(aligned), src(not aligned) : 0.0877068 s
+		dst(not aligned), src(aligned) : 0.0863387 s
+		dst(aligned), src(aligned) : 0.103144 s
+	scan::memcpy_avx_fast
+		dst(not aligned), src(not aligned) : 0.0669884 s
+		dst(aligned), src(not aligned) : 0.0882432 s
+		dst(not aligned), src(aligned) : 0.094811 s
+		dst(aligned), src(aligned) : 0.104409 s
 Len - 129
+	wyx::memcpy_fast
+		dst(not aligned), src(not aligned) : 0.0551475 s
+		dst(aligned), src(not aligned) : 0.076623 s
+		dst(not aligned), src(aligned) : 0.0716153 s
+		dst(aligned), src(aligned) : 0.0928921 s
 	memcpy
-		dst(not aligned), src(not aligned) : 0.0751137 s
-		dst(aligned), src(not aligned) : 0.122299 s
-		dst(not aligned), src(aligned) : 0.0846784 s
-		dst(aligned), src(aligned) : 0.134476 s
-	memcpy_for
-		dst(not aligned), src(not aligned) : 0.152218 s
-		dst(aligned), src(not aligned) : 0.154302 s
-		dst(not aligned), src(aligned) : 0.156931 s
-		dst(aligned), src(aligned) : 0.163391 s
-	memcpy_wyx
-		dst(not aligned), src(not aligned) : 0.0578742 s
-		dst(aligned), src(not aligned) : 0.0797607 s
-		dst(not aligned), src(aligned) : 0.0736942 s
-		dst(aligned), src(aligned) : 0.0959346 s
-	memcpy_sse2
-		dst(not aligned), src(not aligned) : 0.0573693 s
-		dst(aligned), src(not aligned) : 0.0829161 s
-		dst(not aligned), src(aligned) : 0.0737265 s
-		dst(aligned), src(aligned) : 0.101141 s
-	memcpy_avx
-		dst(not aligned), src(not aligned) : 0.0570961 s
-		dst(aligned), src(not aligned) : 0.0822849 s
-		dst(not aligned), src(aligned) : 0.0742552 s
-		dst(aligned), src(aligned) : 0.0993247 s
+		dst(not aligned), src(not aligned) : 0.0670839 s
+		dst(aligned), src(not aligned) : 0.11553 s
+		dst(not aligned), src(aligned) : 0.0818558 s
+		dst(aligned), src(aligned) : 0.125475 s
+	scan::memcpy_for
+		dst(not aligned), src(not aligned) : 0.144683 s
+		dst(aligned), src(not aligned) : 0.149487 s
+		dst(not aligned), src(aligned) : 0.151083 s
+		dst(aligned), src(aligned) : 0.157411 s
+	scan::memcpy_sse2
+		dst(not aligned), src(not aligned) : 0.0580386 s
+		dst(aligned), src(not aligned) : 0.0811084 s
+		dst(not aligned), src(aligned) : 0.0722296 s
+		dst(aligned), src(aligned) : 0.095948 s
+	scan::memcpy_sse2_prefetch
+		dst(not aligned), src(not aligned) : 0.0582761 s
+		dst(aligned), src(not aligned) : 0.0811397 s
+		dst(not aligned), src(aligned) : 0.0698718 s
+		dst(aligned), src(aligned) : 0.094571 s
+	scan::memcpy_sse2_prefetch_2line
+		dst(not aligned), src(not aligned) : 0.053972 s
+		dst(aligned), src(not aligned) : 0.0763686 s
+		dst(not aligned), src(aligned) : 0.0677211 s
+		dst(aligned), src(aligned) : 0.0909612 s
+	scan::memcpy_sse2_stream
+		dst(not aligned), src(not aligned) : 0.186994 s
+		dst(aligned), src(not aligned) : 0.235405 s
+		dst(not aligned), src(aligned) : 0.18611 s
+		dst(aligned), src(aligned) : 0.233994 s
+	scan::memcpy_sse2_fast
+		dst(not aligned), src(not aligned) : 0.054121 s
+		dst(aligned), src(not aligned) : 0.0770469 s
+		dst(not aligned), src(aligned) : 0.0711432 s
+		dst(aligned), src(aligned) : 0.0944915 s
+	scan::memcpy_avx_fast
+		dst(not aligned), src(not aligned) : 0.0547358 s
+		dst(aligned), src(not aligned) : 0.0777298 s
+		dst(not aligned), src(aligned) : 0.0691785 s
+		dst(aligned), src(aligned) : 0.0945256 s
 Len - 256
+	wyx::memcpy_fast
+		dst(not aligned), src(not aligned) : 0.0526729 s
+		dst(aligned), src(not aligned) : 0.0606005 s
+		dst(not aligned), src(aligned) : 0.0512296 s
+		dst(aligned), src(aligned) : 0.0589798 s
 	memcpy
-		dst(not aligned), src(not aligned) : 0.0783574 s
-		dst(aligned), src(not aligned) : 0.100561 s
-		dst(not aligned), src(aligned) : 0.0727759 s
-		dst(aligned), src(aligned) : 0.0987952 s
-	memcpy_for
-		dst(not aligned), src(not aligned) : 0.141068 s
-		dst(aligned), src(not aligned) : 0.139668 s
-		dst(not aligned), src(aligned) : 0.134894 s
-		dst(aligned), src(aligned) : 0.134881 s
-	memcpy_wyx
-		dst(not aligned), src(not aligned) : 0.0544551 s
-		dst(aligned), src(not aligned) : 0.0656141 s
-		dst(not aligned), src(aligned) : 0.0529452 s
-		dst(aligned), src(aligned) : 0.0645745 s
-	memcpy_sse2
-		dst(not aligned), src(not aligned) : 0.05496 s
-		dst(aligned), src(not aligned) : 0.065449 s
-		dst(not aligned), src(aligned) : 0.0529766 s
-		dst(aligned), src(aligned) : 0.0642689 s
-	memcpy_avx
-		dst(not aligned), src(not aligned) : 0.0546519 s
-		dst(aligned), src(not aligned) : 0.0654636 s
-		dst(not aligned), src(aligned) : 0.0535436 s
-		dst(aligned), src(aligned) : 0.0639907 s
+		dst(not aligned), src(not aligned) : 0.0736432 s
+		dst(aligned), src(not aligned) : 0.0949398 s
+		dst(not aligned), src(aligned) : 0.0677684 s
+		dst(aligned), src(aligned) : 0.0929143 s
+	scan::memcpy_for
+		dst(not aligned), src(not aligned) : 0.134269 s
+		dst(aligned), src(not aligned) : 0.134746 s
+		dst(not aligned), src(aligned) : 0.131186 s
+		dst(aligned), src(aligned) : 0.129344 s
+	scan::memcpy_sse2
+		dst(not aligned), src(not aligned) : 0.0567588 s
+		dst(aligned), src(not aligned) : 0.0664339 s
+		dst(not aligned), src(aligned) : 0.0559836 s
+		dst(aligned), src(aligned) : 0.064355 s
+	scan::memcpy_sse2_prefetch
+		dst(not aligned), src(not aligned) : 0.0567907 s
+		dst(aligned), src(not aligned) : 0.064389 s
+		dst(not aligned), src(aligned) : 0.0542157 s
+		dst(aligned), src(aligned) : 0.0624522 s
+	scan::memcpy_sse2_prefetch_2line
+		dst(not aligned), src(not aligned) : 0.050424 s
+		dst(aligned), src(not aligned) : 0.0604859 s
+		dst(not aligned), src(aligned) : 0.0508145 s
+		dst(aligned), src(aligned) : 0.0578342 s
+	scan::memcpy_sse2_stream
+		dst(not aligned), src(not aligned) : 0.148073 s
+		dst(aligned), src(not aligned) : 0.0604005 s
+		dst(not aligned), src(aligned) : 0.1463 s
+		dst(aligned), src(aligned) : 0.0592088 s
+	scan::memcpy_sse2_fast
+		dst(not aligned), src(not aligned) : 0.0521487 s
+		dst(aligned), src(not aligned) : 0.0604147 s
+		dst(not aligned), src(aligned) : 0.0511264 s
+		dst(aligned), src(aligned) : 0.0600619 s
+	scan::memcpy_avx_fast
+		dst(not aligned), src(not aligned) : 0.052707 s
+		dst(aligned), src(not aligned) : 0.0602462 s
+		dst(not aligned), src(aligned) : 0.0515085 s
+		dst(aligned), src(aligned) : 0.0589761 s
 Len - 511
+	wyx::memcpy_fast
+		dst(not aligned), src(not aligned) : 0.0506006 s
+		dst(aligned), src(not aligned) : 0.0490213 s
+		dst(not aligned), src(aligned) : 0.0498535 s
+		dst(aligned), src(aligned) : 0.0486695 s
 	memcpy
-		dst(not aligned), src(not aligned) : 0.0676233 s
-		dst(aligned), src(not aligned) : 0.0642003 s
-		dst(not aligned), src(aligned) : 0.0679074 s
-		dst(aligned), src(aligned) : 0.0668084 s
-	memcpy_for
-		dst(not aligned), src(not aligned) : 0.137516 s
-		dst(aligned), src(not aligned) : 0.139123 s
-		dst(not aligned), src(aligned) : 0.136435 s
-		dst(aligned), src(aligned) : 0.139308 s
-	memcpy_wyx
-		dst(not aligned), src(not aligned) : 0.0521104 s
-		dst(aligned), src(not aligned) : 0.0537833 s
-		dst(not aligned), src(aligned) : 0.0552726 s
-		dst(aligned), src(aligned) : 0.0516564 s
-	memcpy_sse2
-		dst(not aligned), src(not aligned) : 0.0890939 s
-		dst(aligned), src(not aligned) : 0.0759259 s
-		dst(not aligned), src(aligned) : 0.0904446 s
-		dst(aligned), src(aligned) : 0.0759832 s
-	memcpy_avx
-		dst(not aligned), src(not aligned) : 0.0890925 s
-		dst(aligned), src(not aligned) : 0.077857 s
-		dst(not aligned), src(aligned) : 0.0885621 s
-		dst(aligned), src(aligned) : 0.0766989 s
+		dst(not aligned), src(not aligned) : 0.0646563 s
+		dst(aligned), src(not aligned) : 0.0618809 s
+		dst(not aligned), src(aligned) : 0.0635988 s
+		dst(aligned), src(aligned) : 0.0624339 s
+	scan::memcpy_for
+		dst(not aligned), src(not aligned) : 0.132657 s
+		dst(aligned), src(not aligned) : 0.134841 s
+		dst(not aligned), src(aligned) : 0.134192 s
+		dst(aligned), src(aligned) : 0.132328 s
+	scan::memcpy_sse2
+		dst(not aligned), src(not aligned) : 0.0585406 s
+		dst(aligned), src(not aligned) : 0.0567146 s
+		dst(not aligned), src(aligned) : 0.0584714 s
+		dst(aligned), src(aligned) : 0.0565928 s
+	scan::memcpy_sse2_prefetch
+		dst(not aligned), src(not aligned) : 0.056291 s
+		dst(aligned), src(not aligned) : 0.0555569 s
+		dst(not aligned), src(aligned) : 0.0565928 s
+		dst(aligned), src(aligned) : 0.0541518 s
+	scan::memcpy_sse2_prefetch_2line
+		dst(not aligned), src(not aligned) : 0.0523123 s
+		dst(aligned), src(not aligned) : 0.0530601 s
+		dst(not aligned), src(aligned) : 0.0514636 s
+		dst(aligned), src(aligned) : 0.0531819 s
+	scan::memcpy_sse2_stream
+		dst(not aligned), src(not aligned) : 0.0836562 s
+		dst(aligned), src(not aligned) : 0.0692452 s
+		dst(not aligned), src(aligned) : 0.0833794 s
+		dst(aligned), src(aligned) : 0.0696815 s
+	scan::memcpy_sse2_fast
+		dst(not aligned), src(not aligned) : 0.0516241 s
+		dst(aligned), src(not aligned) : 0.0496097 s
+		dst(not aligned), src(aligned) : 0.0497205 s
+		dst(aligned), src(aligned) : 0.0491684 s
+	scan::memcpy_avx_fast
+		dst(not aligned), src(not aligned) : 0.0513494 s
+		dst(aligned), src(not aligned) : 0.0494044 s
+		dst(not aligned), src(aligned) : 0.0486815 s
+		dst(aligned), src(aligned) : 0.0487664 s
 Len - 1024
+	wyx::memcpy_fast
+		dst(not aligned), src(not aligned) : 0.0524064 s
+		dst(aligned), src(not aligned) : 0.0530315 s
+		dst(not aligned), src(aligned) : 0.0518157 s
+		dst(aligned), src(aligned) : 0.0532361 s
 	memcpy
-		dst(not aligned), src(not aligned) : 0.0526911 s
-		dst(aligned), src(not aligned) : 0.0480161 s
-		dst(not aligned), src(aligned) : 0.0522111 s
-		dst(aligned), src(aligned) : 0.0488157 s
-	memcpy_for
-		dst(not aligned), src(not aligned) : 0.148759 s
-		dst(aligned), src(not aligned) : 0.145943 s
-		dst(not aligned), src(aligned) : 0.137331 s
-		dst(aligned), src(aligned) : 0.138993 s
-	memcpy_wyx
-		dst(not aligned), src(not aligned) : 0.0548341 s
-		dst(aligned), src(not aligned) : 0.0554952 s
-		dst(not aligned), src(aligned) : 0.0535069 s
-		dst(aligned), src(aligned) : 0.0558647 s
-	memcpy_sse2
-		dst(not aligned), src(not aligned) : 0.0559825 s
-		dst(aligned), src(not aligned) : 0.0429687 s
-		dst(not aligned), src(aligned) : 0.055686 s
-		dst(aligned), src(aligned) : 0.0411633 s
-	memcpy_avx
-		dst(not aligned), src(not aligned) : 0.0552427 s
-		dst(aligned), src(not aligned) : 0.0399832 s
-		dst(not aligned), src(aligned) : 0.0586857 s
-		dst(aligned), src(aligned) : 0.0393546 s
+		dst(not aligned), src(not aligned) : 0.0498773 s
+		dst(aligned), src(not aligned) : 0.0443607 s
+		dst(not aligned), src(aligned) : 0.0496251 s
+		dst(aligned), src(aligned) : 0.0444709 s
+	scan::memcpy_for
+		dst(not aligned), src(not aligned) : 0.135981 s
+		dst(aligned), src(not aligned) : 0.141542 s
+		dst(not aligned), src(aligned) : 0.133601 s
+		dst(aligned), src(aligned) : 0.1333 s
+	scan::memcpy_sse2
+		dst(not aligned), src(not aligned) : 0.0554998 s
+		dst(aligned), src(not aligned) : 0.0574298 s
+		dst(not aligned), src(aligned) : 0.0556964 s
+		dst(aligned), src(aligned) : 0.0562022 s
+	scan::memcpy_sse2_prefetch
+		dst(not aligned), src(not aligned) : 0.0556644 s
+		dst(aligned), src(not aligned) : 0.0582817 s
+		dst(not aligned), src(aligned) : 0.0564315 s
+		dst(aligned), src(aligned) : 0.0566586 s
+	scan::memcpy_sse2_prefetch_2line
+		dst(not aligned), src(not aligned) : 0.0516404 s
+		dst(aligned), src(not aligned) : 0.0534081 s
+		dst(not aligned), src(aligned) : 0.0505332 s
+		dst(aligned), src(aligned) : 0.052704 s
+	scan::memcpy_sse2_stream
+		dst(not aligned), src(not aligned) : 0.0535734 s
+		dst(aligned), src(not aligned) : 0.0391339 s
+		dst(not aligned), src(aligned) : 0.0534966 s
+		dst(aligned), src(aligned) : 0.0383451 s
+	scan::memcpy_sse2_fast
+		dst(not aligned), src(not aligned) : 0.0544081 s
+		dst(aligned), src(not aligned) : 0.0397738 s
+		dst(not aligned), src(aligned) : 0.0536598 s
+		dst(aligned), src(aligned) : 0.0391976 s
+	scan::memcpy_avx_fast
+		dst(not aligned), src(not aligned) : 0.0536853 s
+		dst(aligned), src(not aligned) : 0.0385687 s
+		dst(not aligned), src(aligned) : 0.0561594 s
+		dst(aligned), src(aligned) : 0.0388548 s
 Len - 4096
+	wyx::memcpy_fast
+		dst(not aligned), src(not aligned) : 0.047904 s
+		dst(aligned), src(not aligned) : 0.0491791 s
+		dst(not aligned), src(aligned) : 0.0480462 s
+		dst(aligned), src(aligned) : 0.0494402 s
 	memcpy
-		dst(not aligned), src(not aligned) : 0.0430936 s
-		dst(aligned), src(not aligned) : 0.042071 s
-		dst(not aligned), src(aligned) : 0.0413386 s
-		dst(aligned), src(aligned) : 0.0374875 s
-	memcpy_for
-		dst(not aligned), src(not aligned) : 0.121638 s
-		dst(aligned), src(not aligned) : 0.121617 s
-		dst(not aligned), src(aligned) : 0.120389 s
-		dst(aligned), src(aligned) : 0.119018 s
-	memcpy_wyx
-		dst(not aligned), src(not aligned) : 0.0521673 s
-		dst(aligned), src(not aligned) : 0.0514114 s
-		dst(not aligned), src(aligned) : 0.0492533 s
-		dst(aligned), src(aligned) : 0.0505229 s
-	memcpy_sse2
-		dst(not aligned), src(not aligned) : 0.0367391 s
-		dst(aligned), src(not aligned) : 0.0349316 s
-		dst(not aligned), src(aligned) : 0.0373717 s
-		dst(aligned), src(aligned) : 0.0353215 s
-	memcpy_avx
-		dst(not aligned), src(not aligned) : 0.0379706 s
-		dst(aligned), src(not aligned) : 0.0361168 s
-		dst(not aligned), src(aligned) : 0.0376261 s
-		dst(aligned), src(aligned) : 0.0332854 s
+		dst(not aligned), src(not aligned) : 0.0425795 s
+		dst(aligned), src(not aligned) : 0.0381905 s
+		dst(not aligned), src(aligned) : 0.0391425 s
+		dst(aligned), src(aligned) : 0.0354592 s
+	scan::memcpy_for
+		dst(not aligned), src(not aligned) : 0.115251 s
+		dst(aligned), src(not aligned) : 0.117322 s
+		dst(not aligned), src(aligned) : 0.113027 s
+		dst(aligned), src(aligned) : 0.114365 s
+	scan::memcpy_sse2
+		dst(not aligned), src(not aligned) : 0.0524041 s
+		dst(aligned), src(not aligned) : 0.0522813 s
+		dst(not aligned), src(aligned) : 0.0521888 s
+		dst(aligned), src(aligned) : 0.051594 s
+	scan::memcpy_sse2_prefetch
+		dst(not aligned), src(not aligned) : 0.0522936 s
+		dst(aligned), src(not aligned) : 0.0514648 s
+		dst(not aligned), src(aligned) : 0.0523991 s
+		dst(aligned), src(aligned) : 0.0516842 s
+	scan::memcpy_sse2_prefetch_2line
+		dst(not aligned), src(not aligned) : 0.0489339 s
+		dst(aligned), src(not aligned) : 0.0493677 s
+		dst(not aligned), src(aligned) : 0.0475785 s
+		dst(aligned), src(aligned) : 0.0476783 s
+	scan::memcpy_sse2_stream
+		dst(not aligned), src(not aligned) : 0.0350899 s
+		dst(aligned), src(not aligned) : 0.0328778 s
+		dst(not aligned), src(aligned) : 0.0361688 s
+		dst(aligned), src(aligned) : 0.0321318 s
+	scan::memcpy_sse2_fast
+		dst(not aligned), src(not aligned) : 0.0366966 s
+		dst(aligned), src(not aligned) : 0.0332376 s
+		dst(not aligned), src(aligned) : 0.034677 s
+		dst(aligned), src(aligned) : 0.0327731 s
+	scan::memcpy_avx_fast
+		dst(not aligned), src(not aligned) : 0.0366282 s
+		dst(aligned), src(not aligned) : 0.0335373 s
+		dst(not aligned), src(aligned) : 0.0344135 s
+		dst(aligned), src(aligned) : 0.0326389 s
 Len - 16384
+	wyx::memcpy_fast
+		dst(not aligned), src(not aligned) : 0.0487577 s
+		dst(aligned), src(not aligned) : 0.0477867 s
+		dst(not aligned), src(aligned) : 0.0482847 s
+		dst(aligned), src(aligned) : 0.0481067 s
 	memcpy
-		dst(not aligned), src(not aligned) : 0.0424177 s
-		dst(aligned), src(not aligned) : 0.0387514 s
-		dst(not aligned), src(aligned) : 0.0414034 s
-		dst(aligned), src(aligned) : 0.0358535 s
-	memcpy_for
-		dst(not aligned), src(not aligned) : 0.113451 s
-		dst(aligned), src(not aligned) : 0.115218 s
-		dst(not aligned), src(aligned) : 0.115206 s
-		dst(aligned), src(aligned) : 0.113521 s
-	memcpy_wyx
-		dst(not aligned), src(not aligned) : 0.0489416 s
-		dst(aligned), src(not aligned) : 0.0501865 s
-		dst(not aligned), src(aligned) : 0.0515451 s
-		dst(aligned), src(aligned) : 0.050101 s
-	memcpy_sse2
-		dst(not aligned), src(not aligned) : 0.0349868 s
-		dst(aligned), src(not aligned) : 0.0332912 s
-		dst(not aligned), src(aligned) : 0.0355777 s
-		dst(aligned), src(aligned) : 0.0345773 s
-	memcpy_avx
-		dst(not aligned), src(not aligned) : 0.0346486 s
-		dst(aligned), src(not aligned) : 0.0336867 s
-		dst(not aligned), src(aligned) : 0.0340826 s
-		dst(aligned), src(aligned) : 0.0322543 s
+		dst(not aligned), src(not aligned) : 0.0400191 s
+		dst(aligned), src(not aligned) : 0.0369735 s
+		dst(not aligned), src(aligned) : 0.0392157 s
+		dst(aligned), src(aligned) : 0.0352657 s
+	scan::memcpy_for
+		dst(not aligned), src(not aligned) : 0.111011 s
+		dst(aligned), src(not aligned) : 0.112493 s
+		dst(not aligned), src(aligned) : 0.111412 s
+		dst(aligned), src(aligned) : 0.109465 s
+	scan::memcpy_sse2
+		dst(not aligned), src(not aligned) : 0.0516972 s
+		dst(aligned), src(not aligned) : 0.0508866 s
+		dst(not aligned), src(aligned) : 0.0516263 s
+		dst(aligned), src(aligned) : 0.0507765 s
+	scan::memcpy_sse2_prefetch
+		dst(not aligned), src(not aligned) : 0.0506994 s
+		dst(aligned), src(not aligned) : 0.0507049 s
+		dst(not aligned), src(aligned) : 0.0520584 s
+		dst(aligned), src(aligned) : 0.0502572 s
+	scan::memcpy_sse2_prefetch_2line
+		dst(not aligned), src(not aligned) : 0.048569 s
+		dst(aligned), src(not aligned) : 0.0483581 s
+		dst(not aligned), src(aligned) : 0.0488719 s
+		dst(aligned), src(aligned) : 0.0481886 s
+	scan::memcpy_sse2_stream
+		dst(not aligned), src(not aligned) : 0.0325202 s
+		dst(aligned), src(not aligned) : 0.0316605 s
+		dst(not aligned), src(aligned) : 0.03208 s
+		dst(aligned), src(aligned) : 0.031613 s
+	scan::memcpy_sse2_fast
+		dst(not aligned), src(not aligned) : 0.0332087 s
+		dst(aligned), src(not aligned) : 0.0328627 s
+		dst(not aligned), src(aligned) : 0.033195 s
+		dst(aligned), src(aligned) : 0.0315293 s
+	scan::memcpy_avx_fast
+		dst(not aligned), src(not aligned) : 0.0353109 s
+		dst(aligned), src(not aligned) : 0.0322861 s
+		dst(not aligned), src(aligned) : 0.0325069 s
+		dst(aligned), src(aligned) : 0.0321517 s
 Len - 32768
+	wyx::memcpy_fast
+		dst(not aligned), src(not aligned) : 0.048811 s
+		dst(aligned), src(not aligned) : 0.0477458 s
+		dst(not aligned), src(aligned) : 0.0487837 s
+		dst(aligned), src(aligned) : 0.0494353 s
 	memcpy
-		dst(not aligned), src(not aligned) : 0.042054 s
-		dst(aligned), src(not aligned) : 0.0377793 s
-		dst(not aligned), src(aligned) : 0.0432788 s
-		dst(aligned), src(aligned) : 0.0359436 s
-	memcpy_for
-		dst(not aligned), src(not aligned) : 0.114293 s
-		dst(aligned), src(not aligned) : 0.113051 s
-		dst(not aligned), src(aligned) : 0.115035 s
-		dst(aligned), src(aligned) : 0.113716 s
-	memcpy_wyx
-		dst(not aligned), src(not aligned) : 0.0505832 s
-		dst(aligned), src(not aligned) : 0.0496793 s
-		dst(not aligned), src(aligned) : 0.0503517 s
-		dst(aligned), src(aligned) : 0.0548694 s
-	memcpy_sse2
-		dst(not aligned), src(not aligned) : 0.0366419 s
-		dst(aligned), src(not aligned) : 0.0337851 s
-		dst(not aligned), src(aligned) : 0.0337931 s
-		dst(aligned), src(aligned) : 0.0341209 s
-	memcpy_avx
-		dst(not aligned), src(not aligned) : 0.035222 s
-		dst(aligned), src(not aligned) : 0.0338829 s
-		dst(not aligned), src(aligned) : 0.0336594 s
-		dst(aligned), src(aligned) : 0.0339966 s
+		dst(not aligned), src(not aligned) : 0.0406203 s
+		dst(aligned), src(not aligned) : 0.0370522 s
+		dst(not aligned), src(aligned) : 0.0399891 s
+		dst(aligned), src(aligned) : 0.0349434 s
+	scan::memcpy_for
+		dst(not aligned), src(not aligned) : 0.113124 s
+		dst(aligned), src(not aligned) : 0.11089 s
+		dst(not aligned), src(aligned) : 0.109908 s
+		dst(aligned), src(aligned) : 0.111374 s
+	scan::memcpy_sse2
+		dst(not aligned), src(not aligned) : 0.0551711 s
+		dst(aligned), src(not aligned) : 0.0508919 s
+		dst(not aligned), src(aligned) : 0.0512403 s
+		dst(aligned), src(aligned) : 0.0503006 s
+	scan::memcpy_sse2_prefetch
+		dst(not aligned), src(not aligned) : 0.05193 s
+		dst(aligned), src(not aligned) : 0.050556 s
+		dst(not aligned), src(aligned) : 0.0520254 s
+		dst(aligned), src(aligned) : 0.0501966 s
+	scan::memcpy_sse2_prefetch_2line
+		dst(not aligned), src(not aligned) : 0.0485261 s
+		dst(aligned), src(not aligned) : 0.0479826 s
+		dst(not aligned), src(aligned) : 0.0483842 s
+		dst(aligned), src(aligned) : 0.0485003 s
+	scan::memcpy_sse2_stream
+		dst(not aligned), src(not aligned) : 0.0336579 s
+		dst(aligned), src(not aligned) : 0.0318578 s
+		dst(not aligned), src(aligned) : 0.0325468 s
+		dst(aligned), src(aligned) : 0.0319601 s
+	scan::memcpy_sse2_fast
+		dst(not aligned), src(not aligned) : 0.033802 s
+		dst(aligned), src(not aligned) : 0.0318573 s
+		dst(not aligned), src(aligned) : 0.0337728 s
+		dst(aligned), src(aligned) : 0.0324288 s
+	scan::memcpy_avx_fast
+		dst(not aligned), src(not aligned) : 0.033208 s
+		dst(aligned), src(not aligned) : 0.0319592 s
+		dst(not aligned), src(aligned) : 0.0328577 s
+		dst(aligned), src(aligned) : 0.0325569 s
 Len - 262144
+	wyx::memcpy_fast
+		dst(not aligned), src(not aligned) : 0.0491696 s
+		dst(aligned), src(not aligned) : 0.0480251 s
+		dst(not aligned), src(aligned) : 0.0483748 s
+		dst(aligned), src(aligned) : 0.04891 s
 	memcpy
-		dst(not aligned), src(not aligned) : 0.0422158 s
-		dst(aligned), src(not aligned) : 0.0391052 s
-		dst(not aligned), src(aligned) : 0.0406722 s
-		dst(aligned), src(aligned) : 0.0368425 s
-	memcpy_for
-		dst(not aligned), src(not aligned) : 0.115123 s
-		dst(aligned), src(not aligned) : 0.112974 s
-		dst(not aligned), src(aligned) : 0.111593 s
-		dst(aligned), src(aligned) : 0.11235 s
-	memcpy_wyx
-		dst(not aligned), src(not aligned) : 0.0519075 s
-		dst(aligned), src(not aligned) : 0.0507051 s
-		dst(not aligned), src(aligned) : 0.0509651 s
-		dst(aligned), src(aligned) : 0.0505348 s
-	memcpy_sse2
-		dst(not aligned), src(not aligned) : 0.0338916 s
-		dst(aligned), src(not aligned) : 0.0336052 s
-		dst(not aligned), src(aligned) : 0.0343904 s
-		dst(aligned), src(aligned) : 0.0336676 s
-	memcpy_avx
-		dst(not aligned), src(not aligned) : 0.0327223 s
-		dst(aligned), src(not aligned) : 0.0318408 s
-		dst(not aligned), src(aligned) : 0.0339944 s
-		dst(aligned), src(aligned) : 0.0337219 s
+		dst(not aligned), src(not aligned) : 0.0388882 s
+		dst(aligned), src(not aligned) : 0.0358399 s
+		dst(not aligned), src(aligned) : 0.0398637 s
+		dst(aligned), src(aligned) : 0.0354465 s
+	scan::memcpy_for
+		dst(not aligned), src(not aligned) : 0.109106 s
+		dst(aligned), src(not aligned) : 0.110129 s
+		dst(not aligned), src(aligned) : 0.1089 s
+		dst(aligned), src(aligned) : 0.108129 s
+	scan::memcpy_sse2
+		dst(not aligned), src(not aligned) : 0.0503281 s
+		dst(aligned), src(not aligned) : 0.0497348 s
+		dst(not aligned), src(aligned) : 0.0513615 s
+		dst(aligned), src(aligned) : 0.0500484 s
+	scan::memcpy_sse2_prefetch
+		dst(not aligned), src(not aligned) : 0.0504766 s
+		dst(aligned), src(not aligned) : 0.0489621 s
+		dst(not aligned), src(aligned) : 0.0512376 s
+		dst(aligned), src(aligned) : 0.0501238 s
+	scan::memcpy_sse2_prefetch_2line
+		dst(not aligned), src(not aligned) : 0.0482041 s
+		dst(aligned), src(not aligned) : 0.0474207 s
+		dst(not aligned), src(aligned) : 0.0468573 s
+		dst(aligned), src(aligned) : 0.0483068 s
+	scan::memcpy_sse2_stream
+		dst(not aligned), src(not aligned) : 0.0322965 s
+		dst(aligned), src(not aligned) : 0.0323144 s
+		dst(not aligned), src(aligned) : 0.032127 s
+		dst(aligned), src(aligned) : 0.031817 s
+	scan::memcpy_sse2_fast
+		dst(not aligned), src(not aligned) : 0.0326176 s
+		dst(aligned), src(not aligned) : 0.0322108 s
+		dst(not aligned), src(aligned) : 0.0323497 s
+		dst(aligned), src(aligned) : 0.0318517 s
+	scan::memcpy_avx_fast
+		dst(not aligned), src(not aligned) : 0.0329696 s
+		dst(aligned), src(not aligned) : 0.0322372 s
+		dst(not aligned), src(aligned) : 0.0318909 s
+		dst(aligned), src(aligned) : 0.0319307 s
 Len - 1048576
+	wyx::memcpy_fast
+		dst(not aligned), src(not aligned) : 0.0484464 s
+		dst(aligned), src(not aligned) : 0.0477519 s
+		dst(not aligned), src(aligned) : 0.0494963 s
+		dst(aligned), src(aligned) : 0.048222 s
 	memcpy
-		dst(not aligned), src(not aligned) : 0.0409541 s
-		dst(aligned), src(not aligned) : 0.0383658 s
-		dst(not aligned), src(aligned) : 0.0415741 s
-		dst(aligned), src(aligned) : 0.0354773 s
-	memcpy_for
-		dst(not aligned), src(not aligned) : 0.112842 s
-		dst(aligned), src(not aligned) : 0.112583 s
-		dst(not aligned), src(aligned) : 0.113625 s
-		dst(aligned), src(aligned) : 0.110525 s
-	memcpy_wyx
-		dst(not aligned), src(not aligned) : 0.0503857 s
-		dst(aligned), src(not aligned) : 0.0512482 s
-		dst(not aligned), src(aligned) : 0.0505227 s
-		dst(aligned), src(aligned) : 0.0510948 s
-	memcpy_sse2
-		dst(not aligned), src(not aligned) : 0.0350203 s
-		dst(aligned), src(not aligned) : 0.0337025 s
-		dst(not aligned), src(aligned) : 0.0337966 s
-		dst(aligned), src(aligned) : 0.034495 s
-	memcpy_avx
-		dst(not aligned), src(not aligned) : 0.0333656 s
-		dst(aligned), src(not aligned) : 0.0333544 s
-		dst(not aligned), src(aligned) : 0.0353332 s
-		dst(aligned), src(aligned) : 0.0345666 s
+		dst(not aligned), src(not aligned) : 0.0398613 s
+		dst(aligned), src(not aligned) : 0.0351731 s
+		dst(not aligned), src(aligned) : 0.0386216 s
+		dst(aligned), src(aligned) : 0.0344975 s
+	scan::memcpy_for
+		dst(not aligned), src(not aligned) : 0.108688 s
+		dst(aligned), src(not aligned) : 0.108245 s
+		dst(not aligned), src(aligned) : 0.11095 s
+		dst(aligned), src(aligned) : 0.107793 s
+	scan::memcpy_sse2
+		dst(not aligned), src(not aligned) : 0.0509737 s
+		dst(aligned), src(not aligned) : 0.0501135 s
+		dst(not aligned), src(aligned) : 0.0504331 s
+		dst(aligned), src(aligned) : 0.049464 s
+	scan::memcpy_sse2_prefetch
+		dst(not aligned), src(not aligned) : 0.0515235 s
+		dst(aligned), src(not aligned) : 0.0491534 s
+		dst(not aligned), src(aligned) : 0.0500664 s
+		dst(aligned), src(aligned) : 0.0496356 s
+	scan::memcpy_sse2_prefetch_2line
+		dst(not aligned), src(not aligned) : 0.0466657 s
+		dst(aligned), src(not aligned) : 0.0476882 s
+		dst(not aligned), src(aligned) : 0.0479983 s
+		dst(aligned), src(aligned) : 0.0494539 s
+	scan::memcpy_sse2_stream
+		dst(not aligned), src(not aligned) : 0.0330733 s
+		dst(aligned), src(not aligned) : 0.0313149 s
+		dst(not aligned), src(aligned) : 0.0328379 s
+		dst(aligned), src(aligned) : 0.0312516 s
+	scan::memcpy_sse2_fast
+		dst(not aligned), src(not aligned) : 0.0331042 s
+		dst(aligned), src(not aligned) : 0.0322077 s
+		dst(not aligned), src(aligned) : 0.0338956 s
+		dst(aligned), src(aligned) : 0.0318247 s
+	scan::memcpy_avx_fast
+		dst(not aligned), src(not aligned) : 0.032647 s
+		dst(aligned), src(not aligned) : 0.0314151 s
+		dst(not aligned), src(aligned) : 0.0333224 s
+		dst(aligned), src(aligned) : 0.0316918 s
 Len - 4194304
+	wyx::memcpy_fast
+		dst(not aligned), src(not aligned) : 0.0463728 s
+		dst(aligned), src(not aligned) : 0.0317027 s
+		dst(not aligned), src(aligned) : 0.0483996 s
+		dst(aligned), src(aligned) : 0.0326555 s
 	memcpy
-		dst(not aligned), src(not aligned) : 0.0438086 s
-		dst(aligned), src(not aligned) : 0.0372507 s
-		dst(not aligned), src(aligned) : 0.0442158 s
-		dst(aligned), src(aligned) : 0.0361945 s
-	memcpy_for
-		dst(not aligned), src(not aligned) : 0.111264 s
-		dst(aligned), src(not aligned) : 0.111216 s
-		dst(not aligned), src(aligned) : 0.114887 s
-		dst(aligned), src(aligned) : 0.110858 s
-	memcpy_wyx
-		dst(not aligned), src(not aligned) : 0.047461 s
-		dst(aligned), src(not aligned) : 0.0345232 s
-		dst(not aligned), src(aligned) : 0.04932 s
-		dst(aligned), src(aligned) : 0.032976 s
-	memcpy_sse2
-		dst(not aligned), src(not aligned) : 0.0492829 s
-		dst(aligned), src(not aligned) : 0.0343067 s
-		dst(not aligned), src(aligned) : 0.0502816 s
-		dst(aligned), src(aligned) : 0.033569 s
-	memcpy_avx
-		dst(not aligned), src(not aligned) : 0.0489343 s
-		dst(aligned), src(not aligned) : 0.03314 s
-		dst(not aligned), src(aligned) : 0.05047 s
-		dst(aligned), src(aligned) : 0.0342278 s
+		dst(not aligned), src(not aligned) : 0.0410611 s
+		dst(aligned), src(not aligned) : 0.0362851 s
+		dst(not aligned), src(aligned) : 0.0412844 s
+		dst(aligned), src(aligned) : 0.0349471 s
+	scan::memcpy_for
+		dst(not aligned), src(not aligned) : 0.108646 s
+		dst(aligned), src(not aligned) : 0.106938 s
+		dst(not aligned), src(aligned) : 0.110706 s
+		dst(aligned), src(aligned) : 0.107973 s
+	scan::memcpy_sse2
+		dst(not aligned), src(not aligned) : 0.0502572 s
+		dst(aligned), src(not aligned) : 0.0500675 s
+		dst(not aligned), src(aligned) : 0.0510914 s
+		dst(aligned), src(aligned) : 0.0491322 s
+	scan::memcpy_sse2_prefetch
+		dst(not aligned), src(not aligned) : 0.0505985 s
+		dst(aligned), src(not aligned) : 0.0492261 s
+		dst(not aligned), src(aligned) : 0.0502935 s
+		dst(aligned), src(aligned) : 0.0496661 s
+	scan::memcpy_sse2_prefetch_2line
+		dst(not aligned), src(not aligned) : 0.0471717 s
+		dst(aligned), src(not aligned) : 0.0478823 s
+		dst(not aligned), src(aligned) : 0.0474741 s
+		dst(aligned), src(aligned) : 0.0471868 s
+	scan::memcpy_sse2_stream
+		dst(not aligned), src(not aligned) : 0.0473123 s
+		dst(aligned), src(not aligned) : 0.0322261 s
+		dst(not aligned), src(aligned) : 0.0539942 s
+		dst(aligned), src(aligned) : 0.0325685 s
+	scan::memcpy_sse2_fast
+		dst(not aligned), src(not aligned) : 0.047407 s
+		dst(aligned), src(not aligned) : 0.0328202 s
+		dst(not aligned), src(aligned) : 0.0483748 s
+		dst(aligned), src(aligned) : 0.0324676 s
+	scan::memcpy_avx_fast
+		dst(not aligned), src(not aligned) : 0.0467768 s
+		dst(aligned), src(not aligned) : 0.0332512 s
+		dst(not aligned), src(aligned) : 0.0470723 s
+		dst(aligned), src(aligned) : 0.0326778 s
 Len - 8388608
+	wyx::memcpy_fast
+		dst(not aligned), src(not aligned) : 0.0650053 s
+		dst(aligned), src(not aligned) : 0.0365398 s
+		dst(not aligned), src(aligned) : 0.0648255 s
+		dst(aligned), src(aligned) : 0.0364047 s
 	memcpy
-		dst(not aligned), src(not aligned) : 0.0451773 s
-		dst(aligned), src(not aligned) : 0.0380973 s
-		dst(not aligned), src(aligned) : 0.0451029 s
-		dst(aligned), src(aligned) : 0.0377535 s
-	memcpy_for
-		dst(not aligned), src(not aligned) : 0.112015 s
-		dst(aligned), src(not aligned) : 0.111663 s
-		dst(not aligned), src(aligned) : 0.11731 s
-		dst(aligned), src(aligned) : 0.112695 s
-	memcpy_wyx
-		dst(not aligned), src(not aligned) : 0.0676317 s
-		dst(aligned), src(not aligned) : 0.0381912 s
-		dst(not aligned), src(aligned) : 0.0670336 s
-		dst(aligned), src(aligned) : 0.0379034 s
-	memcpy_sse2
-		dst(not aligned), src(not aligned) : 0.0656123 s
-		dst(aligned), src(not aligned) : 0.037195 s
-		dst(not aligned), src(aligned) : 0.0673835 s
-		dst(aligned), src(aligned) : 0.0384049 s
-	memcpy_avx
-		dst(not aligned), src(not aligned) : 0.0660097 s
-		dst(aligned), src(not aligned) : 0.0371608 s
-		dst(not aligned), src(aligned) : 0.0636897 s
-		dst(aligned), src(aligned) : 0.0370858 s
+		dst(not aligned), src(not aligned) : 0.041951 s
+		dst(aligned), src(not aligned) : 0.036214 s
+		dst(not aligned), src(aligned) : 0.0421583 s
+		dst(aligned), src(aligned) : 0.0348004 s
+	scan::memcpy_for
+		dst(not aligned), src(not aligned) : 0.110061 s
+		dst(aligned), src(not aligned) : 0.11011 s
+		dst(not aligned), src(aligned) : 0.114606 s
+		dst(aligned), src(aligned) : 0.109021 s
+	scan::memcpy_sse2
+		dst(not aligned), src(not aligned) : 0.0506904 s
+		dst(aligned), src(not aligned) : 0.0495521 s
+		dst(not aligned), src(aligned) : 0.0498696 s
+		dst(aligned), src(aligned) : 0.0490277 s
+	scan::memcpy_sse2_prefetch
+		dst(not aligned), src(not aligned) : 0.0513151 s
+		dst(aligned), src(not aligned) : 0.0497786 s
+		dst(not aligned), src(aligned) : 0.0495533 s
+		dst(aligned), src(aligned) : 0.0488456 s
+	scan::memcpy_sse2_prefetch_2line
+		dst(not aligned), src(not aligned) : 0.0475689 s
+		dst(aligned), src(not aligned) : 0.0490927 s
+		dst(not aligned), src(aligned) : 0.0487448 s
+		dst(aligned), src(aligned) : 0.0472561 s
+	scan::memcpy_sse2_stream
+		dst(not aligned), src(not aligned) : 0.0946505 s
+		dst(aligned), src(not aligned) : 0.0348599 s
+		dst(not aligned), src(aligned) : 0.0952988 s
+		dst(aligned), src(aligned) : 0.0357804 s
+	scan::memcpy_sse2_fast
+		dst(not aligned), src(not aligned) : 0.0646058 s
+		dst(aligned), src(not aligned) : 0.0364957 s
+		dst(not aligned), src(aligned) : 0.0646609 s
+		dst(aligned), src(aligned) : 0.035208 s
+	scan::memcpy_avx_fast
+		dst(not aligned), src(not aligned) : 0.0643351 s
+		dst(aligned), src(not aligned) : 0.0352467 s
+		dst(not aligned), src(aligned) : 0.0638964 s
+		dst(aligned), src(aligned) : 0.0359169 s
