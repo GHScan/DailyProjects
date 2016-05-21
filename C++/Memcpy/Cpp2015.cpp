@@ -64,8 +64,8 @@ static void benchmarkMemcpy() {
 
     auto buffer = static_cast<uint8_t*>(_aligned_malloc(bufferSize, alignment));
 
-    std::vector<size_t> lens{ 20, 63, 129, 1024, 4096, 16384, 32768, 262144, 1048576, 4194304, 8388608 };
-    
+    std::vector<size_t> lens{ 20, 63, 129, 256, 511, 1024, 4096, 16384, 32768, 262144, 1048576, 4194304, 8388608 };
+
     auto bytesToCopy = (size_t(1) << 28);
     for (auto len : lens) {
         std::cout << "Len - " << len << std::endl;
@@ -95,7 +95,7 @@ static void benchmarkMemcpy() {
         TIME(memcpy_sse2);
 
 #undef TIME
-        
+
     }
 
     _aligned_free(buffer);

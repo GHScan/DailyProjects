@@ -1,0 +1,273 @@
+Len - 20
+	memcpy
+		dst(not aligned), src(not aligned) : 0.12932 s
+		dst(aligned), src(not aligned) : 0.231771 s
+		dst(not aligned), src(aligned) : 0.17891 s
+		dst(aligned), src(aligned) : 0.278303 s
+	memcpy_for
+		dst(not aligned), src(not aligned) : 0.219539 s
+		dst(aligned), src(not aligned) : 0.264403 s
+		dst(not aligned), src(aligned) : 0.275086 s
+		dst(aligned), src(aligned) : 0.316903 s
+	memcpy_wyx
+		dst(not aligned), src(not aligned) : 0.0941929 s
+		dst(aligned), src(not aligned) : 0.214515 s
+		dst(not aligned), src(aligned) : 0.163318 s
+		dst(aligned), src(aligned) : 0.254187 s
+	memcpy_sse2
+		dst(not aligned), src(not aligned) : 0.106837 s
+		dst(aligned), src(not aligned) : 0.224664 s
+		dst(not aligned), src(aligned) : 0.167841 s
+		dst(aligned), src(aligned) : 0.26207 s
+Len - 63
+	memcpy
+		dst(not aligned), src(not aligned) : 0.061374 s
+		dst(aligned), src(not aligned) : 0.0771737 s
+		dst(not aligned), src(aligned) : 0.0725198 s
+		dst(aligned), src(aligned) : 0.0896446 s
+	memcpy_for
+		dst(not aligned), src(not aligned) : 0.168255 s
+		dst(aligned), src(not aligned) : 0.170045 s
+		dst(not aligned), src(aligned) : 0.176705 s
+		dst(aligned), src(aligned) : 0.177527 s
+	memcpy_wyx
+		dst(not aligned), src(not aligned) : 0.0503379 s
+		dst(aligned), src(not aligned) : 0.073185 s
+		dst(not aligned), src(aligned) : 0.0661292 s
+		dst(aligned), src(aligned) : 0.0829477 s
+	memcpy_sse2
+		dst(not aligned), src(not aligned) : 0.0513038 s
+		dst(aligned), src(not aligned) : 0.0751142 s
+		dst(not aligned), src(aligned) : 0.0665425 s
+		dst(aligned), src(aligned) : 0.0874903 s
+Len - 129
+	memcpy
+		dst(not aligned), src(not aligned) : 0.0569559 s
+		dst(aligned), src(not aligned) : 0.0908729 s
+		dst(not aligned), src(aligned) : 0.064819 s
+		dst(aligned), src(aligned) : 0.0965153 s
+	memcpy_for
+		dst(not aligned), src(not aligned) : 0.13569 s
+		dst(aligned), src(not aligned) : 0.138719 s
+		dst(not aligned), src(aligned) : 0.145215 s
+		dst(aligned), src(aligned) : 0.152084 s
+	memcpy_wyx
+		dst(not aligned), src(not aligned) : 0.0391445 s
+		dst(aligned), src(not aligned) : 0.0564366 s
+		dst(not aligned), src(aligned) : 0.0507732 s
+		dst(aligned), src(aligned) : 0.0649676 s
+	memcpy_sse2
+		dst(not aligned), src(not aligned) : 0.0383316 s
+		dst(aligned), src(not aligned) : 0.0569845 s
+		dst(not aligned), src(aligned) : 0.0506486 s
+		dst(aligned), src(aligned) : 0.0670799 s
+Len - 256
+	memcpy
+		dst(not aligned), src(not aligned) : 0.0823119 s
+		dst(aligned), src(not aligned) : 0.0828744 s
+		dst(not aligned), src(aligned) : 0.0826574 s
+		dst(aligned), src(aligned) : 0.0843482 s
+	memcpy_for
+		dst(not aligned), src(not aligned) : 0.125397 s
+		dst(aligned), src(not aligned) : 0.126314 s
+		dst(not aligned), src(aligned) : 0.125043 s
+		dst(aligned), src(aligned) : 0.125469 s
+	memcpy_wyx
+		dst(not aligned), src(not aligned) : 0.0351455 s
+		dst(aligned), src(not aligned) : 0.0458848 s
+		dst(not aligned), src(aligned) : 0.0355354 s
+		dst(aligned), src(aligned) : 0.0443276 s
+	memcpy_sse2
+		dst(not aligned), src(not aligned) : 0.0357203 s
+		dst(aligned), src(not aligned) : 0.0455242 s
+		dst(not aligned), src(aligned) : 0.0359216 s
+		dst(aligned), src(aligned) : 0.0447865 s
+Len - 511
+	memcpy
+		dst(not aligned), src(not aligned) : 0.0525951 s
+		dst(aligned), src(not aligned) : 0.048634 s
+		dst(not aligned), src(aligned) : 0.0525913 s
+		dst(aligned), src(aligned) : 0.0485932 s
+	memcpy_for
+		dst(not aligned), src(not aligned) : 0.124359 s
+		dst(aligned), src(not aligned) : 0.123087 s
+		dst(not aligned), src(aligned) : 0.126913 s
+		dst(aligned), src(aligned) : 0.125807 s
+	memcpy_wyx
+		dst(not aligned), src(not aligned) : 0.0357332 s
+		dst(aligned), src(not aligned) : 0.0350327 s
+		dst(not aligned), src(aligned) : 0.0355094 s
+		dst(aligned), src(aligned) : 0.0357493 s
+	memcpy_sse2
+		dst(not aligned), src(not aligned) : 0.0725128 s
+		dst(aligned), src(not aligned) : 0.061067 s
+		dst(not aligned), src(aligned) : 0.0721522 s
+		dst(aligned), src(aligned) : 0.0608723 s
+Len - 1024
+	memcpy
+		dst(not aligned), src(not aligned) : 0.0388791 s
+		dst(aligned), src(not aligned) : 0.0396435 s
+		dst(not aligned), src(aligned) : 0.0386619 s
+		dst(aligned), src(aligned) : 0.0394089 s
+	memcpy_for
+		dst(not aligned), src(not aligned) : 0.128861 s
+		dst(aligned), src(not aligned) : 0.127083 s
+		dst(not aligned), src(aligned) : 0.129041 s
+		dst(aligned), src(aligned) : 0.126103 s
+	memcpy_wyx
+		dst(not aligned), src(not aligned) : 0.0377748 s
+		dst(aligned), src(not aligned) : 0.0393823 s
+		dst(not aligned), src(aligned) : 0.0381458 s
+		dst(aligned), src(aligned) : 0.0391806 s
+	memcpy_sse2
+		dst(not aligned), src(not aligned) : 0.0305568 s
+		dst(aligned), src(not aligned) : 0.0311221 s
+		dst(not aligned), src(aligned) : 0.0307536 s
+		dst(aligned), src(aligned) : 0.0314373 s
+Len - 4096
+	memcpy
+		dst(not aligned), src(not aligned) : 0.0260418 s
+		dst(aligned), src(not aligned) : 0.0262481 s
+		dst(not aligned), src(aligned) : 0.0258313 s
+		dst(aligned), src(aligned) : 0.026386 s
+	memcpy_for
+		dst(not aligned), src(not aligned) : 0.11384 s
+		dst(aligned), src(not aligned) : 0.111214 s
+		dst(not aligned), src(aligned) : 0.114036 s
+		dst(aligned), src(aligned) : 0.110707 s
+	memcpy_wyx
+		dst(not aligned), src(not aligned) : 0.0348347 s
+		dst(aligned), src(not aligned) : 0.0349416 s
+		dst(not aligned), src(aligned) : 0.0347618 s
+		dst(aligned), src(aligned) : 0.034624 s
+	memcpy_sse2
+		dst(not aligned), src(not aligned) : 0.0227783 s
+		dst(aligned), src(not aligned) : 0.0225296 s
+		dst(not aligned), src(aligned) : 0.0225856 s
+		dst(aligned), src(aligned) : 0.022739 s
+Len - 16384
+	memcpy
+		dst(not aligned), src(not aligned) : 0.0248228 s
+		dst(aligned), src(not aligned) : 0.0246795 s
+		dst(not aligned), src(aligned) : 0.0248859 s
+		dst(aligned), src(aligned) : 0.0250943 s
+	memcpy_for
+		dst(not aligned), src(not aligned) : 0.111799 s
+		dst(aligned), src(not aligned) : 0.107098 s
+		dst(not aligned), src(aligned) : 0.111835 s
+		dst(aligned), src(aligned) : 0.107288 s
+	memcpy_wyx
+		dst(not aligned), src(not aligned) : 0.0336752 s
+		dst(aligned), src(not aligned) : 0.0337626 s
+		dst(not aligned), src(aligned) : 0.0337293 s
+		dst(aligned), src(aligned) : 0.0337562 s
+	memcpy_sse2
+		dst(not aligned), src(not aligned) : 0.021364 s
+		dst(aligned), src(not aligned) : 0.0215766 s
+		dst(not aligned), src(aligned) : 0.0216651 s
+		dst(aligned), src(aligned) : 0.0216365 s
+Len - 32768
+	memcpy
+		dst(not aligned), src(not aligned) : 0.0245248 s
+		dst(aligned), src(not aligned) : 0.023956 s
+		dst(not aligned), src(aligned) : 0.0244074 s
+		dst(aligned), src(aligned) : 0.0248281 s
+	memcpy_for
+		dst(not aligned), src(not aligned) : 0.110537 s
+		dst(aligned), src(not aligned) : 0.106611 s
+		dst(not aligned), src(aligned) : 0.110833 s
+		dst(aligned), src(aligned) : 0.107933 s
+	memcpy_wyx
+		dst(not aligned), src(not aligned) : 0.0337198 s
+		dst(aligned), src(not aligned) : 0.0336904 s
+		dst(not aligned), src(aligned) : 0.0334987 s
+		dst(aligned), src(aligned) : 0.0336851 s
+	memcpy_sse2
+		dst(not aligned), src(not aligned) : 0.0213337 s
+		dst(aligned), src(not aligned) : 0.0216343 s
+		dst(not aligned), src(aligned) : 0.0216821 s
+		dst(aligned), src(aligned) : 0.0214135 s
+Len - 262144
+	memcpy
+		dst(not aligned), src(not aligned) : 0.0240599 s
+		dst(aligned), src(not aligned) : 0.0241364 s
+		dst(not aligned), src(aligned) : 0.024124 s
+		dst(aligned), src(aligned) : 0.024869 s
+	memcpy_for
+		dst(not aligned), src(not aligned) : 0.109966 s
+		dst(aligned), src(not aligned) : 0.106962 s
+		dst(not aligned), src(aligned) : 0.110685 s
+		dst(aligned), src(aligned) : 0.105781 s
+	memcpy_wyx
+		dst(not aligned), src(not aligned) : 0.0337297 s
+		dst(aligned), src(not aligned) : 0.0336856 s
+		dst(not aligned), src(aligned) : 0.0335415 s
+		dst(aligned), src(aligned) : 0.0337028 s
+	memcpy_sse2
+		dst(not aligned), src(not aligned) : 0.0216097 s
+		dst(aligned), src(not aligned) : 0.0215328 s
+		dst(not aligned), src(aligned) : 0.0210046 s
+		dst(aligned), src(aligned) : 0.0210688 s
+Len - 1048576
+	memcpy
+		dst(not aligned), src(not aligned) : 0.0245126 s
+		dst(aligned), src(not aligned) : 0.0244838 s
+		dst(not aligned), src(aligned) : 0.024324 s
+		dst(aligned), src(aligned) : 0.024536 s
+	memcpy_for
+		dst(not aligned), src(not aligned) : 0.110772 s
+		dst(aligned), src(not aligned) : 0.105076 s
+		dst(not aligned), src(aligned) : 0.110485 s
+		dst(aligned), src(aligned) : 0.106462 s
+	memcpy_wyx
+		dst(not aligned), src(not aligned) : 0.033579 s
+		dst(aligned), src(not aligned) : 0.0339986 s
+		dst(not aligned), src(aligned) : 0.0335542 s
+		dst(aligned), src(aligned) : 0.0341083 s
+	memcpy_sse2
+		dst(not aligned), src(not aligned) : 0.0212967 s
+		dst(aligned), src(not aligned) : 0.0210153 s
+		dst(not aligned), src(aligned) : 0.0210739 s
+		dst(aligned), src(aligned) : 0.0213246 s
+Len - 4194304
+	memcpy
+		dst(not aligned), src(not aligned) : 0.0251181 s
+		dst(aligned), src(not aligned) : 0.0247246 s
+		dst(not aligned), src(aligned) : 0.0243466 s
+		dst(aligned), src(aligned) : 0.0246142 s
+	memcpy_for
+		dst(not aligned), src(not aligned) : 0.109535 s
+		dst(aligned), src(not aligned) : 0.10565 s
+		dst(not aligned), src(aligned) : 0.110102 s
+		dst(aligned), src(aligned) : 0.10591 s
+	memcpy_wyx
+		dst(not aligned), src(not aligned) : 0.021216 s
+		dst(aligned), src(not aligned) : 0.0220925 s
+		dst(not aligned), src(aligned) : 0.021045 s
+		dst(aligned), src(aligned) : 0.0218381 s
+	memcpy_sse2
+		dst(not aligned), src(not aligned) : 0.0213472 s
+		dst(aligned), src(not aligned) : 0.0218022 s
+		dst(not aligned), src(aligned) : 0.0216591 s
+		dst(aligned), src(aligned) : 0.0219993 s
+Len - 8388608
+	memcpy
+		dst(not aligned), src(not aligned) : 0.0244502 s
+		dst(aligned), src(not aligned) : 0.0252366 s
+		dst(not aligned), src(aligned) : 0.0244156 s
+		dst(aligned), src(aligned) : 0.0252916 s
+	memcpy_for
+		dst(not aligned), src(not aligned) : 0.110805 s
+		dst(aligned), src(not aligned) : 0.105637 s
+		dst(not aligned), src(aligned) : 0.111509 s
+		dst(aligned), src(aligned) : 0.105005 s
+	memcpy_wyx
+		dst(not aligned), src(not aligned) : 0.0215275 s
+		dst(aligned), src(not aligned) : 0.0254602 s
+		dst(not aligned), src(aligned) : 0.0218469 s
+		dst(aligned), src(aligned) : 0.0251772 s
+	memcpy_sse2
+		dst(not aligned), src(not aligned) : 0.0212947 s
+		dst(aligned), src(not aligned) : 0.0249594 s
+		dst(not aligned), src(aligned) : 0.0218005 s
+		dst(aligned), src(aligned) : 0.0250342 s

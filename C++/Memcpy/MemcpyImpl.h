@@ -22,155 +22,62 @@ _label_switch:
     switch (num) {
     default:
     {
-        auto alignStep = 16 - reinterpret_cast<uintptr_t>(dst) & 0xf;
-
-        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst), _mm_loadu_si128(reinterpret_cast<__m128i const*>(src)));
-
-        src += alignStep;
-        dst += alignStep;
-        num -= alignStep;
-
-        if ((reinterpret_cast<uintptr_t>(src) & 0xf) == 0) {
-            for (; num >= 64; num -= 64) {
-                auto a = _mm_load_si128(reinterpret_cast<__m128i const*>(src));
-                auto b = _mm_load_si128(reinterpret_cast<__m128i const*>(src) + 1);
-                auto c = _mm_load_si128(reinterpret_cast<__m128i const*>(src) + 2);
-                auto d = _mm_load_si128(reinterpret_cast<__m128i const*>(src) + 3);
-                _mm_stream_si128(reinterpret_cast<__m128i*>(dst), a);
-                _mm_stream_si128(reinterpret_cast<__m128i*>(dst) + 1, b);
-                _mm_stream_si128(reinterpret_cast<__m128i*>(dst) + 2, c);
-                _mm_stream_si128(reinterpret_cast<__m128i*>(dst) + 3, d);
-                src += 64;
-                dst += 64;
-            }
-        }
-        else {
+        if (num < 256 + 16) {
             for (; num >= 64; num -= 64) {
                 auto a = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src));
                 auto b = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src) + 1);
                 auto c = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src) + 2);
                 auto d = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src) + 3);
-                _mm_stream_si128(reinterpret_cast<__m128i*>(dst), a);
-                _mm_stream_si128(reinterpret_cast<__m128i*>(dst) + 1, b);
-                _mm_stream_si128(reinterpret_cast<__m128i*>(dst) + 2, c);
-                _mm_stream_si128(reinterpret_cast<__m128i*>(dst) + 3, d);
+                _mm_storeu_si128(reinterpret_cast<__m128i*>(dst), a);
+                _mm_storeu_si128(reinterpret_cast<__m128i*>(dst) + 1, b);
+                _mm_storeu_si128(reinterpret_cast<__m128i*>(dst) + 2, c);
+                _mm_storeu_si128(reinterpret_cast<__m128i*>(dst) + 3, d);
                 src += 64;
                 dst += 64;
             }
+        } else {
+            auto alignStep = (16 - (reinterpret_cast<uintptr_t>(dst) & 0xf)) & 0xf;
+
+            if (alignStep > 0) {
+                _mm_storeu_si128(reinterpret_cast<__m128i*>(dst), _mm_loadu_si128(reinterpret_cast<__m128i const*>(src)));
+            }
+
+            src += alignStep;
+            dst += alignStep;
+            num -= alignStep;
+
+            if ((reinterpret_cast<uintptr_t>(src) & 0xf) == 0) {
+                for (; num >= 64; num -= 64) {
+                    auto a = _mm_load_si128(reinterpret_cast<__m128i const*>(src));
+                    auto b = _mm_load_si128(reinterpret_cast<__m128i const*>(src) + 1);
+                    auto c = _mm_load_si128(reinterpret_cast<__m128i const*>(src) + 2);
+                    auto d = _mm_load_si128(reinterpret_cast<__m128i const*>(src) + 3);
+                    _mm_stream_si128(reinterpret_cast<__m128i*>(dst), a);
+                    _mm_stream_si128(reinterpret_cast<__m128i*>(dst) + 1, b);
+                    _mm_stream_si128(reinterpret_cast<__m128i*>(dst) + 2, c);
+                    _mm_stream_si128(reinterpret_cast<__m128i*>(dst) + 3, d);
+                    src += 64;
+                    dst += 64;
+                }
+            }
+            else {
+                for (; num >= 64; num -= 64) {
+                    auto a = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src));
+                    auto b = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src) + 1);
+                    auto c = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src) + 2);
+                    auto d = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src) + 3);
+                    _mm_stream_si128(reinterpret_cast<__m128i*>(dst), a);
+                    _mm_stream_si128(reinterpret_cast<__m128i*>(dst) + 1, b);
+                    _mm_stream_si128(reinterpret_cast<__m128i*>(dst) + 2, c);
+                    _mm_stream_si128(reinterpret_cast<__m128i*>(dst) + 3, d);
+                    src += 64;
+                    dst += 64;
+                }
+            }
+            _mm_sfence();
         }
-        _mm_sfence();
     }
     goto _label_switch;
-    case 128:
-    {
-        auto a = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src));
-        auto b = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src) + 1);
-        auto c = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src) + 2);
-        auto d = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src) + 3);
-        auto e = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src) + 4);
-        auto f = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src) + 5);
-        auto g = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src) + 6);
-        auto h = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src) + 7);
-        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst), a);
-        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst) + 1, b);
-        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst) + 2, c);
-        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst) + 3, d);
-        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst) + 4, e);
-        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst) + 5, f);
-        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst) + 6, g);
-        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst) + 7, h);
-    }
-    break;
-    case 127:
-    case 126:
-    case 125:
-    case 124:
-    case 123:
-    case 122:
-    case 121:
-    case 120:
-    case 119:
-    case 118:
-    case 117:
-    case 116:
-    case 115:
-    case 114:
-    case 113:
-    case 112:
-    case 111:
-    case 110:
-    case 109:
-    case 108:
-    case 107:
-    case 106:
-    case 105:
-    case 104:
-    case 103:
-    case 102:
-    case 101:
-    case 100:
-    case 99:
-    case 98:
-    case 97:
-    case 96:
-    case 95:
-    case 94:
-    case 93:
-    case 92:
-    case 91:
-    case 90:
-    case 89:
-    case 88:
-    case 87:
-    case 86:
-    case 85:
-    case 84:
-    case 83:
-    case 82:
-    case 81:
-    case 80:
-    case 79:
-    case 78:
-    case 77:
-    case 76:
-    case 75:
-    case 74:
-    case 73:
-    case 72:
-    case 71:
-    case 70:
-    case 69:
-    case 68:
-    case 67:
-    case 66:
-    case 65:
-    {
-        auto a = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src));
-        auto b = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src) + 1);
-        auto c = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src) + 2);
-        auto d = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src) + 3);
-        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst), a);
-        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst) + 1, b);
-        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst) + 2, c);
-        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst) + 3, d);
-        dst += 64;
-        src += 64;
-        num -= 64;
-        goto _label_switch;
-    }
-    break;
-    case 64:
-    {
-        auto a = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src));
-        auto b = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src) + 1);
-        auto c = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src) + 2);
-        auto d = _mm_loadu_si128(reinterpret_cast<__m128i const*>(src) + 3);
-        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst), a);
-        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst) + 1, b);
-        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst) + 2, c);
-        _mm_storeu_si128(reinterpret_cast<__m128i*>(dst) + 3, d);
-    }
-    break;
     case 63:
     case 62:
     case 61:
