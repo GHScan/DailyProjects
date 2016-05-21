@@ -34,6 +34,10 @@ static void testMemcpy() {
             dst2.assign(len, 0);
             memcpy_sse2(&dst2[0], &src[off], len);
             assert(std::equal(dst.begin(), dst.end(), dst2.begin()));
+
+            dst2.assign(len, 0);
+            memcpy_avx(&dst2[0], &src[off], len);
+            assert(std::equal(dst.begin(), dst.end(), dst2.begin()));
         }
     }
 }
@@ -93,6 +97,7 @@ static void benchmarkMemcpy() {
         TIME(memcpy_for);
         TIME(memcpy_wyx);
         TIME(memcpy_sse2);
+        TIME(memcpy_avx);
 
 #undef TIME
 
