@@ -11,6 +11,7 @@ namespace CSharp2013
     {
         private static void ConvertReport(string inputTxt, string outputTsv)
         {
+            var funcNames = new List<string>();
             var result =
                 new ConcurrentDictionary<string, ConcurrentDictionary<int, double>>();
 
@@ -30,7 +31,11 @@ namespace CSharp2013
                             times.Add(double.Parse(tokens[1].Trim().Split()[0]));
                         }
                         result.GetOrAdd(funcName,
-                            s => new ConcurrentDictionary<int, double>())
+                            s =>
+                            {
+                                funcNames.Add(s);
+                                return new ConcurrentDictionary<int, double>();
+                            })
                             .TryAdd(len, times.Average());
                     }
                 }
@@ -38,18 +43,16 @@ namespace CSharp2013
 
             using (var output = File.CreateText(outputTsv))
             {
-                output.WriteLine("#\t" + string.Join("\t", result.Keys));
+                output.WriteLine("#\t" + string.Join("\t", funcNames));
 
                 foreach (var len in result.First().Value.Keys.OrderBy(v => v))
                 {
-                    output.WriteLine(string.Format("{0:f3} KB\t", len/1000.0)
-                                     + string.Join("\t", result.Keys.Select(func => result[func][len])));
+                    output.WriteLine(string.Format("{0:f3} KB\t", len / 1000.0) + string.Join("\t", funcNames.Select(func => result[func][len])));
                 }
             }
         }
 
-
-        private static bool gEnableAvx = true;
+        private static readonly bool gEnableAvx = true;
         private static void PrintCaseStatements(TextWriter output, int branchCount, int value, int off)
         {
             for (var i = branchCount; i > 0; i >>= 1)
@@ -88,8 +91,8 @@ namespace CSharp2013
             Debug.Assert((branchCount & (branchCount - 1)) == 0);
 
             var currFlag = branchCount - 1;
-            var currList = new List<int> {currFlag};
-            var result = new List<List<int>> {currList};
+            var currList = new List<int> { currFlag };
+            var result = new List<List<int>> { currList };
             var used = new BitArray(branchCount);
             used.Set(currFlag, true);
             for (var i = 1; i < branchCount; ++i)
@@ -115,7 +118,7 @@ namespace CSharp2013
                     for (var i = 0; i < list.Count - 1; ++i)
                     {
                         fo.WriteLine("case {0}:", list[i]);
-                        PrintCaseStatements(fo, branchCount, list[i] & ~(list[i + 1]), list[i + 1]);
+                        PrintCaseStatements(fo, branchCount, list[i] & ~list[i + 1], list[i + 1]);
                     }
                     fo.WriteLine("case {0}:", list.Last());
                     PrintCaseStatements(fo, branchCount, list.Last(), 0);
