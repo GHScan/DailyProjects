@@ -1,0 +1,280 @@
+Size - 1
+	string_list_table : 0.0657943 ms
+	string_ordered_list_table : 0.048718 ms
+	string_hash_table : 0.0604703 ms
+	symbol_list_table : 0.049622 ms
+	symbol_ordered_list_table : 0.037568 ms
+	symbol_hash_table : 0.042691 ms
+	id16_list_table : 0.0112503 ms
+	id16_list_table_naive : 0.00823667 ms
+	id16_list_table_sse2 : 0.0161723 ms
+	id16_list_table_avx : 0.015871 ms
+	id16_ordered_list_table : 0.0224003 ms
+	id16_hash_table : 0.0104467 ms
+
+Size - 2
+	string_list_table : 0.037769 ms
+	string_ordered_list_table : 0.0367643 ms
+	string_hash_table : 0.0367647 ms
+	symbol_list_table : 0.055247 ms
+	symbol_ordered_list_table : 0.0376687 ms
+	symbol_hash_table : 0.0425907 ms
+	id16_list_table : 0.00773467 ms
+	id16_list_table_naive : 0.00813633 ms
+	id16_list_table_sse2 : 0.0160717 ms
+	id16_list_table_avx : 0.015871 ms
+	id16_ordered_list_table : 0.01346 ms
+	id16_hash_table : 0.0103463 ms
+
+Size - 4
+	string_list_table : 0.0376683 ms
+	string_ordered_list_table : 0.052535 ms
+	string_hash_table : 0.0367643 ms
+	symbol_list_table : 0.045403 ms
+	symbol_ordered_list_table : 0.046709 ms
+	symbol_hash_table : 0.042289 ms
+	id16_list_table : 0.00783533 ms
+	id16_list_table_naive : 0.00813633 ms
+	id16_list_table_sse2 : 0.0159713 ms
+	id16_list_table_avx : 0.015871 ms
+	id16_ordered_list_table : 0.0191857 ms
+	id16_hash_table : 0.0103463 ms
+
+Size - 8
+	string_list_table : 0.0469097 ms
+	string_ordered_list_table : 0.0537403 ms
+	string_hash_table : 0.036463 ms
+	symbol_list_table : 0.0537403 ms
+	symbol_ordered_list_table : 0.0594657 ms
+	symbol_hash_table : 0.0423897 ms
+	id16_list_table : 0.00853833 ms
+	id16_list_table_naive : 0.009141 ms
+	id16_list_table_sse2 : 0.0162727 ms
+	id16_list_table_avx : 0.016072 ms
+	id16_ordered_list_table : 0.0166747 ms
+	id16_hash_table : 0.0104467 ms
+
+Size - 16
+	string_list_table : 0.10507 ms
+	string_ordered_list_table : 0.118832 ms
+	string_hash_table : 0.068908 ms
+	symbol_list_table : 0.110896 ms
+	symbol_ordered_list_table : 0.123854 ms
+	symbol_hash_table : 0.0832723 ms
+	id16_list_table : 0.0132593 ms
+	id16_list_table_naive : 0.0147663 ms
+	id16_list_table_sse2 : 0.029733 ms
+	id16_list_table_avx : 0.029934 ms
+	id16_ordered_list_table : 0.0331483 ms
+	id16_hash_table : 0.01567 ms
+
+Size - 24
+	string_list_table : 0.191958 ms
+	string_ordered_list_table : 0.179804 ms
+	string_hash_table : 0.0975363 ms
+	symbol_list_table : 0.217975 ms
+	symbol_ordered_list_table : 0.186836 ms
+	symbol_hash_table : 0.10055 ms
+	id16_list_table : 0.0245097 ms
+	id16_list_table_naive : 0.0468093 ms
+	id16_list_table_sse2 : 0.0876923 ms
+	id16_list_table_avx : 0.0649903 ms
+	id16_ordered_list_table : 0.05816 ms
+	id16_hash_table : 0.0238063 ms
+
+Size - 32
+	string_list_table : 0.505059 ms
+	string_ordered_list_table : 0.276637 ms
+	string_hash_table : 0.16333 ms
+	symbol_list_table : 0.54112 ms
+	symbol_ordered_list_table : 0.287687 ms
+	symbol_hash_table : 0.166344 ms
+	id16_list_table : 0.052334 ms
+	id16_list_table_naive : 0.0550463 ms
+	id16_list_table_sse2 : 0.060872 ms
+	id16_list_table_avx : 0.063986 ms
+	id16_ordered_list_table : 0.077647 ms
+	id16_hash_table : 0.028628 ms
+
+Size - 50
+	string_list_table : 0.844778 ms
+	string_ordered_list_table : 0.433036 ms
+	string_hash_table : 0.311192 ms
+	symbol_list_table : 0.857535 ms
+	symbol_ordered_list_table : 0.448305 ms
+	symbol_hash_table : 0.218176 ms
+	id16_list_table : 0.0817657 ms
+	id16_list_table_naive : 0.102559 ms
+	id16_list_table_sse2 : 0.0911073 ms
+	id16_list_table_avx : 0.0961297 ms
+	id16_ordered_list_table : 0.117023 ms
+	id16_hash_table : 0.0347553 ms
+
+Size - 72
+	string_list_table : 2.23841 ms
+	string_ordered_list_table : 0.713692 ms
+	string_hash_table : 0.3354 ms
+	symbol_list_table : 1.67298 ms
+	symbol_ordered_list_table : 0.701136 ms
+	symbol_hash_table : 0.424699 ms
+	id16_list_table : 0.1788 ms
+	id16_list_table_naive : 0.1788 ms
+	id16_list_table_sse2 : 0.141533 ms
+	id16_list_table_avx : 0.146555 ms
+	id16_ordered_list_table : 0.219281 ms
+	id16_hash_table : 0.0591647 ms
+
+Size - 90
+	string_list_table : 3.42522 ms
+	string_ordered_list_table : 1.118 ms
+	string_hash_table : 0.442378 ms
+	symbol_list_table : 2.55272 ms
+	symbol_ordered_list_table : 0.915594 ms
+	symbol_hash_table : 0.441976 ms
+	id16_list_table : 0.321337 ms
+	id16_list_table_naive : 0.323547 ms
+	id16_list_table_sse2 : 0.202104 ms
+	id16_list_table_avx : 0.18573 ms
+	id16_ordered_list_table : 0.324652 ms
+	id16_hash_table : 0.0738303 ms
+
+Size - 120
+	string_list_table : 5.38719 ms
+	string_ordered_list_table : 1.20941 ms
+	string_hash_table : 0.517514 ms
+	symbol_list_table : 4.16814 ms
+	symbol_ordered_list_table : 1.33266 ms
+	symbol_hash_table : 0.510885 ms
+	id16_list_table : 0.5814 ms
+	id16_list_table_naive : 0.612439 ms
+	id16_list_table_sse2 : 0.346951 ms
+	id16_list_table_avx : 0.378593 ms
+	id16_ordered_list_table : 0.352175 ms
+	id16_hash_table : 0.0821673 ms
+
+Size - 150
+	string_list_table : 6.90357 ms
+	string_ordered_list_table : 1.59423 ms
+	string_hash_table : 0.603097 ms
+	symbol_list_table : 5.0309 ms
+	symbol_ordered_list_table : 1.61874 ms
+	symbol_hash_table : 0.649404 ms
+	id16_list_table : 0.68878 ms
+	id16_list_table_naive : 0.734786 ms
+	id16_list_table_sse2 : 0.363526 ms
+	id16_list_table_avx : 0.408125 ms
+	id16_ordered_list_table : 0.390044 ms
+	id16_hash_table : 0.115818 ms
+
+Size - 200
+	string_list_table : 16.1841 ms
+	string_ordered_list_table : 2.06724 ms
+	string_hash_table : 0.841162 ms
+	symbol_list_table : 9.85316 ms
+	symbol_ordered_list_table : 2.08543 ms
+	symbol_hash_table : 0.825994 ms
+	id16_list_table : 1.35225 ms
+	id16_list_table_naive : 1.48142 ms
+	id16_list_table_sse2 : 0.542526 ms
+	id16_list_table_avx : 0.626301 ms
+	id16_ordered_list_table : 0.558598 ms
+	id16_hash_table : 0.144948 ms
+
+Size - 256
+	string_list_table : 29.0661 ms
+	string_ordered_list_table : 2.65045 ms
+	string_hash_table : 1.00067 ms
+	symbol_list_table : 15.5008 ms
+	symbol_ordered_list_table : 2.66291 ms
+	symbol_hash_table : 0.86547 ms
+	id16_list_table : 2.17252 ms
+	id16_list_table_naive : 2.19682 ms
+	id16_list_table_sse2 : 0.675219 ms
+	id16_list_table_avx : 0.595161 ms
+	id16_ordered_list_table : 0.835838 ms
+	id16_hash_table : 0.151879 ms
+
+Size - 300
+	string_list_table : 34.6105 ms
+	string_ordered_list_table : 2.98314 ms
+	string_hash_table : 1.24808 ms
+	symbol_list_table : 18.6667 ms
+	symbol_ordered_list_table : 3.1973 ms
+	symbol_hash_table : 1.15316 ms
+	id16_list_table : 2.52379 ms
+	id16_list_table_naive : 2.65377 ms
+	id16_list_table_sse2 : 1.04507 ms
+	id16_list_table_avx : 0.847892 ms
+	id16_ordered_list_table : 0.804799 ms
+	id16_hash_table : 0.14525 ms
+
+Size - 350
+	string_list_table : 35.1926 ms
+	string_ordered_list_table : 3.43998 ms
+	string_hash_table : 1.36028 ms
+	symbol_list_table : 20.2436 ms
+	symbol_ordered_list_table : 3.52888 ms
+	symbol_hash_table : 1.31126 ms
+	id16_list_table : 2.71514 ms
+	id16_list_table_naive : 2.81388 ms
+	id16_list_table_sse2 : 1.00972 ms
+	id16_list_table_avx : 0.77818 ms
+	id16_ordered_list_table : 0.864366 ms
+	id16_hash_table : 0.260666 ms
+
+Size - 400
+	string_list_table : 52.0634 ms
+	string_ordered_list_table : 3.6453 ms
+	string_hash_table : 1.57916 ms
+	symbol_list_table : 27.8238 ms
+	symbol_ordered_list_table : 3.89421 ms
+	symbol_hash_table : 1.25401 ms
+	id16_list_table : 3.52737 ms
+	id16_list_table_naive : 4.01174 ms
+	id16_list_table_sse2 : 1.12614 ms
+	id16_list_table_avx : 0.928251 ms
+	id16_ordered_list_table : 0.961299 ms
+	id16_hash_table : 0.303256 ms
+
+Size - 450
+	string_list_table : 51.5595 ms
+	string_ordered_list_table : 3.9131 ms
+	string_hash_table : 1.56701 ms
+	symbol_list_table : 29.0909 ms
+	symbol_ordered_list_table : 4.20812 ms
+	symbol_hash_table : 1.47269 ms
+	id16_list_table : 3.61858 ms
+	id16_list_table_naive : 4.03896 ms
+	id16_list_table_sse2 : 1.1191 ms
+	id16_list_table_avx : 1.09771 ms
+	id16_ordered_list_table : 0.996054 ms
+	id16_hash_table : 0.251525 ms
+
+Size - 512
+	string_list_table : 57.6896 ms
+	string_ordered_list_table : 4.11219 ms
+	string_hash_table : 1.62025 ms
+	symbol_list_table : 33.3433 ms
+	symbol_ordered_list_table : 4.39596 ms
+	symbol_hash_table : 1.42437 ms
+	id16_list_table : 4.00692 ms
+	id16_list_table_naive : 4.64377 ms
+	id16_list_table_sse2 : 1.39373 ms
+	id16_list_table_avx : 1.03774 ms
+	id16_ordered_list_table : 1.10695 ms
+	id16_hash_table : 0.199693 ms
+
+Size - 768
+	string_list_table : 51.3364 ms
+	string_ordered_list_table : 3.63927 ms
+	string_hash_table : 1.31428 ms
+	symbol_list_table : 33.0662 ms
+	symbol_ordered_list_table : 4.16774 ms
+	symbol_hash_table : 1.17526 ms
+	id16_list_table : 3.99034 ms
+	id16_list_table_naive : 4.47391 ms
+	id16_list_table_sse2 : 1.22849 ms
+	id16_list_table_avx : 1.04156 ms
+	id16_ordered_list_table : 0.970239 ms
+	id16_hash_table : 0.137716 ms
+

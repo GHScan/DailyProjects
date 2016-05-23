@@ -1,5 +1,7 @@
 #include "stdafx.h"
 
+// refer to the StringLookup project for better implementation
+
 #undef max
 #define EXPORT_API extern "C" __declspec(dllexport)
 
