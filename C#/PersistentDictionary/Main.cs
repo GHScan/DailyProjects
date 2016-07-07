@@ -241,7 +241,7 @@ namespace CSharp2013
                 for (var i = 0; i < 40000; ++i)
                 {
                     var path = string.Format("{0}/{1}.txt", dir, random.Next(1000));
-                    switch (random.Next(4))
+                    switch (random.Next(3))
                     {
                         case 0:
                             File.WriteAllBytes(path, payload);
@@ -264,7 +264,7 @@ namespace CSharp2013
                     for (var i = 0; i < 40000; ++i)
                     {
                         var key = string.Format("{0}/{1}.txt", dir, random.Next(1000));
-                        switch (random.Next(4))
+                        switch (random.Next(3))
                         {
                             case 0:
                                 if (dict.Contains(key)) dict[key] = payload;
