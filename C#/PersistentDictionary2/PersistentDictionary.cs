@@ -379,8 +379,12 @@ namespace CSharp2013
                         var position = mBinaryReader.BaseStream.Position;
                         var checksum = mBinaryReader.ReadUInt64();
                         var logType = mBinaryReader.ReadByte();
-                        var key = mBinaryReader.ReadBytes(mBinaryReader.ReadInt32());
-                        var value = mBinaryReader.ReadBytes(mBinaryReader.ReadInt32());
+                        var keyLength = mBinaryReader.ReadInt32();
+                        var key = mBinaryReader.ReadBytes(keyLength);
+                        if (key.Length < keyLength) throw new EndOfStreamException();
+                        var valueLength = mBinaryReader.ReadInt32();
+                        var value = mBinaryReader.ReadBytes(valueLength);
+                        if (value.Length < valueLength) throw new EndOfStreamException();
                         if (checksum != Checksum.Calculate(logType, key, value))
                         {
                             throw new WriteAheadLogCorruptionException(
