@@ -15,7 +15,7 @@ namespace CSharp08
             string subject, string content, string attachments)
         {
             string[] receivers = _receivers.Split(';');
-            string sender = "wyyxscan@126.com";
+            string sender = "testuser@126.com";
 
             MailMessage msg = new MailMessage(sender, receivers[0])
             {
@@ -39,7 +39,7 @@ namespace CSharp08
 
             SmtpClient client = new SmtpClient("smtp.126.com", 25)
             {
-                Credentials = new System.Net.NetworkCredential("wyyxscan", "wyyx19870615scan"),
+                Credentials = new System.Net.NetworkCredential("testuser", "123456"),
                 EnableSsl = true,
             };
             client.Send(msg);
@@ -47,7 +47,7 @@ namespace CSharp08
 
         static void Main(string[] args)
         {
-            SendMail("ppscan@qq.com", "c#测试", "这是一行大姐夫卡死的\nfkjsdl \noyes！", @"D:\Downloads\1.txt"); 
+            SendMail("testuser@qq.com", "c#测试", "这是一行大姐夫卡死的\nfkjsdl \noyes！", @"D:\Downloads\1.txt"); 
         }
     }
 }

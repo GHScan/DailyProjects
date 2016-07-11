@@ -71,7 +71,7 @@ def sendMail(serv, user, passwd,
 
 f = file('1', 'w')
 f = None
-sendMail('126.com', 'wyyxscan', 'wyyx19870615scan', ['wyyxscan@126.com'], '[4]测试python',
+sendMail('126.com', 'testuser', 'password', ['testuser@126.com'], '[4]测试python',
 '中国人九不能用python了吗',
 ['/home/scan/桌面/测试图片.gif','/home/scan/桌面/测试图片2.gif'],
 output=f)

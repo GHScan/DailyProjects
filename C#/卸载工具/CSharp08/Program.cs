@@ -136,7 +136,7 @@ namespace CSharp08
         {
             static AppConfig()
             {
-                ConfigImpl = new AppRegistryConfig("Scan_Chen1987", "UninstallerByCS");
+                ConfigImpl = new AppRegistryConfig("Scan", "UninstallerByCS");
             }
             private static AppRegistryConfig ConfigImpl;
 

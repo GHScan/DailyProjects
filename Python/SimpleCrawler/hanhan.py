@@ -67,3 +67,13 @@ def download_chapter(ch_url, ch_dir):
 
     pool = ThreadPool(8)
     pool.map(lambda p:file(p[0], 'wb').write(_download_url(p[1])), pairs)
+
+
+if not os.path.isdir('book'):
+    os.mkdir('book')
+
+for ch in get_chapters(raw_input()):
+    subdir = 'book/' + ch['name']
+    if not os.path.isdir(subdir):
+        os.mkdir(subdir)
+    download_chapter(ch['url'], subdir)

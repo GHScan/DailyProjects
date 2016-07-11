@@ -34,8 +34,8 @@ if os.path.isfile(cookiesFile):
     print 'load cookies...'
 else:
     postData = {
-    'pwuser':'xbscan',
-    'pwpwd':'xb19870615scan',
+    'pwuser':'testuser',
+    'pwpwd':'password',
     'lgt':'0',
     'hideid':'0',
     'cktime':'31536000',
