@@ -17,8 +17,8 @@ constexpr uint32_t kSeed_PrimalityTester = 5489U;
 constexpr uint32_t kSeed_PerfectHashBuilder = kSeed_PrimalityTester + 1;
 constexpr uint32_t kSeed_Test = kSeed_PrimalityTester + 2;
 constexpr uint32_t kSeed_Benchmark = kSeed_PrimalityTester + 3;
-constexpr uint32_t kMultiplierSearchDepth = 32;
-using TKey = int;
+constexpr uint32_t kRandomStringLength = 32;
+constexpr uint32_t kMultiplierSearchDepth = 64;
 
 
 template <typename TFunc>
@@ -54,6 +54,32 @@ private:
     default_random_engine mEngine;
     uniform_int_distribution<T> mDistribution;
 };
+template<>
+class Random<string>
+{
+public:
+
+    Random(uint32_t seed) :
+        mEngine(seed)
+    {
+    }
+
+    string operator () ()
+    {
+        string s;
+        for (uint32_t i = 0, length = mDistribution(mEngine) % kRandomStringLength;
+            i < length;
+            ++i) 
+        {
+            s.push_back('a' + mDistribution(mEngine) % 26);
+        }
+        return s;
+    }
+
+private:
+    default_random_engine mEngine;
+    uniform_int_distribution<uint32_t> mDistribution;
+};
 
 
 namespace HashFunctions
@@ -66,6 +92,17 @@ namespace HashFunctions
         return hashCode;
     }
 
+    template<typename T>
+    inline uint64_t Djb2(T v, typename enable_if<is_pod<T>::value>::type* = nullptr)
+    {
+        return Djb2(reinterpret_cast<uint8_t const*>(&v), sizeof(v));
+    }
+
+    inline uint64_t Djb2(string const &v)
+    {
+        return Djb2(reinterpret_cast<uint8_t const*>(v.c_str()), v.size());
+    }
+
     inline uint64_t Fnv(uint8_t const *bytes, size_t length)
     {
         auto fnvBasis = 14695981039346656037ULL;
@@ -74,6 +111,17 @@ namespace HashFunctions
         for (size_t i = 0; i < length; ++i)
             hashCode = (hashCode ^ bytes[i]) * fnvPrime;
         return hashCode;
+    }
+
+    template<typename T>
+    inline uint64_t Fnv(T v, typename enable_if<is_pod<T>::value>::type* = nullptr)
+    {
+        return Fnv(reinterpret_cast<uint8_t const*>(&v), sizeof(v));
+    }
+
+    inline uint64_t Fnv(string const &v)
+    {
+        return Fnv(reinterpret_cast<uint8_t const*>(v.c_str()), v.size());
     }
 }
 
@@ -150,14 +198,16 @@ namespace PerfectHashUtils
         return v;
     }
 
+    template<typename TKey>
     inline uint64_t ComputeHashCode1(TKey const &key)
     {
-        return HashFunctions::Djb2(reinterpret_cast<uint8_t const *>(&key), sizeof(key));
+        return HashFunctions::Djb2(key);
     }
 
+    template<typename TKey>
     inline uint64_t ComputeHashCode2(TKey const &key)
     {
-        return HashFunctions::Fnv(reinterpret_cast<uint8_t const *>(&key), sizeof(key));
+        return HashFunctions::Fnv(key);
     }
 
     inline size_t ComputeBucketId(uint64_t hashCode1, size_t bucketCount)
@@ -172,6 +222,7 @@ namespace PerfectHashUtils
 }
 
 
+template<typename TKey>
 class PerfectHashFunction final
 {
 public:
@@ -203,9 +254,9 @@ public:
     size_t GetBucketCount() const { return mBucketId2MultiplierIdMap.size(); }
     size_t GetMultiplierCount() const { return mMultipliers.size(); }
 
-    void Save(char const *fileName) const
+    void Save(char const *filePath) const
     {
-        ofstream fo(fileName, ios::binary);
+        ofstream fo(filePath, ios::binary);
 
         fo.write(reinterpret_cast<char const*>(&mSlotCount), sizeof(mSlotCount));
 
@@ -224,9 +275,9 @@ public:
             mMultipliers.size() * sizeof(mMultipliers[0]));
     }
 
-    void Load(char const *fileName)
+    void Load(char const *filePath)
     {
-        ifstream fi(fileName, ios::binary);
+        ifstream fi(filePath, ios::binary);
 
         fi.read(reinterpret_cast<char *>(&mSlotCount), sizeof(mSlotCount));
 
@@ -254,10 +305,122 @@ private:
     vector<pair<uint32_t, uint32_t>> mMultipliers;
 };
 
-class PerfectHashFunctionBuilder final
+class PerfectHashCodeGenerator final
 {
 public:
-    PerfectHashFunctionBuilder(
+    PerfectHashCodeGenerator(
+        size_t slotCount,
+        vector<uint8_t> buckets,
+        vector<pair<uint32_t, uint32_t>> multipliers) :
+        mSlotCount(slotCount), mBucketId2MultiplierIdMap(move(buckets)), mMultipliers(move(multipliers))
+    {
+    }
+
+    void Generate(char const *sourceFilePath, char const *functionName, char const *keyType) const
+    {
+        ofstream fo(sourceFilePath);
+
+        GenerateIncludes(fo);
+        GenerateHashFunctions(fo);
+        GenerateFunction(fo, functionName, keyType);
+        GenerateSlotCountVariable(fo, functionName);
+    }
+
+private:
+    static void GenerateIncludes(ofstream &fo)
+    {
+        fo <<
+            "#include <cstdint>\n"
+            "#include <string>\n"
+            "using namespace std;\n"
+            "\n";
+    }
+
+    static void GenerateHashFunctions(ofstream &fo)
+    {
+        fo <<
+            "static inline uint64_t Djb2(uint8_t const *bytes, size_t length)\n"
+            "{\n"
+            "    uint64_t hashCode = 5381;\n"
+            "    for (size_t i = 0; i < length; ++i)\n"
+            "        hashCode = ((hashCode << 5) + hashCode) + bytes[i];\n"
+            "    return hashCode;\n"
+            "}\n"
+            "\n"
+            "template<typename TKey>\n"
+            "static inline uint64_t Djb2(TKey v, typename enable_if<is_pod<TKey>::value>::type* = nullptr)\n"
+            "{\n"
+            "    return Djb2(reinterpret_cast<uint8_t const*>(&v), sizeof(v));\n"
+            "}\n"
+            "\n"
+            "static inline uint64_t Djb2(string const &v)\n"
+            "{\n"
+            "    return Djb2(reinterpret_cast<uint8_t const*>(v.c_str()), v.size());\n"
+            "}\n"
+            "\n"
+            "static inline uint64_t Fnv(uint8_t const *bytes, size_t length)\n"
+            "{\n"
+            "    auto fnvBasis = 14695981039346656037ULL;\n"
+            "    auto fnvPrime = 1099511628211ULL;\n"
+            "    auto hashCode = fnvBasis;\n"
+            "    for (size_t i = 0; i < length; ++i)\n"
+            "        hashCode = (hashCode ^ bytes[i]) * fnvPrime;\n"
+            "    return hashCode;\n"
+            "}\n"
+            "\n"
+            "template<typename TKey>\n"
+            "static inline uint64_t Fnv(TKey v, typename enable_if<is_pod<TKey>::value>::type* = nullptr)\n"
+            "{\n"
+            "    return Fnv(reinterpret_cast<uint8_t const*>(&v), sizeof(v));\n"
+            "}\n"
+            "\n"
+            "static inline uint64_t Fnv(string const &v)\n"
+            "{\n"
+            "    return Fnv(reinterpret_cast<uint8_t const*>(v.c_str()), v.size());\n"
+            "}\n"
+            "\n";
+    }
+
+    void GenerateFunction(ofstream &fo, char const *functionName, char const *keyType) const
+    {
+        fo <<
+            "size_t " << functionName << "(" << keyType << " key)\n"
+            "{\n"
+            "     auto h1 = Djb2(key);\n"
+            "     auto h2 = Fnv(key);\n"
+            "     switch (h1 % " << mBucketId2MultiplierIdMap.size() << ")\n"
+            "     {\n";
+
+        for (size_t i = 0; i < mBucketId2MultiplierIdMap.size(); ++i)
+        {
+            auto &multiplier = mMultipliers[mBucketId2MultiplierIdMap[i]];
+            fo
+                << "        case " << i << ":" 
+                << "return (h1 + h2 *" << multiplier.first << " + " << multiplier.second << ") % " << mSlotCount << ";\n";
+        }
+
+        fo <<
+            "     }\n"
+            "   return 0;\n"
+            "}\n";
+    }
+
+    void GenerateSlotCountVariable(ofstream &fo, char const *functionName) const
+    {
+        fo << "size_t " << functionName << "_slotCount = " << mSlotCount << ";";
+    }
+
+private:
+    size_t mSlotCount;
+    vector<uint8_t> mBucketId2MultiplierIdMap;
+    vector<pair<uint32_t, uint32_t>> mMultipliers;
+};
+
+template<typename TKey>
+class PerfectHashBuilder final
+{
+public:
+    PerfectHashBuilder(
         double loadFactor, uint8_t associativity, uint32_t seed) :
         mLoadFactor(loadFactor), mAssociativity(associativity), mRandom(seed)
     {
@@ -278,12 +441,12 @@ public:
 
     size_t GetKeyCount() const { return mKeys.size(); }
 
-    PerfectHashFunction CreateFunction()
+    PerfectHashFunction<TKey> CreateFunction()
     {
         using namespace PerfectHashUtils;
 
-        size_t slotCount = NextPrime(static_cast<size_t>(ceil(mKeys.size() / mLoadFactor)));
-        size_t bucketCount = NextPrime(static_cast<size_t>(ceil(double(slotCount) / mAssociativity)));
+        auto slotCount = NextPrime(static_cast<size_t>(ceil(mKeys.size() / mLoadFactor)));
+        auto bucketCount = NextPrime(static_cast<size_t>(ceil(double(slotCount) / mAssociativity)));
         if (slotCount == 0 || bucketCount == 0)
             throw invalid_argument("slot count/bucket count should not be 0");
 
@@ -293,7 +456,25 @@ public:
         vector<pair<uint32_t, uint32_t>> multipliers;
         GenerateMultipliers(slotCount, bucketId2MultiplierIdMap, multipliers);
 
-        return PerfectHashFunction(slotCount, move(bucketId2MultiplierIdMap), move(multipliers));
+        return PerfectHashFunction<TKey>(slotCount, move(bucketId2MultiplierIdMap), move(multipliers));
+    }
+
+    PerfectHashCodeGenerator CreateCodeGenerator()
+    {
+        using namespace PerfectHashUtils;
+
+        auto slotCount = NextPrime(static_cast<size_t>(ceil(mKeys.size() / mLoadFactor)));
+        auto bucketCount = NextPrime(static_cast<size_t>(ceil(double(slotCount) / mAssociativity)));
+        if (slotCount == 0 || bucketCount == 0)
+            throw invalid_argument("slot count/bucket count should not be 0");
+
+        GroupKeysIntoOrderedBuckets(bucketCount);
+
+        vector<uint8_t> bucketId2MultiplierIdMap(bucketCount);
+        vector<pair<uint32_t, uint32_t>> multipliers;
+        GenerateMultipliers(slotCount, bucketId2MultiplierIdMap, multipliers);
+
+        return PerfectHashCodeGenerator(slotCount, move(bucketId2MultiplierIdMap), move(multipliers));
     }
 
 private:
@@ -352,7 +533,7 @@ private:
         vector<pair<uint32_t, uint32_t>> &multipliers,
         vector<bool> &slotOccupies,
         size_t slotCount,
-        vector<TKey>::const_iterator keyBegin, vector<TKey>::const_iterator keyEnd,
+        typename vector<TKey>::const_iterator keyBegin, typename vector<TKey>::const_iterator keyEnd,
         Random<uint32_t> &random,
         vector<size_t> &tempSlotIds)
     {
@@ -397,7 +578,7 @@ private:
         uint32_t alpha, uint32_t beta,
         vector<bool> &slotOccupies,
         size_t slotCount,
-        vector<TKey>::const_iterator keyBegin, vector<TKey>::const_iterator keyEnd,
+        typename vector<TKey>::const_iterator keyBegin, typename vector<TKey>::const_iterator keyEnd,
         vector<size_t> &tempSlotIds)
     {
         using namespace PerfectHashUtils;
@@ -431,19 +612,20 @@ private:
 };
 
 
-static void GenerateUniqueRandoms(
-    vector<TKey> &keys, Random<TKey> &random)
+template<typename TKey>
+static void GenerateUniqueRandoms(vector<TKey> &keys, Random<TKey> &random)
 {
     generate(keys.begin(), keys.end(), random);
     sort(keys.begin(), keys.end());
     keys.erase(unique(keys.begin(), keys.end()), keys.end());
 }
 
+template<typename TKey>
 static void Test()
 {
     Random<TKey> random(kSeed_Test);
 
-    PerfectHashFunctionBuilder builder(0.5, 8, kSeed_PerfectHashBuilder);
+    PerfectHashBuilder<TKey> builder(0.5, 8, kSeed_PerfectHashBuilder);
 
     for (auto len = 1; len < 300; ++len)
     {
@@ -467,11 +649,24 @@ static void Test()
     }
 }
 
+static void Test_CodeGen() 
+{
+    string cTokens[] = { "auto", "break", "case", "char", "const", "continue", "default", "do", "double", "else", "enum", "extern", "float", "for", "goto", "if", "inline", "int", "long", "register", "restrict", "return", "short", "signed", "sizeof", "static", "struct", "switch", "typedef", "union", "unsigned", "void", "volatile", "while", "_Alignas", "_Alignof", "_Atomic", "_Bool", "_Complex", "_Generic", "_Imaginary", "_Noreturn", "_Static_assert", "_Thread_local", "__func__", "...", ">>=", "<<=", "+=", "-=", "*=", "/=", "%=", "&=", "^=", "|=", ">>", "<<", "++", "--", "->", "&&", "||", "<=", ">=", "==", "!=", ";", "{", "}", ",", ":", "=", "(", ")", "[", "]", ".", "&", "!", "~", "-", "+", "*", "/", "%", "<", ">", "^", "|", "?"};
+    
+    PerfectHashBuilder<string> builder(1, 4, kSeed_PerfectHashBuilder);
+    for (auto &token : cTokens)
+        builder.AddKey(token);
+
+    auto generator = builder.CreateCodeGenerator();
+    generator.Generate("hashToken.cpp", "HashToken", "string");
+}
+
+template<typename TKey>
 static void Benchmark(size_t lengthScale)
 {
     Random<TKey> random(kSeed_Benchmark);
 
-    PerfectHashFunctionBuilder builder(0.5, 8, kSeed_PerfectHashBuilder);
+    PerfectHashBuilder<TKey> builder(0.5, 8, kSeed_PerfectHashBuilder);
 
     for (auto rawLength : { 1, 4, 8, 16 })
     {
@@ -495,12 +690,15 @@ static void Benchmark(size_t lengthScale)
 
 int main()
 {
-    Test();
+    Test<int>();
+    Test<string>();
+    Test_CodeGen();
 
 #ifdef NDEBUG
-    Benchmark(1000 * 1000);
+    Benchmark<int>(1000 * 1000);
+    Benchmark<string>(1000 * 1000);
 #else
-    Benchmark(1000);
+    Benchmark<int>(1000);
+    Benchmark<string>(1000);
 #endif
-
 }
