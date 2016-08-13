@@ -241,13 +241,15 @@ public:
 
     size_t operator () (TKey const &key) const
     {
+        using namespace PerfectHashUtils;
+
         if (mSlotCount == 0) throw runtime_error("hasn't been initialized");
 
-        auto hashCode1 = PerfectHashUtils::ComputeHashCode1(key);
-        auto hashCode2 = PerfectHashUtils::ComputeHashCode2(key);
-        auto multiplierId = mBucketId2MultiplierIdMap[PerfectHashUtils::ComputeBucketId(hashCode1, GetBucketCount())];
+        auto hashCode1 = ComputeHashCode1(key);
+        auto hashCode2 = ComputeHashCode2(key);
+        auto multiplierId = mBucketId2MultiplierIdMap[ComputeBucketId(hashCode1, GetBucketCount())];
         auto &multiplier = mMultipliers[multiplierId];
-        return PerfectHashUtils::ComputeSlotId(hashCode1, hashCode2, multiplier.first, multiplier.second, GetSlotCount());
+        return ComputeSlotId(hashCode1, hashCode2, multiplier.first, multiplier.second, GetSlotCount());
     }
 
     size_t GetSlotCount() const { return mSlotCount; }
