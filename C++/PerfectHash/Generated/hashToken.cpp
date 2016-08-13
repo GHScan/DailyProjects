@@ -42,7 +42,7 @@ static inline uint64_t Fnv(string const &v)
     return Fnv(reinterpret_cast<uint8_t const*>(v.c_str()), v.size());
 }
 
-size_t HashToken(string key)
+size_t HashToken(string const &key)
 {
      auto h1 = Djb2(key);
      auto h2 = Fnv(key);

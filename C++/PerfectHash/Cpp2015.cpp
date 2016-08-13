@@ -384,7 +384,7 @@ private:
     void GenerateFunction(ofstream &fo, char const *functionName, char const *keyType) const
     {
         fo <<
-            "size_t " << functionName << "(" << keyType << " key)\n"
+            "size_t " << functionName << "(" << keyType << " const &key)\n"
             "{\n"
             "     auto h1 = Djb2(key);\n"
             "     auto h2 = Fnv(key);\n"
