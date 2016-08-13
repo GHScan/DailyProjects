@@ -23,11 +23,11 @@ using TKey = int;
 
 template <typename TFunc>
 static double TimeIt(int times, TFunc func) {
-    if (times > 1) 
+    if (times > 1)
         func();
 
     auto start = chrono::high_resolution_clock::now();
-    for (auto i = 0; i < times; ++i) 
+    for (auto i = 0; i < times; ++i)
         func();
     auto end = chrono::high_resolution_clock::now();
 
@@ -40,12 +40,12 @@ class Random
 {
 public:
 
-    Random(uint32_t seed):
+    Random(uint32_t seed) :
         mEngine(seed)
     {
     }
 
-    T operator () () 
+    T operator () ()
     {
         return mDistribution(mEngine);
     }
@@ -81,7 +81,7 @@ namespace HashFunctions
 class MillerRabinPrimalityTester final
 {
 public:
-    MillerRabinPrimalityTester(uint32_t seed = kSeed_PrimalityTester, int iteration = 5): 
+    MillerRabinPrimalityTester(uint32_t seed, int iteration = 5) :
         mRandom(seed), mIteration(iteration)
     {
     }
@@ -142,7 +142,7 @@ private:
 
 namespace PerfectHashUtils
 {
-    static MillerRabinPrimalityTester gPrimalityTester;
+    static MillerRabinPrimalityTester gPrimalityTester(kSeed_PrimalityTester);
 
     inline size_t NextPrime(size_t v)
     {
@@ -178,13 +178,13 @@ public:
     PerfectHashFunction(
         size_t slotCount,
         vector<uint8_t> buckets,
-        vector<pair<uint32_t, uint32_t>> multipliers): 
+        vector<pair<uint32_t, uint32_t>> multipliers) :
         mSlotCount(slotCount), mBucketId2MultiplierIdMap(move(buckets)), mMultipliers(move(multipliers))
     {
     }
 
     PerfectHashFunction()
-        : mSlotCount(0) 
+        : mSlotCount(0)
     {
     }
 
@@ -214,7 +214,7 @@ public:
         size = mBucketId2MultiplierIdMap.size();
         fo.write(reinterpret_cast<char const*>(&size), sizeof(size));
         fo.write(
-            reinterpret_cast<char const*>(&mBucketId2MultiplierIdMap[0]), 
+            reinterpret_cast<char const*>(&mBucketId2MultiplierIdMap[0]),
             mBucketId2MultiplierIdMap.size() * sizeof(mBucketId2MultiplierIdMap[0]));
 
         size = mMultipliers.size();
@@ -224,7 +224,7 @@ public:
             mMultipliers.size() * sizeof(mMultipliers[0]));
     }
 
-    void Load(char const *fileName) 
+    void Load(char const *fileName)
     {
         ifstream fi(fileName, ios::binary);
 
@@ -258,8 +258,7 @@ class PerfectHashFunctionBuilder final
 {
 public:
     PerfectHashFunctionBuilder(
-        double loadFactor, uint8_t associativity, 
-        uint32_t seed = kSeed_PerfectHashBuilder): 
+        double loadFactor, uint8_t associativity, uint32_t seed) :
         mLoadFactor(loadFactor), mAssociativity(associativity), mRandom(seed)
     {
     }
@@ -303,7 +302,7 @@ private:
         using namespace PerfectHashUtils;
 
         vector<uint8_t> bucketId2SlotCountMap(bucketCount);
-        for (auto &key : mKeys) 
+        for (auto &key : mKeys)
         {
             auto hashCode1 = ComputeHashCode1(key);
             auto bucketId = ComputeBucketId(hashCode1, bucketCount);
@@ -330,7 +329,7 @@ private:
         vector<bool> slotOccupies(slotCount);
         vector<size_t> tempSlotIds;
 
-        for (auto it = mKeys.begin(); it != mKeys.end();) 
+        for (auto it = mKeys.begin(); it != mKeys.end();)
         {
             auto bucketId = ComputeBucketId(ComputeHashCode1(*it), bucketId2MultiplierIdMap.size());
             auto end = it + 1;
@@ -338,8 +337,8 @@ private:
                 ++end;
 
             auto multiplierId = AllocateMultiplierForBucket(
-                multipliers, slotOccupies, slotCount, 
-                it, end, 
+                multipliers, slotOccupies, slotCount,
+                it, end,
                 mRandom,
                 tempSlotIds);
 
@@ -360,12 +359,12 @@ private:
         for (size_t i = 0, count = multipliers.size() + kMultiplierSearchDepth; i < count; ++i)
         {
             uint32_t alpha, beta;
-            if (i < multipliers.size()) 
+            if (i < multipliers.size())
             {
                 alpha = multipliers[i].first;
                 beta = multipliers[i].second;
             }
-            else 
+            else
             {
                 alpha = random();
                 beta = random();
@@ -373,11 +372,11 @@ private:
                     continue;
             }
 
-            if (ValidateMultiplier(alpha, beta, slotOccupies, slotCount, keyBegin, keyEnd, tempSlotIds)) 
+            if (ValidateMultiplier(alpha, beta, slotOccupies, slotCount, keyBegin, keyEnd, tempSlotIds))
             {
                 tempSlotIds.clear();
 
-                if (i >= multipliers.size()) 
+                if (i >= multipliers.size())
                 {
                     i = multipliers.size();
                     multipliers.push_back(make_pair(alpha, beta));
@@ -408,8 +407,8 @@ private:
             auto hashCode1 = ComputeHashCode1(*it);
             auto hashCode2 = ComputeHashCode2(*it);
             auto slotId = ComputeSlotId(hashCode1, hashCode2, alpha, beta, slotCount);
-            
-            if (slotOccupies[slotId]) 
+
+            if (slotOccupies[slotId])
             {
                 for (auto id : tempSlotIds)
                     slotOccupies[id] = false;
@@ -440,13 +439,13 @@ static void GenerateUniqueRandoms(
     keys.erase(unique(keys.begin(), keys.end()), keys.end());
 }
 
-static void Test() 
+static void Test()
 {
     Random<TKey> random(kSeed_Test);
 
-    PerfectHashFunctionBuilder builder(0.5, 8);
+    PerfectHashFunctionBuilder builder(0.5, 8, kSeed_PerfectHashBuilder);
 
-    for (auto len = 1; len < 300; ++len) 
+    for (auto len = 1; len < 300; ++len)
     {
         vector<TKey> keys(len);
         GenerateUniqueRandoms(keys, random);
@@ -468,13 +467,13 @@ static void Test()
     }
 }
 
-static void Benchmark(size_t lengthScale) 
+static void Benchmark(size_t lengthScale)
 {
     Random<TKey> random(kSeed_Benchmark);
 
-    PerfectHashFunctionBuilder builder(0.5, 8);
+    PerfectHashFunctionBuilder builder(0.5, 8, kSeed_PerfectHashBuilder);
 
-    for (auto rawLength : {1, 4, 8, 16})
+    for (auto rawLength : { 1, 4, 8, 16 })
     {
         auto length = rawLength * lengthScale;
 
@@ -503,5 +502,5 @@ int main()
 #else
     Benchmark(1000);
 #endif
-    
+
 }
