@@ -69,7 +69,7 @@ public:
         string s;
         for (uint32_t i = 0, length = mDistribution(mEngine) % kRandomStringLength;
             i < length;
-            ++i) 
+            ++i)
         {
             s.push_back('a' + mDistribution(mEngine) % 26);
         }
@@ -397,7 +397,7 @@ private:
         {
             auto &multiplier = mMultipliers[mBucketId2MultiplierIdMap[i]];
             fo
-                << "        case " << i << ":" 
+                << "        case " << i << ":"
                 << "return (h1 + h2 *" << multiplier.first << " + " << multiplier.second << ") % " << mSlotCount << ";\n";
         }
 
@@ -551,8 +551,6 @@ private:
             {
                 alpha = random();
                 beta = random();
-                if (find(multipliers.begin(), multipliers.end(), make_pair(alpha, beta)) != multipliers.end())
-                    continue;
             }
 
             if (ValidateMultiplier(alpha, beta, slotOccupies, slotCount, keyBegin, keyEnd, tempSlotIds))
@@ -651,10 +649,10 @@ static void Test()
     }
 }
 
-static void Test_CodeGen() 
+static void Test_CodeGen()
 {
-    string cTokens[] = { "auto", "break", "case", "char", "const", "continue", "default", "do", "double", "else", "enum", "extern", "float", "for", "goto", "if", "inline", "int", "long", "register", "restrict", "return", "short", "signed", "sizeof", "static", "struct", "switch", "typedef", "union", "unsigned", "void", "volatile", "while", "_Alignas", "_Alignof", "_Atomic", "_Bool", "_Complex", "_Generic", "_Imaginary", "_Noreturn", "_Static_assert", "_Thread_local", "__func__", "...", ">>=", "<<=", "+=", "-=", "*=", "/=", "%=", "&=", "^=", "|=", ">>", "<<", "++", "--", "->", "&&", "||", "<=", ">=", "==", "!=", ";", "{", "}", ",", ":", "=", "(", ")", "[", "]", ".", "&", "!", "~", "-", "+", "*", "/", "%", "<", ">", "^", "|", "?"};
-    
+    string cTokens[] = { "auto", "break", "case", "char", "const", "continue", "default", "do", "double", "else", "enum", "extern", "float", "for", "goto", "if", "inline", "int", "long", "register", "restrict", "return", "short", "signed", "sizeof", "static", "struct", "switch", "typedef", "union", "unsigned", "void", "volatile", "while", "_Alignas", "_Alignof", "_Atomic", "_Bool", "_Complex", "_Generic", "_Imaginary", "_Noreturn", "_Static_assert", "_Thread_local", "__func__", "...", ">>=", "<<=", "+=", "-=", "*=", "/=", "%=", "&=", "^=", "|=", ">>", "<<", "++", "--", "->", "&&", "||", "<=", ">=", "==", "!=", ";", "{", "}", ",", ":", "=", "(", ")", "[", "]", ".", "&", "!", "~", "-", "+", "*", "/", "%", "<", ">", "^", "|", "?" };
+
     PerfectHashBuilder<string> builder(1, 4, kSeed_PerfectHashBuilder);
     for (auto &token : cTokens)
         builder.AddKey(token);
