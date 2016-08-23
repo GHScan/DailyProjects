@@ -35,7 +35,7 @@ int main() {
     });
 
 
-    // problem: counting the occurrence of each character for a length unpredictable string
+    // problem: counting the occurrence of each character in a length unpredictable string
 
 
     vector<uint32_t> result;
@@ -73,24 +73,51 @@ int main() {
 
     TimeIt("parallel counting", 3, [&str, &result]() {
 
-        uint32_t counts[8][128] = { 0 };
+        uint32_t pcounts[8][128] = { 0 };
 
         for (auto *p = str.c_str(); *p; p += 8) {
-            ++counts[0][p[0]];
-            ++counts[1][p[1]];
-            ++counts[2][p[2]];
-            ++counts[3][p[3]];
-            ++counts[4][p[4]];
-            ++counts[5][p[5]];
-            ++counts[6][p[6]];
-            ++counts[7][p[7]];
+            ++pcounts[0][p[0]];
+            ++pcounts[1][p[1]];
+            ++pcounts[2][p[2]];
+            ++pcounts[3][p[3]];
+            ++pcounts[4][p[4]];
+            ++pcounts[5][p[5]];
+            ++pcounts[6][p[6]];
+            ++pcounts[7][p[7]];
         }
 
         for (auto c = 'a'; c <= 'z'; ++c) {
             uint32_t sum = 0;
-            for (auto &counts2 : counts)
-                sum += counts2[c];
+            for (auto &counts : pcounts)
+                sum += counts[c];
             if (result[c] != sum)
+                throw logic_error("");
+        }
+    });
+
+    TimeIt("16bit counting", 3, [&str, &result]() {
+
+        uint32_t b16Counts[65536] = { 0 };
+
+        for (auto *p = reinterpret_cast<uint16_t const*>(str.c_str()); *p; p += 8) {
+            ++b16Counts[p[0]];
+            ++b16Counts[p[1]];
+            ++b16Counts[p[2]];
+            ++b16Counts[p[3]];
+            ++b16Counts[p[4]];
+            ++b16Counts[p[5]];
+            ++b16Counts[p[6]];
+            ++b16Counts[p[7]];
+        }
+
+        uint32_t counts[128] = { 0 };
+        for (auto i = 0; i < 65536; ++i) {
+            counts[i & 0xff] += b16Counts[i];
+            counts[i >> 8] += b16Counts[i];
+        }
+
+        for (auto c = 'a'; c <= 'z'; ++c) {
+            if (result[c] != counts[c])
                 throw logic_error("");
         }
     });
