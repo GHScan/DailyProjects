@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Collections.Generic;
 
-namespace IDHashStore.Managed.Utils
+namespace Tool
 {
     public static class TextFile
     {
