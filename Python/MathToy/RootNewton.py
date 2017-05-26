@@ -1,7 +1,5 @@
 #vim:fileencoding=utf-8
 
-import math
-
 def root_newton(f, x0, n=10, dx=0.0001):
     for _ in range(n):
         y0 = f(x0)
@@ -9,14 +7,16 @@ def root_newton(f, x0, n=10, dx=0.0001):
         x0 = x0 - y0 / t
     return x0
 
-def reverse_func(f):
+def inverse_func(f):
     return lambda x: root_newton(lambda y: f(y)-x, x)
 
 def main():
-    my_sqrt = reverse_func(lambda x:x*x)
-    my_cuberoot = reverse_func(lambda x:x*x*x)
-    my_arcsin = reverse_func(math.sin)
-    my_arctan = reverse_func(math.tan)
+    import math
+
+    my_sqrt = inverse_func(lambda x:x*x)
+    my_cuberoot = inverse_func(lambda x:x*x*x)
+    my_arcsin = inverse_func(math.sin)
+    my_arctan = inverse_func(math.tan)
     
 
     print('# n, sqrt(n), cuberoot(n)')
