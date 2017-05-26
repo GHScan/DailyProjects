@@ -2,24 +2,23 @@
 
 import math
 
-def root_newton(f, x0, n=10):
-    dx = 0.0001
+def root_newton(f, x0, n=10, dx=0.0001):
     for _ in range(n):
         y0 = f(x0)
         t = (f(x0 + dx) - y0) / dx
         x0 = x0 - y0 / t
     return x0
 
-def my_sqrt(v):
-    return root_newton(lambda x:x*x-v, v)
-def my_cuberoot(v):
-    return root_newton(lambda x:x*x*x-v, v)
-def my_arcsin(v):
-    return root_newton(lambda x:math.sin(x)-v, 0)
-def my_arctan(v):
-    return root_newton(lambda x:math.tan(x)-v, 0)
+def reverse_func(f):
+    return lambda x: root_newton(lambda y: f(y)-x, x)
 
 def main():
+    my_sqrt = reverse_func(lambda x:x*x)
+    my_cuberoot = reverse_func(lambda x:x*x*x)
+    my_arcsin = reverse_func(math.sin)
+    my_arctan = reverse_func(math.tan)
+    
+
     print('# n, sqrt(n), cuberoot(n)')
     for i in range(1, 10):
         print('\t', i, my_sqrt(i), my_cuberoot(i))
