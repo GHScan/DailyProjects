@@ -17,9 +17,7 @@ class TaylorTable(object):
         self.table = []
         x = x1
         for _ in range(n + 1):
-            y = f(x)
-            y1 = f1(x)
-            y2 = f2(x)
+            y, y1, y2 = f(x), f1(x), f2(x)
             self.table.append(y2 / 2)
             self.table.append(y1 - x * y2)
             self.table.append(y - x * y1 + y2 * x * x / 2)
@@ -34,10 +32,9 @@ class TaylorTable(object):
 def main():
     my_sin = TaylorTable(math.sin, 0, math.pi/2, 90)
 
-    for i in range(17):
-        x = math.pi * i / 34 + 0.00001
-        y1 = math.sin(x)
-        y2 = my_sin(x)
+    for i in range(37):
+        x = math.pi * i / 74 + 0.00001
+        y1, y2 = math.sin(x), my_sin(x)
         print('%.6f%%' % (100 * abs(y2 - y1) / y1))
 
 
