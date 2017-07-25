@@ -22,23 +22,26 @@ static float Divide(float n, float d) {
     uint32_t constexpr s_e_mask = s_mask | e_mask;
     uint32_t constexpr e_minus1 = 126 << 23;
 
-
-    uint32_t s_d = UnsafeCast<uint32_t>(d) & s_mask;
-    uint32_t e_d = UnsafeCast<uint32_t>(d) & e_mask;
-    uint32_t e_n = UnsafeCast<uint32_t>(n) & e_mask;
+    
+    uint32_t u_d = UnsafeCast<uint32_t>(d);
+    uint32_t u_n = UnsafeCast<uint32_t>(n);
+    uint32_t s_d = u_d & s_mask;
+    uint32_t e_d = u_d & e_mask;
+    uint32_t e_n = u_n & e_mask;
     uint32_t e_shift = e_minus1 - e_d;
     uint32_t e_n2 = e_n + e_shift;
 
-    auto d2 = UnsafeCast<float>((UnsafeCast<uint32_t>(d) & ~s_e_mask) | e_minus1);
-    float n2;
+
+    uint32_t u_n2;
     if (e_n2 & s_mask) {
-        if (e_shift & s_mask)   // underflow
-            n2 = UnsafeCast<float>((UnsafeCast<uint32_t>(n) & s_mask) ^ s_d);
-        else                    // overflow
-            n2 = UnsafeCast<float>((UnsafeCast<uint32_t>(n) & s_mask | e_mask) ^ s_d);
+        u_n2 = e_shift & s_mask
+            ? u_n & s_mask ^ s_d                // underflow
+            : (u_n & s_mask | e_mask) ^ s_d;    // overflow
     } else {
-        n2 = UnsafeCast<float>(((UnsafeCast<uint32_t>(n) & ~e_mask) | e_n2) ^ s_d);
+        u_n2 = (u_n & ~e_mask | e_n2) ^ s_d;
     }
+    auto n2 = UnsafeCast<float>(u_n2);
+    auto d2 = UnsafeCast<float>(u_d & ~s_e_mask | e_minus1);
 
 
     uint32_t constexpr precision = 23;
