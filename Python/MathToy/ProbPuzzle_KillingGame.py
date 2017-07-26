@@ -5,6 +5,11 @@
 # 杀死需要的次数的期望值最大。
 # 成为最后一个被杀死的概率最大。
 
+def plot(data):
+    import matplotlib.pyplot as plt
+    plt.plot(data)
+    plt.show()
+
 def calc_survival_prob(particpants, survivals):
     a = [1] * survivals
 
@@ -24,7 +29,7 @@ def calc_survival_prob(particpants, survivals):
 
         a = a2
 
-    open('prob.txt', 'w').write('\n'.join(str(v) for v in a))
+    plot(a)
 
 def calc_survival_turn_expect(particpants, survivals):
     a = [1] * survivals
@@ -46,7 +51,7 @@ def calc_survival_turn_expect(particpants, survivals):
     
         a = a2
 
-    open('expect.txt', 'w').write('\n'.join(str(v) for v in a))
+    plot(a)
 
 calc_survival_prob(600, 1)
-calc_survival_turn_expect(600, 1)
+#calc_survival_turn_expect(600, 1)
