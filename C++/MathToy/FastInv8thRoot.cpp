@@ -51,13 +51,13 @@ static float FastInv8thRoot(float y) {
 
 /*
 
-                    error(%)	    default(s)	    /fp:fast	/arch:avx2	    /fp:fast/arch:avx2
-dummy		                        0.00463	        0.00493	    0.00472	        0.00477
-sqrt * 4		                    0.43175	        0.25407	    0.35568	        0.14386
-power		                        0.17621	        0.17582	    0.17635	        0.17552
-fastinv8throot	    0.03~5	        0.03257	        0.03275	    0.03109	        0.02796
-fastinv8throot+1	0.00005~0.01	0.09523	        0.06561	    0.09228	        0.05649
-fastinv8throot+2	0~0.000012	    0.17713	        0.11211	    0.17925	        0.09345
+                    error(%)        default(s)     /fp:fast     /arch:avx2     /fp:fast/arch:avx2
+dummy                               0.00463         0.00493     0.00472         0.00477
+sqrt * 4                            0.43175         0.25407     0.35568         0.14386
+power                               0.17621         0.17582     0.17635         0.17552
+fastinv8throot      0.03~5          0.03257         0.03275     0.03109         0.02796
+fastinv8throot+1    0.00005~0.01    0.09523         0.06561     0.09228         0.05649
+fastinv8throot+2    0~0.000012      0.17713         0.11211     0.17925         0.09345
 
 
 */
