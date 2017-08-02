@@ -39,7 +39,7 @@ namespace MultiplePrecisionOp {
             while (space > 0) decimals[--space] = '0';
         }
         else {
-            copy(decimals + space, decimals + size, decimals);
+            std::copy(decimals + space, decimals + size, decimals);
         }
         return size - space;
     }
