@@ -17,7 +17,6 @@ namespace NTTFieldArithmetic {
 
     constexpr uint64_t kPrime = 4179340454199820289ULL;
     constexpr uint64_t kHalfPrime = kPrime >> 1;
-    constexpr long double kInvPrime = 2.3927220358300787503404874106038e-19;
     constexpr uint64_t kPrimitiveRoot = 3;
 
     inline uint64_t Add(uint64_t a, uint64_t b) {
@@ -49,7 +48,7 @@ namespace NTTFieldArithmetic {
         ASSERT(a < kPrime && b < kPrime);
         ASSERT(std::numeric_limits<long double>::digits >= 64);
         long double fa = a;
-        auto q = static_cast<uint64_t>(fa * b * kInvPrime);
+        auto q = static_cast<uint64_t>(fa * b / kPrime);
         auto r = static_cast<int64_t>(a * b - q * kPrime) % static_cast<int64_t>(kPrime);
         return r < 0 ? r + kPrime : r;
     }
