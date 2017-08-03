@@ -1,6 +1,6 @@
 #vim:fileencoding=utf-8
 
-from math import pi, e, ceil, log
+from math import pi,e,ceil,log2
 import numpy as np
 import time
 
@@ -38,7 +38,7 @@ def classic_convolve(a, b):
     return c
 
 def convolve(a, b):
-    n = 1<<int(ceil(log(len(a)+len(b)-1)/log(2)))
+    n = 1<<int(ceil(log2(len(a)+len(b)-1)))
     fa = fft(a + [0]*(n-len(a)), 1)
     fb = fft(b + [0]*(n-len(b)), 1)
     fc = [va*vb for (va, vb) in zip(fa, fb)]
@@ -46,7 +46,7 @@ def convolve(a, b):
     return [c[i].real for i in range(len(a)+len(b)-1)]
 
 def convolve_np(a, b):
-    n = 1<<int(ceil(log(len(a)+len(b)-1)/log(2)))
+    n = 1<<int(ceil(log2(len(a)+len(b)-1)))
     fa = fft_np(a + [0]*(n-len(a)), 1)
     fb = fft_np(b + [0]*(n-len(b)), 1)
     fc = fa * fb
@@ -54,7 +54,7 @@ def convolve_np(a, b):
     return [c[i].real for i in range(len(a)+len(b)-1)]
 
 def convolve_ntt(a, b, P=3221225473, G=5):
-    n = 1<<int(ceil(log(len(a)+len(b)-1)/log(2)))
+    n = 1<<int(ceil(log2(len(a)+len(b)-1)))
     fa = ntt(a + [0]*(n-len(a)), 1, P, G)
     fb = ntt(b + [0]*(n-len(b)), 1, P, G)
     fc = [va*vb%P for (va, vb) in zip(fa, fb)]
@@ -68,9 +68,7 @@ def bigint_to_string(i):
     return ''.join(str(v) for v in reversed(i))
 
 def bigint_remove_leading_zeros(i):
-    size = len(i)
-    while size > 1 and i[size-1]==0: size -= 1
-    return i[:size]
+    return bigint_remove_leading_zeros(i[:-1]) if len(i)>1 and i[-1]==0 else i
 
 def bigint_carry(i):
     c, ni = 0, []
