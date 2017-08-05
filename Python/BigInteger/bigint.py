@@ -27,7 +27,17 @@ def ntt(a, flag, P=3221225473, G=5, N=1):
     b2 = ntt(a[1::2], flag, P, G, max(len(a), N))
     ws = [pow(G, (P-1+flag*i*(P-1)//len(a))%(P-1), P) for i in range(len(b1))]
     ts = list(zip(b1, b2, ws))
-    return [(c1+c2*w)%P for (c1,c2,w) in ts] + [(c1-c2*w)%P for (c1,c2,w) in ts]
+    return [(c1+c2*w)%P for (c1,c2,w) in ts] + [(c1+P*P-c2*w)%P for (c1,c2,w) in ts]
+
+def ntt2(a, flag, qn=64, N=1):
+    assert(qn % N == 0)
+    P=2**qn+1
+    if len(a) == 1: return [a[0]*(2**(2*qn)//N%P if flag<0 else 1)%P]
+    b1 = ntt2(a[0::2], flag, qn, max(len(a), N))
+    b2 = ntt2(a[1::2], flag, qn, max(len(a), N))
+    ws = [pow(2, (2*qn+flag*i*qn//len(b1))%(2*qn), P) for i in range(len(b1))]
+    ts = list(zip(b1, b2, ws))
+    return [(c1+w*c2)%P for (c1,c2,w) in ts] + [(c1+P*P-c2*w)%P for (c1,c2,w) in ts]
 
 #------------------------------
 def classic_convolve(a, b):
@@ -59,6 +69,15 @@ def convolve_ntt(a, b, P=3221225473, G=5):
     fb = ntt(b + [0]*(n-len(b)), 1, P, G)
     fc = [va*vb%P for (va, vb) in zip(fa, fb)]
     c = ntt(fc, -1, P, G)
+    return c[:len(a)+len(b)-1]
+
+def convolve_ntt2(a, b, qn=64):
+    P=2**qn+1
+    n = 1<<int(ceil(log2(len(a)+len(b)-1)))
+    fa = ntt2(a + [0]*(n-len(a)), 1, qn)
+    fb = ntt2(b + [0]*(n-len(b)), 1, qn)
+    fc = [va*vb%P for (va, vb) in zip(fa, fb)]
+    c = ntt2(fc, -1, qn)
     return c[:len(a)+len(b)-1]
 #------------------------------
 def string_to_bigint(s):
@@ -101,14 +120,14 @@ def bigint_fac(n, d=1):
 
 #------------------------------
 def test_fft():
-    for f in [fft, fft_np, ntt]:
+    for f in [fft, fft_np, ntt, ntt2]:
         for bits in range(1, 5):
             l = list(range(1<<bits))
             l2 = [round(complex(v).real) for v in f(f(l ,1) ,-1)]
             assert(l == l2)
 
 def test_convolve():
-    for f in [convolve, convolve_np, convolve_ntt]:
+    for f in [convolve, convolve_np, convolve_ntt, convolve_ntt2]:
         for bits in range(1, 5):
             ns = list(range(1<<bits))
             l = classic_convolve(ns, ns)
