@@ -13,7 +13,7 @@
 #endif
 
 
-static void RecursiveFFTImpl(
+static void RecursiveFFT(
     std::complex<double> *dest,
     std::complex<double> const *src,
     size_t size,
@@ -28,15 +28,15 @@ static void RecursiveFFTImpl(
         auto halfSize = size / 2;
 
         auto w2 = w * w;
-        RecursiveFFTImpl(dest, src, halfSize, sstep * 2, w2, scale);
-        RecursiveFFTImpl(dest + halfSize, src + sstep, halfSize, sstep * 2, w2, scale);
+        RecursiveFFT(dest, src, halfSize, sstep * 2, w2, scale);
+        RecursiveFFT(dest + halfSize, src + sstep, halfSize, sstep * 2, w2, scale);
 
         auto wi = std::complex<double>(1);
         for (size_t i = 0; i < halfSize; ++i) {
-            auto c1 = dest[i], c2 = dest[i + halfSize];
-            auto wc2 = wi * c2;
-            dest[i] = c1 + wc2;
-            dest[i + halfSize] = c1 - wc2;
+            auto c0 = dest[i], c1 = dest[i + halfSize];
+            auto wc1 = wi * c1;
+            dest[i] = c0 + wc1;
+            dest[i + halfSize] = c0 - wc1;
             wi *= w;
         }
     }
@@ -44,7 +44,7 @@ static void RecursiveFFTImpl(
 
 
 #ifdef USE_SSE
-static void FFTImpl2SSE(double *dest0, double *dest1, double *w) {
+static void FFTCombine2_SSE(double *dest0, double *dest1, double *w) {
     auto r1 = _mm_loaddup_pd(dest1);
     auto i1 = _mm_loaddup_pd(dest1 + 1);
     auto cw = _mm_load_pd(w);
@@ -65,7 +65,7 @@ static void FFTImpl2SSE(double *dest0, double *dest1, double *w) {
 }
 #endif 
 
-static void FFTImpl(
+static void FFT(
     std::complex<double> *dest,
     std::complex<double> const *src,
     size_t size,
@@ -82,10 +82,10 @@ static void FFTImpl(
     }
 
     if (scale == 1) {
-        for (size_t i = 0, bc = BitCount(size) - 1; i < size; ++i)
+        for (size_t i = 0, bc = static_cast<size_t>(log2(size)); i < size; ++i)
             dest[BitReversal(i, bc)] = src[i];
     } else {
-        for (size_t i = 0, bc = BitCount(size) - 1; i < size; ++i)
+        for (size_t i = 0, bc = static_cast<size_t>(log2(size)); i < size; ++i)
             dest[BitReversal(i, bc)] = src[i] * scale;
     }
 
@@ -95,22 +95,22 @@ static void FFTImpl(
         for (size_t i = 0; i < size; i += s) {
             for (size_t j = 0, iw = 0; j < halfS; ++j, iw += dw) {
 #ifdef USE_SSE
-                FFTImpl2SSE(
+                FFTCombine2_SSE(
                     reinterpret_cast<double*>(dest + i + j),
                     reinterpret_cast<double*>(dest + i + j + halfS),
                     reinterpret_cast<double*>(&ws[iw]));
 #else
-                auto c1 = dest[i + j], c2 = dest[i + j + halfS];
-                auto wc2 = ws[iw] * c2;
-                dest[i + j] = c1 + wc2;
-                dest[i + j + halfS] = c1 - wc2;
+                auto c0 = dest[i + j], c1 = dest[i + j + halfS];
+                auto wc1 = ws[iw] * c1;
+                dest[i + j] = c0 + wc1;
+                dest[i + j + halfS] = c0 - wc1;
 #endif
             }
         }
     }
 }
 
-extern void FFT(
+extern void FastFourierTransform(
     std::complex<double> *dest,
     std::complex<double> const *src,
     size_t size) {
@@ -118,13 +118,13 @@ extern void FFT(
     ASSERT(IsPowerOf2(size));
 
 #ifdef USE_RECURSIVE_FFT
-    RecursiveFFTImpl(dest, src, size, 1, std::polar(1.0, 2 * kPi / size), 1);
+    RecursiveFFT(dest, src, size, 1, std::polar(1.0, 2 * kPi / size), 1);
 #else
-    FFTImpl(dest, src, size, std::polar(1.0, 2 * kPi / size), 1);
+    FFT(dest, src, size, std::polar(1.0, 2 * kPi / size), 1);
 #endif
 }
 
-extern void InverseFFT(
+extern void InverseFastFourierTransform(
     std::complex<double> *dest,
     std::complex<double> const *src,
     size_t size) {
@@ -132,8 +132,8 @@ extern void InverseFFT(
     ASSERT(IsPowerOf2(size));
 
 #ifdef USE_RECURSIVE_FFT
-    RecursiveFFTImpl(dest, src, size, 1, std::polar(1.0, -2 * kPi / size), 1.0 / size);
+    RecursiveFFT(dest, src, size, 1, std::polar(1.0, -2 * kPi / size), 1.0 / size);
 #else
-    FFTImpl(dest, src, size, std::polar(1.0, -2 * kPi / size), 1.0 / size);
+    FFT(dest, src, size, std::polar(1.0, -2 * kPi / size), 1.0 / size);
 #endif
 }
