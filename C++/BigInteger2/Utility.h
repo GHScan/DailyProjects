@@ -6,6 +6,9 @@
 
 
 #include <complex>
+#include <chrono>
+#include <iostream>
+#include <algorithm>
 
 
 extern int WAssert(char const* message, char const* fileName, size_t line);
@@ -17,7 +20,7 @@ extern int WAssert(char const* message, char const* fileName, size_t line);
 #endif
 
 
-#define USE_SSE
+#define USE_SIMD
 
 
 inline bool IsPowerOf2(size_t n) {
@@ -67,6 +70,24 @@ void Memset(T *dest, uint8_t c, size_t n) {
 
 
 static auto const kPi = std::acos(-1);
+
+
+template <typename TFunc>
+static void Timing(char const* name, TFunc func, int times = 3) {
+    using namespace std::chrono;
+
+    if (times > 1) func();
+
+    auto t = std::numeric_limits<double>::max();
+    for (auto i = 0; i < times; ++i) {
+        auto start = high_resolution_clock::now();
+        func();
+        auto end = high_resolution_clock::now();
+        t = std::min(t, duration<double>(end - start).count());
+    }
+
+    std::cout << name << " : " << t << " s" << std::endl;
+}
 
 
 #endif

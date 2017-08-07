@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+
 #include "MultiplePrecisionOp.h"
 #include "FFT.h"
 #include "NTT.h"
@@ -8,7 +9,7 @@
 
 namespace MultiplePrecisionOp {
 
-    static size_t gMultiplyAlgorithmSwitchingThreashold[4];
+    static size_t gMultiplicationSwitchingThreashold[4];
 
     static class Initializer final {
     public:
@@ -18,14 +19,14 @@ namespace MultiplePrecisionOp {
     } gInitializer;
 
     void ResetConfigurations() {
-        gMultiplyAlgorithmSwitchingThreashold[MA_Karatsuba] = 80;
-        gMultiplyAlgorithmSwitchingThreashold[MA_FFT] = 5000;
-        gMultiplyAlgorithmSwitchingThreashold[MA_NTT] = 5000;
-        gMultiplyAlgorithmSwitchingThreashold[MA_NTT2] = 10000;
+        gMultiplicationSwitchingThreashold[MA_Karatsuba] = 80;
+        gMultiplicationSwitchingThreashold[MA_FFT] = 5000;
+        gMultiplicationSwitchingThreashold[MA_NTT] = 5000;
+        gMultiplicationSwitchingThreashold[MA_NTT2] = 10000;
     }
 
-    void SetAlgorithmSwitchingThreashold(MultiplyAlgorithm algorithm, size_t threashold) {
-        gMultiplyAlgorithmSwitchingThreashold[algorithm] = threashold;
+    void SetAlgorithmSwitchingThreashold(MultiplicationAlgorithm algorithm, size_t threashold) {
+        gMultiplicationSwitchingThreashold[algorithm] = threashold;
     }
 
     uint32_t DecimalsToDisplayDigit(char const *decimals, size_t size) {
@@ -234,13 +235,67 @@ namespace MultiplePrecisionOp {
         uint32_t const *digits0, size_t size0,
         uint32_t const *digits1, size_t size1) {
 
-        if (size0 < size1) return Multiply(output, osize, digits1, size1, digits0, size0);
+        if (size0 < size1) 
+            return Multiply(output, osize, digits1, size1, digits0, size0);
 
         ASSERT(osize >= size0 + size1);
 
         if (size1 == 1 && digits1[0] == 0) return;
 
-        for (size_t i1 = 0; i1 < size1; ++i1) {
+        size_t i1 = 0;
+
+        for (; i1 + 4 <= size1; i1 += 4) {
+            
+            uint64_t carry0 = output[i1 + 0];
+            uint64_t carry1 = output[i1 + 1];
+            uint64_t carry2 = output[i1 + 2];
+            uint64_t carry3 = output[i1 + 3];
+
+            size_t io = i1;
+            for (size_t i0 = 0; i0 < size0; ++i0, ++io) {
+                uint64_t d0 = digits0[i0];
+
+                carry0 += d0 * digits1[i1 + 0];
+                carry1 += d0 * digits1[i1 + 1];
+                carry2 += d0 * digits1[i1 + 2];
+                carry3 += d0 * digits1[i1 + 3];
+
+                uint64_t carryLow0 = static_cast<uint32_t>(carry0);
+                uint64_t carryLow1 = static_cast<uint32_t>(carry1);
+                uint64_t carryLow2 = static_cast<uint32_t>(carry2);
+                uint64_t carryLow3 = static_cast<uint32_t>(carry3);
+
+                uint64_t carryHi0 = carry0 >> kInternalBaseBits;
+                uint64_t carryHi1 = carry1 >> kInternalBaseBits;
+                uint64_t carryHi2 = carry2 >> kInternalBaseBits;
+                uint64_t carryHi3 = carry3 >> kInternalBaseBits;
+
+                output[io] = static_cast<uint32_t>(carryLow0);
+                carry0 = carryHi0 + carryLow1;
+                carry1 = carryHi1 + carryLow2;
+                carry2 = carryHi2 + carryLow3;
+                carry3 = carryHi3 + output[io + 4];
+            }
+
+            uint64_t carry = 0;
+            carry += carry0;
+            output[io++] = static_cast<uint32_t>(carry);
+            carry >>= kInternalBaseBits;
+            carry += carry1;
+            output[io++] = static_cast<uint32_t>(carry);
+            carry >>= kInternalBaseBits;
+            carry += carry2;
+            output[io++] = static_cast<uint32_t>(carry);
+            carry >>= kInternalBaseBits;
+            carry += carry3;
+            output[io++] = static_cast<uint32_t>(carry);
+            carry >>= kInternalBaseBits;
+
+            carry = Carry(output + io, osize - io, carry);
+            ASSERT(carry == 0);
+        }
+
+        for (; i1 < size1; ++i1) {
             uint64_t digit1 = digits1[i1];
             uint64_t carry = 0;
 
@@ -272,7 +327,8 @@ namespace MultiplePrecisionOp {
         uint32_t const *digits1, size_t size1,
         uint64_t base) {
 
-        if (size0 < size1) return Multiply_B(output, osize, digits1, size1, digits0, size0, base);
+        if (size0 < size1) 
+            return Multiply_B(output, osize, digits1, size1, digits0, size0, base);
 
         ASSERT(osize >= size0 + size1);
 
@@ -299,11 +355,12 @@ namespace MultiplePrecisionOp {
         uint32_t const *digits0, size_t size0,
         uint32_t const *digits1, size_t size1) {
 
-        if (size0 < size1) return Multiply_Karatsuba(output, osize, digits1, size1, digits0, size0);
+        if (size0 < size1) 
+            return Multiply_Karatsuba(output, osize, digits1, size1, digits0, size0);
 
         ASSERT(osize >= size0 + size1);
 
-        if (size1 < gMultiplyAlgorithmSwitchingThreashold[MA_Karatsuba]) {
+        if (size1 < gMultiplicationSwitchingThreashold[MA_Karatsuba]) {
             return Multiply(output, osize, digits0, size0, digits1, size1);
         }
 
@@ -318,27 +375,28 @@ namespace MultiplePrecisionOp {
         auto digits1Low = digits1, digits1Hi = size1 <= half ? zeroDigits : digits1 + half;
         auto size1Low = std::min(half, size1), size1Hi = size1 <= half ? 1 : size1 - half;
 
-        {
-            Memcpy(buf0, digits0Low, size0Low);
-            if (Add(buf0, size0Low, digits0Hi, size0Hi))
-                buf0[size0Low] = 1;
-            else
-                buf0[size0Low] = 0;
-            Memcpy(buf1, digits1Low, size1Low);
-            if (Add(buf1, size1Low, digits1Hi, size1Hi))
-                buf1[size1Low] = 1;
-            else
-                buf1[size1Low] = 0;
-            Multiply_Karatsuba(buf2, 2 * half + 2, buf0, size0Low + 1, buf1, size1Low + 1);
-        }
-        {
-            Memset(buf0, 0, size0Low + size1Low);
-            Multiply_Karatsuba(buf0, size0Low + size1Low, digits0Low, size0Low, digits1Low, size1Low);
-            if (Add(output, osize, buf0, size0Low + size1Low))
-                ASSERT(0);
-            if (Substract(buf2, 2 * half + 2, buf0, size0Low + size1Low))
-                ASSERT(0);
-        }
+
+        Memcpy(buf0, digits0Low, size0Low);
+        if (Add(buf0, size0Low, digits0Hi, size0Hi))
+            buf0[size0Low] = 1;
+        else
+            buf0[size0Low] = 0;
+        Memcpy(buf1, digits1Low, size1Low);
+        if (Add(buf1, size1Low, digits1Hi, size1Hi))
+            buf1[size1Low] = 1;
+        else
+            buf1[size1Low] = 0;
+        Multiply_Karatsuba(buf2, 2 * half + 2, buf0, size0Low + 1, buf1, size1Low + 1);
+
+
+        Memset(buf0, 0, size0Low + size1Low);
+        Multiply_Karatsuba(buf0, size0Low + size1Low, digits0Low, size0Low, digits1Low, size1Low);
+        if (Add(output, osize, buf0, size0Low + size1Low))
+            ASSERT(0);
+        if (Substract(buf2, 2 * half + 2, buf0, size0Low + size1Low))
+            ASSERT(0);
+
+
         if (digits1Hi != zeroDigits)
         {
             Memset(buf0, 0, size0Hi + size1Hi);
@@ -348,10 +406,10 @@ namespace MultiplePrecisionOp {
             if (Substract(buf2, 2 * half + 2, buf0, size0Hi + size1Hi))
                 ASSERT(0);
         }
-        {
-            if (Add(output + half, osize - half, buf2, DetermineSize(buf2, 2 * half + 2)))
-                ASSERT(0);
-        }
+        
+
+        if (Add(output + half, osize - half, buf2, DetermineSize(buf2, 2 * half + 2)))
+            ASSERT(0);
     }
 
     std::vector<uint32_t> Multiply_Karatsuba(
@@ -368,11 +426,12 @@ namespace MultiplePrecisionOp {
         uint32_t const *digits1, size_t size1,
         uint64_t base) {
 
-        if (size0 < size1) return Multiply_Karatsuba_B(output, osize, digits1, size1, digits0, size0, base);
+        if (size0 < size1) 
+            return Multiply_Karatsuba_B(output, osize, digits1, size1, digits0, size0, base);
 
         ASSERT(osize >= size0 + size1);
 
-        if (size1 < gMultiplyAlgorithmSwitchingThreashold[MA_Karatsuba]) {
+        if (size1 < gMultiplicationSwitchingThreashold[MA_Karatsuba]) {
             return Multiply_B(output, osize, digits0, size0, digits1, size1, base);
         }
 
@@ -387,27 +446,28 @@ namespace MultiplePrecisionOp {
         auto digits1Low = digits1, digits1Hi = size1 <= half ? zeroDigits : digits1 + half;
         auto size1Low = std::min(half, size1), size1Hi = size1 <= half ? 1 : size1 - half;
 
-        {
-            Memcpy(buf0, digits0Low, size0Low);
-            if (Add_B(buf0, size0Low, digits0Hi, size0Hi, base))
-                buf0[size0Low] = 1;
-            else
-                buf0[size0Low] = 0;
-            Memcpy(buf1, digits1Low, size1Low);
-            if (Add_B(buf1, size1Low, digits1Hi, size1Hi, base))
-                buf1[size1Low] = 1;
-            else
-                buf1[size1Low] = 0;
-            Multiply_Karatsuba_B(buf2, 2 * half + 2, buf0, size0Low + 1, buf1, size1Low + 1, base);
-        }
-        {
-            Memset(buf0, 0, size0Low + size1Low);
-            Multiply_Karatsuba_B(buf0, size0Low + size1Low, digits0Low, size0Low, digits1Low, size1Low, base);
-            if (Add_B(output, osize, buf0, size0Low + size1Low, base))
-                ASSERT(0);
-            if (Substract_B(buf2, 2 * half + 2, buf0, size0Low + size1Low, base))
-                ASSERT(0);
-        }
+        
+        Memcpy(buf0, digits0Low, size0Low);
+        if (Add_B(buf0, size0Low, digits0Hi, size0Hi, base))
+            buf0[size0Low] = 1;
+        else
+            buf0[size0Low] = 0;
+        Memcpy(buf1, digits1Low, size1Low);
+        if (Add_B(buf1, size1Low, digits1Hi, size1Hi, base))
+            buf1[size1Low] = 1;
+        else
+            buf1[size1Low] = 0;
+        Multiply_Karatsuba_B(buf2, 2 * half + 2, buf0, size0Low + 1, buf1, size1Low + 1, base);
+
+
+        Memset(buf0, 0, size0Low + size1Low);
+        Multiply_Karatsuba_B(buf0, size0Low + size1Low, digits0Low, size0Low, digits1Low, size1Low, base);
+        if (Add_B(output, osize, buf0, size0Low + size1Low, base))
+            ASSERT(0);
+        if (Substract_B(buf2, 2 * half + 2, buf0, size0Low + size1Low, base))
+            ASSERT(0);
+
+
         if (digits1Hi != zeroDigits)
         {
             Memset(buf0, 0, size0Hi + size1Hi);
@@ -417,10 +477,10 @@ namespace MultiplePrecisionOp {
             if (Substract_B(buf2, 2 * half + 2, buf0, size0Hi + size1Hi, base))
                 ASSERT(0);
         }
-        {
-            if (Add_B(output + half, osize - half, buf2, DetermineSize(buf2, 2 * half + 2), base))
-                ASSERT(0);
-        }
+
+
+        if (Add_B(output + half, osize - half, buf2, DetermineSize(buf2, 2 * half + 2), base))
+            ASSERT(0);
     }
 
     static void Multiply_FFT16(
@@ -563,15 +623,17 @@ namespace MultiplePrecisionOp {
         uint32_t const *digits0, size_t size0, 
         uint32_t const *digits1, size_t size1) {
 
-        if (size0 < size1) return Multiply_NTT2(output, osize, digits1, size1, digits0, size0);
+        if (size0 < size1) 
+            return Multiply_NTT2(output, osize, digits1, size1, digits0, size0);
 
         ASSERT(osize >= size0 + size1);
 
-        if (size1 < gMultiplyAlgorithmSwitchingThreashold[MA_NTT2]) 
+        if (size1 < gMultiplicationSwitchingThreashold[MA_NTT2]) 
             return Multiply_Karatsuba(output, osize, digits0, size0, digits1, size1);
 
         size_t rawNumberSize, ringNumberSize;
-        EstimateNTT2NumberSize(size0, size1, rawNumberSize, ringNumberSize);
+        if (!EstimateNTT2NumberSize(size0, size1, rawNumberSize, ringNumberSize))
+            return Multiply_Karatsuba(output, osize, digits0, size0, digits1, size1);
 
         std::vector<uint32_t> convolveOutput(
             ((size0 + rawNumberSize - 1) / rawNumberSize + (size1 + rawNumberSize - 1) / rawNumberSize) * ringNumberSize);
@@ -597,18 +659,19 @@ namespace MultiplePrecisionOp {
     std::vector<uint32_t> FastMultiply(
         std::vector<uint32_t> const &digits0, std::vector<uint32_t> const &digits1) {
 
-        if (digits0.size() < digits1.size()) return FastMultiply(digits1, digits0);
+        if (digits0.size() < digits1.size()) 
+            return FastMultiply(digits1, digits0);
 
-        if (digits1.size() >= gMultiplyAlgorithmSwitchingThreashold[MA_NTT2])
+        if (digits1.size() >= gMultiplicationSwitchingThreashold[MA_NTT2])
             return Multiply_NTT2(digits0, digits1);
 //#ifdef _MSC_VER
-//        if (digits1.size() > gMultiplyAlgorithmSwitchingThreashold[MA_FFT])
+//        if (digits1.size() > gMultiplicationSwitchingThreashold[MA_FFT])
 //            return Multiply_FFT(digits0, digits1);
 //#else
-//        if (digits1.size() > gMultiplyAlgorithmSwitchingThreashold[MA_NTT])
+//        if (digits1.size() > gMultiplicationSwitchingThreashold[MA_NTT])
 //            return Multiply_NTT(digits0, digits1);
 //#endif
-        if (digits1.size() >= gMultiplyAlgorithmSwitchingThreashold[MA_Karatsuba])
+        if (digits1.size() >= gMultiplicationSwitchingThreashold[MA_Karatsuba])
             return Multiply_Karatsuba(digits0, digits1);
 
         return Multiply(digits0, digits1);
@@ -638,7 +701,7 @@ namespace MultiplePrecisionOp {
     }
 
     std::vector<uint32_t> ChangeBase(std::vector<uint32_t> srcDigits, uint64_t srcBase, uint64_t destBase) {
-        if (srcDigits.size() < 2 * gMultiplyAlgorithmSwitchingThreashold[MA_Karatsuba]) 
+        if (srcDigits.size() < 2 * gMultiplicationSwitchingThreashold[MA_Karatsuba]) 
             return ChangeBase_Classic(move(srcDigits), srcBase, destBase);
 
         auto half = (srcDigits.size() + 1) / 2;
@@ -655,8 +718,10 @@ namespace MultiplePrecisionOp {
         auto loResult = ChangeBase(srcDigits, srcBase, destBase);
 
         std::vector<uint32_t> destDigits(hiResult.size() + hiBaseResult.size() + 1);
+
         Multiply_Karatsuba_B(
             &destDigits[0], destDigits.size(), &hiResult[0], hiResult.size(), &hiBaseResult[0], hiBaseResult.size(), destBase);
+
         if (Add_B(&destDigits[0], destDigits.size(), &loResult[0], loResult.size(), destBase))
             ASSERT(0);
 

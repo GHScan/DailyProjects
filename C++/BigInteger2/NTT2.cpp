@@ -197,7 +197,7 @@ extern void InverseNumberTheoreticTransform2(
 }
 
 
-extern void EstimateNTT2NumberSize(
+extern bool EstimateNTT2NumberSize(
     size_t inputSize0, size_t inputSize1,
     size_t &rawNumberSize, size_t &ringNumberSize) {
     
@@ -212,6 +212,8 @@ extern void EstimateNTT2NumberSize(
     ringNumberSize = RingNumberSize(qn);
 
     ASSERT(32 * qn >= 32 * rawNumberSize * 2 + log2(nttSize));
+
+    return ringNumberSize != inputSize0 || ringNumberSize != inputSize1;
 }
 
 
@@ -231,6 +233,7 @@ extern void Convolve_NTT2(
     ASSERT(outputBlockCount >= inputBlockCount0 + inputBlockCount1 - 1);
     ASSERT(2 * qn % nttSize == 0);
     ASSERT(32 * qn >= 32 * rawNumberSize * 2 + log2(nttSize));
+    ASSERT(ringNumberSize != inputSize0 || ringNumberSize != inputSize1); // otherwise we may encounter stack overflow
 
 
     std::vector<uint32_t> bufVec(ringNumberSize * nttSize * 3 + ringNumberSize * 2), m = CreateModularDigits(ringNumberSize);

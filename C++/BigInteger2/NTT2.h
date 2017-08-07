@@ -21,7 +21,7 @@ extern void InverseNumberTheoreticTransform2(
     size_t ringNumberSize);
 
 
-extern void EstimateNTT2NumberSize(
+extern bool EstimateNTT2NumberSize(
     size_t inputSize0, size_t inputSize1,
     size_t &rawNumberSize, size_t &ringNumberSize);
 

@@ -3,9 +3,8 @@
 #include <array>
 #include <vector>
 #include <algorithm>
-#include <iostream>
 #include <sstream>
-#include <chrono>
+
 
 #define USE_GMP
 
@@ -15,25 +14,9 @@
 
 
 #include "BigInteger.h"
-
-
-template <typename TFunc>
-static void Timing(char const* name, TFunc func, int times = 3) {
-    using namespace std::chrono;
-
-    if (times > 1) func();
-
-    auto t = std::numeric_limits<double>::max();
-    for (auto i = 0; i < times; ++i) {
-        auto start = high_resolution_clock::now();
-        func();
-        auto end = high_resolution_clock::now();
-        t = std::min(t, duration<double>(end - start).count());
-    }
-
-    std::cout << name << " : " << t << " s" << std::endl;
-}
-
+#include "FFT.h"
+#include "NTT.h"
+#include "NTT2.h"
 
 //------------------------------------------------------------------------------
 
@@ -51,11 +34,11 @@ static void TestFFT() {
         for (size_t i = 0; i < inputs.size(); ++i) {
             std::vector<std::complex<double>> output(inputs[i].size());
 
-            FFT(&output[0], &inputs[i][0], inputs[i].size());
+            FastFourierTransform(&output[0], &inputs[i][0], inputs[i].size());
             for (size_t j = 0; j < output.size(); ++j) {
                 ASSERT(Equals(output[j], expects[i][j]));
             }
-            InverseFFT(&output[0], &expects[i][0], expects[i].size());
+            InverseFastFourierTransform(&output[0], &expects[i][0], expects[i].size());
             for (size_t j = 0; j < output.size(); ++j) {
                 ASSERT(Equals(output[j], inputs[i][j]));
             }
@@ -67,15 +50,41 @@ static void TestFFT() {
             { 536870909, 536870910, 536870911, 536870912 },
         };
 
-        for (size_t i = 0; i < inputs.size(); ++i) {
-            std::vector<uint64_t> output(inputs[i].size());
-            NTT(&output[0], &inputs[i][0], inputs[i].size());
+        for (auto &input : inputs) {
+            std::vector<uint64_t> output(input.size());
+            NumberTheoreticTransform(&output[0], &input[0], input.size());
 
-            std::vector<uint64_t> outputInverse(inputs[i].size());
-            InverseNTT(&outputInverse[0], &output[0], output.size());
+            std::vector<uint64_t> outputInverse(input.size());
+            InverseNumberTheoreticTransform(&outputInverse[0], &output[0], output.size());
             for (size_t j = 0; j < outputInverse.size(); ++j) {
-                ASSERT(outputInverse[j] == inputs[i][j]);
+                ASSERT(outputInverse[j] == input[j]);
             }
+        }
+    }
+    {
+        std::vector<std::vector<uint32_t>> inputs = {
+            { 1, 2, 3, 4 },
+            { 536870909, 536870910, 536870911, 536870912 },
+            { 1, 2, 3, 4, 1, 2, 3, 4, },
+        };
+
+        for (auto &input : inputs) {
+            std::vector<uint64_t> output(input.size());
+            
+            size_t rawNumberSize, ringNumberSize;
+            EstimateNTT2NumberSize(input.size(), input.size(), rawNumberSize, ringNumberSize);
+
+            size_t nttSize = NextPowerOf2((input.size() + rawNumberSize - 1) / rawNumberSize * 2);
+
+            std::vector<uint32_t> inputNums(nttSize * ringNumberSize);
+            for (size_t i = 0, io = 0; i < input.size(); i += rawNumberSize, io += ringNumberSize)
+                Memcpy(&inputNums[io], &input[i], std::min(rawNumberSize, input.size() - i));
+            std::vector<uint32_t> outputNums(inputNums.size());
+
+            NumberTheoreticTransform2(&outputNums[0], &inputNums[0], nttSize, ringNumberSize);
+
+            std::vector<uint32_t> inputNums2(inputNums.size());
+            NumberTheoreticTransform2(&inputNums2[0], &outputNums[0], nttSize, ringNumberSize);
         }
     }
 }
@@ -89,19 +98,19 @@ static void TestConvolve() {
         };
 
         for (auto &input : inputs) {
-            std::vector<uint64_t> expectedResult(input.size() * 2 - 1);
-            ClassicConvolve(
+            std::vector<uint64_t> expectedOutput(input.size() * 2 - 1);
+            Convolve_Classic(
+                &expectedOutput[0], expectedOutput.size(),
                 &input[0], input.size(), &input[0], input.size(),
-                &expectedResult[0], expectedResult.size(),
                 [](auto v) {return v; }, [](uint64_t v) {return v; });
 
-            std::vector<uint64_t> result(input.size() * 2 - 1);
-            Convolve(
+            std::vector<uint64_t> output(input.size() * 2 - 1);
+            Convolve_FFT(
+                &output[0], output.size(),
                 &input[0], input.size(), &input[0], input.size(),
-                &result[0], result.size(),
                 [](auto v) { return v; },
                 [](auto v) { return llround(v.real()); });
-                ASSERT(equal(result.begin(), result.end(), expectedResult.begin()));
+                ASSERT(equal(output.begin(), output.end(), expectedOutput.begin()));
         }
     }
     {
@@ -112,19 +121,19 @@ static void TestConvolve() {
         };
 
         for (auto &input : inputs) {
-            std::vector<uint64_t> expectedResult(input.size() * 2 - 1);
-            ClassicConvolve(
+            std::vector<uint64_t> expectedOutput(input.size() * 2 - 1);
+            Convolve_Classic(
+                &expectedOutput[0], expectedOutput.size(),
                 &input[0], input.size(), &input[0], input.size(),
-                &expectedResult[0], expectedResult.size(),
                 [](auto v) {return v; }, [](uint64_t v) {return v; });
 
-            std::vector<uint64_t> result(input.size() * 2 - 1);
-            NTConvolve(
+            std::vector<uint64_t> output(input.size() * 2 - 1);
+            Convolve_NTT(
+                &output[0], output.size(),
                 &input[0], input.size(), &input[0], input.size(),
-                &result[0], result.size(),
                 [](auto v) { return v; },
                 [](auto v) { return v; });
-            ASSERT(equal(result.begin(), result.end(), expectedResult.begin()));
+            ASSERT(equal(output.begin(), output.end(), expectedOutput.begin()));
         }
     }
 }
@@ -156,18 +165,20 @@ static void TestBigInteger() {
         }
     }
     for (auto &a : randomStrs) {
+        SetAlgorithmSwitchingThreashold(MultiplePrecisionOp::MA_NTT2, 8);
         for (auto &b : randomStrs) {
-            auto s1 = mpz_class(mpz_class(a) * mpz_class(b)).get_str();
-            auto s2 = (BigInteger(a) * BigInteger(b)).ToString();
-            auto s3 = BigInteger(MultiplePrecisionOp::Multiply_Karatsuba(BigInteger(a).Digits(), BigInteger(b).Digits())).ToString();
-            auto s4 = BigInteger(MultiplePrecisionOp::Multiply_FFT(BigInteger(a).Digits(), BigInteger(b).Digits())).ToString();
-            auto s5 = BigInteger(MultiplePrecisionOp::Multiply_NTT(BigInteger(a).Digits(), BigInteger(b).Digits())).ToString();
-            ASSERT(s1 == s2);
-            ASSERT(s1 == s2);
-            ASSERT(s1 == s3);
-            ASSERT(s1 == s4);
-            ASSERT(s1 == s5);
+            auto expected = mpz_class(mpz_class(a) * mpz_class(b)).get_str();
+            std::string strs[] = {
+                (BigInteger(a) * BigInteger(b)).ToString(),
+                BigInteger(MultiplePrecisionOp::Multiply_Karatsuba(BigInteger(a).Digits(), BigInteger(b).Digits())).ToString(),
+                BigInteger(MultiplePrecisionOp::Multiply_FFT(BigInteger(a).Digits(), BigInteger(b).Digits())).ToString(),
+                BigInteger(MultiplePrecisionOp::Multiply_NTT(BigInteger(a).Digits(), BigInteger(b).Digits())).ToString(),
+                BigInteger(MultiplePrecisionOp::Multiply_NTT2(BigInteger(a).Digits(), BigInteger(b).Digits())).ToString(),
+            };
+            for (auto &s : strs)
+                ASSERT(expected == s);
         }
+        MultiplePrecisionOp::ResetConfigurations();
     }
     for (auto &a : randomStrs) {
         auto b = rand() & 0xf;
@@ -212,15 +223,15 @@ static void Benchmark() {
     Timing("factorial", []()
     {
         Factorial(160000);
-    });
+    }, 1);
     Timing("fibonacci", []()
     {
         Fibonacci(160000);
-    });
+    }, 1);
     Timing("power", []()
     {
-        Power(BigInteger(37), 1 << 18);
-    });
+        Power(BigInteger(37), 1 << 17);
+    }, 1);
 }
 
 int main() {

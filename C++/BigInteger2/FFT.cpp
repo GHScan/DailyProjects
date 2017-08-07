@@ -4,13 +4,14 @@
 
 #include <complex>
 
-#include "FFT.h"
 
-
-#ifdef USE_SSE
-#include "pmmintrin.h"
-#include "emmintrin.h"
+#ifdef USE_SIMD
+#include <pmmintrin.h>
+#include <emmintrin.h>
 #endif
+
+
+#include "FFT.h"
 
 
 static void RecursiveFFT(
@@ -43,7 +44,7 @@ static void RecursiveFFT(
 }
 
 
-#ifdef USE_SSE
+#ifdef USE_SIMD
 static void FFTCombine2_SSE(double *dest0, double *dest1, double *w) {
     auto r1 = _mm_loaddup_pd(dest1);
     auto i1 = _mm_loaddup_pd(dest1 + 1);
@@ -94,7 +95,7 @@ static void FFT(
         size_t dw = size / s;
         for (size_t i = 0; i < size; i += s) {
             for (size_t j = 0, iw = 0; j < halfS; ++j, iw += dw) {
-#ifdef USE_SSE
+#ifdef USE_SIMD
                 FFTCombine2_SSE(
                     reinterpret_cast<double*>(dest + i + j),
                     reinterpret_cast<double*>(dest + i + j + halfS),

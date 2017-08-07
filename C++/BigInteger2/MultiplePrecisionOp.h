@@ -13,7 +13,7 @@ uint64_t constexpr kInternalBase = 1ULL << kInternalBaseBits;
 
 namespace MultiplePrecisionOp {
 
-    enum MultiplyAlgorithm : uint8_t {
+    enum MultiplicationAlgorithm : uint8_t {
         MA_Karatsuba,
         MA_FFT,
         MA_NTT,
@@ -21,7 +21,7 @@ namespace MultiplePrecisionOp {
     };
 
     void ResetConfigurations();
-    void SetAlgorithmSwitchingThreashold(MultiplyAlgorithm algorithm, size_t threashold);
+    void SetAlgorithmSwitchingThreashold(MultiplicationAlgorithm algorithm, size_t threashold);
 
     uint32_t DecimalsToDisplayDigit(char const *decimals, size_t size);
     size_t DisplayDigitToDecimals(uint32_t digit, char *decimals, size_t size, bool fillZero);
