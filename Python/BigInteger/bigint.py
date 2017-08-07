@@ -9,7 +9,7 @@ def fft(a, flag, N=1):
     if len(a) == 1: return [a[0]/(N if flag<0 else 1)]
     b1 = fft(a[0::2], flag, max(len(a), N))
     b2 = fft(a[1::2], flag, max(len(a), N))
-    ws = [e**(1j*flag*i*pi/len(b1)) for i in range(len(b1))]
+    ws = [e**(2j*flag*i*pi/len(a)) for i in range(len(b1))]
     ts = list(zip(b1, b2, ws))
     return [c1+c2*w for (c1,c2,w) in ts] + [c1-c2*w for (c1,c2,w) in ts]
 
@@ -17,8 +17,23 @@ def fft_np(a, flag, N=1):
     if len(a) == 1: return np.array([a[0]/(N if flag<0 else 1)])
     b1 = fft_np(a[0::2], flag, max(len(a), N))
     b2 = fft_np(a[1::2], flag, max(len(a), N))
-    w = np.exp(flag*1j*pi/len(b1) * np.arange(len(b1)))
+    w = np.exp(2j*flag*pi/len(a) * np.arange(len(b1)))
     return np.concatenate((b1+w*b2, b1-w*b2))
+
+def fft_r4(a, flag, N=1):
+    if len(a) % 4 != 0: return fft(a, flag, N)
+    if len(a) == 1: return [a[0]/(N if flag<0 else 1)]
+    b1 = fft_r4(a[0::4], flag, max(len(a), N))
+    b2 = fft_r4(a[1::4], flag, max(len(a), N))
+    b3 = fft_r4(a[2::4], flag, max(len(a), N))
+    b4 = fft_r4(a[3::4], flag, max(len(a), N))
+    ws = [e**(2j*flag*i*pi/len(a)) for i in range(len(b1))]
+    ts = list(zip(b1, b2, b3, b4, ws))
+    return \
+        [c1+c2*w+c3*w*w+c4*w*w*w for (c1,c2,c3,c4,w) in ts] + \
+        [c1+flag*1j*c2*w-c3*w*w-flag*1j*c4*w*w*w for (c1,c2,c3,c4,w) in ts] + \
+        [c1-c2*w+c3*w*w-c4*w*w*w for (c1,c2,c3,c4,w) in ts] + \
+        [c1-flag*1j*c2*w-c3*w*w+flag*1j*c4*w*w*w for (c1,c2,c3,c4,w) in ts]
 
 #------------------------------
 def ntt(a, flag, P=3221225473, G=5, N=1):
@@ -61,6 +76,15 @@ def convolve_np(a, b):
     fb = fft_np(b + [0]*(n-len(b)), 1)
     fc = fa * fb
     c = fft_np(fc, -1)
+    return [c[i].real for i in range(len(a)+len(b)-1)]
+
+def convolve_r4(a, b):
+    n = 1<<(int(ceil(log2(len(a)+len(b)-1)/log2(4)))*2)
+    assert(n % 4 == 0)
+    fa = fft_r4(a + [0]*(n-len(a)), 1)
+    fb = fft_r4(b + [0]*(n-len(b)), 1)
+    fc = [va*vb for (va, vb) in zip(fa, fb)]
+    c = fft_r4(fc, -1)
     return [c[i].real for i in range(len(a)+len(b)-1)]
 
 def convolve_ntt(a, b, P=3221225473, G=5):
@@ -120,14 +144,14 @@ def bigint_fac(n, d=1):
 
 #------------------------------
 def test_fft():
-    for f in [fft, fft_np, ntt, ntt2]:
+    for f in [fft, fft_np, fft_r4, ntt, ntt2]:
         for bits in range(1, 5):
             l = list(range(1<<bits))
             l2 = [round(complex(v).real) for v in f(f(l ,1) ,-1)]
             assert(l == l2)
 
 def test_convolve():
-    for f in [convolve, convolve_np, convolve_ntt, convolve_ntt2]:
+    for f in [convolve, convolve_np, convolve_r4, convolve_ntt, convolve_ntt2]:
         for bits in range(1, 5):
             ns = list(range(1<<bits))
             l = classic_convolve(ns, ns)
@@ -172,4 +196,3 @@ if __name__ == '__main__':
     test_bigint()
     # benchmark_convolve()
     # benchmark_bigint()
-
