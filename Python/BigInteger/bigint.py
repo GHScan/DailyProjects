@@ -1,6 +1,7 @@
 #vim:fileencoding=utf-8
 
 from math import pi,e,ceil,log2
+from functools import reduce
 import numpy as np
 import time
 
@@ -12,6 +13,14 @@ def fft(a, flag, N=1):
     ws = [e**(2j*flag*i*pi/len(a)) for i in range(len(b1))]
     ts = list(zip(b1, b2, ws))
     return [c1+c2*w for (c1,c2,w) in ts] + [c1-c2*w for (c1,c2,w) in ts]
+
+def fft_dif(a, flag, N=1):
+    if len(a) == 1: return [a[0]/(N if flag<0 else 1)]
+    ws = [e**(2j*flag*i*pi/len(a)) for i in range(len(a)//2)]
+    ts = list(zip(a[:len(ws)], a[len(ws):], ws))
+    b1 = fft_dif([c1+c2 for (c1,c2,w) in ts], flag, max(len(a), N))
+    b2 = fft_dif([(c1-c2)*w for (c1,c2,w) in ts], flag, max(len(a), N))
+    return reduce(lambda a,b:a+b, [[c1, c2] for (c1,c2) in zip(b1, b2)])
 
 def fft_np(a, flag, N=1):
     if len(a) == 1: return np.array([a[0]/(N if flag<0 else 1)])
@@ -83,6 +92,14 @@ def convolve(a, b):
     fb = fft(b + [0]*(n-len(b)), 1)
     fc = [va*vb for (va, vb) in zip(fa, fb)]
     c = fft(fc, -1)
+    return [c[i].real for i in range(len(a)+len(b)-1)]
+
+def convolve_dif(a, b):
+    n = 1<<int(ceil(log2(len(a)+len(b)-1)))
+    fa = fft_dif(a + [0]*(n-len(a)), 1)
+    fb = fft_dif(b + [0]*(n-len(b)), 1)
+    fc = [va*vb for (va, vb) in zip(fa, fb)]
+    c = fft_dif(fc, -1)
     return [c[i].real for i in range(len(a)+len(b)-1)]
 
 def convolve_np(a, b):
@@ -168,14 +185,14 @@ def bigint_fac(n, d=1):
 
 #------------------------------
 def test_fft():
-    for f in [fft, fft_np, fft_r4, fft_sr, ntt, ntt2]:
+    for f in [fft, fft_dif, fft_np, fft_r4, fft_sr, ntt, ntt2]:
         for bits in range(1, 5):
             l = list(range(1<<bits))
             l2 = [round(complex(v).real) for v in f(f(l ,1) ,-1)]
             assert(l == l2)
 
 def test_convolve():
-    for f in [convolve, convolve_np, convolve_r4, convolve_sr, convolve_ntt, convolve_ntt2]:
+    for f in [convolve, convolve_dif, convolve_np, convolve_r4, convolve_sr, convolve_ntt, convolve_ntt2]:
         for bits in range(1, 5):
             ns = list(range(1<<bits))
             l = classic_convolve(ns, ns)
