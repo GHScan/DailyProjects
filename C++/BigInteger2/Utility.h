@@ -7,7 +7,6 @@
 
 #include <complex>
 #include <chrono>
-#include <iostream>
 #include <algorithm>
 
 
@@ -37,7 +36,7 @@ inline size_t NextPowerOf2(size_t n) {
     return n + 1;
 }
 
-inline size_t BitReversal(size_t i, size_t bitCount) {
+inline size_t ReverseBits(size_t i, size_t bitCount) {
     ASSERT(bitCount <= 32);
 
     extern size_t gReversedBytes[256];
@@ -73,10 +72,11 @@ static auto const kPi = std::acos(-1);
 
 
 template <typename TFunc>
-static void Timing(char const* name, TFunc func, int times = 3) {
+static double Timing(TFunc func, int times = 3) {
     using namespace std::chrono;
 
-    if (times > 1) func();
+    if (times > 1) 
+        func();
 
     auto t = std::numeric_limits<double>::max();
     for (auto i = 0; i < times; ++i) {
@@ -86,8 +86,36 @@ static void Timing(char const* name, TFunc func, int times = 3) {
         t = std::min(t, duration<double>(end - start).count());
     }
 
-    std::cout << name << " : " << t << " s" << std::endl;
+    return t;
 }
+
+
+#ifdef _MSC_VER
+#define FORCEINLINE __forceinline
+#else
+#define FORCEINLINE __attribute__((always_inline))
+#endif
+
+
+#ifdef _MSC_VER
+template<typename T>
+inline T* AlignedAlloc(size_t size) {
+    return static_cast<T*>(_aligned_malloc(size * sizeof(T), 32));
+}
+template<typename T>
+inline void AlignedFree(T *p) {
+    _aligned_free(p);
+}
+#else
+template<typename T>
+inline T* AlignedAlloc(size_t size) {
+    return static_cast<T*>(aligned_alloc(32, size * sizeof(T)));
+}
+template<typename T>
+inline void AlignedFree(T *p) {
+    free(p);
+}
+#endif
 
 
 #endif

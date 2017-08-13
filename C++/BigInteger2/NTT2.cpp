@@ -145,7 +145,7 @@ extern void NumberTheoreticTransform2 (
     auto buf0 = &bufVec[0], buf1 = &bufVec[ringNumberSize], digitsM = &m[0];
 
     for (size_t i = 0, bc = static_cast<size_t>(log2(size)); i < size; ++i)
-        Memcpy(dest + BitReversal(i, bc) * ringNumberSize, src + i * ringNumberSize, ringNumberSize);
+        Memcpy(dest + ReverseBits(i, bc) * ringNumberSize, src + i * ringNumberSize, ringNumberSize);
 
     for (size_t s = 2; s <= size; s <<= 1) {
         size_t halfS = s / 2;
@@ -178,7 +178,7 @@ extern void InverseNumberTheoreticTransform2(
 
     for (size_t i = 0, bc = static_cast<size_t>(log2(size)); i < size; ++i) {
         RShiftBitsTo(buf0, src + i * ringNumberSize, ringNumberSize, bc, digitsM, buf1);
-        Memcpy(dest + BitReversal(i, bc) * ringNumberSize, buf0, ringNumberSize);
+        Memcpy(dest + ReverseBits(i, bc) * ringNumberSize, buf0, ringNumberSize);
     }
 
     for (size_t s = 2; s <= size; s <<= 1) {

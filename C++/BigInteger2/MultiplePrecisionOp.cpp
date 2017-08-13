@@ -483,7 +483,7 @@ namespace MultiplePrecisionOp {
             ASSERT(0);
     }
 
-    static void Multiply_FFT16(
+    static void Multiply_FFT_u16(
         uint32_t *output, size_t osize,
         uint32_t const *digits0, size_t size0,
         uint32_t const *digits1, size_t size1) {
@@ -516,7 +516,7 @@ namespace MultiplePrecisionOp {
         ASSERT(carry == 0);
     }
 
-    static void Multiply_FFT8(
+    static void Multiply_FFT_u8(
         uint32_t *output, size_t osize,
         uint32_t const *digits0, size_t size0,
         uint32_t const *digits1, size_t size1) {
@@ -565,13 +565,13 @@ namespace MultiplePrecisionOp {
         if (CanConvolveIntegersAccurately(
             reinterpret_cast<uint16_t const*>(digits0), size0 * 2,
             reinterpret_cast<uint16_t const*>(digits1), size1 * 2)) {
-            return Multiply_FFT16(output, osize, digits0, size0, digits1, size1);
+            return Multiply_FFT_u16(output, osize, digits0, size0, digits1, size1);
         }
 
         ASSERT(CanConvolveIntegersAccurately(
             reinterpret_cast<uint8_t const*>(digits0), size0 * 4,
             reinterpret_cast<uint8_t const*>(digits1), size1 * 4));
-        return Multiply_FFT8(output, osize, digits0, size0, digits1, size1);
+        return Multiply_FFT_u8(output, osize, digits0, size0, digits1, size1);
     }
 
     std::vector<uint32_t> Multiply_FFT(

@@ -84,10 +84,10 @@ static void FFT(
 
     if (scale == 1) {
         for (size_t i = 0, bc = static_cast<size_t>(log2(size)); i < size; ++i)
-            dest[BitReversal(i, bc)] = src[i];
+            dest[ReverseBits(i, bc)] = src[i];
     } else {
         for (size_t i = 0, bc = static_cast<size_t>(log2(size)); i < size; ++i)
-            dest[BitReversal(i, bc)] = src[i] * scale;
+            dest[ReverseBits(i, bc)] = src[i] * scale;
     }
 
     for (size_t s = 2; s <= size; s <<= 1) {

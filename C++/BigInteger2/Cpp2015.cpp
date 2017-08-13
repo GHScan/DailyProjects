@@ -7,9 +7,13 @@
 
 
 #define USE_GMP
+// #define USE_FFTW
 
 #ifdef USE_GMP
 #include <mpirxx.h>
+#endif
+#ifdef USE_FFTW
+#include <fftw3.h>
 #endif
 
 
@@ -17,6 +21,8 @@
 #include "FFT.h"
 #include "NTT.h"
 #include "NTT2.h"
+#include "FastestFT.h"
+
 
 //------------------------------------------------------------------------------
 
@@ -84,9 +90,39 @@ static void TestFFT() {
             NumberTheoreticTransform2(&outputNums[0], &inputNums[0], nttSize, ringNumberSize);
 
             std::vector<uint32_t> inputNums2(inputNums.size());
-            NumberTheoreticTransform2(&inputNums2[0], &outputNums[0], nttSize, ringNumberSize);
+            InverseNumberTheoreticTransform2(&inputNums2[0], &outputNums[0], nttSize, ringNumberSize);
+            ASSERT(equal(inputNums.begin(), inputNums.end(), inputNums2.begin()));
         }
     }
+#ifdef ENABLE_FASTEST_FT
+    {
+        for (auto bits = 0; bits <= 20; ++bits) {
+            auto len = 1 << bits;
+            auto input = AlignedAlloc<std::complex<double>>(len);
+            iota(input, input + len, 0);
+
+            auto output = AlignedAlloc<std::complex<double>>(len);
+            FastestFourierTransform(output, input, len);
+
+            if (bits <= 10) {
+                auto output2 = AlignedAlloc<std::complex<double>>(len);
+                FastFourierTransform(output2, input, len);
+                for (size_t i = 0; i < len; ++i)
+                    ASSERT(Equals(output[i], output2[i]));
+                AlignedFree(output2);
+            }
+
+            auto input2 = AlignedAlloc<std::complex<double>>(len);
+            InverseFastestFourierTransform(input2, output, len);
+            for (size_t i = 0; i < len; ++i) 
+                ASSERT(Equals(input[i], input2[i], 1e-3));
+
+            AlignedFree(input2);
+            AlignedFree(output);
+            AlignedFree(input);
+        }
+    }
+#endif
 }
 
 static void TestConvolve() {
@@ -219,19 +255,75 @@ static void Test() {
     TestBigInteger();
 }
 
+
+static void Benchmark_FFT() {
+    puts("fft\n");
+    for (size_t bits = 2; bits <= 20; ++bits) {
+        std::vector<std::complex<double>> input(1ULL << bits);
+        iota(input.begin(), input.end(), 0);
+        auto output(input);
+
+        auto loop = 1 << (bits > 15 ? 0 : 15 - bits);
+        printf("\t2^%-llu: %f us\n", bits, Timing([&]()
+        {
+            for (auto i = 0; i < loop; ++i)
+                FastFourierTransform(&output[0], &input[0], input.size());
+        }) * 1000000 / loop);
+    }
+
+#ifdef ENABLE_FASTEST_FT
+    puts("fatestft\n");
+    for (size_t bits = 2; bits <= 20; ++bits) {
+        auto len = 1ULL << bits;
+        auto input = AlignedAlloc<std::complex<double>>(len);
+        iota(input, input + len, 0);
+        auto output = AlignedAlloc<std::complex<double>>(len);
+
+        auto loop = 1 << (bits > 15 ? 0 : 15 - bits);
+        printf("\t2^%-llu: %f us\n", bits, Timing([&]()
+        {
+            for (auto i = 0; i < loop; ++i)
+                FastestFourierTransform(output, input, len);
+        }) * 1000000 / loop);
+
+        AlignedFree(output);
+        AlignedFree(input);
+    }
+#endif
+
+#ifdef USE_FFTW
+    puts("fftw3 estimate\n");
+    for (size_t bits = 2; bits <= 20; ++bits) {
+        auto len = 1 << bits;
+        auto in = static_cast<fftw_complex*>(fftw_malloc(sizeof(fftw_complex) * len));
+        auto out = static_cast<fftw_complex*>(fftw_malloc(sizeof(fftw_complex) * len));
+        auto p = fftw_plan_dft_1d(len, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
+        // auto p = fftw_plan_dft_1d(len, in, out, FFTW_FORWARD, FFTW_MEASURE);
+        for (auto i = 0; i < len; ++i)
+            in[i][0] = i, in[i][1] = 0;
+
+        auto loop = 1 << (bits > 15 ? 0 : 15 - bits);
+        printf("\t2^%-llu: %f us\n", bits, Timing([&]()
+        {
+            for (auto i = 0; i < loop; ++i)
+                fftw_execute(p);
+        }) * 1000000 / loop);
+
+        fftw_destroy_plan(p);
+        fftw_free(in); fftw_free(out);
+    }
+#endif
+}
+
+static void Benchmark_BigInteger() {
+    printf("%-20s: %f s\n", "factorial", Timing([]() { Factorial(320000); }, 1));
+    printf("%-20s: %f s\n", "fibonacci", Timing([]() { Fibonacci(320000); }, 1));
+    printf("%-20s: %f s\n", "power", Timing([]() { Power(BigInteger(37), 1 << 17); }, 1));
+}
+
 static void Benchmark() {
-    Timing("factorial", []()
-    {
-        Factorial(160000);
-    }, 1);
-    Timing("fibonacci", []()
-    {
-        Fibonacci(160000);
-    }, 1);
-    Timing("power", []()
-    {
-        Power(BigInteger(37), 1 << 17);
-    }, 1);
+    // Benchmark_FFT();
+    Benchmark_BigInteger();
 }
 
 int main() {
