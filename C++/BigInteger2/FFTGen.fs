@@ -66,19 +66,37 @@ let DimensionOf (exp : ComplexVExpression) : int =
         | CV_CrossElementAddSub (op1, op2) -> assert (op1.Dimension = op2.Dimension); op1.Dimension
         | CV_Invoke (name, args, d) -> d
 
+let rec ExpandIAdd (exp : IntExpression) : List<IntExpression> * int = 
+    match exp with
+    | I_Literal i -> List.empty, i
+    | I_Add (op0, op1) -> 
+        let (ints0, i0), (ints1, i1) = ExpandIAdd op0, ExpandIAdd op1
+        List.concat [ints0; ints1], i0+i1
+    | _ -> [ exp ], 0
+
+let rec ExpandIMultiply (exp : IntExpression) : List<IntExpression> * int = 
+    match exp with
+    | I_Literal i -> List.empty, i
+    | I_Multiply (op0, op1) -> 
+        let (ints0, i0), (ints1, i1) = ExpandIMultiply op0, ExpandIMultiply op1
+        List.concat [ints0; ints1], i0*i1
+    | _ -> [ exp ], 1
+
 let rec FoldLiteralInt (exp : IntExpression) : IntExpression = 
     match exp with
     | I_Literal _ -> exp
     | I_Variable _ -> exp
-    | I_Add (op0, op1) -> match (FoldLiteralInt op0, FoldLiteralInt op1) with 
-                          | (I_Literal a, I_Literal b) -> I_Literal (a+b)
-                          | (a, b) -> I_Add (a, b)
+    | I_Add (op0, op1) -> match ExpandIAdd exp with
+                            | [], i -> I_Literal i
+                            | ints, 0 -> ints |> List.map FoldLiteralInt |> List.reduce (fun a b -> I_Add (a,b))
+                            | ints, i -> I_Add (ints |> List.map FoldLiteralInt |> List.reduce (fun a b -> I_Add (a,b)), I_Literal i)
     | I_Substract (op0, op1) -> match (FoldLiteralInt op0, FoldLiteralInt op1) with 
                                 | (I_Literal a, I_Literal b) -> I_Literal (a-b)
                                 | (a, b) -> I_Substract (a, b)
-    | I_Multiply (op0, op1) -> match (FoldLiteralInt op0, FoldLiteralInt op1) with 
-                                | (I_Literal a, I_Literal b) -> I_Literal (a*b)
-                                | (a, b) -> I_Multiply (a, b)
+    | I_Multiply (op0, op1) -> match ExpandIMultiply exp with
+                                | [], i -> I_Literal i
+                                | ints, 0 -> ints |> List.map FoldLiteralInt |> List.reduce (fun a b -> I_Multiply (a,b))
+                                | ints, i -> I_Multiply (ints |> List.map FoldLiteralInt |> List.reduce (fun a b -> I_Multiply (a,b)), I_Literal i)
     | _ -> notImpl ""
 
 //-------------------------------------------------------------------------------
@@ -123,10 +141,12 @@ module Constant =
     let kScalerVariableName = "scaler"
     let kDefaultLoopVariableName = "i"
     let kComplexVRegisterPrefix = "temp_"
-    let kSmallSizeBits = 6
-    let kSmallSize = 1 <<< kSmallSizeBits
+    let kUnrollingBits = 6
+    let kUnrollingSize = 1 <<< kUnrollingBits
+    let kRollingBits = 3
+    let kRollingSize = 1 <<< kRollingBits
 
-type BitReverseCopyCodeGenerator() = class
+type BitReverseCopyFunctionGenerator() = class
     
     member private this.GenUnrolledForwardFunction (size : int) : Function = 
         let srcParam : ComplexPtrVariable = { Name=Constant.kSrcParamName; Readonly=true }
@@ -172,7 +192,7 @@ type BitReverseCopyCodeGenerator() = class
             Parameters=[V_Int param]; Ret=Some param; 
             Body=[S_Return reversed]}
 
-    member private this.GenLoopForwardFunction (size : int) : Function = 
+    member private this.GenRolledForwardFunction (size : int) : Function = 
         let srcParam : ComplexPtrVariable = { Name=Constant.kSrcParamName; Readonly=true }
         let destParam : ComplexPtrVariable = { Name=Constant.kDestParamName; Readonly=false }
         let loopV : IntVariable = { Name=Constant.kDefaultLoopVariableName }
@@ -186,7 +206,7 @@ type BitReverseCopyCodeGenerator() = class
             Parameters=[V_Ptr destParam; V_Ptr srcParam]; Ret=None; 
             Body=[stat] }
 
-    member private this.GenLoopBackwardFunction (size : int) : Function = 
+    member private this.GenRolledBackwardFunction (size : int) : Function = 
         let srcParam : ComplexPtrVariable = { Name=Constant.kSrcParamName; Readonly=true }
         let destParam : ComplexPtrVariable = { Name=Constant.kDestParamName; Readonly=false }
         let loopV : IntVariable = { Name=Constant.kDefaultLoopVariableName }
@@ -205,20 +225,21 @@ type BitReverseCopyCodeGenerator() = class
             Body=[defScaler; stat] }
     
     member this.ForwardGen (size : int) : List<Function> = 
-        if size <= Constant.kSmallSize then
+        if size <= Constant.kUnrollingSize then
             [ this.GenUnrolledForwardFunction size ]
         else
-            [ this.GenReverseBitsFunction size; this.GenLoopForwardFunction size ] 
+            [ this.GenReverseBitsFunction size; this.GenRolledForwardFunction size ] 
 
     member this.BackwardGen (size : int) : List<Function> = 
-        if size <= Constant.kSmallSize then
+        if size <= Constant.kUnrollingSize then
             [ this.GenUnrolledBackwardFunction size ]
         else
-            [ this.GenLoopBackwardFunction size ] 
+            [ this.GenRolledBackwardFunction size ] 
 
 end
 
-type RecursiveFFTCodeGenerator() = class
+[< AbstractClass >]
+type FFTKernelGenerator() = class
     let mutable statements : List<Statement> = List.empty
     let mutable exp2Register : Map<ComplexVExpression, ComplexVRegister> = Map.empty
     let mutable registerId = 0
@@ -242,11 +263,11 @@ type RecursiveFFTCodeGenerator() = class
             statements <- S_EvaluateComplexV (reg, exp) :: statements
             reg
 
-    member private this.StoreComplexV (ptrs : List<ComplexPtrVariable * IntExpression>) (r : ComplexVRegister) =
+    member this.StoreComplexV (ptrs : List<ComplexPtrVariable * IntExpression>) (r : ComplexVRegister) =
         assert (List.forall (fun (p, i)-> not p.Readonly) ptrs)
         statements <- (S_StoreComplexV (ptrs, r)) :: statements
 
-    member private this.LoadComplex (ptr : ComplexPtrVariable) (index : IntExpression) : ComplexVRegister =
+    member this.LoadComplex (ptr : ComplexPtrVariable) (index : IntExpression) : ComplexVRegister =
         let reg : ComplexVRegister = { Name = this.NewRegisterName(); Dimension = 1 }
         statements <- (S_LoadComplex (reg, ptr, index)) :: statements
         reg
@@ -316,8 +337,23 @@ type RecursiveFFTCodeGenerator() = class
         let chunk = dlp / (l.Item 0).Dimension
         l |> List.chunkBySize chunk 
           |> List.collect (fun rs -> if rs.Length > 1 then [this.EvaluateComplexV (CV_Merge rs)] else rs)
+    
+    member this.Gen (a : List<ComplexPtrVariable * IntExpression>) (initialFactor : IntExpression * int) (dlp : int) (direction : int) : List<Statement> = 
+        this.Reset()
 
-    member this.RecursiveFFT 
+        let rs = this.RecursiveFFT a initialFactor dlp direction
+        for ptrs, r in List.zip (List.chunkBySize (a.Length/rs.Length) a) rs do
+            this.StoreComplexV ptrs r
+
+        List.rev statements
+
+    abstract member RecursiveFFT : List<ComplexPtrVariable * IntExpression> -> IntExpression * int -> int -> int -> List<ComplexVRegister>
+end
+
+type Radix2FFTKernelGenerator() = class
+    inherit FFTKernelGenerator()
+
+    override this.RecursiveFFT 
             (a : List<ComplexPtrVariable * IntExpression>) (initialE : IntExpression, initialN : int) (dlp : int) (direction : int) 
             : List<ComplexVRegister> =
 
@@ -343,18 +379,9 @@ type RecursiveFFTCodeGenerator() = class
                 o1 <- (this.Substract c0 c1f) :: o1
 
             List.concat [List.rev o0; List.rev o1]
-    
-    member this.Gen (a : List<ComplexPtrVariable * IntExpression>) (initialFactor : IntExpression * int) (dlp : int) (direction : int) : List<Statement> = 
-        this.Reset()
-
-        let rs = this.RecursiveFFT a initialFactor dlp direction
-        for ptrs, r in List.zip (List.chunkBySize (a.Length/rs.Length) a) rs do
-            this.StoreComplexV ptrs r
-
-        List.rev statements
 end
 
-type FFTRadix2CodeGenerator() = class
+type FFTFunctionGenerator() = class
 
     member private this.InvokeKernel (size : int) (destParam : ComplexPtrVariable) (offset : IntExpression) (direction : int) : List<Statement> = 
         if size = 1 then
@@ -376,20 +403,21 @@ type FFTRadix2CodeGenerator() = class
         let destParam : ComplexPtrVariable = { Name=Constant.kDestParamName; Readonly=false }
         let offsetParam : IntVariable = { Name=Constant.kOffsetParamName }
         let prevKernelSize = 
-            if size = 1 then 0
-            else 1 <<< (((Util.ILog2 size) - 1) / Constant.kSmallSizeBits * Constant.kSmallSizeBits)
-        let prevKernelCount = 
-            if size = 1 then 0
-            else size / prevKernelSize
+            if size <= Constant.kUnrollingSize then
+                1
+            else if size < Constant.kUnrollingSize * Constant.kRollingSize then
+                Constant.kUnrollingSize
+            else 
+                size / Constant.kRollingSize
+        let prevKernelCount = size / prevKernelSize
         let invokeKernels = List.concat [for i in 0..prevKernelCount-1 ->
                                             this.InvokeKernel 
                                                 prevKernelSize 
                                                 destParam 
                                                 (I_Add (I_Variable offsetParam, I_Literal (i * prevKernelSize))) 
-                                                direction
-                                        ] 
+                                                direction ] 
         let loop = this.RangeFor 0 prevKernelSize (fun iv -> 
-                let recFFTGen = new RecursiveFFTCodeGenerator()
+                let recFFTGen = new Radix2FFTKernelGenerator()
                 let a = [for i in 0..prevKernelCount-1 -> (destParam, FoldLiteralInt (I_Add (I_Variable offsetParam,(I_Add (iv, I_Literal (i * prevKernelSize))))))]
                 recFFTGen.Gen a (iv, size) dlp direction)
         {   Name=(if direction > 0 then Constant.kKernelFuncPrefix else Constant.kInverseKernelFuncPrefix)+size.ToString();
@@ -764,11 +792,10 @@ static __m128d %s(size_t i, size_t bitCount) {
         | S_StoreComplexV ([{ Name=pname }, i], { Name=rname; Dimension=1 }) -> 
             sprintf "%s_mm_store_pd(reinterpret_cast<double*>(&%s[%s]),%s);" ident pname (this.TranslateIntExpression i) rname
         | S_StoreComplexV ([{ Name=pname0 }, i0; { Name=pname1 }, i1], { Name=rname; Dimension=2 }) when pname0 = pname1 -> 
-            let foldedI0, foldedI1 = FoldLiteralInt i0, FoldLiteralInt i1
-            if I_Add (i0, I_Literal 1) = i1 then
+            if FoldLiteralInt (I_Add (i0, I_Literal 1)) = i1 then
                 let si0 = this.TranslateIntExpression i0
                 sprintf "%s_mm256_store_pd(reinterpret_cast<double*>(&%s[%s]),%s);" ident pname0 si0 rname
-            else if I_Add (i1, I_Literal 1) = i0 then
+            else if FoldLiteralInt (I_Add (i1, I_Literal 1)) = i0 then
                 let si1 = this.TranslateIntExpression i1
                 sprintf "%s_mm256_store_pd(reinterpret_cast<double*>(&%s[%s]),%s);" ident pname0 si1 rname
             else
@@ -796,8 +823,8 @@ static __m128d %s(size_t i, size_t bitCount) {
 end
 //-------------------------------------------------------------------------------
 let GenerateFFTCode (path : string) (sizes : List<int>) (dlp : int) (translator : Function -> string) =
-    let brcGen = new BitReverseCopyCodeGenerator()
-    let fftGen = new FFTRadix2CodeGenerator()
+    let brcGen = new BitReverseCopyFunctionGenerator()
+    let fftGen = new FFTFunctionGenerator()
     System.IO.File.WriteAllLines(path,
         List.concat [
                 [for size in sizes do 
