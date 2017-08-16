@@ -272,7 +272,7 @@ static void Benchmark_FFT() {
     }
 
 #ifdef ENABLE_FASTEST_FT
-    puts("fatestft\n");
+    puts("fastestft\n");
     for (size_t bits = 2; bits <= 20; ++bits) {
         auto len = 1ULL << bits;
         auto input = AlignedAlloc<std::complex<double>>(len);

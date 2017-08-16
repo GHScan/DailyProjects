@@ -35,6 +35,8 @@ and FloatExpression =
     | F_ReadImag of Operand : ComplexVRegister * Index : int
 and ComplexVExpression = 
     | CV_New of Values : List<FloatExpression * FloatExpression>
+    | CV_DupReals of Operand : ComplexVRegister
+    | CV_DupImags of Operand : ComplexVRegister
     | CV_Merge of Variables : List<ComplexVRegister>
     | CV_Add of Operand0 : ComplexVRegister * Operand1 : ComplexVRegister
     | CV_Substract of Operand0 : ComplexVRegister * Operand1 : ComplexVRegister
@@ -47,9 +49,9 @@ and ArgumentExpression =
 
 type Statement = 
     | S_EvaluateComplexV of Register : ComplexVRegister * Expression : ComplexVExpression
-    | S_LoadComplex of Register : ComplexVRegister * Ptr : ComplexPtrVariable * Index : IntExpression
-    | S_StoreComplexV of Ptrs : List<ComplexPtrVariable * IntExpression> * Register : ComplexVRegister
-    | S_RangeFor of Variable : IntVariable * Start : IntExpression * Stop : IntExpression * Body : List<Statement>
+    | S_LoadComplex of Register : ComplexVRegister * Ptr : ComplexPtrVariable * Index : IntExpression * Dimension : int
+    | S_StoreComplexV of Ptrs : List<ComplexPtrVariable * IntExpression * int> * Register : ComplexVRegister
+    | S_RangeFor of Variable : IntVariable * Start : int * Stop : int * Step : int * Body : List<Statement>
     | S_Invoke of Name : string * Arguments : List<ArgumentExpression>
     | S_Return of Expression : IntExpression
 
@@ -59,6 +61,8 @@ type Function = { Name : string; Parameters : List<Variable>; Ret : Option<IntVa
 let DimensionOf (exp : ComplexVExpression) : int = 
     match exp with
         | CV_New nums -> nums.Length
+        | CV_DupReals op -> op.Dimension
+        | CV_DupImags op -> op.Dimension
         | CV_Merge rs -> List.sumBy (fun r -> r.Dimension) rs
         | CV_Add (op1, op2) -> assert (op1.Dimension = op2.Dimension); op1.Dimension
         | CV_Substract (op1, op2) -> assert (op1.Dimension = op2.Dimension); op1.Dimension
@@ -66,37 +70,47 @@ let DimensionOf (exp : ComplexVExpression) : int =
         | CV_CrossElementAddSub (op1, op2) -> assert (op1.Dimension = op2.Dimension); op1.Dimension
         | CV_Invoke (name, args, d) -> d
 
-let rec ExpandIAdd (exp : IntExpression) : List<IntExpression> * int = 
-    match exp with
-    | I_Literal i -> List.empty, i
-    | I_Add (op0, op1) -> 
-        let (ints0, i0), (ints1, i1) = ExpandIAdd op0, ExpandIAdd op1
-        List.concat [ints0; ints1], i0+i1
-    | _ -> [ exp ], 0
 
-let rec ExpandIMultiply (exp : IntExpression) : List<IntExpression> * int = 
+let ReduceBinaryIOp 
+    (termReducer : IntExpression * IntExpression -> IntExpression) 
+    (literalReducer : int -> int -> int)
+    (unit : int)
+    (operands : List<IntExpression>) 
+    : IntExpression =
+    let terms, accum = List.foldBack 
+                            (fun v (terms, accum) -> match v with 
+                                                        | I_Literal i -> (terms, literalReducer i accum)
+                                                        | _ -> (v :: terms, accum)) 
+                            operands 
+                            ([], unit)
+    if terms.Length = 0 then
+        I_Literal accum
+    else
+        let reducedTerms = List.reduce (fun a b->termReducer(a, b)) terms
+        if accum = unit then
+            reducedTerms
+        else 
+            termReducer (reducedTerms, I_Literal accum)
+
+let rec ExpandIAdd (exp : IntExpression) : List<IntExpression> = 
     match exp with
-    | I_Literal i -> List.empty, i
-    | I_Multiply (op0, op1) -> 
-        let (ints0, i0), (ints1, i1) = ExpandIMultiply op0, ExpandIMultiply op1
-        List.concat [ints0; ints1], i0*i1
-    | _ -> [ exp ], 1
+    | I_Add (op0, op1) -> List.concat [ExpandIAdd op0; ExpandIAdd op1]
+    | _ -> [ exp ]
+
+let rec ExpandIMultiply (exp : IntExpression) : List<IntExpression> = 
+    match exp with
+    | I_Multiply (op0, op1) -> List.concat [ExpandIMultiply op0; ExpandIMultiply op1]
+    | _ -> [ exp ]
 
 let rec FoldLiteralInt (exp : IntExpression) : IntExpression = 
     match exp with
     | I_Literal _ -> exp
     | I_Variable _ -> exp
-    | I_Add (op0, op1) -> match ExpandIAdd exp with
-                            | [], i -> I_Literal i
-                            | ints, 0 -> ints |> List.map FoldLiteralInt |> List.reduce (fun a b -> I_Add (a,b))
-                            | ints, i -> I_Add (ints |> List.map FoldLiteralInt |> List.reduce (fun a b -> I_Add (a,b)), I_Literal i)
+    | I_Add (op0, op1) -> ExpandIAdd exp |> List.map FoldLiteralInt |> ReduceBinaryIOp I_Add (fun a b->a+b) 0
     | I_Substract (op0, op1) -> match (FoldLiteralInt op0, FoldLiteralInt op1) with 
                                 | (I_Literal a, I_Literal b) -> I_Literal (a-b)
                                 | (a, b) -> I_Substract (a, b)
-    | I_Multiply (op0, op1) -> match ExpandIMultiply exp with
-                                | [], i -> I_Literal i
-                                | ints, 0 -> ints |> List.map FoldLiteralInt |> List.reduce (fun a b -> I_Multiply (a,b))
-                                | ints, i -> I_Multiply (ints |> List.map FoldLiteralInt |> List.reduce (fun a b -> I_Multiply (a,b)), I_Literal i)
+    | I_Multiply (op0, op1) -> ExpandIMultiply exp |> List.map FoldLiteralInt |> ReduceBinaryIOp I_Multiply (fun a b->a*b) 1
     | _ -> notImpl ""
 
 //-------------------------------------------------------------------------------
@@ -141,7 +155,7 @@ module Constant =
     let kScalerVariableName = "scaler"
     let kDefaultLoopVariableName = "i"
     let kComplexVRegisterPrefix = "temp_"
-    let kUnrollingBits = 6
+    let kUnrollingBits = 8
     let kUnrollingSize = 1 <<< kUnrollingBits
     let kRollingBits = 3
     let kRollingSize = 1 <<< kRollingBits
@@ -154,8 +168,8 @@ type BitReverseCopyFunctionGenerator() = class
         let statements = [0..size-1] |> List.chunkBySize 4 |> List.collect (fun ints -> 
                 let temps = [for i in ints ->{ Name=Constant.kComplexVRegisterPrefix+i.ToString(); Dimension=1 }]
                 List.concat [
-                    [for i, temp in List.zip ints temps -> S_LoadComplex (temp, srcParam, I_Literal i)];
-                    [for i, temp in List.zip ints temps -> S_StoreComplexV ([destParam, I_Literal (Util.ReverseBits i (Util.ILog2 size))], temp)]])
+                    [for i, temp in List.zip ints temps -> S_LoadComplex (temp, srcParam, I_Literal i, 1)];
+                    [for i, temp in List.zip ints temps -> S_StoreComplexV ([destParam, I_Literal (Util.ReverseBits i (Util.ILog2 size)), 1], temp)]])
         {   Name=Constant.kBitReverseCopyFuncPrefix+size.ToString();
             Parameters=[V_Ptr destParam; V_Ptr srcParam]; Ret=None;
             Body=statements }
@@ -169,9 +183,9 @@ type BitReverseCopyFunctionGenerator() = class
                 let temps = [for i in ints ->{ Name=Constant.kComplexVRegisterPrefix+i.ToString(); Dimension=1 }]
                 let scaledTemps = [for i in ints ->{ Name=Constant.kComplexVRegisterPrefix+(i+size).ToString(); Dimension=1 }]
                 List.concat [
-                    [for i, temp in List.zip ints temps -> S_LoadComplex (temp, srcParam, I_Literal i)];
+                    [for i, temp in List.zip ints temps -> S_LoadComplex (temp, srcParam, I_Literal i, 1)];
                     [for temp, scaledTemp in List.zip temps scaledTemps -> S_EvaluateComplexV (scaledTemp, CV_ElementMultiply (temp, scalerVar))]
-                    [for i, scaledTemp in List.zip ints scaledTemps -> S_StoreComplexV ([destParam, I_Literal (Util.ReverseBits i (Util.ILog2 size))], scaledTemp)]])
+                    [for i, scaledTemp in List.zip ints scaledTemps -> S_StoreComplexV ([destParam, I_Literal (Util.ReverseBits i (Util.ILog2 size)), 1], scaledTemp)]])
         {   Name=Constant.kInverseBitReverseCopyFuncPrefix+size.ToString();
             Parameters=[V_Ptr destParam; V_Ptr srcParam]; Ret=None;
             Body=defScaler :: bitRevCopy }
@@ -197,11 +211,11 @@ type BitReverseCopyFunctionGenerator() = class
         let destParam : ComplexPtrVariable = { Name=Constant.kDestParamName; Readonly=false }
         let loopV : IntVariable = { Name=Constant.kDefaultLoopVariableName }
         let temp = { Name=Constant.kComplexVRegisterPrefix+"0"; Dimension=1 }
-        let load = S_LoadComplex (temp, srcParam, I_Variable loopV)
+        let load = S_LoadComplex (temp, srcParam, I_Variable loopV, 1)
         let store = S_StoreComplexV (
-                        [destParam, (I_Invoke (Constant.kReverseBitsFuncPrefix+size.ToString(), [A_Int (I_Variable loopV)]))], 
+                        [destParam, (I_Invoke (Constant.kReverseBitsFuncPrefix+size.ToString(), [A_Int (I_Variable loopV)])), 1], 
                         temp)
-        let stat = S_RangeFor (loopV, (I_Literal 0), (I_Literal size), [load; store])
+        let stat = S_RangeFor (loopV, 0, size, 1, [load; store])
         {   Name=Constant.kBitReverseCopyFuncPrefix+size.ToString(); 
             Parameters=[V_Ptr destParam; V_Ptr srcParam]; Ret=None; 
             Body=[stat] }
@@ -214,12 +228,12 @@ type BitReverseCopyFunctionGenerator() = class
         let temp = { Name=Constant.kComplexVRegisterPrefix+"0"; Dimension=1 }
         let scaledTemp = { Name=Constant.kComplexVRegisterPrefix+"1"; Dimension=1 }
         let defScaler = S_EvaluateComplexV (scalerVar, CV_New [F_Literal (1.0/(double size)), F_Literal (1.0/(double size))])
-        let load = S_LoadComplex (temp, srcParam, I_Variable loopV)
+        let load = S_LoadComplex (temp, srcParam, I_Variable loopV, 1)
         let scale = S_EvaluateComplexV (scaledTemp, CV_ElementMultiply (temp, scalerVar))
         let store = S_StoreComplexV (
-                        [destParam, (I_Invoke (Constant.kReverseBitsFuncPrefix+size.ToString(), [A_Int (I_Variable loopV)]))], 
+                        [destParam, (I_Invoke (Constant.kReverseBitsFuncPrefix+size.ToString(), [A_Int (I_Variable loopV)])), 1], 
                         scaledTemp)
-        let stat = S_RangeFor (loopV, (I_Literal 0), (I_Literal size), [load; scale; store])
+        let stat = S_RangeFor (loopV, 0, size, 1, [load; scale; store])
         {   Name=Constant.kInverseBitReverseCopyFuncPrefix+size.ToString(); 
             Parameters=[V_Ptr destParam; V_Ptr srcParam]; Ret=None; 
             Body=[defScaler; stat] }
@@ -263,13 +277,13 @@ type FFTKernelGenerator() = class
             statements <- S_EvaluateComplexV (reg, exp) :: statements
             reg
 
-    member this.StoreComplexV (ptrs : List<ComplexPtrVariable * IntExpression>) (r : ComplexVRegister) =
-        assert (List.forall (fun (p, i)-> not p.Readonly) ptrs)
+    member this.StoreComplexV (ptrs : List<ComplexPtrVariable * IntExpression * int>) (r : ComplexVRegister) =
+        assert (List.forall (fun (p, i, d)-> not p.Readonly) ptrs)
         statements <- (S_StoreComplexV (ptrs, r)) :: statements
 
-    member this.LoadComplex (ptr : ComplexPtrVariable) (index : IntExpression) : ComplexVRegister =
-        let reg : ComplexVRegister = { Name = this.NewRegisterName(); Dimension = 1 }
-        statements <- (S_LoadComplex (reg, ptr, index)) :: statements
+    member this.LoadComplex (ptr : ComplexPtrVariable) (index : IntExpression) (dimension : int) : ComplexVRegister =
+        let reg : ComplexVRegister = { Name = this.NewRegisterName(); Dimension = dimension }
+        statements <- (S_LoadComplex (reg, ptr, index, dimension)) :: statements
         reg
 
     member private this.MultiplyLiteralComplex (r : ComplexVRegister) (c : Complex) : ComplexVRegister = 
@@ -302,8 +316,9 @@ type FFTKernelGenerator() = class
 
     member private this.MultiplyComplexV (r : ComplexVRegister) (cs : List<ComplexVRegister>) : ComplexVRegister = 
         assert (List.forall (fun c->c.Dimension = 1) cs)
-        let reals = this.EvaluateComplexV (CV_New [for c in cs -> (F_ReadReal (c, 0), F_ReadReal (c, 0))])
-        let imags = this.EvaluateComplexV (CV_New [for c in cs -> (F_ReadImag (c, 0), F_ReadImag (c, 0))])
+        let csr = if cs.Length = 1 then cs.Item 0 else this.EvaluateComplexV (CV_Merge cs)
+        let reals = this.EvaluateComplexV (CV_DupReals csr)
+        let imags = this.EvaluateComplexV (CV_DupImags csr)
         let rTimesReal = this.EvaluateComplexV (CV_ElementMultiply (r, reals))
         let rTimesImags = this.EvaluateComplexV (CV_ElementMultiply (r, imags))
         this.EvaluateComplexV (CV_CrossElementAddSub (rTimesReal, rTimesImags))
@@ -338,38 +353,38 @@ type FFTKernelGenerator() = class
         l |> List.chunkBySize chunk 
           |> List.collect (fun rs -> if rs.Length > 1 then [this.EvaluateComplexV (CV_Merge rs)] else rs)
     
-    member this.Gen (a : List<ComplexPtrVariable * IntExpression>) (initialFactor : IntExpression * int) (dlp : int) (direction : int) : List<Statement> = 
+    member this.Gen (a : List<ComplexPtrVariable * IntExpression * int>) (initialFactor : List<IntExpression * int>) (dlp : int) (direction : int) : List<Statement> = 
         this.Reset()
 
         let rs = this.RecursiveFFT a initialFactor dlp direction
-        for ptrs, r in List.zip (List.chunkBySize (a.Length/rs.Length) a) rs do
+        for ptrs, r in List.zip (List.chunkBySize (a.Length / rs.Length) a) rs do
             this.StoreComplexV ptrs r
 
         List.rev statements
 
-    abstract member RecursiveFFT : List<ComplexPtrVariable * IntExpression> -> IntExpression * int -> int -> int -> List<ComplexVRegister>
+    abstract member RecursiveFFT : List<ComplexPtrVariable * IntExpression * int> -> List<IntExpression * int> -> int -> int -> List<ComplexVRegister>
 end
 
 type Radix2FFTKernelGenerator() = class
     inherit FFTKernelGenerator()
 
     override this.RecursiveFFT 
-            (a : List<ComplexPtrVariable * IntExpression>) (initialE : IntExpression, initialN : int) (dlp : int) (direction : int) 
-            : List<ComplexVRegister> =
+            (a : List<ComplexPtrVariable * IntExpression * int>) (initialFactors : List<IntExpression * int>) (dlp : int) (direction : int) : List<ComplexVRegister> =
 
         if a.Length = 1 then
-            let (p, i) = a.Item 0
-            [ this.LoadComplex p i]
+            let (p, i, d) = a.Item 0
+            [ this.LoadComplex p i d]
         else
             let a0, a1 = List.splitAt (a.Length / 2) a
-            let nextInitialFactor = (I_Multiply (initialE, I_Literal 2), initialN)
+            let nextInitialFactors = [for e, n in initialFactors -> (I_Multiply (e, I_Literal 2), n)]
 
-            let b0 = this.RecursiveFFT a0 nextInitialFactor dlp direction |> this.MergeRegisters dlp
-            let b1 = this.RecursiveFFT a1 nextInitialFactor dlp direction |> this.MergeRegisters dlp
+            let b0 = this.RecursiveFFT a0 nextInitialFactors dlp direction |> this.MergeRegisters dlp
+            let b1 = this.RecursiveFFT a1 nextInitialFactors dlp direction |> this.MergeRegisters dlp
 
             let factors = [for i in 0..a0.Length-1 ->
-                            (I_Add (initialE, I_Literal (initialN / a.Length * i)), initialN)] 
+                            [for e, n in initialFactors -> (I_Add (e, I_Literal (n / a.Length * i)), n)]]
                             |> List.chunkBySize (a0.Length / b0.Length)
+                            |> List.map List.concat
 
             let mutable o0, o1 = List.empty, List.empty
 
@@ -390,14 +405,14 @@ type FFTFunctionGenerator() = class
             let prefix = if direction > 0 then Constant.kKernelFuncPrefix else Constant.kInverseKernelFuncPrefix
             [ S_Invoke (prefix + size.ToString(), [A_Ptr destParam; A_Int offset]) ]
 
-    member private this.RangeFor (start : int) (stop : int) (bodyGen : IntExpression -> List<Statement>) : List<Statement> =
+    member private this.RangeFor (start : int) (stop : int) (step : int) (bodyGen : IntExpression -> List<Statement>) : List<Statement> =
         if start + 1 > stop then
             List.empty
         else if start + 1 = stop then
             bodyGen (I_Literal start)
         else
             let var : IntVariable = { Name=Constant.kDefaultLoopVariableName }
-            [ S_RangeFor (var, I_Literal start, I_Literal stop, bodyGen (I_Variable var)) ]
+            [ S_RangeFor (var, start, stop, step, bodyGen (I_Variable var)) ]
 
     member private this.GenKernelFunction (size : int) (dlp : int) (direction : int) : Function = 
         let destParam : ComplexPtrVariable = { Name=Constant.kDestParamName; Readonly=false }
@@ -405,8 +420,6 @@ type FFTFunctionGenerator() = class
         let prevKernelSize = 
             if size <= Constant.kUnrollingSize then
                 1
-            else if size < Constant.kUnrollingSize * Constant.kRollingSize then
-                Constant.kUnrollingSize
             else 
                 size / Constant.kRollingSize
         let prevKernelCount = size / prevKernelSize
@@ -415,11 +428,14 @@ type FFTFunctionGenerator() = class
                                                 prevKernelSize 
                                                 destParam 
                                                 (I_Add (I_Variable offsetParam, I_Literal (i * prevKernelSize))) 
-                                                direction ] 
-        let loop = this.RangeFor 0 prevKernelSize (fun iv -> 
+                                                direction ]
+        let step = min dlp prevKernelSize
+        let loop = this.RangeFor 0 prevKernelSize step (fun iv -> 
                 let recFFTGen = new Radix2FFTKernelGenerator()
-                let a = [for i in 0..prevKernelCount-1 -> (destParam, FoldLiteralInt (I_Add (I_Variable offsetParam,(I_Add (iv, I_Literal (i * prevKernelSize))))))]
-                recFFTGen.Gen a (iv, size) dlp direction)
+                let a = [for i in 0..prevKernelCount-1 -> 
+                            (destParam, FoldLiteralInt (I_Add (I_Variable offsetParam,(I_Add (iv, I_Literal (i * prevKernelSize))))), step)]
+                let initialFactors = [for i in 0..step-1 -> (I_Add (iv, I_Literal i), size)]
+                recFFTGen.Gen a initialFactors dlp direction)
         {   Name=(if direction > 0 then Constant.kKernelFuncPrefix else Constant.kInverseKernelFuncPrefix)+size.ToString();
             Parameters=[V_Ptr destParam; V_Int offsetParam ]; Ret=None;
             Body=List.concat [invokeKernels; loop] }
@@ -481,8 +497,9 @@ def TwiddleFactor(i, bitCount, factorMatrix=[[]]*32):
     member private this.TranslateComplexVRegister (r : ComplexVRegister) : List<string> = 
         [for i in 0..r.Dimension-1 -> sprintf "%s_%d" r.Name i]
 
-    member private this.TranslateComplexPtr (p : ComplexPtrVariable) (i : IntExpression) : string = 
-        sprintf "%s[%s]" p.Name (this.TranslateIntExpression i)
+    member private this.TranslateComplexPtr (p : ComplexPtrVariable) (i : IntExpression) (dimension : int) : List<string> = 
+        let is = this.TranslateIntExpression i
+        [for i in 0..dimension-1 -> sprintf "%s[%s+%d]" p.Name is i]
 
     member private this.TranslateVariable (v : Variable) : string =
         match v with 
@@ -495,7 +512,7 @@ def TwiddleFactor(i, bitCount, factorMatrix=[[]]*32):
         | I_Variable {Name=name} -> name
         | I_Add (op0, op1) -> sprintf "(%s)+(%s)" (this.TranslateIntExpression op0) (this.TranslateIntExpression op1)
         | I_Substract (op0, op1) -> sprintf "(%s)-(%s)" (this.TranslateIntExpression op0) (this.TranslateIntExpression op1)
-        | I_Multiply (op0, op1) -> sprintf "%s*%s" (this.TranslateIntExpression op0) (this.TranslateIntExpression op1)
+        | I_Multiply (op0, op1) -> sprintf "(%s)*(%s)" (this.TranslateIntExpression op0) (this.TranslateIntExpression op1)
         | I_And (op0, op1) -> sprintf "(%s)&(%s)" (this.TranslateIntExpression op0) (this.TranslateIntExpression op1)
         | I_Or (op0, op1) -> sprintf "(%s)|(%s)" (this.TranslateIntExpression op0) (this.TranslateIntExpression op1)
         | I_LShift (op0, op1) -> sprintf "(%s)<<(%s)" (this.TranslateIntExpression op0) (this.TranslateIntExpression op1)
@@ -513,6 +530,8 @@ def TwiddleFactor(i, bitCount, factorMatrix=[[]]*32):
     member private this.TranslateComplexVExpression (exp : ComplexVExpression) : List<string> = 
         match exp with
         | CV_New values -> [for (r, i) in values -> sprintf "complex(%s,%s)" (this.TranslateFloatExpression r) (this.TranslateFloatExpression i)]
+        | CV_DupReals r -> this.TranslateComplexVRegister r |> List.map (fun s -> sprintf "complex(%s.real,%s.real)" s s)
+        | CV_DupImags r -> this.TranslateComplexVRegister r |> List.map (fun s -> sprintf "complex(%s.imag,%s.imag)" s s)
         | CV_Merge vars -> List.collect this.TranslateComplexVRegister vars
         | CV_Add (op0, op1) -> [for l, r in List.zip (this.TranslateComplexVRegister op0) (this.TranslateComplexVRegister op1) 
                                 -> sprintf "%s+%s" l r]
@@ -535,16 +554,17 @@ def TwiddleFactor(i, bitCount, factorMatrix=[[]]*32):
             sprintf "%s%s" ident 
                 (List.zip (this.TranslateComplexVRegister r) (this.TranslateComplexVExpression e) 
                 |> List.map (fun (a,b)-> sprintf "%s=%s" a b) |> String.concat ";")
-        | S_LoadComplex (r, p, i) -> 
-            assert (r.Dimension = 1)
-            sprintf "%s%s=%s" ident ((this.TranslateComplexVRegister r).Item 0) (this.TranslateComplexPtr p i)
+        | S_LoadComplex (r, p, i, d) -> 
+            sprintf "%s%s" ident 
+                (List.zip (this.TranslateComplexVRegister r) (this.TranslateComplexPtr p i d) 
+                |> List.map (fun (a,b)-> sprintf "%s=%s" a b) |> String.concat ";")
         | S_StoreComplexV (ptrs, r) -> 
             sprintf "%s%s" ident 
-                (List.zip [for p, i in ptrs -> this.TranslateComplexPtr p i] (this.TranslateComplexVRegister r)
+                (List.zip (List.concat [for p, i, d in ptrs -> this.TranslateComplexPtr p i d]) (this.TranslateComplexVRegister r)
                 |> List.map (fun (a,b)-> sprintf "%s=%s" a b) |> String.concat ";")
-        | S_RangeFor ({Name=name}, s, e, stats) -> 
-            sprintf "%sfor %s in range(%s,%s):\n%s" 
-                ident name (this.TranslateIntExpression s) (this.TranslateIntExpression e) 
+        | S_RangeFor ({Name=name}, start, stop, step, stats) -> 
+            sprintf "%sfor %s in range(%d,%d,%d):\n%s" 
+                ident name start stop step 
                 ([for stat in stats -> this.TranslateStatement (ident + "    ") stat] |> String.concat "\n")
         | S_Invoke (name, args) -> sprintf "%s%s(%s)" ident name ([for arg in args -> this.TranslateArgument arg] |> String.concat ",")
         | S_Return e -> sprintf "%sreturn %s" ident (this.TranslateIntExpression e)
@@ -596,8 +616,9 @@ static std::complex<double> %s(size_t i, size_t bitCount) {
     member private this.TranslateComplexVRegister (r : ComplexVRegister) : List<string> = 
         [for i in 0..r.Dimension-1 -> sprintf "%s_%d" r.Name i]
 
-    member private this.TranslateComplexPtr (p : ComplexPtrVariable) (i : IntExpression) : string = 
-        sprintf "%s[%s]" p.Name (this.TranslateIntExpression i)
+    member private this.TranslateComplexPtr (p : ComplexPtrVariable) (i : IntExpression) (dimension : int) : List<string> = 
+        let is = this.TranslateIntExpression i
+        [for i in 0..dimension-1 -> sprintf "%s[%s+%d]" p.Name is i]
 
     member private this.TranslateVariable (v : Variable) : string =
         match v with 
@@ -616,7 +637,7 @@ static std::complex<double> %s(size_t i, size_t bitCount) {
         | I_Variable {Name=name} -> name
         | I_Add (op0, op1) -> sprintf "(%s)+(%s)" (this.TranslateIntExpression op0) (this.TranslateIntExpression op1)
         | I_Substract (op0, op1) -> sprintf "(%s)-(%s)" (this.TranslateIntExpression op0) (this.TranslateIntExpression op1)
-        | I_Multiply (op0, op1) -> sprintf "%s*%s" (this.TranslateIntExpression op0) (this.TranslateIntExpression op1)
+        | I_Multiply (op0, op1) -> sprintf "(%s)*(%s)" (this.TranslateIntExpression op0) (this.TranslateIntExpression op1)
         | I_And (op0, op1) -> sprintf "(%s)&(%s)" (this.TranslateIntExpression op0) (this.TranslateIntExpression op1)
         | I_Or (op0, op1) -> sprintf "(%s)|(%s)" (this.TranslateIntExpression op0) (this.TranslateIntExpression op1)
         | I_LShift (op0, op1) -> sprintf "(%s)<<(%s)" (this.TranslateIntExpression op0) (this.TranslateIntExpression op1)
@@ -634,6 +655,8 @@ static std::complex<double> %s(size_t i, size_t bitCount) {
     member private this.TranslateComplexVExpression (exp : ComplexVExpression) : List<string> = 
         match exp with
         | CV_New values -> [for (r, i) in values -> sprintf "std::complex<double>(%s,%s)" (this.TranslateFloatExpression r) (this.TranslateFloatExpression i)]
+        | CV_DupReals r -> this.TranslateComplexVRegister r |> List.map (fun s -> sprintf "std::complex<double>(%s.real(),%s.real())" s s)
+        | CV_DupImags r -> this.TranslateComplexVRegister r |> List.map (fun s -> sprintf "std::complex<double>(%s.imag(),%s.imag())" s s)
         | CV_Merge vars -> List.collect this.TranslateComplexVRegister vars
         | CV_Add (op0, op1) -> [for l, r in List.zip (this.TranslateComplexVRegister op0) (this.TranslateComplexVRegister op1) 
                                 -> sprintf "%s+%s" l r]
@@ -656,16 +679,17 @@ static std::complex<double> %s(size_t i, size_t bitCount) {
             sprintf "%s%s;" ident 
                 (List.zip (this.TranslateComplexVRegister r) (this.TranslateComplexVExpression e) 
                 |> List.map (fun (a,b)-> sprintf "auto %s=%s" a b) |> String.concat ";")
-        | S_LoadComplex (r, p, i) -> 
-            assert (r.Dimension = 1)
-            sprintf "%sauto %s=%s;" ident ((this.TranslateComplexVRegister r).Item 0) (this.TranslateComplexPtr p i)
+        | S_LoadComplex (r, p, i, d) -> 
+            sprintf "%s%s;" ident 
+                (List.zip (this.TranslateComplexVRegister r) (this.TranslateComplexPtr p i d) 
+                |> List.map (fun (a,b)-> sprintf "auto %s=%s" a b) |> String.concat ";")
         | S_StoreComplexV (ptrs, r) -> 
             sprintf "%s%s;" ident 
-                (List.zip [for p, i in ptrs -> this.TranslateComplexPtr p i] (this.TranslateComplexVRegister r)
+                (List.zip (List.concat [for p, i, d in ptrs -> this.TranslateComplexPtr p i d]) (this.TranslateComplexVRegister r)
                 |> List.map (fun (a,b)-> sprintf "%s=%s" a b) |> String.concat ";")
-        | S_RangeFor ({Name=name}, s, e, stats) -> 
-            sprintf "%sfor (size_t %s = %s; %s < %s; ++%s) {\n%s\n%s}" 
-                ident name (this.TranslateIntExpression s) name (this.TranslateIntExpression e) name
+        | S_RangeFor ({Name=name}, start, stop, step, stats) -> 
+            sprintf "%sfor (size_t %s = %d; %s < %d; %s += %d) {\n%s\n%s}" 
+                ident name start name stop name step
                 ([for stat in stats -> this.TranslateStatement (ident + "    ") stat] |> String.concat "\n") ident
         | S_Invoke (name, args) -> sprintf "%s%s(%s);" ident name ([for arg in args -> this.TranslateArgument arg] |> String.concat ",")
         | S_Return e -> sprintf "%sreturn %s;" ident (this.TranslateIntExpression e)
@@ -740,7 +764,7 @@ static __m128d %s(size_t i, size_t bitCount) {
         | I_Variable {Name=name} -> name
         | I_Add (op0, op1) -> sprintf "(%s)+(%s)" (this.TranslateIntExpression op0) (this.TranslateIntExpression op1)
         | I_Substract (op0, op1) -> sprintf "(%s)-(%s)" (this.TranslateIntExpression op0) (this.TranslateIntExpression op1)
-        | I_Multiply (op0, op1) -> sprintf "%s*%s" (this.TranslateIntExpression op0) (this.TranslateIntExpression op1)
+        | I_Multiply (op0, op1) -> sprintf "(%s)*(%s)" (this.TranslateIntExpression op0) (this.TranslateIntExpression op1)
         | I_And (op0, op1) -> sprintf "(%s)&(%s)" (this.TranslateIntExpression op0) (this.TranslateIntExpression op1)
         | I_Or (op0, op1) -> sprintf "(%s)|(%s)" (this.TranslateIntExpression op0) (this.TranslateIntExpression op1)
         | I_LShift (op0, op1) -> sprintf "(%s)<<(%s)" (this.TranslateIntExpression op0) (this.TranslateIntExpression op1)
@@ -767,6 +791,10 @@ static __m128d %s(size_t i, size_t bitCount) {
             sprintf "_mm256_set_pd(%s,%s,%s,%s)" 
                 (this.TranslateFloatExpression i1) (this.TranslateFloatExpression r1) 
                 (this.TranslateFloatExpression i0) (this.TranslateFloatExpression r0)
+        | CV_DupReals { Name=name; Dimension=1 } -> sprintf "_mm_shuffle_pd(%s,%s,0)" name name
+        | CV_DupReals { Name=name; Dimension=2 } -> sprintf "_mm256_shuffle_pd(%s,%s,0)" name name
+        | CV_DupImags { Name=name; Dimension=1 } -> sprintf "_mm_shuffle_pd(%s,%s,3)" name name
+        | CV_DupImags { Name=name; Dimension=2 } -> sprintf "_mm256_shuffle_pd(%s,%s,15)" name name
         | CV_Merge [{ Name=name0; Dimension=1 }; { Name=name1; Dimension=1 }] -> sprintf "_mm256_set_m128d(%s,%s)" name1 name0
         | CV_Add ({ Name=name0; Dimension=1 }, { Name=name1; Dimension=1 }) -> sprintf "_mm_add_pd(%s,%s)" name0 name1
         | CV_Add ({ Name=name0; Dimension=2 }, { Name=name1; Dimension=2 }) -> sprintf "_mm256_add_pd(%s,%s)" name0 name1
@@ -787,11 +815,15 @@ static __m128d %s(size_t i, size_t bitCount) {
     member private this.TranslateStatement (ident : string) (stat : Statement) : string = 
         match stat with 
         | S_EvaluateComplexV ({ Name=name; }, e) -> sprintf "%sauto %s=%s;" ident name (this.TranslateComplexVExpression e)
-        | S_LoadComplex ({ Name=rname; Dimension=1 }, { Name=pname; }, i) -> 
+        | S_LoadComplex ({ Name=rname; Dimension=1 }, { Name=pname; }, i, 1) -> 
             sprintf "%sauto %s=_mm_load_pd(reinterpret_cast<double const*>(&%s[%s]));" ident rname pname (this.TranslateIntExpression i)
-        | S_StoreComplexV ([{ Name=pname }, i], { Name=rname; Dimension=1 }) -> 
+        | S_LoadComplex ({ Name=rname; Dimension=2 }, { Name=pname; }, i, 2) -> 
+            sprintf "%sauto %s=_mm256_load_pd(reinterpret_cast<double const*>(&%s[%s]));" ident rname pname (this.TranslateIntExpression i)
+        | S_StoreComplexV ([{ Name=pname }, i, 1 ], { Name=rname; Dimension=1 }) -> 
             sprintf "%s_mm_store_pd(reinterpret_cast<double*>(&%s[%s]),%s);" ident pname (this.TranslateIntExpression i) rname
-        | S_StoreComplexV ([{ Name=pname0 }, i0; { Name=pname1 }, i1], { Name=rname; Dimension=2 }) when pname0 = pname1 -> 
+        | S_StoreComplexV ([{ Name=pname }, i, 2 ], { Name=rname; Dimension=2 }) -> 
+            sprintf "%s_mm256_store_pd(reinterpret_cast<double*>(&%s[%s]),%s);" ident pname (this.TranslateIntExpression i) rname
+        | S_StoreComplexV ([{ Name=pname0 }, i0, 1; { Name=pname1 }, i1, 1], { Name=rname; Dimension=2 }) when pname0 = pname1 -> 
             if FoldLiteralInt (I_Add (i0, I_Literal 1)) = i1 then
                 let si0 = this.TranslateIntExpression i0
                 sprintf "%s_mm256_store_pd(reinterpret_cast<double*>(&%s[%s]),%s);" ident pname0 si0 rname
@@ -802,9 +834,9 @@ static __m128d %s(size_t i, size_t bitCount) {
                 [ sprintf "%s_mm_store_pd(reinterpret_cast<double*>(&%s[%s]),_mm256_castpd256_pd128(%s));" ident pname0 (this.TranslateIntExpression i0) rname
                   sprintf "%s_mm_store_pd(reinterpret_cast<double*>(&%s[%s]),_mm256_extractf128_pd(%s,1));" ident pname1 (this.TranslateIntExpression i1) rname
                   ] |> String.concat "" 
-        | S_RangeFor ({Name=name}, s, e, stats) -> 
-            sprintf "%sfor (size_t %s = %s; %s < %s; ++%s) {\n%s\n%s}" 
-                ident name (this.TranslateIntExpression s) name (this.TranslateIntExpression e) name
+        | S_RangeFor ({Name=name}, start, stop, step, stats) -> 
+            sprintf "%sfor (size_t %s = %d; %s < %d; %s += %d) {\n%s\n%s}" 
+                ident name start name stop name step
                 ([for stat in stats -> this.TranslateStatement (ident + "    ") stat] |> String.concat "\n") ident
         | S_Invoke (name, args) -> sprintf "%s%s(%s);" ident name ([for arg in args -> this.TranslateArgument arg] |> String.concat ",")
         | S_Return e -> sprintf "%sreturn %s;" ident (this.TranslateIntExpression e)
