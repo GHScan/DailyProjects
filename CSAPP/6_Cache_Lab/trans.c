@@ -22,26 +22,122 @@ int is_transpose(int M, int N, int A[N][M], int B[M][N]);
 char transpose_submit_desc[] = "Transpose submission";
 void transpose_submit(int M, int N, int A[N][M], int B[M][N])
 {
-    int nSize = 8, mSize = 8;
-    if (N == 64) {
-        nSize = 8, mSize = 4;
-    } else if (N == 67) {
-        nSize = 8, mSize = 4;
-    }
+    int iOff, jOff, i, j;
+    int temp0, temp1, temp2, temp3, temp4, temp5, temp6, temp7;
 
-#define MIN(a, b) ((a)<(b) ? (a):(b))
-    int nBlock = (N + nSize - 1) / nSize, mBlock = (M + mSize - 1) / mSize;
-    for (int i = 0; i < nBlock; ++i) {
-        for (int j = 0; j < mBlock; ++j) {
-            int iie = MIN(i * nSize + nSize, N), jje = MIN(j * mSize + mSize, M);
-            for (int ii = i * nSize; ii < iie; ++ii) {
-                for (int jj = jje - 1; jj >= j * mSize; --jj) {
-                    B[jj][ii] = A[ii][jj];
+    if (M == 64 && N == 64) {
+        for (iOff = 0; iOff + 8 <= M; iOff += 8) {
+            for (jOff = 0; jOff + 8 <= N; jOff += 8) {
+                for (j = jOff; j < jOff + 4; ++j) {
+                    temp0 = A[j][iOff];
+                    temp1 = A[j][iOff+1];
+                    temp2 = A[j][iOff+2];
+                    temp3 = A[j][iOff+3];
+                    temp4 = A[j][iOff+4];
+                    temp5 = A[j][iOff+5];
+                    temp6 = A[j][iOff+6];
+                    temp7 = A[j][iOff+7];
+                    B[iOff+0][j]=temp0;
+                    B[iOff+1][j]=temp1;
+                    B[iOff+2][j]=temp2;
+                    B[iOff+3][j]=temp3;
+                    B[iOff+1][j+4]=temp4;
+                    B[iOff+2][j+4]=temp5;
+                    B[iOff+3][j+4]=temp6;
+                    B[iOff+0][j+4]=temp7;
+                }
+                for (j = jOff + 4; j < jOff + 8; ++j) {
+                    temp0 = A[j][iOff];
+                    temp1 = A[j][iOff+1];
+                    temp2 = A[j][iOff+2];
+                    temp3 = A[j][iOff+3];
+                    temp4 = A[j][iOff+4];
+                    temp5 = A[j][iOff+5];
+                    temp6 = A[j][iOff+6];
+                    temp7 = A[j][iOff+7];
+                    B[iOff+4][j-4]=temp0;
+                    B[iOff+5][j-4]=temp1;
+                    B[iOff+6][j-4]=temp2;
+                    B[iOff+7][j-4]=temp3;
+                    B[iOff+4][j]=temp4;
+                    B[iOff+5][j]=temp5;
+                    B[iOff+6][j]=temp6;
+                    B[iOff+7][j]=temp7;
+                }
+                for (i = 3; i >= 0; --i) {
+                    j = (i + 1) & 3;
+                    temp0 = B[iOff+4+i][jOff];
+                    temp1 = B[iOff+4+i][jOff+1];
+                    temp2 = B[iOff+4+i][jOff+2];
+                    temp3 = B[iOff+4+i][jOff+3];
+                    temp4 = B[iOff+j][jOff+4];
+                    temp5 = B[iOff+j][jOff+5];
+                    temp6 = B[iOff+j][jOff+6];
+                    temp7 = B[iOff+j][jOff+7];
+                    B[iOff+4+i][jOff] = temp4;
+                    B[iOff+4+i][jOff+1] = temp5;
+                    B[iOff+4+i][jOff+2] = temp6;
+                    B[iOff+4+i][jOff+3] = temp7;
+                    B[iOff+j][jOff+4] = temp0;
+                    B[iOff+j][jOff+5] = temp1;
+                    B[iOff+j][jOff+6] = temp2;
+                    B[iOff+j][jOff+7] = temp3;
+                }
+                for (i = 0; i < 3; ++i) {
+                    j = i + 1;
+                    temp0 = B[iOff+i][jOff+4];
+                    temp1 = B[iOff+i][jOff+5];
+                    temp2 = B[iOff+i][jOff+6];
+                    temp3 = B[iOff+i][jOff+7];
+                    temp4 = B[iOff+j][jOff+4];
+                    temp5 = B[iOff+j][jOff+5];
+                    temp6 = B[iOff+j][jOff+6];
+                    temp7 = B[iOff+j][jOff+7];
+                    B[iOff+j][jOff+4] = temp0;
+                    B[iOff+j][jOff+5] = temp1;
+                    B[iOff+j][jOff+6] = temp2;
+                    B[iOff+j][jOff+7] = temp3;
+                    B[iOff+i][jOff+4] = temp4;
+                    B[iOff+i][jOff+5] = temp5;
+                    B[iOff+i][jOff+6] = temp6;
+                    B[iOff+i][jOff+7] = temp7;
                 }
             }
         }
+    } else {
+        iOff = 0;
+        for (; iOff + 8 <= M; iOff += 8) {
+            jOff = 0;
+            for (; jOff + 8 <= N; jOff += 8) {
+                for (j = jOff; j < jOff + 8; ++j) {
+                    temp0 = A[j][iOff];
+                    temp1 = A[j][iOff+1];
+                    temp2 = A[j][iOff+2];
+                    temp3 = A[j][iOff+3];
+                    temp4 = A[j][iOff+4];
+                    temp5 = A[j][iOff+5];
+                    temp6 = A[j][iOff+6];
+                    temp7 = A[j][iOff+7];
+                    B[iOff][j] = temp0;
+                    B[iOff+1][j] = temp1;
+                    B[iOff+2][j] = temp2;
+                    B[iOff+3][j] = temp3;
+                    B[iOff+4][j] = temp4;
+                    B[iOff+5][j] = temp5;
+                    B[iOff+6][j] = temp6;
+                    B[iOff+7][j] = temp7;
+                }
+            }
+            for (j = jOff; j < N; ++j) {
+                for (i = iOff; i < iOff + 8; ++i)
+                    B[i][j] = A[j][i];
+            }
+        }
+        for (i = iOff; i < M; ++i) {
+            for (j = 0; j < N; ++j)
+                B[i][j] = A[j][i];
+        }
     }
-#undef MIN
 }
 
 /* 
