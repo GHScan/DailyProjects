@@ -1,18 +1,17 @@
 #include "stdafx.h"
 
-#include <array>
 #include <vector>
 #include <algorithm>
 #include <sstream>
 
 
-#define USE_GMP
-// #define USE_FFTW
+#define USE_GMP 1
+#define USE_FFTW 0
 
-#ifdef USE_GMP
+#if USE_GMP
 #include <mpirxx.h>
 #endif
-#ifdef USE_FFTW
+#if USE_FFTW
 #include <fftw3.h>
 #endif
 
@@ -28,17 +27,21 @@
 
 static void TestFFT() {
     {
-        std::vector<std::vector<std::complex<double>>> inputs = {
+        std::vector<std::vector<std::complex<FFTFloat>>> inputs = {
             { 1, 2, 3, 4 },
             { 1, 2, 3, 4, 5, 6, 7, 8 },
         };
-        std::vector<std::vector<std::complex<double>>> expects = {
+        std::vector<std::vector<std::complex<FFTFloat>>> expects = {
             { { 10, 0 },{ -2,-2 },{ -2,0 },{ -2,2 } },
+#if USE_SINGLE_FLOAT_FFT
+            { { 36,0 },{ -4,-9.65685f },{ -4,-4 },{ -4,-1.65685f },{ -4,0 },{ -4, 1.65685f },{ -4, 4 },{ -4, 9.65685f }, },
+#else
             { { 36,0 },{ -4,-9.65685 },{ -4,-4 },{ -4,-1.65685 },{ -4,0 },{ -4, 1.65685 },{ -4, 4 },{ -4, 9.65685 }, },
+#endif
         };
 
         for (size_t i = 0; i < inputs.size(); ++i) {
-            std::vector<std::complex<double>> output(inputs[i].size());
+            std::vector<std::complex<FFTFloat>> output(inputs[i].size());
 
             FastFourierTransform(&output[0], &inputs[i][0], inputs[i].size());
             for (size_t j = 0; j < output.size(); ++j) {
@@ -94,28 +97,40 @@ static void TestFFT() {
             ASSERT(equal(inputNums.begin(), inputNums.end(), inputNums2.begin()));
         }
     }
-#ifdef ENABLE_FASTEST_FT
+#if ENABLE_FASTEST_FT
     {
+#if USE_SINGLE_FLOAT_FFT
+        for (auto bits = 0; bits <= 12; ++bits) {
+#else
         for (auto bits = 0; bits <= 20; ++bits) {
+#endif
             auto len = 1 << bits;
-            auto input = AlignedAlloc<std::complex<double>>(len);
-            iota(input, input + len, 0);
+            auto input = AlignedAlloc<std::complex<FFTFloat>>(len);
+            iota(input, input + len, FFTFloat(0));
 
-            auto output = AlignedAlloc<std::complex<double>>(len);
+            auto output = AlignedAlloc<std::complex<FFTFloat>>(len);
             FastestFourierTransform(output, input, len);
 
             if (bits <= 10) {
-                auto output2 = AlignedAlloc<std::complex<double>>(len);
+                auto output2 = AlignedAlloc<std::complex<FFTFloat>>(len);
                 FastFourierTransform(output2, input, len);
                 for (size_t i = 0; i < len; ++i)
+#if USE_SINGLE_FLOAT_FFT
+                    ASSERT(Equals(output[i], output2[i], 1e1));
+#else
                     ASSERT(Equals(output[i], output2[i]));
+#endif
                 AlignedFree(output2);
             }
 
-            auto input2 = AlignedAlloc<std::complex<double>>(len);
+            auto input2 = AlignedAlloc<std::complex<FFTFloat>>(len);
             InverseFastestFourierTransform(input2, output, len);
             for (size_t i = 0; i < len; ++i) 
+#if USE_SINGLE_FLOAT_FFT
+                ASSERT(Equals(input[i], input2[i], 1e0));
+#else
                 ASSERT(Equals(input[i], input2[i], 1e-3));
+#endif
 
             AlignedFree(input2);
             AlignedFree(output);
@@ -175,7 +190,7 @@ static void TestConvolve() {
 }
 
 static void TestBigInteger() {
-#ifdef USE_GMP
+#if USE_GMP
     std::vector<std::string> randomStrs(16);
     std::generate(randomStrs.begin(), randomStrs.end(), []()
     {
@@ -257,13 +272,16 @@ static void Test() {
 
 
 static void Benchmark_FFT() {
+    size_t kMaxBits = 20;
+    size_t kMaxLoopBits = 22;
+
     puts("fft\n");
-    for (size_t bits = 2; bits <= 20; ++bits) {
-        std::vector<std::complex<double>> input(1ULL << bits);
-        iota(input.begin(), input.end(), 0);
+    for (size_t bits = 2; bits <= kMaxBits; ++bits) {
+        std::vector<std::complex<FFTFloat>> input(1ULL << bits);
+        iota(input.begin(), input.end(), FFTFloat(0));
         auto output(input);
 
-        auto loop = 1 << (bits > 15 ? 0 : 15 - bits);
+        auto loop = 1 << (bits > kMaxLoopBits ? 0 : kMaxLoopBits - bits);
         printf("\t2^%-llu: %f us\n", bits, Timing([&]()
         {
             for (auto i = 0; i < loop; ++i)
@@ -271,15 +289,15 @@ static void Benchmark_FFT() {
         }) * 1000000 / loop);
     }
 
-#ifdef ENABLE_FASTEST_FT
+#if ENABLE_FASTEST_FT
     puts("fastestft\n");
-    for (size_t bits = 2; bits <= 20; ++bits) {
+    for (size_t bits = 2; bits <= kMaxBits; ++bits) {
         auto len = 1ULL << bits;
-        auto input = AlignedAlloc<std::complex<double>>(len);
-        iota(input, input + len, 0);
-        auto output = AlignedAlloc<std::complex<double>>(len);
+        auto input = AlignedAlloc<std::complex<FFTFloat>>(len);
+        iota(input, input + len, FFTFloat(0));
+        auto output = AlignedAlloc<std::complex<FFTFloat>>(len);
 
-        auto loop = 1 << (bits > 15 ? 0 : 15 - bits);
+        auto loop = 1 << (bits > kMaxLoopBits ? 0 : kMaxLoopBits - bits);
         printf("\t2^%-llu: %f us\n", bits, Timing([&]()
         {
             for (auto i = 0; i < loop; ++i)
@@ -291,9 +309,31 @@ static void Benchmark_FFT() {
     }
 #endif
 
-#ifdef USE_FFTW
+#if USE_FFTW
+#if USE_SINGLE_FLOAT_FFT
+    puts("fftwf3 estimate\n");
+    for (size_t bits = 2; bits <= kMaxBits; ++bits) {
+        auto len = 1 << bits;
+        auto in = static_cast<fftwf_complex*>(fftw_malloc(sizeof(fftwf_complex) * len));
+        auto out = static_cast<fftwf_complex*>(fftw_malloc(sizeof(fftwf_complex) * len));
+        // auto p = fftwf_plan_dft_1d(len, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
+        auto p = fftwf_plan_dft_1d(len, in, out, FFTW_FORWARD, FFTW_MEASURE);
+        for (auto i = 0; i < len; ++i)
+            in[i][0] = FFTFloat(i), in[i][1] = FFTFloat(0);
+
+        auto loop = 1 << (bits > kMaxLoopBits ? 0 : kMaxLoopBits - bits);
+        printf("\t2^%-llu: %f us\n", bits, Timing([&]()
+        {
+            for (auto i = 0; i < loop; ++i)
+                fftwf_execute(p);
+        }) * 1000000 / loop);
+
+        fftwf_destroy_plan(p);
+        fftwf_free(in); fftwf_free(out);
+    }
+#else
     puts("fftw3 estimate\n");
-    for (size_t bits = 2; bits <= 20; ++bits) {
+    for (size_t bits = 2; bits <= kMaxBits; ++bits) {
         auto len = 1 << bits;
         auto in = static_cast<fftw_complex*>(fftw_malloc(sizeof(fftw_complex) * len));
         auto out = static_cast<fftw_complex*>(fftw_malloc(sizeof(fftw_complex) * len));
@@ -302,7 +342,7 @@ static void Benchmark_FFT() {
         for (auto i = 0; i < len; ++i)
             in[i][0] = i, in[i][1] = 0;
 
-        auto loop = 1 << (bits > 15 ? 0 : 15 - bits);
+        auto loop = 1 << (bits > kMaxLoopBits ? 0 : kMaxLoopBits - bits);
         printf("\t2^%-llu: %f us\n", bits, Timing([&]()
         {
             for (auto i = 0; i < loop; ++i)
@@ -312,6 +352,7 @@ static void Benchmark_FFT() {
         fftw_destroy_plan(p);
         fftw_free(in); fftw_free(out);
     }
+#endif
 #endif
 }
 

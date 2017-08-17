@@ -5,15 +5,15 @@
 #include "FastestFT.h"
 
 
-#ifdef ENABLE_FASTEST_FT
+#if ENABLE_FASTEST_FT
 
 
 #include "FFT_gen.h"
 
 
 extern void FastestFourierTransform(
-    std::complex<double> *dest,
-    std::complex<double> const *src,
+    std::complex<FFTFloat> *dest,
+    std::complex<FFTFloat> const *src,
     size_t size) {
 
     ASSERT(IsPowerOf2(size));
@@ -45,8 +45,8 @@ extern void FastestFourierTransform(
 }
 
 extern void InverseFastestFourierTransform(
-    std::complex<double> *dest,
-    std::complex<double> const *src,
+    std::complex<FFTFloat> *dest,
+    std::complex<FFTFloat> const *src,
     size_t size) {
  
     ASSERT(IsPowerOf2(size));

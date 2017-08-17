@@ -4,17 +4,19 @@
 
 #include <complex>
 
+#include "Utility.h"
 
-// #define ENABLE_FASTEST_FT
+
+#define ENABLE_FASTEST_FT 0
 
 
 extern void FastestFourierTransform(
-    std::complex<double> *dest,
-    std::complex<double> const *src,
+    std::complex<FFTFloat> *dest,
+    std::complex<FFTFloat> const *src,
     size_t size);
 extern void InverseFastestFourierTransform(
-    std::complex<double> *dest,
-    std::complex<double> const *src,
+    std::complex<FFTFloat> *dest,
+    std::complex<FFTFloat> const *src,
     size_t size);
 
 

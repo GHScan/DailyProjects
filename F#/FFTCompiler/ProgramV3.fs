@@ -457,11 +457,11 @@ type FFTFunctionGenerator() = class
                 Body=[invokeBitReverseCopy; invokeKernel] }
 
     member this.ForwardGen (size : int) (dlp : int) : List<Function> = 
-        assert (dlp = 1 || dlp = 2)
+        assert (dlp = 1 || dlp = 2 || dlp = 4)
         [ this.GenKernelFunction size  dlp 1; this.GenFFTFunction size 1]
 
     member this.BackwardGen (size : int) (dlp : int) : List<Function> = 
-        assert (dlp = 1 || dlp = 2)
+        assert (dlp = 1 || dlp = 2 || dlp = 4)
         [ this.GenKernelFunction size  dlp -1; this.GenFFTFunction size -1]
 
 end
@@ -582,7 +582,10 @@ def TwiddleFactor(i, bitCount, factorMatrix=[[]]*32):
 
 end
 
-type CppTranslator() = class 
+type CppTranslator(floatType : string) = class 
+    do 
+        assert (floatType = "float" || floatType = "double")
+
     let mutable headerGenerated = false
 
     member private this.GenHeader() : string =
@@ -594,20 +597,20 @@ type CppTranslator() = class
                 sprintf "
 #include <vector>
 #include <complex>
-static std::complex<double> %s(size_t i, size_t bitCount) {
-    static std::vector<std::vector<std::complex<double>>> sFactorMatrix(32);
+static std::complex<%s> %s(size_t i, size_t bitCount) {
+    static std::vector<std::vector<std::complex<%s>>> sFactorMatrix(32);
     auto &factors = sFactorMatrix[bitCount];
     if (factors.size() == 0) {
         auto size = 1UL << bitCount;
         factors.reserve(size + 1);
-        std::complex<double> f = std::polar(1.0, 2.0 * acos(-1) / size), fi = 1;
+        std::complex<%s> f = std::polar(1.0, 2.0 * acos(-1) / size), fi = 1;
         for (size_t j = 0; j < size; ++j, fi *= f) 
             factors.push_back(fi);
         factors.push_back(1);
     }
     return factors[i];
 }
-                                " Constant.kTwiddleFactorFuncName
+                                " floatType Constant.kTwiddleFactorFuncName floatType floatType
             let reverseByteFunc = 
                 sprintf "static size_t %s(size_t i){\n    static size_t sReversedBytes[]={%s};\n    return sReversedBytes[i];\n}\n" 
                     Constant.kReverseByteFuncName ([for b in Util.ReversedBytes -> b.ToString()] |> String.concat ",")
@@ -623,8 +626,8 @@ static std::complex<double> %s(size_t i, size_t bitCount) {
     member private this.TranslateVariable (v : Variable) : string =
         match v with 
         | V_Int { Name=name; } -> sprintf "size_t %s" name
-        | V_Ptr { Name=name; Readonly=true } -> sprintf "std::complex<double> const *%s" name
-        | V_Ptr { Name=name; Readonly=false } -> sprintf "std::complex<double> *%s" name
+        | V_Ptr { Name=name; Readonly=true } -> sprintf "std::complex<%s> const *%s" floatType name
+        | V_Ptr { Name=name; Readonly=false } -> sprintf "std::complex<%s> *%s" floatType name
 
     member private this.TranslateRetType (v : Option<IntVariable>) : string = 
         match v with 
@@ -646,7 +649,7 @@ static std::complex<double> %s(size_t i, size_t bitCount) {
 
     member private this.TranslateFloatExpression (exp : FloatExpression) : string = 
         match exp with
-        | F_Literal v -> sprintf "%.20f" v
+        | F_Literal v -> sprintf "%.20f%s" v (if floatType = "float" then "f" else "")
         | F_Minus v -> sprintf "-%s" (this.TranslateFloatExpression v)
         | F_Multiply (op0, op1) -> sprintf "%s*%s" (this.TranslateFloatExpression op0) (this.TranslateFloatExpression op1)
         | F_ReadReal (r, i) -> sprintf "%s.real()" ((this.TranslateComplexVRegister r).Item i)
@@ -654,18 +657,20 @@ static std::complex<double> %s(size_t i, size_t bitCount) {
 
     member private this.TranslateComplexVExpression (exp : ComplexVExpression) : List<string> = 
         match exp with
-        | CV_New values -> [for (r, i) in values -> sprintf "std::complex<double>(%s,%s)" (this.TranslateFloatExpression r) (this.TranslateFloatExpression i)]
-        | CV_DupReals r -> this.TranslateComplexVRegister r |> List.map (fun s -> sprintf "std::complex<double>(%s.real(),%s.real())" s s)
-        | CV_DupImags r -> this.TranslateComplexVRegister r |> List.map (fun s -> sprintf "std::complex<double>(%s.imag(),%s.imag())" s s)
+        | CV_New values -> [for (r, i) in values -> sprintf "std::complex<%s>(%s,%s)" floatType (this.TranslateFloatExpression r) (this.TranslateFloatExpression i)]
+        | CV_DupReals r -> 
+            this.TranslateComplexVRegister r |> List.map (fun s -> sprintf "std::complex<%s>(%s.real(),%s.real())" floatType s s)
+        | CV_DupImags r -> 
+            this.TranslateComplexVRegister r |> List.map (fun s -> sprintf "std::complex<%s>(%s.imag(),%s.imag())" floatType s s)
         | CV_Merge vars -> List.collect this.TranslateComplexVRegister vars
         | CV_Add (op0, op1) -> [for l, r in List.zip (this.TranslateComplexVRegister op0) (this.TranslateComplexVRegister op1) 
                                 -> sprintf "%s+%s" l r]
         | CV_Substract (op0, op1) -> [for l, r in List.zip (this.TranslateComplexVRegister op0) (this.TranslateComplexVRegister op1) 
                                 -> sprintf "%s-%s" l r]
         | CV_ElementMultiply (op0, op1) -> [for l, r in List.zip (this.TranslateComplexVRegister op0) (this.TranslateComplexVRegister op1) 
-                                -> sprintf "std::complex<double>(%s.real()*%s.real(),%s.imag()*%s.imag())" l r l r]
+                                -> sprintf "std::complex<%s>(%s.real()*%s.real(),%s.imag()*%s.imag())" floatType l r l r]
         | CV_CrossElementAddSub (op0, op1) -> [for l, r in List.zip (this.TranslateComplexVRegister op0) (this.TranslateComplexVRegister op1) 
-                                -> sprintf "std::complex<double>(%s.real()-%s.imag(),%s.imag()+%s.real())" l r l r]
+                                -> sprintf "std::complex<%s>(%s.real()-%s.imag(),%s.imag()+%s.real())" floatType l r l r]
         | CV_Invoke (name, args, d) -> [sprintf "%s(%s)" name ([for arg in args -> this.TranslateArgument arg ] |> String.concat ",")]
 
     member private this.TranslateArgument (arg : ArgumentExpression) : string = 
@@ -733,7 +738,7 @@ public:
             factors.push_back(1);
         }
     }
-    __m128d operator () (size_t i, size_t bitCount) {
+    __m128d operator () (size_t i, size_t bitCount) const {
         return _mm_load_pd(reinterpret_cast<double const*>(&mMatrix[bitCount][i]));
     }
     std::vector<std::vector<std::complex<double>>> mMatrix;
@@ -827,13 +832,205 @@ static __m128d %s(size_t i, size_t bitCount) {
             if FoldLiteralInt (I_Add (i0, I_Literal 1)) = i1 then
                 let si0 = this.TranslateIntExpression i0
                 sprintf "%s_mm256_store_pd(reinterpret_cast<double*>(&%s[%s]),%s);" ident pname0 si0 rname
-            else if FoldLiteralInt (I_Add (i1, I_Literal 1)) = i0 then
-                let si1 = this.TranslateIntExpression i1
-                sprintf "%s_mm256_store_pd(reinterpret_cast<double*>(&%s[%s]),%s);" ident pname0 si1 rname
             else
                 [ sprintf "%s_mm_store_pd(reinterpret_cast<double*>(&%s[%s]),_mm256_castpd256_pd128(%s));" ident pname0 (this.TranslateIntExpression i0) rname
                   sprintf "%s_mm_store_pd(reinterpret_cast<double*>(&%s[%s]),_mm256_extractf128_pd(%s,1));" ident pname1 (this.TranslateIntExpression i1) rname
                   ] |> String.concat "" 
+        | S_RangeFor ({Name=name}, start, stop, step, stats) -> 
+            sprintf "%sfor (size_t %s = %d; %s < %d; %s += %d) {\n%s\n%s}" 
+                ident name start name stop name step
+                ([for stat in stats -> this.TranslateStatement (ident + "    ") stat] |> String.concat "\n") ident
+        | S_Invoke (name, args) -> sprintf "%s%s(%s);" ident name ([for arg in args -> this.TranslateArgument arg] |> String.concat ",")
+        | S_Return e -> sprintf "%sreturn %s;" ident (this.TranslateIntExpression e)
+        | _ -> notImpl ""
+
+    member private this.TranslateBody (body : List<Statement>) : string = 
+        body |> List.map (this.TranslateStatement "    ") |> String.concat "\n"
+
+    member this.Translate ({Name=name; Parameters=parameters; Ret=ret; Body=body; } : Function) : string = 
+        this.GenHeader() + sprintf "static %s %s(%s) {\n%s\n}" 
+            (this.TranslateRetType ret)
+            name 
+            (List.map this.TranslateVariable parameters |> String.concat ", ") 
+            (this.TranslateBody body)
+
+end
+
+type CppWithSIMDTranslatorF() = class 
+    let mutable headerGenerated = false
+
+    member private this.GenHeader() : string =
+        if headerGenerated then 
+            ""
+        else
+            headerGenerated <- true
+            let twiddleFactorFunc = 
+                sprintf "
+#include <emmintrin.h>
+#include <pmmintrin.h>
+#include <vector>
+#include <complex>
+static const __m128 gZero128(_mm_setzero_ps());
+static class TwiddleFactorMatrix {
+public:
+    TwiddleFactorMatrix() : mMatrix(32) {
+        for (size_t bitCount = 0; bitCount <= 20; ++bitCount) {
+            auto &factors = mMatrix[bitCount];
+            auto size = 1UL << bitCount;
+            factors.reserve(size + 1);
+            std::complex<float> f = std::polar(1.0, 2.0 * acos(-1) / size), fi = 1;
+            for (size_t j = 0; j < size; ++j, fi *= f)
+                factors.push_back(fi);
+            factors.push_back(1);
+        }
+    }
+    __m128 operator () (size_t i, size_t bitCount) const {
+        return _mm_loadl_pi(gZero128, reinterpret_cast<__m64 const*>(&mMatrix[bitCount][i]));
+    }
+    std::vector<std::vector<std::complex<float>>> mMatrix;
+} gFactorMatrix;
+static __m128 %s(size_t i, size_t bitCount) {
+    return gFactorMatrix(i, bitCount);
+}
+                                " Constant.kTwiddleFactorFuncName
+            let reverseByteFunc = 
+                sprintf "static size_t %s(size_t i){\n    static size_t sReversedBytes[]={%s};\n    return sReversedBytes[i];\n}\n" 
+                    Constant.kReverseByteFuncName ([for b in Util.ReversedBytes -> b.ToString()] |> String.concat ",")
+            [twiddleFactorFunc; reverseByteFunc] |> String.concat "\n"
+
+    member private this.TranslateVariable (v : Variable) : string =
+        match v with 
+        | V_Int { Name=name; } -> sprintf "size_t %s" name
+        | V_Ptr { Name=name; Readonly=true } -> sprintf "std::complex<float> const *%s" name
+        | V_Ptr { Name=name; Readonly=false } -> sprintf "std::complex<float> *%s" name
+
+    member private this.TranslateRetType (v : Option<IntVariable>) : string = 
+        match v with 
+        | None -> "void"
+        | Some _ -> "size_t"
+
+    member private this.TranslateIntExpression (exp : IntExpression) : string = 
+        match exp with
+        | I_Literal i -> i.ToString()
+        | I_Variable {Name=name} -> name
+        | I_Add (op0, op1) -> sprintf "(%s)+(%s)" (this.TranslateIntExpression op0) (this.TranslateIntExpression op1)
+        | I_Substract (op0, op1) -> sprintf "(%s)-(%s)" (this.TranslateIntExpression op0) (this.TranslateIntExpression op1)
+        | I_Multiply (op0, op1) -> sprintf "(%s)*(%s)" (this.TranslateIntExpression op0) (this.TranslateIntExpression op1)
+        | I_And (op0, op1) -> sprintf "(%s)&(%s)" (this.TranslateIntExpression op0) (this.TranslateIntExpression op1)
+        | I_Or (op0, op1) -> sprintf "(%s)|(%s)" (this.TranslateIntExpression op0) (this.TranslateIntExpression op1)
+        | I_LShift (op0, op1) -> sprintf "(%s)<<(%s)" (this.TranslateIntExpression op0) (this.TranslateIntExpression op1)
+        | I_RShift (op0, op1) -> sprintf "(%s)>>(%s)" (this.TranslateIntExpression op0) (this.TranslateIntExpression op1)
+        | I_Invoke (name, args) -> sprintf "%s(%s)" name ([for arg in args -> this.TranslateArgument arg ] |> String.concat ",")
+
+    member private this.TranslateFloatExpression (exp : FloatExpression) : string = 
+        match exp with
+        | F_Literal v -> sprintf "%.20ff" v
+        | F_Minus v -> sprintf "-%s" (this.TranslateFloatExpression v)
+        | F_Multiply (op0, op1) -> sprintf "%s*%s" (this.TranslateFloatExpression op0) (this.TranslateFloatExpression op1)
+        | F_ReadReal ({ Name=name; Dimension=1 }, 0) -> sprintf "%s.m128_f32[0]" name
+        | F_ReadReal ({ Name=name; Dimension=2 }, i) -> sprintf "%s.m128_f32[%d]" name (i * 2)
+        | F_ReadReal ({ Name=name; Dimension=4 }, i) -> sprintf "%s.m256_f32[%d]" name (i * 2)
+        | F_ReadImag ({ Name=name; Dimension=1 }, 0) -> sprintf "%s.m128_f32[1]" name
+        | F_ReadImag ({ Name=name; Dimension=2 }, i) -> sprintf "%s.m128_f32[%d+1]" name (i * 2)
+        | F_ReadImag ({ Name=name; Dimension=4 }, i) -> sprintf "%s.m256_f32[%d+1]" name (i * 2)
+        | _ -> notImpl ""
+
+    member private this.TranslateComplexVExpression (exp : ComplexVExpression) : string = 
+        match exp with
+        | CV_New [(r, i)] when r = i -> sprintf "_mm_set1_ps(%s)" (this.TranslateFloatExpression r)
+        | CV_New [(r, i)] -> sprintf "_mm_set_ps(0, 0, %s, %s)" (this.TranslateFloatExpression i) (this.TranslateFloatExpression r)
+        | CV_New [(r0, i0); (r1, i1)] when r0 = i0 && r1 = i1 && r0 = r1 -> sprintf "_mm_set1_ps(%s)" (this.TranslateFloatExpression r0)
+        | CV_New [(r0, i0); (r1, i1)] -> 
+            sprintf "_mm_set_ps(%s,%s,%s,%s)" 
+                (this.TranslateFloatExpression i1) (this.TranslateFloatExpression r1) 
+                (this.TranslateFloatExpression i0) (this.TranslateFloatExpression r0)
+        | CV_New nums when nums.Length = 4 -> 
+            let h = List.head nums
+            if List.forall (fun v->v = h) nums && fst h = snd h then
+                sprintf "_mm256_set1_ps(%s)" (this.TranslateFloatExpression (fst h))
+            else
+                sprintf "_mm256_set_ps(%s)" 
+                    ([for r, i in List.rev nums -> sprintf "%s,%s" (this.TranslateFloatExpression i) (this.TranslateFloatExpression r)] 
+                    |> String.concat ",")
+        | CV_DupReals { Name=name; Dimension=1 } -> sprintf "_mm_shuffle_ps(%s,%s,0)" name name
+        | CV_DupReals { Name=name; Dimension=2 } -> sprintf "_mm_shuffle_ps(%s,%s,0xa0)" name name
+        | CV_DupReals { Name=name; Dimension=4 } -> sprintf "_mm256_shuffle_ps(%s,%s,0xa0)" name name
+        | CV_DupImags { Name=name; Dimension=1 } -> sprintf "_mm_shuffle_ps(%s,%s,5)" name name
+        | CV_DupImags { Name=name; Dimension=2 } -> sprintf "_mm_shuffle_ps(%s,%s,0xf5)" name name
+        | CV_DupImags { Name=name; Dimension=4 } -> sprintf "_mm256_shuffle_ps(%s,%s,0xf5)" name name
+        | CV_Merge [{ Name=name0; Dimension=1 }; { Name=name1; Dimension=1 }] -> sprintf "_mm_shuffle_ps(%s,%s,0x44)" name0 name1
+        | CV_Merge [{ Name=name0; Dimension=1 }; { Name=name1; Dimension=1 }; { Name=name2; Dimension=1 };{ Name=name3; Dimension=1 };] -> 
+            sprintf "_mm256_set_m128(_mm_shuffle_ps(%s,%s,0x44),_mm_shuffle_ps(%s,%s,0x44))" name2 name3 name0 name1
+        | CV_Merge [{ Name=name0; Dimension=2 }; { Name=name1; Dimension=2 }] -> sprintf "_mm256_set_m128(%s,%s)" name1 name0
+        | CV_Add ({ Name=name0; Dimension=1 }, { Name=name1; Dimension=1 }) -> sprintf "_mm_add_ps(%s,%s)" name0 name1
+        | CV_Add ({ Name=name0; Dimension=2 }, { Name=name1; Dimension=2 }) -> sprintf "_mm_add_ps(%s,%s)" name0 name1
+        | CV_Add ({ Name=name0; Dimension=4 }, { Name=name1; Dimension=4 }) -> sprintf "_mm256_add_ps(%s,%s)" name0 name1
+        | CV_Substract ({ Name=name0; Dimension=1 },{ Name=name1; Dimension=1 }) -> sprintf "_mm_sub_ps(%s,%s)" name0 name1
+        | CV_Substract ({ Name=name0; Dimension=2 },{ Name=name1; Dimension=2 }) -> sprintf "_mm_sub_ps(%s,%s)" name0 name1
+        | CV_Substract ({ Name=name0; Dimension=4 },{ Name=name1; Dimension=4 }) -> sprintf "_mm256_sub_ps(%s,%s)" name0 name1
+        | CV_ElementMultiply ({ Name=name0; Dimension=1 },{ Name=name1; Dimension=1 }) -> sprintf "_mm_mul_ps(%s,%s)" name0 name1
+        | CV_ElementMultiply ({ Name=name0; Dimension=2 },{ Name=name1; Dimension=2 }) -> sprintf "_mm_mul_ps(%s,%s)" name0 name1
+        | CV_ElementMultiply ({ Name=name0; Dimension=4 },{ Name=name1; Dimension=4 }) -> sprintf "_mm256_mul_ps(%s,%s)" name0 name1
+        | CV_CrossElementAddSub ({ Name=name0; Dimension=1 },{ Name=name1; Dimension=1 }) -> sprintf "_mm_addsub_ps(%s, _mm_shuffle_ps(%s,%s,0xb1))" name0 name1 name1
+        | CV_CrossElementAddSub ({ Name=name0; Dimension=2 },{ Name=name1; Dimension=2 }) -> sprintf "_mm_addsub_ps(%s, _mm_shuffle_ps(%s,%s,0xb1))" name0 name1 name1
+        | CV_CrossElementAddSub ({ Name=name0; Dimension=4 },{ Name=name1; Dimension=4 }) -> sprintf "_mm256_addsub_ps(%s, _mm256_shuffle_ps(%s,%s,0xb1))" name0 name1 name1
+        | CV_Invoke (name, args, d) -> sprintf "%s(%s)" name ([for arg in args -> this.TranslateArgument arg ] |> String.concat ",")
+        | _ -> notImpl ""
+
+    member private this.TranslateArgument (arg : ArgumentExpression) : string = 
+        match arg with
+        | A_Int i -> this.TranslateIntExpression i
+        | A_Ptr {Name=name} -> name
+
+    member private this.TranslateStatement (ident : string) (stat : Statement) : string = 
+        match stat with 
+        | S_EvaluateComplexV ({ Name=name; }, e) -> sprintf "%sauto %s=%s;" ident name (this.TranslateComplexVExpression e)
+        | S_LoadComplex ({ Name=rname; Dimension=1 }, { Name=pname; }, i, 1) -> 
+            sprintf "%sauto %s=_mm_loadl_pi(gZero128, reinterpret_cast<__m64 const*>(&%s[%s]));" ident rname pname (this.TranslateIntExpression i)
+        | S_LoadComplex ({ Name=rname; Dimension=2 }, { Name=pname; }, i, 2) -> 
+            sprintf "%sauto %s=_mm_load_ps(reinterpret_cast<float const*>(&%s[%s]));" ident rname pname (this.TranslateIntExpression i)
+        | S_LoadComplex ({ Name=rname; Dimension=4 }, { Name=pname; }, i, 4) -> 
+            sprintf "%sauto %s=_mm256_load_ps(reinterpret_cast<float const*>(&%s[%s]));" ident rname pname (this.TranslateIntExpression i)
+        | S_StoreComplexV ([{ Name=pname }, i, 1 ], { Name=rname; Dimension=1 }) -> 
+            sprintf "%s_mm_storel_pi(reinterpret_cast<__m64*>(&%s[%s]),%s);" ident pname (this.TranslateIntExpression i) rname
+        | S_StoreComplexV ([{ Name=pname }, i, 2 ], { Name=rname; Dimension=2 }) -> 
+            sprintf "%s_mm_store_ps(reinterpret_cast<float*>(&%s[%s]),%s);" ident pname (this.TranslateIntExpression i) rname
+        | S_StoreComplexV ([{ Name=pname }, i, 4 ], { Name=rname; Dimension=4 }) -> 
+            sprintf "%s_mm256_store_ps(reinterpret_cast<float*>(&%s[%s]),%s);" ident pname (this.TranslateIntExpression i) rname
+        | S_StoreComplexV ([{ Name=pname0 }, i0, 1; { Name=pname1 }, i1, 1], { Name=rname; Dimension=2 }) when pname0 = pname1 -> 
+            if FoldLiteralInt (I_Add (i0, I_Literal 1)) = i1 then
+                let si0 = this.TranslateIntExpression i0
+                sprintf "%s_mm_store_ps(reinterpret_cast<float*>(&%s[%s]),%s);" ident pname0 si0 rname
+            else
+                [ sprintf "%s_mm_storel_pi(reinterpret_cast<float*>(&%s[%s]),%s);" ident pname0 (this.TranslateIntExpression i0) rname
+                  sprintf "%s_mm_storeh_pi(reinterpret_cast<float*>(&%s[%s]),%s);" ident pname1 (this.TranslateIntExpression i1) rname
+                  ] |> String.concat ""
+        | S_StoreComplexV ([{ Name=pname0 }, i0, 1; { Name=pname1 }, i1, 1; { Name=pname2 }, i2, 1; { Name=pname3 }, i3, 1], { Name=rname; Dimension=4 }) 
+            when pname0 = pname1 && pname0 = pname2 && pname0 = pname3 -> 
+                let i0Plus1, i1Plus1, i2Plus1 = FoldLiteralInt (I_Add (i0, I_Literal 1)), FoldLiteralInt (I_Add (i1, I_Literal 1)), FoldLiteralInt (I_Add (i2, I_Literal 1))
+                if i0Plus1 = i1 && i1Plus1 = i2 && i2Plus1 = i3 then
+                    let si0 = this.TranslateIntExpression i0
+                    sprintf "%s_mm256_store_ps(reinterpret_cast<float*>(&%s[%s]),%s);" ident pname0 si0 rname
+                else
+                    sprintf 
+                        "%s%s;" 
+                        ident 
+                        ([
+                            sprintf "auto %s_lo=_mm256_castps256_ps128(%s)" rname rname;
+                            sprintf "auto %s_hi=_mm256_extractf128_ps(%s,1)" rname rname;
+                            sprintf "_mm_storel_pi(reinterpret_cast<float*>(&%s[%s]),%s_lo);" pname0 (this.TranslateIntExpression i0) rname
+                            sprintf "_mm_storeh_pi(reinterpret_cast<float*>(&%s[%s]),%s_lo);" pname1 (this.TranslateIntExpression i1) rname
+                            sprintf "_mm_storel_pi(reinterpret_cast<float*>(&%s[%s]),%s_hi);" pname2 (this.TranslateIntExpression i2) rname
+                            sprintf "_mm_storeh_pi(reinterpret_cast<float*>(&%s[%s]),%s_hi);" pname3 (this.TranslateIntExpression i3) rname
+                        ] |> String.concat ";")
+        | S_StoreComplexV ([{ Name=pname0 }, i0, 2; { Name=pname1 }, i1, 2], { Name=rname; Dimension=4 }) when pname0 = pname1 -> 
+            if FoldLiteralInt (I_Add (i0, I_Literal 1)) = i1 then
+                let si0 = this.TranslateIntExpression i0
+                sprintf "%s_mm256_store_ps(reinterpret_cast<float*>(&%s[%s]),%s);" ident pname0 si0 rname
+            else
+                [ sprintf "%s_mm_store_ps(reinterpret_cast<float*>(&%s[%s]),_mm256_castps256_ps128(%s));" ident pname0 (this.TranslateIntExpression i0) rname
+                  sprintf "%s_mm_store_ps(reinterpret_cast<float*>(&%s[%s]),_mm256_extractf128_ps(%s,1));" ident pname1 (this.TranslateIntExpression i1) rname
+                  ] |> String.concat ""
         | S_RangeFor ({Name=name}, start, stop, step, stats) -> 
             sprintf "%sfor (size_t %s = %d; %s < %d; %s += %d) {\n%s\n%s}" 
                 ident name start name stop name step
@@ -880,13 +1077,25 @@ let main argv =
 //    GenerateFFTCode 
 //        "C:\Programming\Projects\Cpp2015\Cpp2015\FFT_gen.h"
 //        [for i in 0..20 -> 1 <<< i ]
+//        1
+//        ((new CppTranslator("float")).Translate);
+
+//    GenerateFFTCode 
+//        "C:\Programming\Projects\Cpp2015\Cpp2015\FFT_gen.h"
+//        [for i in 0..20 -> 1 <<< i ]
 //        2
-//        ((new CppTranslator()).Translate);
+//        ((new CppTranslator("double")).Translate);
 
     GenerateFFTCode 
         "C:\Programming\Projects\Cpp2015\Cpp2015\FFT_gen.h"
         [for i in 0..20 -> 1 <<< i ]
-        2
-        ((new CppWithSIMDTranslator()).Translate);
+        4
+        ((new CppWithSIMDTranslatorF()).Translate);
+
+//    GenerateFFTCode 
+//        "C:\Programming\Projects\Cpp2015\Cpp2015\FFT_gen.h"
+//        [for i in 0..20 -> 1 <<< i ]
+//        2
+//        ((new CppWithSIMDTranslator()).Translate);
 
     0

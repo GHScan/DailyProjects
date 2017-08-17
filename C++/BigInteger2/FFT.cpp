@@ -5,7 +5,7 @@
 #include <complex>
 
 
-#ifdef USE_SIMD
+#if USE_SIMD
 #include <pmmintrin.h>
 #include <emmintrin.h>
 #endif
@@ -15,12 +15,12 @@
 
 
 static void RecursiveFFT(
-    std::complex<double> *dest,
-    std::complex<double> const *src,
+    std::complex<FFTFloat> *dest,
+    std::complex<FFTFloat> const *src,
     size_t size,
     size_t sstep,
-    std::complex<double> w,
-    double scale) {
+    std::complex<FFTFloat> w,
+    FFTFloat scale) {
     
     if (size == 1) {
         ASSERT(Equals(w.real(), 1.0));
@@ -32,7 +32,7 @@ static void RecursiveFFT(
         RecursiveFFT(dest, src, halfSize, sstep * 2, w2, scale);
         RecursiveFFT(dest + halfSize, src + sstep, halfSize, sstep * 2, w2, scale);
 
-        auto wi = std::complex<double>(1);
+        auto wi = std::complex<FFTFloat>(1);
         for (size_t i = 0; i < halfSize; ++i) {
             auto c0 = dest[i], c1 = dest[i + halfSize];
             auto wc1 = wi * c1;
@@ -44,7 +44,7 @@ static void RecursiveFFT(
 }
 
 
-#ifdef USE_SIMD
+#if USE_SIMD
 static void FFTCombine2_SSE(double *dest0, double *dest1, double *w) {
     auto r1 = _mm_loaddup_pd(dest1);
     auto i1 = _mm_loaddup_pd(dest1 + 1);
@@ -67,15 +67,15 @@ static void FFTCombine2_SSE(double *dest0, double *dest1, double *w) {
 #endif 
 
 static void FFT(
-    std::complex<double> *dest,
-    std::complex<double> const *src,
+    std::complex<FFTFloat> *dest,
+    std::complex<FFTFloat> const *src,
     size_t size,
-    std::complex<double> w,
-    double scale) {
+    std::complex<FFTFloat> w,
+    FFTFloat scale) {
     
-    std::vector<std::complex<double>> ws(size / 2);
+    std::vector<std::complex<FFTFloat>> ws(size / 2);
     {
-        auto wi = std::complex<double>(1);
+        auto wi = std::complex<FFTFloat>(1);
         for (auto &v : ws) {
             v = wi;
             wi *= w;
@@ -95,7 +95,7 @@ static void FFT(
         size_t dw = size / s;
         for (size_t i = 0; i < size; i += s) {
             for (size_t j = 0, iw = 0; j < halfS; ++j, iw += dw) {
-#ifdef USE_SIMD
+#if (USE_SIMD && !USE_SINGLE_FLOAT_FFT)
                 FFTCombine2_SSE(
                     reinterpret_cast<double*>(dest + i + j),
                     reinterpret_cast<double*>(dest + i + j + halfS),
@@ -112,13 +112,13 @@ static void FFT(
 }
 
 extern void FastFourierTransform(
-    std::complex<double> *dest,
-    std::complex<double> const *src,
+    std::complex<FFTFloat> *dest,
+    std::complex<FFTFloat> const *src,
     size_t size) {
 
     ASSERT(IsPowerOf2(size));
 
-#ifdef USE_RECURSIVE_FFT
+#if USE_RECURSIVE_FFT
     RecursiveFFT(dest, src, size, 1, std::polar(1.0, 2 * kPi / size), 1);
 #else
     FFT(dest, src, size, std::polar(1.0, 2 * kPi / size), 1);
@@ -126,15 +126,15 @@ extern void FastFourierTransform(
 }
 
 extern void InverseFastFourierTransform(
-    std::complex<double> *dest,
-    std::complex<double> const *src,
+    std::complex<FFTFloat> *dest,
+    std::complex<FFTFloat> const *src,
     size_t size) {
 
     ASSERT(IsPowerOf2(size));
 
-#ifdef USE_RECURSIVE_FFT
+#if USE_RECURSIVE_FFT
     RecursiveFFT(dest, src, size, 1, std::polar(1.0, -2 * kPi / size), 1.0 / size);
 #else
-    FFT(dest, src, size, std::polar(1.0, -2 * kPi / size), 1.0 / size);
+    FFT(dest, src, size, std::polar(1.0, -2 * kPi / size), FFTFloat(1.0) / size);
 #endif
 }

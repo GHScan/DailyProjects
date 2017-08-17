@@ -19,7 +19,15 @@ extern int WAssert(char const* message, char const* fileName, size_t line);
 #endif
 
 
-#define USE_SIMD
+#define USE_SIMD 1
+#define USE_SINGLE_FLOAT_FFT 0
+
+
+#if USE_SINGLE_FLOAT_FFT
+using FFTFloat = float;
+#else
+using FFTFloat = double;
+#endif
 
 
 inline bool IsPowerOf2(size_t n) {

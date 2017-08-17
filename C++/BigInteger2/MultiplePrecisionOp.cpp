@@ -497,7 +497,7 @@ namespace MultiplePrecisionOp {
             reinterpret_cast<uint16_t const*>(digits0), size0 * 2,
             reinterpret_cast<uint16_t const*>(digits1), size1 * 2,
             [](uint16_t v) { return v; },
-            [](std::complex<double> &v)
+            [](std::complex<FFTFloat> &v)
         {
             auto re = llround(v.real());
             ASSERT(re >= 0 && llround(v.imag()) == 0);
@@ -530,7 +530,7 @@ namespace MultiplePrecisionOp {
             reinterpret_cast<uint8_t const*>(digits0), size0 * 4,
             reinterpret_cast<uint8_t const*>(digits1), size1 * 4,
             [](uint8_t v) { return v; },
-            [](std::complex<double> &v)
+            [](std::complex<FFTFloat> &v)
         {
             auto re = llround(v.real());
             ASSERT(re >= 0 && llround(v.imag()) == 0);

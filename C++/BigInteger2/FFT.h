@@ -11,17 +11,17 @@
 #include "Utility.h"
 
 
-// #define USE_RECURSIVE_FFT
+// #define USE_RECURSIVE_FFT 1
 
 
 extern void FastFourierTransform(
-    std::complex<double> *dest,
-    std::complex<double> const *src,
+    std::complex<FFTFloat> *dest,
+    std::complex<FFTFloat> const *src,
     size_t size);
 
 extern void InverseFastFourierTransform(
-    std::complex<double> *dest,
-    std::complex<double> const *src,
+    std::complex<FFTFloat> *dest,
+    std::complex<FFTFloat> const *src,
     size_t size);
 
 
@@ -54,7 +54,7 @@ inline void Convolve_FFT(
     ASSERT(outSize >= (aSize + bSize - 1));
 
     auto fftSize = NextPowerOf2(aSize + bSize - 1);
-    std::vector<std::complex<double>> bufVec(fftSize * 3);
+    std::vector<std::complex<FFTFloat>> bufVec(fftSize * 3);
     auto buf0 = &bufVec[0], buf1 = &bufVec[0] + fftSize, buf2 = &bufVec[0] + 2 * fftSize;
 
     std::transform(a, a + aSize, buf0, inAdapter);
