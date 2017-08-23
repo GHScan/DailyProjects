@@ -151,18 +151,19 @@ static void PostTransform(Float *destReals, Float *destImags, uint8_t log2OfSize
         PostTransform(destReals, destImags, log2OfSize - 1);
         PostTransform(destReals + halfSize, destImags + halfSize, log2OfSize - 1);
 
+        auto factorReals = &gFactorRealMatrix[log2OfSize][0], factorImags = &gFactorImagMatrix[log2OfSize][0];
         for (size_t i = 0; i < halfSize; i += SCANFFT_COMPLEXV_DIMENSION) {
-            SCANFFT_COMPLEXV_LOAD(c1, &destReals[halfSize + i], &destImags[halfSize + i]);
-            SCANFFT_COMPLEXV_LOAD(wi, &gFactorRealMatrix[log2OfSize][i], &gFactorImagMatrix[log2OfSize][i]);
+            SCANFFT_COMPLEXV_LOAD(c1, dest, halfSize + i);
+            SCANFFT_COMPLEXV_LOAD(wi, factor, i);
             SCANFFT_COMPLEXV_MUL(c1TimesWi, c1, wi);
 
-            SCANFFT_COMPLEXV_LOAD(c0, &destReals[i], &destImags[i]);
+            SCANFFT_COMPLEXV_LOAD(c0, dest, i);
 
             SCANFFT_COMPLEXV_ADD(x0, c0, c1TimesWi);
-            SCANFFT_COMPLEXV_STORE(&destReals[i], &destImags[i], x0);
+            SCANFFT_COMPLEXV_STORE(dest, i, x0);
 
             SCANFFT_COMPLEXV_SUB(x1, c0, c1TimesWi);
-            SCANFFT_COMPLEXV_STORE(&destReals[halfSize + i], &destImags[halfSize + i], x1);
+            SCANFFT_COMPLEXV_STORE(dest, halfSize + i, x1);
         }
 
         break;
@@ -181,33 +182,35 @@ static void PostTransform(Float *destReals, Float *destImags, uint8_t log2OfSize
         PostTransform(destReals + halfSize, destImags + halfSize, log2OfSize - 2);
         PostTransform(destReals + halfSize + quarterSize, destImags + halfSize + quarterSize, log2OfSize - 2);
 
+        auto factorReals = &gFactorRealMatrix[log2OfSize][0], factorImags = &gFactorImagMatrix[log2OfSize][0];
+        auto factor3Reals = &gFactor3RealMatrix[log2OfSize][0], factor3Imags = &gFactor3ImagMatrix[log2OfSize][0];
         for (size_t i = 0; i < quarterSize; i += SCANFFT_COMPLEXV_DIMENSION) {
-            SCANFFT_COMPLEXV_LOAD(c2, &destReals[halfSize + i], &destImags[halfSize + i]);
-            SCANFFT_COMPLEXV_LOAD(wi, &gFactorRealMatrix[log2OfSize][i], &gFactorImagMatrix[log2OfSize][i]);
+            SCANFFT_COMPLEXV_LOAD(c2, dest, halfSize + i);
+            SCANFFT_COMPLEXV_LOAD(wi, factor, i);
             SCANFFT_COMPLEXV_MUL(c2TimesWi, c2, wi);
 
-            SCANFFT_COMPLEXV_LOAD(c3, &destReals[halfSize + quarterSize + i], &destImags[halfSize + quarterSize + i]);
-            SCANFFT_COMPLEXV_LOAD(wi3, &gFactor3RealMatrix[log2OfSize][i], &gFactor3ImagMatrix[log2OfSize][i]);
+            SCANFFT_COMPLEXV_LOAD(c3, dest, halfSize + quarterSize + i);
+            SCANFFT_COMPLEXV_LOAD(wi3, factor3, i);
             SCANFFT_COMPLEXV_MUL(c3TimesWi3, c3, wi3);
             {
                 SCANFFT_COMPLEXV_ADD(c2TimesWiPlusC3TimesWi3, c2TimesWi, c3TimesWi3);
-                SCANFFT_COMPLEXV_LOAD(c0, &destReals[i], &destImags[i]);
+                SCANFFT_COMPLEXV_LOAD(c0, dest, i);
 
                 SCANFFT_COMPLEXV_ADD(x0, c0, c2TimesWiPlusC3TimesWi3);
-                SCANFFT_COMPLEXV_STORE(&destReals[i], &destImags[i], x0);
+                SCANFFT_COMPLEXV_STORE(dest, i, x0);
 
                 SCANFFT_COMPLEXV_SUB(x2, c0, c2TimesWiPlusC3TimesWi3);
-                SCANFFT_COMPLEXV_STORE(&destReals[halfSize + i], &destImags[halfSize + i], x2);
+                SCANFFT_COMPLEXV_STORE(dest, halfSize + i, x2);
             }
             {
                 SCANFFT_COMPLEXV_SUB(c2TimesWiMinusC3TimesWi3, c2TimesWi, c3TimesWi3);
-                SCANFFT_COMPLEXV_LOAD(c1, &destReals[quarterSize + i], &destImags[quarterSize + i]);
+                SCANFFT_COMPLEXV_LOAD(c1, dest, quarterSize + i);
 
                 SCANFFT_COMPLEXV_ADD_TIMES_I(x1, c1, c2TimesWiMinusC3TimesWi3);
-                SCANFFT_COMPLEXV_STORE(&destReals[quarterSize + i], &destImags[quarterSize + i], x1);
+                SCANFFT_COMPLEXV_STORE(dest, quarterSize + i, x1);
 
                 SCANFFT_COMPLEXV_SUB_TIMES_I(x3, c1, c2TimesWiMinusC3TimesWi3);
-                SCANFFT_COMPLEXV_STORE(&destReals[halfSize + quarterSize + i], &destImags[halfSize + quarterSize + i], x3);
+                SCANFFT_COMPLEXV_STORE(dest, halfSize + quarterSize + i, x3);
             }
         }
 
@@ -229,18 +232,19 @@ static void IPostTransform(Float *destReals, Float *destImags, uint8_t log2OfSiz
         IPostTransform(destReals, destImags, log2OfSize - 1);
         IPostTransform(destReals + halfSize, destImags + halfSize, log2OfSize - 1);
 
+        auto factorReals = &gIFactorRealMatrix[log2OfSize][0], factorImags = &gIFactorImagMatrix[log2OfSize][0];
         for (size_t i = 0; i < halfSize; i += SCANFFT_COMPLEXV_DIMENSION) {
-            SCANFFT_COMPLEXV_LOAD(c1, &destReals[halfSize + i], &destImags[halfSize + i]);
-            SCANFFT_COMPLEXV_LOAD(wi, &gIFactorRealMatrix[log2OfSize][i], &gIFactorImagMatrix[log2OfSize][i]);
+            SCANFFT_COMPLEXV_LOAD(c1, dest, halfSize + i);
+            SCANFFT_COMPLEXV_LOAD(wi, factor, i);
             SCANFFT_COMPLEXV_MUL(c1TimesWi, c1, wi);
 
-            SCANFFT_COMPLEXV_LOAD(c0, &destReals[i], &destImags[i]);
+            SCANFFT_COMPLEXV_LOAD(c0, dest, i);
 
             SCANFFT_COMPLEXV_ADD(x0, c0, c1TimesWi);
-            SCANFFT_COMPLEXV_STORE(&destReals[i], &destImags[i], x0);
+            SCANFFT_COMPLEXV_STORE(dest, i, x0);
 
             SCANFFT_COMPLEXV_SUB(x1, c0, c1TimesWi);
-            SCANFFT_COMPLEXV_STORE(&destReals[halfSize + i], &destImags[halfSize + i], x1);
+            SCANFFT_COMPLEXV_STORE(dest, halfSize + i, x1);
         }
 
         break;
@@ -257,33 +261,35 @@ static void IPostTransform(Float *destReals, Float *destImags, uint8_t log2OfSiz
         IPostTransform(destReals + halfSize, destImags + halfSize, log2OfSize - 2);
         IPostTransform(destReals + halfSize + quarterSize, destImags + halfSize + quarterSize, log2OfSize - 2);
 
+        auto factorReals = &gIFactorRealMatrix[log2OfSize][0], factorImags = &gIFactorImagMatrix[log2OfSize][0];
+        auto factor3Reals = &gIFactor3RealMatrix[log2OfSize][0], factor3Imags = &gIFactor3ImagMatrix[log2OfSize][0];
         for (size_t i = 0; i < quarterSize; i += SCANFFT_COMPLEXV_DIMENSION) {
-            SCANFFT_COMPLEXV_LOAD(c2, &destReals[halfSize + i], &destImags[halfSize + i]);
-            SCANFFT_COMPLEXV_LOAD(wi, &gIFactorRealMatrix[log2OfSize][i], &gIFactorImagMatrix[log2OfSize][i]);
+            SCANFFT_COMPLEXV_LOAD(c2, dest, halfSize + i);
+            SCANFFT_COMPLEXV_LOAD(wi, factor, i);
             SCANFFT_COMPLEXV_MUL(c2TimesWi, c2, wi);
 
-            SCANFFT_COMPLEXV_LOAD(c3, &destReals[halfSize + quarterSize + i], &destImags[halfSize + quarterSize + i]);
-            SCANFFT_COMPLEXV_LOAD(wi3, &gIFactor3RealMatrix[log2OfSize][i], &gIFactor3ImagMatrix[log2OfSize][i]);
+            SCANFFT_COMPLEXV_LOAD(c3, dest, halfSize + quarterSize + i);
+            SCANFFT_COMPLEXV_LOAD(wi3, factor3, i);
             SCANFFT_COMPLEXV_MUL(c3TimesWi3, c3, wi3);
             {
                 SCANFFT_COMPLEXV_ADD(c2TimesWiPlusC3TimesWi3, c2TimesWi, c3TimesWi3);
-                SCANFFT_COMPLEXV_LOAD(c0, &destReals[i], &destImags[i]);
+                SCANFFT_COMPLEXV_LOAD(c0, dest, i);
 
                 SCANFFT_COMPLEXV_ADD(x0, c0, c2TimesWiPlusC3TimesWi3);
-                SCANFFT_COMPLEXV_STORE(&destReals[i], &destImags[i], x0);
+                SCANFFT_COMPLEXV_STORE(dest, i, x0);
 
                 SCANFFT_COMPLEXV_SUB(x2, c0, c2TimesWiPlusC3TimesWi3);
-                SCANFFT_COMPLEXV_STORE(&destReals[halfSize + i], &destImags[halfSize + i], x2);
+                SCANFFT_COMPLEXV_STORE(dest, halfSize + i, x2);
             }
             {
                 SCANFFT_COMPLEXV_SUB(c2TimesWiMinusC3TimesWi3, c2TimesWi, c3TimesWi3);
-                SCANFFT_COMPLEXV_LOAD(c1, &destReals[quarterSize + i], &destImags[quarterSize + i]);
+                SCANFFT_COMPLEXV_LOAD(c1, dest, quarterSize + i);
 
                 SCANFFT_COMPLEXV_ADD_TIMES_NEG_I(x1, c1, c2TimesWiMinusC3TimesWi3);
-                SCANFFT_COMPLEXV_STORE(&destReals[quarterSize + i], &destImags[quarterSize + i], x1);
+                SCANFFT_COMPLEXV_STORE(dest, quarterSize + i, x1);
 
                 SCANFFT_COMPLEXV_SUB_TIMES_NEG_I(x3, c1, c2TimesWiMinusC3TimesWi3);
-                SCANFFT_COMPLEXV_STORE(&destReals[halfSize + quarterSize + i], &destImags[halfSize + quarterSize + i], x3);
+                SCANFFT_COMPLEXV_STORE(dest, halfSize + quarterSize + i, x3);
             }
         }
 

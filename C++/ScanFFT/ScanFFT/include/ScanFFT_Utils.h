@@ -18,6 +18,12 @@
 #endif
 
 
+#define SCANFFT_ALLOC(name, size) auto \
+    name##Reals = ScanFFT::Alloc<ScanFFT::Float>(size), \
+    name##Imags = ScanFFT::Alloc<ScanFFT::Float>(size)
+#define SCANFFT_FREE(name)  ScanFFT::Free(name##Reals), ScanFFT::Free(name##Imags)
+
+
 namespace ScanFFT {
 
 

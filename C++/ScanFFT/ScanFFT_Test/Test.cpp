@@ -22,17 +22,14 @@ static void TestFFT() {
     for (uint8_t log2OfSize = 0; log2OfSize <= 16; ++log2OfSize) {
 #endif
         size_t size = 1ULL << log2OfSize;
-        auto inReals = Alloc<Float>(size);
-        auto inImags = Alloc<Float>(size);
-        auto outReals = Alloc<Float>(size);
-        auto outImags = Alloc<Float>(size);
-        auto outReals2 = Alloc<Float>(size);
-        auto outImags2 = Alloc<Float>(size);
+        SCANFFT_ALLOC(in, size);
+        SCANFFT_ALLOC(out, size);
+        SCANFFT_ALLOC(out2, size);
 
         std::iota(inReals, inReals + size, Float(0));
         std::fill(inImags, inImags + size, Float(0));
-        Transform(outReals, outImags, inReals, inImags, log2OfSize);
-        InverseTransform(outReals2, outImags2, outReals, outImags, log2OfSize);
+        SCANFFT_TRANSFORM(out, in, log2OfSize);
+        SCANFFT_INVERSE_TRANSFORM(out2, out, log2OfSize);
 
         for (size_t i = 0; i < size; ++i) {
 #if SCANFFT_SINGLE_PRECISION_FLOAT
@@ -40,18 +37,15 @@ static void TestFFT() {
 #else
             Float epsilon = 1e-4;
 #endif
-            if (!FEquals(inReals[i], outReals2[i], epsilon) || !FEquals(inImags[i], outImags2[i], epsilon))
+            if (!FEquals(inReals[i], out2Reals[i], epsilon) || !FEquals(inImags[i], out2Imags[i], epsilon))
                 assert(0);
         }
 
-        Free(inReals);
-        Free(inImags);
-        Free(outReals);
-        Free(outImags);
-        Free(outReals2);
-        Free(outImags2);
+        SCANFFT_FREE(out2);
+        SCANFFT_FREE(out);
+        SCANFFT_FREE(in);
     }
-    }
+}
 
 static void BenchmarkFFT() {
     using namespace ScanFFT;
@@ -59,12 +53,10 @@ static void BenchmarkFFT() {
     puts("ScanFFT\n");
     for (uint8_t log2OfSize = 2; log2OfSize <= FFT_LOG2_OF_MAX_SIZE; ++log2OfSize) {
         auto size = 1ULL << log2OfSize;
-        auto inReals = Alloc<Float>(size);
-        auto inImags = Alloc<Float>(size);
+        SCANFFT_ALLOC(in, size);
         std::iota(inReals, inReals + size, Float(0));
         std::fill(inImags, inImags + size, Float(0));
-        auto outReals = Alloc<Float>(size);
-        auto outImags = Alloc<Float>(size);
+        SCANFFT_ALLOC(out, size);
 
         auto loop = 1 << (FFT_LOG2_OF_MAX_SIZE - log2OfSize);
         printf("\t2^%d: %f us\n", log2OfSize, Timing([&]()
@@ -73,10 +65,8 @@ static void BenchmarkFFT() {
                 Transform(outReals, outImags, inReals, inImags, log2OfSize);
         }) * 1000000 / loop);
 
-        Free(inReals);
-        Free(inImags);
-        Free(outReals);
-        Free(outImags);
+        SCANFFT_FREE(out);
+        SCANFFT_FREE(in);
     }
 }
 

@@ -23,12 +23,12 @@ inline std::complex<FloatT> make_complex(FloatT real, FloatT imag) {
 
 #define SCANFFT_COMPLEXV_DIMENSION 1
 #define SCANFFT_COMPLEXV_ASSIGN(name1, name0) name1##Real = name0##Real, name1##Imag = name0##Imag
-#define SCANFFT_COMPLEXV_MAKE(name, real, imag) auto name = ScanFFT::make_complex(real, imag)
-#define SCANFFT_COMPLEXV_LOAD(name, srcReal, srcImag) SCANFFT_COMPLEXV_MAKE(name, *(srcReal), *(srcImag))
-#define SCANFFT_COMPLEXV_STORE(destReal, destImag, name) *(destReal) = name.real(), *(destImag) = name.imag()
+#define SCANFFT_COMPLEXV_MAKE1(name, real, imag) auto name = ScanFFT::make_complex(real, imag)
+#define SCANFFT_COMPLEXV_LOAD(name, src, i) SCANFFT_COMPLEXV_MAKE1(name, *(src##Reals + i), *(src##Imags + i))
+#define SCANFFT_COMPLEXV_STORE(dest, i, name) *(dest##Reals + i) = name.real(), *(dest##Imags + i) = name.imag()
 #define SCANFFT_COMPLEXV_ADD(name2, name0, name1) auto name2 = name0 + name1
-#define SCANFFT_COMPLEXV_ADD_TIMES_I(name2, name0, name1) SCANFFT_COMPLEXV_MAKE(name2, name0.real() - name1.imag(), name0.imag() + name1.real())
-#define SCANFFT_COMPLEXV_ADD_TIMES_NEG_I(name2, name0, name1) SCANFFT_COMPLEXV_MAKE(name2, name0.real() + name1.imag(), name0.imag() - name1.real())
+#define SCANFFT_COMPLEXV_ADD_TIMES_I(name2, name0, name1) SCANFFT_COMPLEXV_MAKE1(name2, name0.real() - name1.imag(), name0.imag() + name1.real())
+#define SCANFFT_COMPLEXV_ADD_TIMES_NEG_I(name2, name0, name1) SCANFFT_COMPLEXV_MAKE1(name2, name0.real() + name1.imag(), name0.imag() - name1.real())
 #define SCANFFT_COMPLEXV_SUB(name2, name0, name1) auto name2 = name0 - name1
 #define SCANFFT_COMPLEXV_SUB_TIMES_I(name2, name0, name1) SCANFFT_COMPLEXV_ADD_TIMES_NEG_I(name2, name0, name1)
 #define SCANFFT_COMPLEXV_SUB_TIMES_NEG_I(name2, name0, name1) SCANFFT_COMPLEXV_ADD_TIMES_I(name2, name0, name1)
@@ -43,9 +43,9 @@ inline std::complex<FloatT> make_complex(FloatT real, FloatT imag) {
 
 #define SCANFFT_COMPLEXV_DIMENSION 8
 #define SCANFFT_COMPLEXV_ASSIGN(name1, name0) name1##Real = name0##Real, name1##Imag = name0##Imag
-#define SCANFFT_COMPLEXV_MAKE(name, real, imag) auto name##Real = _mm256_set1_ps(real), name##Imag = _mm256_set1_ps(imag)
-#define SCANFFT_COMPLEXV_LOAD(name, srcReal, srcImag) auto name##Real = _mm256_load_ps(srcReal), name##Imag = _mm256_load_ps(srcImag)
-#define SCANFFT_COMPLEXV_STORE(destReal, destImag, name) _mm256_store_ps(destReal, name##Real), _mm256_store_ps(destImag, name##Imag)
+#define SCANFFT_COMPLEXV_MAKE1(name, real, imag) auto name##Real = _mm256_set1_ps(real), name##Imag = _mm256_set1_ps(imag)
+#define SCANFFT_COMPLEXV_LOAD(name, src, i) auto name##Real = _mm256_load_ps(src##Reals + i), name##Imag = _mm256_load_ps(src##Imags + i)
+#define SCANFFT_COMPLEXV_STORE(dest, i, name) _mm256_store_ps(dest##Reals + i, name##Real), _mm256_store_ps(dest##Imags + i, name##Imag)
 #define SCANFFT_COMPLEXV_ADD(name2, name0, name1) auto name2##Real = _mm256_add_ps(name0##Real, name1##Real), name2##Imag = _mm256_add_ps(name0##Imag, name1##Imag)
 #define SCANFFT_COMPLEXV_ADD_TIMES_I(name2, name0, name1) auto name2##Real = _mm256_sub_ps(name0##Real, name1##Imag), name2##Imag = _mm256_add_ps(name0##Imag, name1##Real)
 #define SCANFFT_COMPLEXV_ADD_TIMES_NEG_I(name2, name0, name1) auto name2##Real = _mm256_add_ps(name0##Real, name1##Imag), name2##Imag = _mm256_sub_ps(name0##Imag, name1##Real)
@@ -70,9 +70,9 @@ inline std::complex<FloatT> make_complex(FloatT real, FloatT imag) {
 
 #define SCANFFT_COMPLEXV_DIMENSION 4
 #define SCANFFT_COMPLEXV_ASSIGN(name1, name0) name1##Real = name0##Real, name1##Imag = name0##Imag
-#define SCANFFT_COMPLEXV_MAKE(name, real, imag) auto name##Real = _mm256_set1_pd(real), name##Imag = _mm256_set1_pd(imag)
-#define SCANFFT_COMPLEXV_LOAD(name, srcReal, srcImag) auto name##Real = _mm256_load_pd(srcReal), name##Imag = _mm256_load_pd(srcImag)
-#define SCANFFT_COMPLEXV_STORE(destReal, destImag, name) _mm256_store_pd(destReal, name##Real), _mm256_store_pd(destImag, name##Imag)
+#define SCANFFT_COMPLEXV_MAKE1(name, real, imag) auto name##Real = _mm256_set1_pd(real), name##Imag = _mm256_set1_pd(imag)
+#define SCANFFT_COMPLEXV_LOAD(name, src, i) auto name##Real = _mm256_load_pd(src##Reals + i), name##Imag = _mm256_load_pd(src##Imags + i)
+#define SCANFFT_COMPLEXV_STORE(dest, i, name) _mm256_store_pd(dest##Reals + i, name##Real), _mm256_store_pd(dest##Imags + i, name##Imag)
 #define SCANFFT_COMPLEXV_ADD(name2, name0, name1) auto name2##Real = _mm256_add_pd(name0##Real, name1##Real), name2##Imag = _mm256_add_pd(name0##Imag, name1##Imag)
 #define SCANFFT_COMPLEXV_ADD_TIMES_I(name2, name0, name1) auto name2##Real = _mm256_sub_pd(name0##Real, name1##Imag), name2##Imag = _mm256_add_pd(name0##Imag, name1##Real)
 #define SCANFFT_COMPLEXV_ADD_TIMES_NEG_I(name2, name0, name1) auto name2##Real = _mm256_add_pd(name0##Real, name1##Imag), name2##Imag = _mm256_sub_pd(name0##Imag, name1##Real)
