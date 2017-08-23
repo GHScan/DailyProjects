@@ -167,7 +167,8 @@
   ```
 - 到这里，常规优化就结束了，profiler会告诉你butterfly还是热点，但似乎不太有办法进一步改善。这个版本由于引入SSE，会比常见的基本c++实现明显快，2000~5000 mflops 左右 （我的 E3-1231 v3 CPU上）
 # 优化
-- 上面讲了常规优化，现在进入FFT专门优化篇章，把代码从从几十行改到2000+行以及数万行生成的代码，当然不是只为了增加code size。为此我专门做了个库，在[这里](https://github.com/GHScan/DailyProjects/tree/master/C%2B%2B/ScanFFT) 。值得一提的是，虽然这个库在某些指标上接近甚至超过FFTW（双精度/单精度峰值吞吐可达20000/40000 mflops），但优化的水平其实不可同日而语。按照开篇实现要点的顺序，我这里也分开讲，小尺寸的处理，大尺寸的处理，以及bit-reverse copy的实现
+- 上面讲了常规优化，现在进入FFT专门优化篇章，把代码从从几十行改到2000+行以及数万行生成的代码，当然不是只为了增加code size。为此我专门做了个库，在[这里](https://github.com/GHScan/DailyProjects/tree/master/C%2B%2B/ScanFFT) 。值得一提的是，虽然这个库在某些指标上接近甚至超过FFTW，但优化的水平其实不可同日而语。按照开篇实现要点的顺序，我这里也分开讲，小尺寸的处理，大尺寸的处理，以及bit-reverse copy的实现
+![](Benchmark.png)
 ## 小尺寸的处理
 - [Unrolled FFT code generator](https://github.com/GHScan/DailyProjects/blob/master/C%2B%2B/ScanFFT/ScanFFT_UnrolledFFTGen/UnrolledFFTGen.fs) ，用F#写的
   - 总的来说它定义了个静态类型的基于[浮点向量](https://github.com/GHScan/DailyProjects/blob/master/C%2B%2B/ScanFFT/ScanFFT_UnrolledFFTGen/UnrolledFFTGen.fs#L12)的DSL，由于直接在内存里做从的code gen，故这个DSL没有源码形式，全程操作带[类型标记的AST](https://github.com/GHScan/DailyProjects/blob/master/C%2B%2B/ScanFFT/ScanFFT_UnrolledFFTGen/UnrolledFFTGen.fs#L15) 
