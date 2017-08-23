@@ -1,0 +1,10 @@
+*.suo
+*.user
+*.swp
+*.VC.db
+*.VC.opendb
+
+ipch/
+[Dd]ebug/
+[Rr]elease/
+Generated/
