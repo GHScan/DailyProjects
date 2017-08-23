@@ -247,10 +247,10 @@
  - 这些输出就是综合了FFT算法自身的分治复杂度和generator本身的一些优化的效果。这里generate出来的最大的是size=256的函数，操作数是1359个。这个上限的选择，是测得的，再大，code size、寄存器分配等问题会导致时间不可接受。而大部分时间里，这些小尺寸FFT函数的表现不比FFTW差
 ## 大尺寸的FFT算法
 - 这个尺寸下首先是做bit-reverse copy（最后讲），然后是in-place的做PostTransform，后者对应经典Cooley-Tukey FFT最后的逐层迭代butterfly，只是为了缓存局部性改用递归。他主要应对三种情形：
-   - size=64，调用InplaceFFT_6，这是上面的FFT generator生成的in-place版本，在这个尺寸上，无疑是code gen出来的效果最好。这个case主要负责更大size分治下来的小问题
-   - size=128，用来在InplaceFFT_6和Split Radix算法间做适配，因为后者要求讲输入给partition掉，而前者要求保持顺序
+   - size=256，调用InplaceFFT_8，这是上面的FFT generator生成的in-place版本，在这个尺寸上，无疑是code gen出来的效果最好。这个case主要负责更大size分治下来的小问题
+   - size=512，用来在InplaceFFT_8和Split Radix算法间做适配，因为后者要求将输入给partition掉，而前者要求保持顺序
    - 其他size，利用Split-Radix 分治将问题派发到更小规模，然后本层butterfly。其实这里的Split-Radix不是我最好的选择，现在的FFT generator已经是第4版了，只负责小size，而[第3版](https://github.com/GHScan/DailyProjects/blob/master/F%23/FFTCompiler/ProgramV3.fs)的时候generator也负责大size，它在大size上做的是类似Radix-8的分治，至少在当时表现很好，从小size方案到大size得到了较平滑的过渡。（这里没在沿用第3版的方案仅仅是个人精力问题，当前版本的Split-Radix是手工写的，为省事，但按之前经验，表现不如generator生成的高Radix版本）
-- size=128用的是Radix-2的算法，相对比较简单：
+- size=512用的是Radix-2的算法，相对比较简单：
 ``` 
     case SCANFFT_UNROLLED_LOG2_OF_SIZE + 1:
     {
@@ -279,7 +279,8 @@
         break;
     }
 ```
-- 正如前面提到的，预计算的复根值(gFactorRealMatrix)为不同的size计算了冗余项，这个冗余使得不同size访问复根时是连续访存的，从而有更好的局部性，以及能做数据并行。有一个问题是需要考虑的，大size的情况下，预计算的表空间，会否导致更多的cache miss甚至不如就地求复根？就我的观察来说，大size下的确读表开销很大，但还是比复数乘法略小。循环本身是一组复数操作宏，每个操作是同时对多组复数求butterfly：
+- 正如前面提到的，预计算的复根值(gFactorRealMatrix)为不同的size计算了冗余项，这个冗余使得不同size访问复根时是连续访存的，从而有更好的局部性，以及能做数据并行。有一个问题是需要考虑的，大size的情况下，预计算的表空间，会否导致更多的cache miss甚至不如就地求复根？就我的观察来说，大size下的确读表开销很大，但还是比复数乘法略小。
+- 循环本身是一组复数操作宏，每个操作是同时对多组复数求butterfly：
 ```
 #define SCANFFT_COMPLEXV_DIMENSION 4
 #define SCANFFT_COMPLEXV_ASSIGN(name1, name0) name1##Real = name0##Real, name1##Imag = name0##Imag
