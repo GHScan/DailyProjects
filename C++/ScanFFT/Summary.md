@@ -319,7 +319,7 @@ auto revI0 = (i0 >> 9) | (gReversedBytes[i0 & 0xff] << 9) | (gReversedBytes[(i0 
 auto revI0 = (i0 >> 16) | (gReversedBytes[i0 & 0xff] << 16) | (gReversedBytes[(i0 >> 8) & 0xff] << 8);
 ```
 - k等于9和10的时候用有特殊算法直接避免了
-- 好的，我们说瓶颈在于bit-reverse copy的源和目的，一方访存连续的时候，意味着i的低位在变化，那么reversed(i)就是高位变化，访存不连续，k较大的时候跨度也大，局部性很差。但是，我们又讨论过，由于这里用到的是ReverseBits的变种，是高8位直接右移，低k-8位逆序后左移，如果以访问i+0~i+8的8个元素后，再步进2^(k-8)，处理新的8个元素，那么这8个元素的目标位置会和前8个元素处在连续地址上，从而，读写都连续了。
+- 好的，我们说瓶颈在于bit-reverse copy的源和目的，一方访存连续的时候，意味着i的低位在变化，那么reversed(i)就是高位变化，访存不连续，k较大的时候跨度也大，局部性很差。但是，我们又讨论过，由于这里用到的是ReverseBits的变种，是高8位直接右移，低k-8位逆序后左移，如果以访问i+0~i+7的8个元素后，再步进2^(k-8)，处理新的8个元素，那么这8个元素的目标位置会和前8个元素处在连续地址上，从而，读写都连续了。
 - 具体来说，k=9和10的时候有特殊算法，k=11及以上每次处理8x8个元素，相当于转置:
 ```
 void BitReverseCopy_9(float *destReals, float *destImags, float const *srcReals, float const *srcImags) {
