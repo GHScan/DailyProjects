@@ -2,6 +2,10 @@
 #define SCANFFT_UTILS_H
 
 
+#include <cstdint>
+#include <cassert>
+
+
 #include <limits>
 #include <chrono>
 #include <algorithm>
@@ -72,7 +76,11 @@ inline double Timing(TFunc &&func, int times = 3) {
 }
 
 
-extern size_t gReversedBytes[];
+inline size_t Reverse8Bits(size_t b) {
+    extern uint8_t gReversedBytes[];
+    assert(b < 256);
+    return gReversedBytes[b];
+}
 
 
 }

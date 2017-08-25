@@ -119,11 +119,10 @@
     ```c++
     inline size_t ReverseBits(size_t i, size_t bitCount) {
         ASSERT(bitCount <= 32);
-        extern size_t gReversedBytes[256];
-        auto rev = (gReversedBytes[(i >> 0) & 0xff] << 24)
-            | (gReversedBytes[(i >> 8) & 0xff] << 16)
-            | (gReversedBytes[(i >> 16) & 0xff] << 8)
-            | (gReversedBytes[(i >> 24) & 0xff] << 0);
+        auto rev = (Reverse8Bits((i >> 0) & 0xff) << 24)
+            | (Reverse8Bits((i >> 8) & 0xff) << 16)
+            | (Reverse8Bits((i >> 16) & 0xff) << 8)
+            | (Reverse8Bits((i >> 24) & 0xff) << 0);
         return rev >> (32 - bitCount);
     }
     ```
@@ -310,13 +309,13 @@
     // k=9
     // k=10
     // k=11
-    auto revI0 = (i0 >> 3) | (gReversedBytes[i0 & 0x7] << 3);
+    auto revI0 = (i0 >> 3) | (Reverse8Bits(i0 & 0x7) << 3);
     // k=12
-    auto revI0 = (i0 >> 4) | (gReversedBytes[i0 & 0xf] << 4);
+    auto revI0 = (i0 >> 4) | (Reverse8Bits(i0 & 0xf) << 4);
     // k=17
-    auto revI0 = (i0 >> 9) | (gReversedBytes[i0 & 0xff] << 9) | (gReversedBytes[(i0 >> 8) & 0x1] << 1);
+    auto revI0 = (i0 >> 9) | (Reverse8Bits(i0 & 0xff) << 9) | (Reverse8Bits((i0 >> 8) & 0x1) << 1);
     // k=24
-    auto revI0 = (i0 >> 16) | (gReversedBytes[i0 & 0xff] << 16) | (gReversedBytes[(i0 >> 8) & 0xff] << 8);
+    auto revI0 = (i0 >> 16) | (Reverse8Bits(i0 & 0xff) << 16) | (Reverse8Bits((i0 >> 8) & 0xff) << 8);
     ```
 - k等于9和10的时候用有特殊算法直接避免了
 - 好的，我们说瓶颈在于bit-reverse copy的源和目的，一方访存连续的时候，意味着i的低位在变化，那么reversed(i)就是高位变化，访存不连续，k较大的时候跨度也大，局部性很差。但是，我们又讨论过，由于这里用到的是ReverseBits的变种，是高8位直接右移，低k-8位逆序后左移，如果以访问i+0~i+7的8个元素后，再步进2^(k-8)，处理新的8个元素，那么这8个元素的目标位置会和前8个元素处在连续地址上，从而，读写都连续了。
@@ -339,14 +338,14 @@
         for (size_t off = 0; off < span; off += 8) {
             for (size_t i = off; i < 2048; i += 8 * span) {
                 auto i0 = i + 0, i1 = i + 1, i2 = i + 2, i3 = i + 3, i4 = i + 4, i5 = i + 5, i6 = i + 6, i7 = i + 7;
-                auto revI0 = (i0 >> 3) | (gReversedBytes[i0 & 0x7] << 3);
-                auto revI1 = (i1 >> 3) | (gReversedBytes[i1 & 0x7] << 3);
-                auto revI2 = (i2 >> 3) | (gReversedBytes[i2 & 0x7] << 3);
-                auto revI3 = (i3 >> 3) | (gReversedBytes[i3 & 0x7] << 3);
-                auto revI4 = (i4 >> 3) | (gReversedBytes[i4 & 0x7] << 3);
-                auto revI5 = (i5 >> 3) | (gReversedBytes[i5 & 0x7] << 3);
-                auto revI6 = (i6 >> 3) | (gReversedBytes[i6 & 0x7] << 3);
-                auto revI7 = (i7 >> 3) | (gReversedBytes[i7 & 0x7] << 3);
+                auto revI0 = (i0 >> 3) | (Reverse8Bits(i0 & 0x7) << 3);
+                auto revI1 = (i1 >> 3) | (Reverse8Bits(i1 & 0x7) << 3);
+                auto revI2 = (i2 >> 3) | (Reverse8Bits(i2 & 0x7) << 3);
+                auto revI3 = (i3 >> 3) | (Reverse8Bits(i3 & 0x7) << 3);
+                auto revI4 = (i4 >> 3) | (Reverse8Bits(i4 & 0x7) << 3);
+                auto revI5 = (i5 >> 3) | (Reverse8Bits(i5 & 0x7) << 3);
+                auto revI6 = (i6 >> 3) | (Reverse8Bits(i6 & 0x7) << 3);
+                auto revI7 = (i7 >> 3) | (Reverse8Bits(i7 & 0x7) << 3);
                 Transpose_8PS(
                     destReals, revI0, revI1, revI2, revI3, revI4, revI5, revI6, revI7,
                     srcReals, i, i + span, i + 2 * span, i + 3 * span, 

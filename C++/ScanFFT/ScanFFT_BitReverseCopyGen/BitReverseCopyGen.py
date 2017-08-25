@@ -19,15 +19,15 @@ def genReversedBitsExp(varName, bits, reversedBits):
     parts = ['(%s >> %d)' % (varName, reversedBits)]
     for i in range(0, reversedBits, 8):
         if i + 8 <= reversedBits:
-            part = genLshift('gReversedBytes[%s & 0xff]' % genRshift(varName, i), bits - 8 - i)
+            part = genLshift('Reverse8Bits(%s & 0xff)' % genRshift(varName, i), bits - 8 - i)
         else:
             currBits = reversedBits - i
             currMask = (1 << currBits) - 1
             rshift = (8 - currBits) - (bits - currBits - i)
             if rshift >= 0:
-                part = genRshift('gReversedBytes[%s & %s]' % (genRshift(varName, i), hex(currMask)), rshift)
+                part = genRshift('Reverse8Bits(%s & %s)' % (genRshift(varName, i), hex(currMask)), rshift)
             else:
-                part = genLshift('gReversedBytes[%s & %s]' % (genRshift(varName, i), hex(currMask)), -rshift)
+                part = genLshift('Reverse8Bits(%s & %s)' % (genRshift(varName, i), hex(currMask)), -rshift)
         parts.append(part)
 
     return ' | '.join(parts)

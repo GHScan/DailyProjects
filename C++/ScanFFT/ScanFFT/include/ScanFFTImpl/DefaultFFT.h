@@ -39,10 +39,10 @@ namespace ScanFFT {
 
 
 static size_t ReverseBits(size_t i, size_t bits) {
-    auto rev = (gReversedBytes[(i >> 0) & 0xff] << 24)
-        | (gReversedBytes[(i >> 8) & 0xff] << 16)
-        | (gReversedBytes[(i >> 16) & 0xff] << 8)
-        | (gReversedBytes[(i >> 24) & 0xff] << 0);
+    auto rev = (Reverse8Bits((i >> 0) & 0xff) << 24)
+        | (Reverse8Bits((i >> 8) & 0xff) << 16)
+        | (Reverse8Bits((i >> 16) & 0xff) << 8)
+        | (Reverse8Bits((i >> 24) & 0xff) << 0);
     return rev >> (32 - bits);
 }
 
