@@ -210,7 +210,7 @@
             _mm_storel_pi(reinterpret_cast<__m64*>(&destImags[2]), temp_23);
         }
     ```
- - 上面并行度2，在指定并行度8的情况下，size略增加，并行度会进一步提升到4和8： 
+  - 上面并行度2，在指定并行度8的情况下，size略增加，并行度会进一步提升到4和8： 
     ```c++
     void FFT_3(float *destReals, float *destImags, float const *srcReals, float const *srcImags) {
         auto temp_0=_mm_load_ps(&srcReals[0]);
@@ -244,7 +244,7 @@
         ...
     }
     ```
- - 这些输出就是综合了FFT算法自身的分治复杂度和generator本身的一些优化的效果。这里generate出来的最大的是size=256的函数，操作数是1359个。这个上限的选择，是测得的，再大，code size、寄存器分配等问题会导致时间不可接受。而大部分时间里，这些小尺寸FFT函数的表现不比FFTW差
+  - 这些输出就是综合了FFT算法自身的分治复杂度和generator本身的一些优化的效果。这里generate出来的最大的是size=256的函数，操作数是1359个。这个上限的选择，是测得的，再大，code size、寄存器分配等问题会导致时间不可接受。而大部分时间里，这些小尺寸FFT函数的表现不比FFTW差
 ## 大尺寸的FFT算法
 - 这个尺寸下首先是做bit-reverse copy（最后讲），然后是in-place的做PostTransform，后者对应经典Cooley-Tukey FFT最后的逐层迭代butterfly，只是为了缓存局部性改用递归。他主要应对三种情形：
    - size=256，调用InplaceFFT_8，这是上面的FFT generator生成的in-place版本，在这个尺寸上，无疑是code gen出来的效果最好。这个case主要负责更大size分治下来的小问题
@@ -278,7 +278,7 @@
 
         break;
     }
-```
+    ```
 - 正如前面提到的，预计算的复根值(gFactorReal2DArray)为不同的size计算了冗余项，这个冗余使得不同size访问复根时是连续访存的，从而有更好的局部性，以及能做数据并行。有一个问题是需要考虑的，大size的情况下，预计算的表空间，会否导致更多的cache miss甚至不如就地求复根？就我的观察来说，大size下的确读表开销很大，但还是比复数乘法略小。
 - 循环本身是一组复数操作宏，每个操作是同时对多组复数求butterfly：
     ```c++
