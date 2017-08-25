@@ -76,26 +76,26 @@ static void IBitReverseCopy(Float *destReals, Float *destImags, Float const *src
 }
 
 
-static std::vector<Float*> gFactorRealMatrix, gFactorImagMatrix;
-static std::vector<Float*> gFactor3RealMatrix, gFactor3ImagMatrix;
-static std::vector<Float*> gIFactorRealMatrix, gIFactorImagMatrix;
-static std::vector<Float*> gIFactor3RealMatrix, gIFactor3ImagMatrix;
+static std::vector<Float*> gFactorReal2DArray, gFactorImag2DArray;
+static std::vector<Float*> gFactor3Real2DArray, gFactor3Imag2DArray;
+static std::vector<Float*> gIFactorReal2DArray, gIFactorImag2DArray;
+static std::vector<Float*> gIFactor3Real2DArray, gIFactor3Imag2DArray;
 
 
 static void SetupDefaultFFT(size_t log2OfMaxSize) {
 
     auto const kPi = Float(acos(-1));
 
-    gFactorRealMatrix.resize(log2OfMaxSize + 1); gFactorImagMatrix.resize(log2OfMaxSize + 1); gFactor3RealMatrix.resize(log2OfMaxSize + 1); gFactor3ImagMatrix.resize(log2OfMaxSize + 1);
-    gIFactorRealMatrix.resize(log2OfMaxSize + 1); gIFactorImagMatrix.resize(log2OfMaxSize + 1); gIFactor3RealMatrix.resize(log2OfMaxSize + 1); gIFactor3ImagMatrix.resize(log2OfMaxSize + 1);
+    gFactorReal2DArray.resize(log2OfMaxSize + 1); gFactorImag2DArray.resize(log2OfMaxSize + 1); gFactor3Real2DArray.resize(log2OfMaxSize + 1); gFactor3Imag2DArray.resize(log2OfMaxSize + 1);
+    gIFactorReal2DArray.resize(log2OfMaxSize + 1); gIFactorImag2DArray.resize(log2OfMaxSize + 1); gIFactor3Real2DArray.resize(log2OfMaxSize + 1); gIFactor3Imag2DArray.resize(log2OfMaxSize + 1);
     if (log2OfMaxSize >= SCANFFT_UNROLLED_LOG2_OF_SIZE + 1) {
         size_t log2OfSize = SCANFFT_UNROLLED_LOG2_OF_SIZE + 1;
         auto size = 1ULL << log2OfSize;
         auto halfSize = size >> 1;
-        auto &factorReals = gFactorRealMatrix[log2OfSize] = Alloc<Float>(halfSize);
-        auto &factorImags = gFactorImagMatrix[log2OfSize] = Alloc<Float>(halfSize);
-        auto &ifactorReals = gIFactorRealMatrix[log2OfSize] = Alloc<Float>(halfSize);
-        auto &ifactorImags = gIFactorImagMatrix[log2OfSize] = Alloc<Float>(halfSize);
+        auto &factorReals = gFactorReal2DArray[log2OfSize] = Alloc<Float>(halfSize);
+        auto &factorImags = gFactorImag2DArray[log2OfSize] = Alloc<Float>(halfSize);
+        auto &ifactorReals = gIFactorReal2DArray[log2OfSize] = Alloc<Float>(halfSize);
+        auto &ifactorImags = gIFactorImag2DArray[log2OfSize] = Alloc<Float>(halfSize);
         auto w = std::polar<Float>(1, 2 * kPi / size); auto wi = std::complex<Float>(1, 0);
         auto Iw = std::polar<Float>(1, -2 * kPi / size); auto Iwi = std::complex<Float>(1, 0);
         for (size_t i = 0; i < halfSize; ++i, wi *= w, Iwi *= Iw) {
@@ -106,14 +106,14 @@ static void SetupDefaultFFT(size_t log2OfMaxSize) {
     for (size_t log2OfSize = SCANFFT_UNROLLED_LOG2_OF_SIZE + 2; log2OfSize <= log2OfMaxSize; ++log2OfSize) {
         auto size = 1ULL << log2OfSize;
         auto quarterSize = size >> 2;
-        auto &factorReals = gFactorRealMatrix[log2OfSize] = Alloc<Float>(quarterSize);
-        auto &factorImags = gFactorImagMatrix[log2OfSize] = Alloc<Float>(quarterSize);
-        auto &ifactorReals = gIFactorRealMatrix[log2OfSize] = Alloc<Float>(quarterSize);
-        auto &ifactorImags = gIFactorImagMatrix[log2OfSize] = Alloc<Float>(quarterSize);
-        auto &factor3Reals = gFactor3RealMatrix[log2OfSize] = Alloc<Float>(quarterSize);
-        auto &factor3Imags = gFactor3ImagMatrix[log2OfSize] = Alloc<Float>(quarterSize);
-        auto &ifactor3Reals = gIFactor3RealMatrix[log2OfSize] = Alloc<Float>(quarterSize);
-        auto &ifactor3Imags = gIFactor3ImagMatrix[log2OfSize] = Alloc<Float>(quarterSize);
+        auto &factorReals = gFactorReal2DArray[log2OfSize] = Alloc<Float>(quarterSize);
+        auto &factorImags = gFactorImag2DArray[log2OfSize] = Alloc<Float>(quarterSize);
+        auto &ifactorReals = gIFactorReal2DArray[log2OfSize] = Alloc<Float>(quarterSize);
+        auto &ifactorImags = gIFactorImag2DArray[log2OfSize] = Alloc<Float>(quarterSize);
+        auto &factor3Reals = gFactor3Real2DArray[log2OfSize] = Alloc<Float>(quarterSize);
+        auto &factor3Imags = gFactor3Imag2DArray[log2OfSize] = Alloc<Float>(quarterSize);
+        auto &ifactor3Reals = gIFactor3Real2DArray[log2OfSize] = Alloc<Float>(quarterSize);
+        auto &ifactor3Imags = gIFactor3Imag2DArray[log2OfSize] = Alloc<Float>(quarterSize);
 
         auto w = std::polar<Float>(1, 2 * kPi / size); auto wi = std::complex<Float>(1, 0);
         auto Iw = std::polar<Float>(1, -2 * kPi / size); auto Iwi = std::complex<Float>(1, 0);
@@ -128,12 +128,12 @@ static void SetupDefaultFFT(size_t log2OfMaxSize) {
 }
 
 static void CleanupDefaultFFT() {
-    for (auto p : gFactorRealMatrix) Free(p); for (auto p : gFactorImagMatrix) Free(p);
-    for (auto p : gFactor3RealMatrix) Free(p); for (auto p : gFactor3ImagMatrix) Free(p);
-    for (auto p : gIFactorRealMatrix) Free(p); for (auto p : gIFactorImagMatrix) Free(p);
-    for (auto p : gIFactor3RealMatrix) Free(p); for (auto p : gIFactor3ImagMatrix) Free(p);
-    gFactorRealMatrix.clear(); gFactorImagMatrix.clear(); gFactor3RealMatrix.clear(); gFactor3ImagMatrix.clear();
-    gIFactorRealMatrix.clear(); gIFactorImagMatrix.clear(); gIFactor3RealMatrix.clear(); gIFactor3ImagMatrix.clear();
+    for (auto p : gFactorReal2DArray) Free(p); for (auto p : gFactorImag2DArray) Free(p);
+    for (auto p : gFactor3Real2DArray) Free(p); for (auto p : gFactor3Imag2DArray) Free(p);
+    for (auto p : gIFactorReal2DArray) Free(p); for (auto p : gIFactorImag2DArray) Free(p);
+    for (auto p : gIFactor3Real2DArray) Free(p); for (auto p : gIFactor3Imag2DArray) Free(p);
+    gFactorReal2DArray.clear(); gFactorImag2DArray.clear(); gFactor3Real2DArray.clear(); gFactor3Imag2DArray.clear();
+    gIFactorReal2DArray.clear(); gIFactorImag2DArray.clear(); gIFactor3Real2DArray.clear(); gIFactor3Imag2DArray.clear();
 }
 
 
@@ -151,7 +151,7 @@ static void PostTransform(Float *destReals, Float *destImags, uint8_t log2OfSize
         PostTransform(destReals, destImags, log2OfSize - 1);
         PostTransform(destReals + halfSize, destImags + halfSize, log2OfSize - 1);
 
-        auto factorReals = &gFactorRealMatrix[log2OfSize][0], factorImags = &gFactorImagMatrix[log2OfSize][0];
+        auto factorReals = &gFactorReal2DArray[log2OfSize][0], factorImags = &gFactorImag2DArray[log2OfSize][0];
         for (size_t i = 0; i < halfSize; i += SCANFFT_COMPLEXV_DIMENSION) {
             SCANFFT_COMPLEXV_LOAD(c1, dest, halfSize + i);
             SCANFFT_COMPLEXV_LOAD(wi, factor, i);
@@ -182,8 +182,8 @@ static void PostTransform(Float *destReals, Float *destImags, uint8_t log2OfSize
         PostTransform(destReals + halfSize, destImags + halfSize, log2OfSize - 2);
         PostTransform(destReals + halfSize + quarterSize, destImags + halfSize + quarterSize, log2OfSize - 2);
 
-        auto factorReals = &gFactorRealMatrix[log2OfSize][0], factorImags = &gFactorImagMatrix[log2OfSize][0];
-        auto factor3Reals = &gFactor3RealMatrix[log2OfSize][0], factor3Imags = &gFactor3ImagMatrix[log2OfSize][0];
+        auto factorReals = &gFactorReal2DArray[log2OfSize][0], factorImags = &gFactorImag2DArray[log2OfSize][0];
+        auto factor3Reals = &gFactor3Real2DArray[log2OfSize][0], factor3Imags = &gFactor3Imag2DArray[log2OfSize][0];
         for (size_t i = 0; i < quarterSize; i += SCANFFT_COMPLEXV_DIMENSION) {
             SCANFFT_COMPLEXV_LOAD(c2, dest, halfSize + i);
             SCANFFT_COMPLEXV_LOAD(wi, factor, i);
@@ -232,7 +232,7 @@ static void IPostTransform(Float *destReals, Float *destImags, uint8_t log2OfSiz
         IPostTransform(destReals, destImags, log2OfSize - 1);
         IPostTransform(destReals + halfSize, destImags + halfSize, log2OfSize - 1);
 
-        auto factorReals = &gIFactorRealMatrix[log2OfSize][0], factorImags = &gIFactorImagMatrix[log2OfSize][0];
+        auto factorReals = &gIFactorReal2DArray[log2OfSize][0], factorImags = &gIFactorImag2DArray[log2OfSize][0];
         for (size_t i = 0; i < halfSize; i += SCANFFT_COMPLEXV_DIMENSION) {
             SCANFFT_COMPLEXV_LOAD(c1, dest, halfSize + i);
             SCANFFT_COMPLEXV_LOAD(wi, factor, i);
@@ -261,8 +261,8 @@ static void IPostTransform(Float *destReals, Float *destImags, uint8_t log2OfSiz
         IPostTransform(destReals + halfSize, destImags + halfSize, log2OfSize - 2);
         IPostTransform(destReals + halfSize + quarterSize, destImags + halfSize + quarterSize, log2OfSize - 2);
 
-        auto factorReals = &gIFactorRealMatrix[log2OfSize][0], factorImags = &gIFactorImagMatrix[log2OfSize][0];
-        auto factor3Reals = &gIFactor3RealMatrix[log2OfSize][0], factor3Imags = &gIFactor3ImagMatrix[log2OfSize][0];
+        auto factorReals = &gIFactorReal2DArray[log2OfSize][0], factorImags = &gIFactorImag2DArray[log2OfSize][0];
+        auto factor3Reals = &gIFactor3Real2DArray[log2OfSize][0], factor3Imags = &gIFactor3Imag2DArray[log2OfSize][0];
         for (size_t i = 0; i < quarterSize; i += SCANFFT_COMPLEXV_DIMENSION) {
             SCANFFT_COMPLEXV_LOAD(c2, dest, halfSize + i);
             SCANFFT_COMPLEXV_LOAD(wi, factor, i);

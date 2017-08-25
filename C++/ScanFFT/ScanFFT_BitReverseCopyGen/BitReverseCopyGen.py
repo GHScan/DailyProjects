@@ -100,12 +100,12 @@ void IBitReverseCopy_%d(float *destReals, float *destImags, float const *srcReal
 
 def genBitReverseCopy_SingleParallel8(bits, reversedBits):
     size = 1 << bits
-    reversedSize = 1 << reversedBits
+    span = 1 << reversedBits
     body = '''
 void BitReverseCopy_%d(float *destReals, float *destImags, float const *srcReals, float const *srcImags) {
-    size_t reversedSize = %d;
-    for (size_t off = 0; off < reversedSize; off += 8) {
-        for (size_t i = off; i < %d; i += 8 * reversedSize) {
+    constexpr size_t span = %d;
+    for (size_t off = 0; off < span; off += 8) {
+        for (size_t i = off; i < %d; i += 8 * span) {
             auto i0 = i + 0, i1 = i + 1, i2 = i + 2, i3 = i + 3, i4 = i + 4, i5 = i + 5, i6 = i + 6, i7 = i + 7;
             auto revI0 = %s;
             auto revI1 = %s;
@@ -117,16 +117,16 @@ void BitReverseCopy_%d(float *destReals, float *destImags, float const *srcReals
             auto revI7 = %s;
             Transpose_8PS(
                 destReals, revI0, revI1, revI2, revI3, revI4, revI5, revI6, revI7,
-                srcReals, i, i + reversedSize, i + 2 * reversedSize, i + 3 * reversedSize, 
-                          i + 4 * reversedSize, i + 5 * reversedSize, i + 6 * reversedSize, i + 7 * reversedSize);
+                srcReals, i, i + span, i + 2 * span, i + 3 * span, 
+                          i + 4 * span, i + 5 * span, i + 6 * span, i + 7 * span);
             Transpose_8PS(
                 destImags, revI0, revI1, revI2, revI3, revI4, revI5, revI6, revI7,
-                srcImags, i, i + reversedSize, i + 2 * reversedSize, i + 3 * reversedSize,
-                i + 4 * reversedSize, i + 5 * reversedSize, i + 6 * reversedSize, i + 7 * reversedSize);
+                srcImags, i, i + span, i + 2 * span, i + 3 * span,
+                i + 4 * span, i + 5 * span, i + 6 * span, i + 7 * span);
         }
     }
 }
-''' % (bits, reversedSize, size, 
+''' % (bits, span, size, 
        genReversedBitsExp('i0', bits, reversedBits), 
        genReversedBitsExp('i1', bits, reversedBits), 
        genReversedBitsExp('i2', bits, reversedBits), 
@@ -139,13 +139,13 @@ void BitReverseCopy_%d(float *destReals, float *destImags, float const *srcReals
 
 def genIBitReverseCopy_SingleParallel8(bits, reversedBits):
     size = 1 << bits
-    reversedSize = 1 << reversedBits
+    span = 1 << reversedBits
     body = '''
 void IBitReverseCopy_%d(float *destReals, float *destImags, float const *srcReals, float const *srcImags) {
     auto scale = CreateScaler_8PS(%.20ff);
-    size_t reversedSize = %d;
-    for (size_t off = 0; off < reversedSize; off += 8) {
-        for (size_t i = off; i < %d; i += 8 * reversedSize) {
+    constexpr size_t span = %d;
+    for (size_t off = 0; off < span; off += 8) {
+        for (size_t i = off; i < %d; i += 8 * span) {
             auto i0 = i + 0, i1 = i + 1, i2 = i + 2, i3 = i + 3, i4 = i + 4, i5 = i + 5, i6 = i + 6, i7 = i + 7;
             auto revI0 = %s;
             auto revI1 = %s;
@@ -157,16 +157,16 @@ void IBitReverseCopy_%d(float *destReals, float *destImags, float const *srcReal
             auto revI7 = %s;
             Transpose_Scaled8PS(
                 destReals, revI0, revI1, revI2, revI3, revI4, revI5, revI6, revI7,
-                srcReals, i, i + reversedSize, i + 2 * reversedSize, i + 3 * reversedSize, 
-                          i + 4 * reversedSize, i + 5 * reversedSize, i + 6 * reversedSize, i + 7 * reversedSize, scale);
+                srcReals, i, i + span, i + 2 * span, i + 3 * span, 
+                          i + 4 * span, i + 5 * span, i + 6 * span, i + 7 * span, scale);
             Transpose_Scaled8PS(
                 destImags, revI0, revI1, revI2, revI3, revI4, revI5, revI6, revI7,
-                srcImags, i, i + reversedSize, i + 2 * reversedSize, i + 3 * reversedSize,
-                i + 4 * reversedSize, i + 5 * reversedSize, i + 6 * reversedSize, i + 7 * reversedSize, scale);
+                srcImags, i, i + span, i + 2 * span, i + 3 * span,
+                i + 4 * span, i + 5 * span, i + 6 * span, i + 7 * span, scale);
         }
     }
 }
-''' % (bits, 1 / size, reversedSize, size, 
+''' % (bits, 1 / size, span, size, 
        genReversedBitsExp('i0', bits, reversedBits), 
        genReversedBitsExp('i1', bits, reversedBits), 
        genReversedBitsExp('i2', bits, reversedBits), 
@@ -209,23 +209,23 @@ void IBitReverseCopy_%d(double *destReals, double *destImags, double const *srcR
 
 def genBitReverseCopy_DoubleParallel4(bits, reversedBits):
     size = 1 << bits
-    reversedSize = 1 << reversedBits
+    span = 1 << reversedBits
     body = '''
 void BitReverseCopy_%d(double *destReals, double *destImags, double const *srcReals, double const *srcImags) {
-    size_t reversedSize = %d;
-    for (size_t off = 0; off < reversedSize; off += 4) {
-        for (size_t i = off; i < %d; i += 4 * reversedSize) {
+    constexpr size_t span = %d;
+    for (size_t off = 0; off < span; off += 4) {
+        for (size_t i = off; i < %d; i += 4 * span) {
             auto i0 = i + 0, i1 = i + 1, i2 = i + 2, i3 = i + 3;
             auto revI0 = %s;
             auto revI1 = %s;
             auto revI2 = %s;
             auto revI3 = %s;
-            Transpose_4PD(destReals, revI0, revI1, revI2, revI3, srcReals, i, i + reversedSize, i + 2 * reversedSize, i + 3 * reversedSize);
-            Transpose_4PD(destImags, revI0, revI1, revI2, revI3, srcImags, i, i + reversedSize, i + 2 * reversedSize, i + 3 * reversedSize);
+            Transpose_4PD(destReals, revI0, revI1, revI2, revI3, srcReals, i, i + span, i + 2 * span, i + 3 * span);
+            Transpose_4PD(destImags, revI0, revI1, revI2, revI3, srcImags, i, i + span, i + 2 * span, i + 3 * span);
         }
     }
 }
-''' % (bits, reversedSize, size, 
+''' % (bits, span, size, 
        genReversedBitsExp('i0', bits, reversedBits), 
        genReversedBitsExp('i1', bits, reversedBits), 
        genReversedBitsExp('i2', bits, reversedBits), 
@@ -234,24 +234,24 @@ void BitReverseCopy_%d(double *destReals, double *destImags, double const *srcRe
 
 def genIBitReverseCopy_DoubleParallel4(bits, reversedBits):
     size = 1 << bits
-    reversedSize = 1 << reversedBits
+    span = 1 << reversedBits
     body = '''
 void IBitReverseCopy_%d(double *destReals, double *destImags, double const *srcReals, double const *srcImags) {
     auto scale = CreateScaler_4PD(%.20f);
-    size_t reversedSize = %d;
-    for (size_t off = 0; off < reversedSize; off += 4) {
-        for (size_t i = off; i < %d; i += 4 * reversedSize) {
+    constexpr size_t span = %d;
+    for (size_t off = 0; off < span; off += 4) {
+        for (size_t i = off; i < %d; i += 4 * span) {
             auto i0 = i + 0, i1 = i + 1, i2 = i + 2, i3 = i + 3;
             auto revI0 = %s;
             auto revI1 = %s;
             auto revI2 = %s;
             auto revI3 = %s;
-            Transpose_Scaled4PD(destReals, revI0, revI1, revI2, revI3, srcReals, i, i + reversedSize, i + 2 * reversedSize, i + 3 * reversedSize, scale);
-            Transpose_Scaled4PD(destImags, revI0, revI1, revI2, revI3, srcImags, i, i + reversedSize, i + 2 * reversedSize, i + 3 * reversedSize, scale);
+            Transpose_Scaled4PD(destReals, revI0, revI1, revI2, revI3, srcReals, i, i + span, i + 2 * span, i + 3 * span, scale);
+            Transpose_Scaled4PD(destImags, revI0, revI1, revI2, revI3, srcImags, i, i + span, i + 2 * span, i + 3 * span, scale);
         }
     }
 }
-''' % (bits, 1 / size, reversedSize, size, 
+''' % (bits, 1 / size, span, size, 
        genReversedBitsExp('i0', bits, reversedBits), 
        genReversedBitsExp('i1', bits, reversedBits), 
        genReversedBitsExp('i2', bits, reversedBits), 

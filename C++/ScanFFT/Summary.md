@@ -178,7 +178,7 @@
   - 常规的[冗余消除](https://github.com/GHScan/DailyProjects/blob/master/C%2B%2B/ScanFFT/ScanFFT_UnrolledFFTGen/UnrolledFFTGen.fs#L114)和[死代码删除](https://github.com/GHScan/DailyProjects/blob/master/C%2B%2B/ScanFFT/ScanFFT_UnrolledFFTGen/UnrolledFFTGen.fs#L43)，通过严格限制DSL的能力我们可以简化所有这些操作
   - 最后它可以生成[单精度/双精度的C++代码](https://github.com/GHScan/DailyProjects/blob/master/C%2B%2B/ScanFFT/ScanFFT_UnrolledFFTGen/UnrolledFFTGen.fs#L350)，或[单精度](https://github.com/GHScan/DailyProjects/blob/master/C%2B%2B/ScanFFT/ScanFFT_UnrolledFFTGen/UnrolledFFTGen.fs#L499)/[双精度](https://github.com/GHScan/DailyProjects/blob/master/C%2B%2B/ScanFFT/ScanFFT_UnrolledFFTGen/UnrolledFFTGen.fs#L422)的SIMD码。根据用户配置的并行度，SIMD版的translator可以生成SSE或者AVX指令集，如果将来AVX512成熟了大概添加20、30行代码就能支持更高一倍的并行度
   - 这个小尺寸FFT generator的SIMD版输出长这样：
-    ```
+    ```c++
         void FFT_2(float *destReals, float *destImags, float const *srcReals, float const *srcImags) {
             auto temp_0=_mm_loadl_pi(_mm_setzero_ps(), reinterpret_cast<__m64 const*>(&srcReals[0]));
             auto temp_1=_mm_loadl_pi(_mm_setzero_ps(), reinterpret_cast<__m64 const*>(&srcImags[0]));
@@ -211,7 +211,7 @@
         }
     ```
  - 上面并行度2，在指定并行度8的情况下，size略增加，并行度会进一步提升到4和8： 
-    ```
+    ```c++
     void FFT_3(float *destReals, float *destImags, float const *srcReals, float const *srcImags) {
         auto temp_0=_mm_load_ps(&srcReals[0]);
         auto temp_1=_mm_load_ps(&srcImags[0]);
@@ -251,7 +251,7 @@
    - size=512，用来在InplaceFFT_8和Split Radix算法间做适配，因为后者要求将输入给partition掉，而前者要求保持顺序
    - 其他size，利用Split-Radix 分治将问题派发到更小规模，然后本层butterfly。其实这里的Split-Radix不是我最好的选择，现在的FFT generator已经是第4版了，只负责小size，而[第3版](https://github.com/GHScan/DailyProjects/blob/master/F%23/FFTCompiler/ProgramV3.fs)的时候generator也负责大size，它在大size上做的是类似Radix-8的分治，至少在当时表现很好，从小size方案到大size得到了较平滑的过渡。（这里没在沿用第3版的方案仅仅是个人精力问题，当前版本的Split-Radix是手工写的，为省事，但按之前经验，表现不如generator生成的高Radix版本）
 - size=512用的是Radix-2的算法，相对比较简单：
-``` 
+    ```c++
     case SCANFFT_UNROLLED_LOG2_OF_SIZE + 1:
     {
         // Radix 2 FFT
@@ -261,7 +261,7 @@
         PostTransform(destReals, destImags, log2OfSize - 1);
         PostTransform(destReals + halfSize, destImags + halfSize, log2OfSize - 1);
 
-        auto factorReals = &gFactorRealMatrix[log2OfSize][0], factorImags = &gFactorImagMatrix[log2OfSize][0];
+        auto factorReals = &gFactorReal2DArray[log2OfSize][0], factorImags = &gFactorImag2DArray[log2OfSize][0];
         for (size_t i = 0; i < halfSize; i += SCANFFT_COMPLEXV_DIMENSION) {
             SCANFFT_COMPLEXV_LOAD(c1, dest, halfSize + i);
             SCANFFT_COMPLEXV_LOAD(wi, factor, i);
@@ -279,142 +279,142 @@
         break;
     }
 ```
-- 正如前面提到的，预计算的复根值(gFactorRealMatrix)为不同的size计算了冗余项，这个冗余使得不同size访问复根时是连续访存的，从而有更好的局部性，以及能做数据并行。有一个问题是需要考虑的，大size的情况下，预计算的表空间，会否导致更多的cache miss甚至不如就地求复根？就我的观察来说，大size下的确读表开销很大，但还是比复数乘法略小。
+- 正如前面提到的，预计算的复根值(gFactorReal2DArray)为不同的size计算了冗余项，这个冗余使得不同size访问复根时是连续访存的，从而有更好的局部性，以及能做数据并行。有一个问题是需要考虑的，大size的情况下，预计算的表空间，会否导致更多的cache miss甚至不如就地求复根？就我的观察来说，大size下的确读表开销很大，但还是比复数乘法略小。
 - 循环本身是一组复数操作宏，每个操作是同时对多组复数求butterfly：
-```
-#define SCANFFT_COMPLEXV_DIMENSION 4
-#define SCANFFT_COMPLEXV_ASSIGN(name1, name0) name1##Real = name0##Real, name1##Imag = name0##Imag
-#define SCANFFT_COMPLEXV_MAKE1(name, real, imag) auto name##Real = _mm256_set1_pd(real), name##Imag = _mm256_set1_pd(imag)
-#define SCANFFT_COMPLEXV_LOAD(name, src, i) auto name##Real = _mm256_load_pd(src##Reals + i), name##Imag = _mm256_load_pd(src##Imags + i)
-#define SCANFFT_COMPLEXV_STORE(dest, i, name) _mm256_store_pd(dest##Reals + i, name##Real), _mm256_store_pd(dest##Imags + i, name##Imag)
-#define SCANFFT_COMPLEXV_ADD(name2, name0, name1) auto name2##Real = _mm256_add_pd(name0##Real, name1##Real), name2##Imag = _mm256_add_pd(name0##Imag, name1##Imag)
-#define SCANFFT_COMPLEXV_ADD_TIMES_I(name2, name0, name1) auto name2##Real = _mm256_sub_pd(name0##Real, name1##Imag), name2##Imag = _mm256_add_pd(name0##Imag, name1##Real)
-#define SCANFFT_COMPLEXV_ADD_TIMES_NEG_I(name2, name0, name1) auto name2##Real = _mm256_add_pd(name0##Real, name1##Imag), name2##Imag = _mm256_sub_pd(name0##Imag, name1##Real)
-#define SCANFFT_COMPLEXV_SUB(name2, name0, name1) auto name2##Real = _mm256_sub_pd(name0##Real, name1##Real), name2##Imag = _mm256_sub_pd(name0##Imag, name1##Imag)
-#define SCANFFT_COMPLEXV_SUB_TIMES_I(name2, name0, name1) SCANFFT_COMPLEXV_ADD_TIMES_NEG_I(name2, name0, name1)
-#define SCANFFT_COMPLEXV_SUB_TIMES_NEG_I(name2, name0, name1) SCANFFT_COMPLEXV_ADD_TIMES_I(name2, name0, name1)
-#define SCANFFT_COMPLEXV_MUL(name2, name0, name1) __m256d name2##Real, name2##Imag; do {\
-    auto __realTimesReal = _mm256_mul_pd(name0##Real, name1##Real); \
-    auto __realTimesImag = _mm256_mul_pd(name0##Real, name1##Imag); \
-    auto __imagTimesReal = _mm256_mul_pd(name0##Imag, name1##Real); \
-    auto __imagTimesImag = _mm256_mul_pd(name0##Imag, name1##Imag); \
-    name2##Real = _mm256_sub_pd(__realTimesReal, __imagTimesImag); \
-    name2##Imag = _mm256_add_pd(__realTimesImag, __imagTimesReal); \
-} while(0)
-```
+    ```c++
+    #define SCANFFT_COMPLEXV_DIMENSION 4
+    #define SCANFFT_COMPLEXV_ASSIGN(name1, name0) name1##Real = name0##Real, name1##Imag = name0##Imag
+    #define SCANFFT_COMPLEXV_MAKE1(name, real, imag) auto name##Real = _mm256_set1_pd(real), name##Imag = _mm256_set1_pd(imag)
+    #define SCANFFT_COMPLEXV_LOAD(name, src, i) auto name##Real = _mm256_load_pd(src##Reals + i), name##Imag = _mm256_load_pd(src##Imags + i)
+    #define SCANFFT_COMPLEXV_STORE(dest, i, name) _mm256_store_pd(dest##Reals + i, name##Real), _mm256_store_pd(dest##Imags + i, name##Imag)
+    #define SCANFFT_COMPLEXV_ADD(name2, name0, name1) auto name2##Real = _mm256_add_pd(name0##Real, name1##Real), name2##Imag = _mm256_add_pd(name0##Imag, name1##Imag)
+    #define SCANFFT_COMPLEXV_ADD_TIMES_I(name2, name0, name1) auto name2##Real = _mm256_sub_pd(name0##Real, name1##Imag), name2##Imag = _mm256_add_pd(name0##Imag, name1##Real)
+    #define SCANFFT_COMPLEXV_ADD_TIMES_NEG_I(name2, name0, name1) auto name2##Real = _mm256_add_pd(name0##Real, name1##Imag), name2##Imag = _mm256_sub_pd(name0##Imag, name1##Real)
+    #define SCANFFT_COMPLEXV_SUB(name2, name0, name1) auto name2##Real = _mm256_sub_pd(name0##Real, name1##Real), name2##Imag = _mm256_sub_pd(name0##Imag, name1##Imag)
+    #define SCANFFT_COMPLEXV_SUB_TIMES_I(name2, name0, name1) SCANFFT_COMPLEXV_ADD_TIMES_NEG_I(name2, name0, name1)
+    #define SCANFFT_COMPLEXV_SUB_TIMES_NEG_I(name2, name0, name1) SCANFFT_COMPLEXV_ADD_TIMES_I(name2, name0, name1)
+    #define SCANFFT_COMPLEXV_MUL(name2, name0, name1) __m256d name2##Real, name2##Imag; do {\
+        auto __realTimesReal = _mm256_mul_pd(name0##Real, name1##Real); \
+        auto __realTimesImag = _mm256_mul_pd(name0##Real, name1##Imag); \
+        auto __imagTimesReal = _mm256_mul_pd(name0##Imag, name1##Real); \
+        auto __imagTimesImag = _mm256_mul_pd(name0##Imag, name1##Imag); \
+        name2##Real = _mm256_sub_pd(__realTimesReal, __imagTimesImag); \
+        name2##Imag = _mm256_add_pd(__realTimesImag, __imagTimesReal); \
+    } while(0)
+    ```
 - 注意其中乘i、-i只是用宏来交换变量、交换加减(SCANFFT_COMPLEXV_ADD_TIMES_I, SCANFFT_COMPLEXV_ADD_TIMES_NEG_I)，并不用真的运算。在FFT gen v3的时候，这些都是generator作为强度消减的一部分自动完成
 ## Bit-Reverse Copy的优化
 - 按理说，一个O(nlogn)的算法当中的O(n)部分，不值得特别关注，哪怕那个ReverseBits不够快，但怎可能成为瓶颈？事实是，他的确是瓶颈。如果说我的实现比FFTW在开始和末端略有优势，开始靠的是FFT gen生成的特化函数，那末端靠的可能就是bit-reverse copy的缓存友好性（因为PostTransform本身，大家最起码是cache-oblivious的递归实现）
 - 好的，其实ReverseBits这个函数，的确耗时不菲的，尤其是在size明显小于cache时，但他还能怎样优化呢？记得我们有针对每个size生成特化的实现吗？这里也类似的code gen输出：(注意这里是ReverseBits的变种，即高8位直接右移，低k-8位逆序左移)
-```
-// k=9
-// k=10
-// k=11
-auto revI0 = (i0 >> 3) | (gReversedBytes[i0 & 0x7] << 3);
-// k=12
-auto revI0 = (i0 >> 4) | (gReversedBytes[i0 & 0xf] << 4);
-// k=17
-auto revI0 = (i0 >> 9) | (gReversedBytes[i0 & 0xff] << 9) | (gReversedBytes[(i0 >> 8) & 0x1] << 1);
-// k=24
-auto revI0 = (i0 >> 16) | (gReversedBytes[i0 & 0xff] << 16) | (gReversedBytes[(i0 >> 8) & 0xff] << 8);
-```
+    ```c++
+    // k=9
+    // k=10
+    // k=11
+    auto revI0 = (i0 >> 3) | (gReversedBytes[i0 & 0x7] << 3);
+    // k=12
+    auto revI0 = (i0 >> 4) | (gReversedBytes[i0 & 0xf] << 4);
+    // k=17
+    auto revI0 = (i0 >> 9) | (gReversedBytes[i0 & 0xff] << 9) | (gReversedBytes[(i0 >> 8) & 0x1] << 1);
+    // k=24
+    auto revI0 = (i0 >> 16) | (gReversedBytes[i0 & 0xff] << 16) | (gReversedBytes[(i0 >> 8) & 0xff] << 8);
+    ```
 - k等于9和10的时候用有特殊算法直接避免了
 - 好的，我们说瓶颈在于bit-reverse copy的源和目的，一方访存连续的时候，意味着i的低位在变化，那么reversed(i)就是高位变化，访存不连续，k较大的时候跨度也大，局部性很差。但是，我们又讨论过，由于这里用到的是ReverseBits的变种，是高8位直接右移，低k-8位逆序后左移，如果以访问i+0~i+7的8个元素后，再步进2^(k-8)，处理新的8个元素，那么这8个元素的目标位置会和前8个元素处在连续地址上，从而，读写都连续了。
 - 具体来说，k=9和10的时候有特殊算法，k=11及以上每次处理8x8个元素，相当于转置:
-```
-void BitReverseCopy_9(float *destReals, float *destImags, float const *srcReals, float const *srcImags) {
-    for (size_t i = 0; i < 512; i += 16) {
-        SplitEvenOdd_8PS(destReals, i / 2, i / 2 + 256, srcReals, i, i + 8);
-        SplitEvenOdd_8PS(destImags, i / 2, i / 2 + 256, srcImags, i, i + 8);
-    }
-}
-void BitReverseCopy_10(float *destReals, float *destImags, float const *srcReals, float const *srcImags) {
-    for (size_t i = 0; i < 1024; i += 32) {
-        SplitMod4_8PS(destReals, i / 4, i / 4 + 256, i / 4 + 512, i / 4 + 768, srcReals, i, i + 8, i + 16, i + 24);
-        SplitMod4_8PS(destImags, i / 4, i / 4 + 256, i / 4 + 512, i / 4 + 768, srcImags, i, i + 8, i + 16, i + 24);
-    }
-}
-void BitReverseCopy_11(float *destReals, float *destImags, float const *srcReals, float const *srcImags) {
-    size_t reversedSize = 8;
-    for (size_t off = 0; off < reversedSize; off += 8) {
-        for (size_t i = off; i < 2048; i += 8 * reversedSize) {
-            auto i0 = i + 0, i1 = i + 1, i2 = i + 2, i3 = i + 3, i4 = i + 4, i5 = i + 5, i6 = i + 6, i7 = i + 7;
-            auto revI0 = (i0 >> 3) | (gReversedBytes[i0 & 0x7] << 3);
-            auto revI1 = (i1 >> 3) | (gReversedBytes[i1 & 0x7] << 3);
-            auto revI2 = (i2 >> 3) | (gReversedBytes[i2 & 0x7] << 3);
-            auto revI3 = (i3 >> 3) | (gReversedBytes[i3 & 0x7] << 3);
-            auto revI4 = (i4 >> 3) | (gReversedBytes[i4 & 0x7] << 3);
-            auto revI5 = (i5 >> 3) | (gReversedBytes[i5 & 0x7] << 3);
-            auto revI6 = (i6 >> 3) | (gReversedBytes[i6 & 0x7] << 3);
-            auto revI7 = (i7 >> 3) | (gReversedBytes[i7 & 0x7] << 3);
-            Transpose_8PS(
-                destReals, revI0, revI1, revI2, revI3, revI4, revI5, revI6, revI7,
-                srcReals, i, i + reversedSize, i + 2 * reversedSize, i + 3 * reversedSize, 
-                          i + 4 * reversedSize, i + 5 * reversedSize, i + 6 * reversedSize, i + 7 * reversedSize);
-            Transpose_8PS(
-                destImags, revI0, revI1, revI2, revI3, revI4, revI5, revI6, revI7,
-                srcImags, i, i + reversedSize, i + 2 * reversedSize, i + 3 * reversedSize,
-                i + 4 * reversedSize, i + 5 * reversedSize, i + 6 * reversedSize, i + 7 * reversedSize);
+    ```c++
+    void BitReverseCopy_9(float *destReals, float *destImags, float const *srcReals, float const *srcImags) {
+        for (size_t i = 0; i < 512; i += 16) {
+            SplitEvenOdd_8PS(destReals, i / 2, i / 2 + 256, srcReals, i, i + 8);
+            SplitEvenOdd_8PS(destImags, i / 2, i / 2 + 256, srcImags, i, i + 8);
         }
     }
-}
-SCANFFT_FORCEINLINE static void SplitEvenOdd_8PS(
-    float *destPtr, size_t d0, size_t d1, float const *srcPtr, size_t s0, size_t s1) {
-    auto row0 = _mm256_load_ps(srcPtr + s0);
-    auto row1 = _mm256_load_ps(srcPtr + s1);
-    auto even = _mm256_permutevar8x32_ps(_mm256_shuffle_ps(row0, row1, 0x88), gF32Q2Q3SwapIdx);
-    auto odd = _mm256_permutevar8x32_ps(_mm256_shuffle_ps(row0, row1, 0xdd), gF32Q2Q3SwapIdx);
-    _mm256_store_ps(destPtr + d0, even);
-    _mm256_store_ps(destPtr + d1, odd);
-}
-SCANFFT_FORCEINLINE static void SplitMod4_8PS(
-    float *destPtr, size_t d0, size_t d1, size_t d2, size_t d3, 
-    float const *srcPtr, size_t s0, size_t s1, size_t s2, size_t s3) {
-    auto row0 = _mm256_load_ps(srcPtr + s0);
-    auto row1 = _mm256_load_ps(srcPtr + s1);
-    auto row2 = _mm256_load_ps(srcPtr + s2);
-    auto row3 = _mm256_load_ps(srcPtr + s3);
+    void BitReverseCopy_10(float *destReals, float *destImags, float const *srcReals, float const *srcImags) {
+        for (size_t i = 0; i < 1024; i += 32) {
+            SplitMod4_8PS(destReals, i / 4, i / 4 + 256, i / 4 + 512, i / 4 + 768, srcReals, i, i + 8, i + 16, i + 24);
+            SplitMod4_8PS(destImags, i / 4, i / 4 + 256, i / 4 + 512, i / 4 + 768, srcImags, i, i + 8, i + 16, i + 24);
+        }
+    }
+    void BitReverseCopy_11(float *destReals, float *destImags, float const *srcReals, float const *srcImags) {
+        size_t span = 8;
+        for (size_t off = 0; off < span; off += 8) {
+            for (size_t i = off; i < 2048; i += 8 * span) {
+                auto i0 = i + 0, i1 = i + 1, i2 = i + 2, i3 = i + 3, i4 = i + 4, i5 = i + 5, i6 = i + 6, i7 = i + 7;
+                auto revI0 = (i0 >> 3) | (gReversedBytes[i0 & 0x7] << 3);
+                auto revI1 = (i1 >> 3) | (gReversedBytes[i1 & 0x7] << 3);
+                auto revI2 = (i2 >> 3) | (gReversedBytes[i2 & 0x7] << 3);
+                auto revI3 = (i3 >> 3) | (gReversedBytes[i3 & 0x7] << 3);
+                auto revI4 = (i4 >> 3) | (gReversedBytes[i4 & 0x7] << 3);
+                auto revI5 = (i5 >> 3) | (gReversedBytes[i5 & 0x7] << 3);
+                auto revI6 = (i6 >> 3) | (gReversedBytes[i6 & 0x7] << 3);
+                auto revI7 = (i7 >> 3) | (gReversedBytes[i7 & 0x7] << 3);
+                Transpose_8PS(
+                    destReals, revI0, revI1, revI2, revI3, revI4, revI5, revI6, revI7,
+                    srcReals, i, i + span, i + 2 * span, i + 3 * span, 
+                              i + 4 * span, i + 5 * span, i + 6 * span, i + 7 * span);
+                Transpose_8PS(
+                    destImags, revI0, revI1, revI2, revI3, revI4, revI5, revI6, revI7,
+                    srcImags, i, i + span, i + 2 * span, i + 3 * span,
+                    i + 4 * span, i + 5 * span, i + 6 * span, i + 7 * span);
+            }
+        }
+    }
+    SCANFFT_FORCEINLINE static void SplitEvenOdd_8PS(
+        float *destPtr, size_t d0, size_t d1, float const *srcPtr, size_t s0, size_t s1) {
+        auto row0 = _mm256_load_ps(srcPtr + s0);
+        auto row1 = _mm256_load_ps(srcPtr + s1);
+        auto even = _mm256_permutevar8x32_ps(_mm256_shuffle_ps(row0, row1, 0x88), gF32Q2Q3SwapIdx);
+        auto odd = _mm256_permutevar8x32_ps(_mm256_shuffle_ps(row0, row1, 0xdd), gF32Q2Q3SwapIdx);
+        _mm256_store_ps(destPtr + d0, even);
+        _mm256_store_ps(destPtr + d1, odd);
+    }
+    SCANFFT_FORCEINLINE static void SplitMod4_8PS(
+        float *destPtr, size_t d0, size_t d1, size_t d2, size_t d3, 
+        float const *srcPtr, size_t s0, size_t s1, size_t s2, size_t s3) {
+        auto row0 = _mm256_load_ps(srcPtr + s0);
+        auto row1 = _mm256_load_ps(srcPtr + s1);
+        auto row2 = _mm256_load_ps(srcPtr + s2);
+        auto row3 = _mm256_load_ps(srcPtr + s3);
 
-    auto row01Lo = _mm256_unpacklo_ps(row0, row1);
-    auto row01Hi = _mm256_unpackhi_ps(row0, row1);
-    auto row23Lo = _mm256_unpacklo_ps(row2, row3);
-    auto row23Hi = _mm256_unpackhi_ps(row2, row3);
-    auto lololo = _mm256_unpacklo_ps(row01Lo, row23Lo);
-    auto lolohi = _mm256_unpackhi_ps(row01Lo, row23Lo);
-    auto hihilo = _mm256_unpacklo_ps(row01Hi, row23Hi);
-    auto hihihi = _mm256_unpackhi_ps(row01Hi, row23Hi);
-    row0 = _mm256_permutevar8x32_ps(lololo, gMod4PermIndex);
-    row1 = _mm256_permutevar8x32_ps(hihilo, gMod4PermIndex);
-    row2 = _mm256_permutevar8x32_ps(lolohi, gMod4PermIndex);
-    row3 = _mm256_permutevar8x32_ps(hihihi, gMod4PermIndex);
+        auto row01Lo = _mm256_unpacklo_ps(row0, row1);
+        auto row01Hi = _mm256_unpackhi_ps(row0, row1);
+        auto row23Lo = _mm256_unpacklo_ps(row2, row3);
+        auto row23Hi = _mm256_unpackhi_ps(row2, row3);
+        auto lololo = _mm256_unpacklo_ps(row01Lo, row23Lo);
+        auto lolohi = _mm256_unpackhi_ps(row01Lo, row23Lo);
+        auto hihilo = _mm256_unpacklo_ps(row01Hi, row23Hi);
+        auto hihihi = _mm256_unpackhi_ps(row01Hi, row23Hi);
+        row0 = _mm256_permutevar8x32_ps(lololo, gMod4PermIndex);
+        row1 = _mm256_permutevar8x32_ps(hihilo, gMod4PermIndex);
+        row2 = _mm256_permutevar8x32_ps(lolohi, gMod4PermIndex);
+        row3 = _mm256_permutevar8x32_ps(hihihi, gMod4PermIndex);
 
-    _mm256_store_ps(destPtr + d0, row0);
-    _mm256_store_ps(destPtr + d1, row1);
-    _mm256_store_ps(destPtr + d2, row2);
-    _mm256_store_ps(destPtr + d3, row3);
-}
-SCANFFT_FORCEINLINE static void Transpose_8PS(
-    float *destPtr, size_t d0, size_t d1, size_t d2, size_t d3, size_t d4, size_t d5, size_t d6, size_t d7,
-    float const *srcPtr, size_t s0, size_t s1, size_t s2, size_t s3, size_t s4, size_t s5, size_t s6, size_t s7) {
-    auto row0 = _mm256_load_ps(srcPtr + s0);
-    auto row1 = _mm256_load_ps(srcPtr + s1);
-    auto row2 = _mm256_load_ps(srcPtr + s2);
-    auto row3 = _mm256_load_ps(srcPtr + s3);
-    auto row4 = _mm256_load_ps(srcPtr + s4);
-    auto row5 = _mm256_load_ps(srcPtr + s5);
-    auto row6 = _mm256_load_ps(srcPtr + s6);
-    auto row7 = _mm256_load_ps(srcPtr + s7);
-    _MM256_TRANSPOSE8_PS(row0, row1, row2, row3, row4, row5, row6, row7);
-    _mm256_store_ps(destPtr + d0, row0);
-    _mm256_store_ps(destPtr + d1, row1);
-    _mm256_store_ps(destPtr + d2, row2);
-    _mm256_store_ps(destPtr + d3, row3);
-    _mm256_store_ps(destPtr + d4, row4);
-    _mm256_store_ps(destPtr + d5, row5);
-    _mm256_store_ps(destPtr + d6, row6);
-    _mm256_store_ps(destPtr + d7, row7);
-}
-```
+        _mm256_store_ps(destPtr + d0, row0);
+        _mm256_store_ps(destPtr + d1, row1);
+        _mm256_store_ps(destPtr + d2, row2);
+        _mm256_store_ps(destPtr + d3, row3);
+    }
+    SCANFFT_FORCEINLINE static void Transpose_8PS(
+        float *destPtr, size_t d0, size_t d1, size_t d2, size_t d3, size_t d4, size_t d5, size_t d6, size_t d7,
+        float const *srcPtr, size_t s0, size_t s1, size_t s2, size_t s3, size_t s4, size_t s5, size_t s6, size_t s7) {
+        auto row0 = _mm256_load_ps(srcPtr + s0);
+        auto row1 = _mm256_load_ps(srcPtr + s1);
+        auto row2 = _mm256_load_ps(srcPtr + s2);
+        auto row3 = _mm256_load_ps(srcPtr + s3);
+        auto row4 = _mm256_load_ps(srcPtr + s4);
+        auto row5 = _mm256_load_ps(srcPtr + s5);
+        auto row6 = _mm256_load_ps(srcPtr + s6);
+        auto row7 = _mm256_load_ps(srcPtr + s7);
+        _MM256_TRANSPOSE8_PS(row0, row1, row2, row3, row4, row5, row6, row7);
+        _mm256_store_ps(destPtr + d0, row0);
+        _mm256_store_ps(destPtr + d1, row1);
+        _mm256_store_ps(destPtr + d2, row2);
+        _mm256_store_ps(destPtr + d3, row3);
+        _mm256_store_ps(destPtr + d4, row4);
+        _mm256_store_ps(destPtr + d5, row5);
+        _mm256_store_ps(destPtr + d6, row6);
+        _mm256_store_ps(destPtr + d7, row7);
+    }
+    ```
 - 可以看到，由于大家的PostTransform都很高效，在bit-reverse copy上下功夫，分别特化了ReverseBits（小尺寸有效）、改进了访存局部性（大尺寸有效）、以及Transpose8这种高效读写cache line的方式过后（曾经某个size上用过Transpose 4，在吞吐曲线上观察到明显的不光滑，后来定位到可以进一步挖掘并行性，该函数从SSE换成AVX），我的实现在大尺寸上从比FFTW差一大截到略有优势
 
 # 结语
