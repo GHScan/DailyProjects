@@ -16,7 +16,7 @@ class seq_nn_classifier(object):
             weight_decay, floss, optimizer, lr_scheduler, weights_initializer):
 
         self.weights = [weights_initializer((din, dout)) for din, dout in zip(self.sizes[:-1], self.sizes[1:]) ]
-        self.biases = [weights_initializer((dout,)) for dout in self.sizes[1:] ]
+        self.biases = [np.zeros((dout,)) for dout in self.sizes[1:] ]
 
         for e in range(epoch):
             acc, loss = self.run_one_epoch(e, train_data, batch_size, weight_decay, floss, optimizer, lr_scheduler)

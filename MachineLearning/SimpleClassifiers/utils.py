@@ -11,9 +11,6 @@ def int_to_vector(i, max_i):
     v[i] = 1
     return v
 
-def vec1_to_vec2(x):
-    return x.reshape((x.shape[0], 1))
-
 def ext_dim(X):
     return np.expand_dims(X, axis=-1)
 
@@ -143,7 +140,6 @@ def euclidean_dist(x0, x1):
 
 
 def break_into_batches(X, batch_size, shuffle=False):
-
     idx = list(range(len(X)))
     if shuffle:
         random.shuffle(idx)
@@ -176,3 +172,47 @@ def gaussian_weights_intializer(mean, std):
     def func_(shape):
         return np.random.randn(*shape) * (std / np.sqrt(shape[-1])) + mean
     return func_
+
+
+def conv_rect(im_rect, fit_rect, fit_stride):
+    w, h = (np.array(im_rect) - np.array(fit_rect)) / np.array(fit_stride) + 1
+    assert w == int(w) and h == int(h)
+    return int(w), int(h)
+
+def iconv_rect(col_rect, fit_rect, fit_stride):
+    w, h = (np.array(col_rect) - 1) * np.array(fit_stride) + np.array(fit_rect)
+    assert w == int(w) and h == int(h)
+    return int(w), int(h)
+
+
+def im2col(im, im_rect, fit_rect, fit_stride):
+    from skimage.util import view_as_windows
+    im_chan = im.shape[0]
+    row_num = im_chan * fit_rect[0] * fit_rect[1]
+    im_m = im.reshape((im_chan, im_rect[0], im_rect[1]))
+    return view_as_windows(
+                im_m, 
+                (im_chan, fit_rect[0], fit_rect[1]), 
+                (1, fit_stride[0], fit_stride[1])).reshape((-1,row_num)).T
+
+def col2im(cols, im_rect, fit_rect, fit_stride):
+    from skimage.util import view_as_windows
+    im_chan = cols.shape[0] // (fit_rect[0] * fit_rect[1])
+    im_m = np.zeros((im_chan, im_rect[0], im_rect[1]))
+    v = view_as_windows(
+                im_m, 
+                (im_chan, fit_rect[0], fit_rect[1]), 
+                (1, fit_stride[0], fit_stride[1]))
+    v += cols.T.reshape(v.shape)
+    im = im_m * (1 / (fit_rect[0] * fit_rect[1]))
+    return im.reshape((im_chan,-1))
+
+
+def max_pool(x):
+    return np.max(x, axis=0)
+
+def dmax_pool(dy, y, x):
+    dx = np.zeros(x.shape)
+    dx[np.argmax(x, axis=0), :] = dy
+    return dx
+

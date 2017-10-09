@@ -17,7 +17,7 @@ class linear_classifier(object):
         din, dout = train_data[0][0].shape[0], train_data[0][1].shape[0]
 
         self.w = weights_initializer((dout, din))
-        self.b = weights_initializer((dout,))
+        self.b = np.zeros((dout,))
 
         for e in range(epoch):
             acc, loss = self.run_one_epoch(e, train_data, batch_size, weight_decay, floss, optimizer, lr_scheduler)
@@ -51,7 +51,7 @@ class linear_classifier(object):
                 dwxpb = self.fdact(dy, y, wxpb)
                 dwx = dwxpb
                 db = dwxpb
-                dw = utils.ddot0(utils.vec1_to_vec2(dwx), wx, self.w, utils.vec1_to_vec2(x))
+                dw = utils.ddot0(dwx.reshape((-1,1)), wx, self.w, x.reshape((-1,1)))
 
                 # update grad
                 grad_w += dw
@@ -91,7 +91,7 @@ class linear_classifier2(object):
         din, dout = train_data[0][0].shape[0], train_data[0][1].shape[0]
 
         self.w = weights_initializer((din, dout))
-        self.b = weights_initializer((dout,))
+        self.b = np.zeros((dout,))
 
         for e in range(epoch):
             acc, loss = self.run_one_epoch(e, train_data, batch_size, weight_decay, floss, optimizer, lr_scheduler)
