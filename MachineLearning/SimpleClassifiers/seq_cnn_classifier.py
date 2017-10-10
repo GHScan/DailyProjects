@@ -21,7 +21,8 @@ class conv_layer(object):
         self.params = [self.weights, self.biases]
 
     def forward(self, x):
-        self._t0 = utils.im2col(x, self.im_rect, self.fit_rect, self.fit_stride)
+        self._im = x.reshape((x.shape[0],self.im_rect[0],self.im_rect[1]))
+        self._t0 = utils.im2col(self._im, self.fit_rect, self.fit_stride)
         self._t1 = np.dot(self.weights, self._t0)
         self._t2 = self._t1 + self.biases
         return self.fact(self._t2)
@@ -32,7 +33,8 @@ class conv_layer(object):
         dt1 = dt2
         self.weights_grad = utils.ddot0(dt1, self._t1, self.weights, self._t0)
         dt0 = utils.ddot1(dt1, self._t1, self.weights, self._t0)
-        dx = utils.col2im(dt0, self.im_rect, self.fit_rect, self.fit_stride)
+        dim = utils.dim2col(dt0, self._t0, self._im, self.fit_rect, self.fit_stride)
+        dx = dim.reshape((dim.shape[0],-1))
 
         scale = 1 / (self.col_rect[0] * self.col_rect[1])
         self.params_grad = [self.weights_grad * scale, self.biases_grad * scale]
@@ -53,21 +55,25 @@ class max_pool_layer(object):
         self.params = []
 
     def forward(self, x):
+        self._ims = []
         self._cols = []
         new_rows = []
         for row in x:
-            col = utils.im2col(row.reshape((1,-1)), self.im_rect, self.pool_rect, self.pool_stride)
+            im = row.reshape((1,self.im_rect[0],self.im_rect[1]))
+            col = utils.im2col(im, self.pool_rect, self.pool_stride)
             new_row = utils.max_pool(col)
             new_rows.append(new_row)
+            self._ims.append(im)
             self._cols.append(col)
         return np.array(new_rows)
 
     def backward(self, dy, y, x):
         drows = []
-        for dnew_row, new_row, row, col in zip(dy, y, x, self._cols):
+        for dnew_row, new_row, row, col, im in zip(dy, y, x, self._cols, self._ims):
             dcol = utils.dmax_pool(dnew_row, new_row, col)
-            drow = utils.col2im(dcol, self.im_rect, self.pool_rect, self.pool_stride)
-            drows.append(drow.reshape((-1,)))
+            dim = utils.dim2col(dcol, col, im, self.pool_rect, self.pool_stride)
+            drow = dim.reshape(-1)
+            drows.append(drow)
 
         self.params_grad = []
 

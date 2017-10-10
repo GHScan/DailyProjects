@@ -185,27 +185,25 @@ def iconv_rect(col_rect, fit_rect, fit_stride):
     return int(w), int(h)
 
 
-def im2col(im, im_rect, fit_rect, fit_stride):
+def im2col(im, fit_rect, fit_stride):
     from skimage.util import view_as_windows
     im_chan = im.shape[0]
     row_num = im_chan * fit_rect[0] * fit_rect[1]
-    im_m = im.reshape((im_chan, im_rect[0], im_rect[1]))
     return view_as_windows(
-                im_m, 
+                im, 
                 (im_chan, fit_rect[0], fit_rect[1]), 
                 (1, fit_stride[0], fit_stride[1])).reshape((-1,row_num)).T
 
-def col2im(cols, im_rect, fit_rect, fit_stride):
+def dim2col(dcol, col, im, fit_rect, fit_stride):
     from skimage.util import view_as_windows
-    im_chan = cols.shape[0] // (fit_rect[0] * fit_rect[1])
-    im_m = np.zeros((im_chan, im_rect[0], im_rect[1]))
+    im_chan = im.shape[0]
+    dim = np.zeros(im.shape)
     v = view_as_windows(
-                im_m, 
+                dim, 
                 (im_chan, fit_rect[0], fit_rect[1]), 
                 (1, fit_stride[0], fit_stride[1]))
-    v += cols.T.reshape(v.shape)
-    im = im_m * (1 / (fit_rect[0] * fit_rect[1]))
-    return im.reshape((im_chan,-1))
+    v += dcol.T.reshape(v.shape)
+    return dim * (1 / (fit_rect[0] * fit_rect[1]))
 
 
 def max_pool(x):

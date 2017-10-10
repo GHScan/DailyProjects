@@ -3,7 +3,7 @@
 
 import sys
 sys.path.append('.')
-sys.path.append('../data')
+sys.path.append('../DataLoader')
 
 import utils
 
@@ -83,9 +83,9 @@ def evaluate_seq_cnn(train_data, valid_data, test_data, im_rect):
         valid_data = [ (x.reshape((1,-1)), y) for x, y in valid_data ]
         test_data = [ (x.reshape((1,-1)), y) for x, y in test_data ]
 
-    train_data = train_data[:2000]
-    valid_data = valid_data[:300]
-    test_data = test_data[:2000]
+    train_data = train_data[:300]
+    valid_data = valid_data[:100]
+    test_data = test_data[:100]
 
     batch_size = 1
     din = train_data[0][0].shape[0]
