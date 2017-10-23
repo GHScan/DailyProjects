@@ -32,8 +32,8 @@ inline double Timing(TFunc &&func, int times = 3) {
 }
 
 
-inline bool IsPowerOf2(size_t n) {
-    return n > 0 && ((n - 1) & n) == 0;
+inline bool IsPowerOf2(size_t i) {
+    return i > 0 && ((i - 1) & i) == 0;
 }
 
 
@@ -110,15 +110,15 @@ struct Bitonic_v1 {
 
 struct Bitonic_v2 {
     template<typename T>
-    static void Sort(T *p, size_t size, bool ascent) {
+    static void Sort(T *ptr, size_t size, bool ascent) {
         assert(IsPowerOf2(size));
 
         for (auto dirSpan = 2; dirSpan <= size; dirSpan *= 2) {
             for (auto span = size / 2; span >= 1; span /= 2) {
                 for (size_t i = 0; i < size; ++i) {
                     if ((i / span) % 2 == 0) {
-                        if ((p[i] > p[i + span]) == ((i / dirSpan) % 2 == 0 ? ascent : !ascent)) {
-                            auto v = p[i]; p[i] = p[i + span]; p[i + span] = v;
+                        if ((ptr[i] > ptr[i + span]) == ((i / dirSpan) % 2 == 0 ? ascent : !ascent)) {
+                            auto v = ptr[i]; ptr[i] = ptr[i + span]; ptr[i + span] = v;
                         }
                     }
                 }
@@ -131,13 +131,13 @@ struct Bitonic_v2 {
 template<typename T>
 __global__ void Bitonic_v3_Kernel(T *ptr, size_t size, bool ascent) {
     auto tid = threadIdx.x;
-    auto win = size / blockDim.x;
-    auto first = tid * win;
-    auto last = first + win;
+    auto elemCountPerThread = size / blockDim.x;
+    auto first = tid * elemCountPerThread;
+    auto last = first + elemCountPerThread;
 
-    __shared__ T p[4096];
+    __shared__ T localPtr[4096];
     for (auto i = first; i != last; ++i)
-        p[i] = ptr[i];
+        localPtr[i] = ptr[i];
     __syncthreads();
         
 
@@ -146,8 +146,8 @@ __global__ void Bitonic_v3_Kernel(T *ptr, size_t size, bool ascent) {
 #pragma unroll
             for (auto i = first; i != last; ++i) {
                 if ((i / span) % 2 == 0) {
-                    if ((p[i] > p[i + span]) == ((i / dirSpan) % 2 == 0 ? ascent : !ascent)) {
-                        auto v = p[i]; p[i] = p[i + span]; p[i + span] = v;
+                    if ((localPtr[i] > localPtr[i + span]) == ((i / dirSpan) % 2 == 0 ? ascent : !ascent)) {
+                        auto v = localPtr[i]; localPtr[i] = localPtr[i + span]; localPtr[i + span] = v;
                     }
                 }
             }
@@ -157,27 +157,71 @@ __global__ void Bitonic_v3_Kernel(T *ptr, size_t size, bool ascent) {
     }
 
     for (auto i = first; i != last; ++i)
-        ptr[i] = p[i];
+        ptr[i] = localPtr[i];
 }
 
 struct Bitonic_v3 {
     template<typename T>
-    static void Sort(std::shared_ptr<CUDAArray<T>> a, bool ascent, size_t maxThread) {
-        assert(IsPowerOf2(a->Length));
+    static void Sort(std::shared_ptr<CUDAArray<T>> devPtr, bool ascent, size_t maxThread) {
+        assert(IsPowerOf2(devPtr->Length));
 
-        auto threadCount = std::min(maxThread, a->Length);
-        Bitonic_v3_Kernel << < 1, threadCount >> > (a->Ptr, a->Length, ascent);
+        auto threadCount = std::min(maxThread, devPtr->Length);
+        Bitonic_v3_Kernel << < 1, threadCount >> > (devPtr->Ptr, devPtr->Length, ascent);
 
-        a->Device->CheckLastError();
+        devPtr->Device->CheckLastError();
     }
 
 
     template<typename T>
-    static void Sort(std::shared_ptr<CUDADevice> device, T *a, size_t size, bool ascent, size_t maxThread = 512) {
-        auto da = device->Alloc<T>(size);
-        device->Copy(da, a);
-        Sort(da, ascent, maxThread);
-        device->Copy(a, da);
+    static void Sort(std::shared_ptr<CUDADevice> device, T *ptr, size_t size, bool ascent, size_t maxThread = 512) {
+        auto devPtr = device->Alloc<T>(size);
+        device->Copy(devPtr, ptr);
+        Sort(devPtr, ascent, maxThread);
+        device->Copy(ptr, devPtr);
+    }
+};
+
+
+template<typename T>
+__global__ void Bitonic_v4_Kernel(T *ptr, size_t size, size_t dirSpan, size_t span, bool ascent) {
+    auto totalThreadCount = gridDim.x * blockDim.x;
+    auto elemCountPerThread = totalThreadCount < size ? size / totalThreadCount : 1;
+    auto tid = blockIdx.x * blockDim.x + threadIdx.x;
+    auto first = tid * elemCountPerThread;
+    auto last = first + elemCountPerThread;
+
+    for (auto i = first; i != last; ++i) {
+        if (i < size && (i / span) % 2 == 0) {
+            if ((ptr[i] > ptr[i + span]) == ((i / dirSpan) % 2 == 0 ? ascent : !ascent)) {
+                auto v = ptr[i]; ptr[i] = ptr[i + span]; ptr[i + span] = v;
+            }
+        }
+    }
+}
+
+struct Bitonic_v4 {
+    template<typename T>
+    static void Sort(std::shared_ptr<CUDAArray<T>> devPtr, bool ascent) {
+        assert(IsPowerOf2(devPtr->Length));
+
+        size_t threadCount = 1024;
+        size_t blockCount = std::max<size_t>(devPtr->Length / threadCount, 1);
+        for (auto dirSpan = 2; dirSpan <= devPtr->Length; dirSpan *= 2) {
+            for (auto span = devPtr->Length / 2; span >= 1; span /= 2) {
+                Bitonic_v4_Kernel << < blockCount, threadCount >> > (devPtr->Ptr, devPtr->Length, dirSpan, span, ascent);
+            }
+        }
+
+        devPtr->Device->CheckLastError();
+    }
+
+
+    template<typename T>
+    static void Sort(std::shared_ptr<CUDADevice> device, T *ptr, size_t size, bool ascent) {
+        auto devPtr = device->Alloc<T>(size);
+        device->Copy(devPtr, ptr);
+        Sort(devPtr, ascent);
+        device->Copy(ptr, devPtr);
     }
 };
 
@@ -187,23 +231,27 @@ static void Test(std::shared_ptr<CUDADevice> device) {
     for (auto i = 0; i < 12; ++i) {
         std::vector<int> range(1 << i);
         iota(range.begin(), range.end(), 0);
-        auto a(range);
+        auto temp(range);
 
-        random_shuffle(a.begin(), a.end());
-        Bitonic_v0::Sort(a.begin(), a.end(), true);
-        assert(std::equal(a.begin(), a.end(), range.begin()));
+        random_shuffle(temp.begin(), temp.end());
+        Bitonic_v0::Sort(temp.begin(), temp.end(), true);
+        assert(std::equal(temp.begin(), temp.end(), range.begin()));
 
-        random_shuffle(a.begin(), a.end());
-        Bitonic_v1::Sort(a.begin(), a.end(), true);
-        assert(std::equal(a.begin(), a.end(), range.begin()));
+        random_shuffle(temp.begin(), temp.end());
+        Bitonic_v1::Sort(temp.begin(), temp.end(), true);
+        assert(std::equal(temp.begin(), temp.end(), range.begin()));
 
-        random_shuffle(a.begin(), a.end());
-        Bitonic_v2::Sort(&a[0], a.size(), true);
-        assert(std::equal(a.begin(), a.end(), range.begin()));
+        random_shuffle(temp.begin(), temp.end());
+        Bitonic_v2::Sort(&temp[0], temp.size(), true);
+        assert(std::equal(temp.begin(), temp.end(), range.begin()));
 
-        random_shuffle(a.begin(), a.end());
-        Bitonic_v3::Sort(device, &a[0], a.size(), true);
-        assert(std::equal(a.begin(), a.end(), range.begin()));
+        random_shuffle(temp.begin(), temp.end());
+        Bitonic_v3::Sort(device, &temp[0], temp.size(), true);
+        assert(std::equal(temp.begin(), temp.end(), range.begin()));
+
+        random_shuffle(temp.begin(), temp.end());
+        Bitonic_v4::Sort(device, &temp[0], temp.size(), true);
+        assert(std::equal(temp.begin(), temp.end(), range.begin()));
     }
 }
 
@@ -212,92 +260,84 @@ static void Benchmark(std::shared_ptr<CUDADevice> device) {
     constexpr size_t kSize = 1 << 12;
     constexpr size_t kLoop = 100;
 
-    std::vector<int> a(kSize);
-    iota(a.begin(), a.end(), 0);
-    random_shuffle(a.begin(), a.end());
+    std::vector<int> shuffled(kSize);
+    iota(shuffled.begin(), shuffled.end(), 0);
+    random_shuffle(shuffled.begin(), shuffled.end());
     {
-        auto b(a);
+        auto temp(shuffled);
 
         auto baseline = Timing([&]() {
             for (size_t i = 0; i < kLoop; ++i) {
-                b.assign(a.begin(), a.end());
-                USE(b.front());
+                temp.assign(shuffled.begin(), shuffled.end());
+                USE(temp.front());
             }
         }) / kLoop;
 
 
         printf("%-24s=%f\n", "qsort", Timing([&]() {
             for (size_t i = 0; i < kLoop; ++i) {
-                b.assign(a.begin(), a.end());
-                sort(b.begin(), b.end());
-                USE(b.front());
+                temp.assign(shuffled.begin(), shuffled.end());
+                sort(temp.begin(), temp.end());
+                USE(temp.front());
             }
         }) / kLoop - baseline);
 
         printf("%-24s=%f\n", "bitonic_0", Timing([&]() {
             for (size_t i = 0; i < kLoop; ++i) {
-                b.assign(a.begin(), a.end());
-                Bitonic_v0::Sort(b.begin(), b.end(), true);
-                USE(b.front());
+                temp.assign(shuffled.begin(), shuffled.end());
+                Bitonic_v0::Sort(temp.begin(), temp.end(), true);
+                USE(temp.front());
             }
         }) / kLoop - baseline);
 
         printf("%-24s=%f\n", "bitonic_1", Timing([&]() {
             for (size_t i = 0; i < kLoop; ++i) {
-                b.assign(a.begin(), a.end());
-                Bitonic_v1::Sort(b.begin(), b.end(), true);
-                USE(b.front());
+                temp.assign(shuffled.begin(), shuffled.end());
+                Bitonic_v1::Sort(temp.begin(), temp.end(), true);
+                USE(temp.front());
             }
         }) / kLoop - baseline);
 
         printf("%-24s=%f\n", "bitonic_2", Timing([&]() {
             for (size_t i = 0; i < kLoop; ++i) {
-                b.assign(a.begin(), a.end());
-                Bitonic_v2::Sort(&b[0], b.size(), true);
-                USE(b.front());
+                temp.assign(shuffled.begin(), shuffled.end());
+                Bitonic_v2::Sort(&temp[0], temp.size(), true);
+                USE(temp.front());
             }
         }) / kLoop - baseline);
     }
     {
-        auto da = device->Alloc<int>(kSize);
-        device->Copy(da, &a[0]);
-        auto db = device->Alloc<int>(kSize);
+        auto devShuffled = device->Alloc<int>(kSize);
+        device->Copy(devShuffled, &shuffled[0]);
+        auto devTemp = device->Alloc<int>(kSize);
 
         auto baseline = Timing([&]() {
             for (size_t i = 0; i < kLoop; ++i) {
-                device->Copy(db, da);
+                device->Copy(devTemp, devShuffled);
             }
             device->Synchronize();
         }) / kLoop;
 
         printf("%-24s=%f\n", "bitonic_3,128", Timing([&]() {
             for (size_t i = 0; i < kLoop; ++i) {
-                device->Copy(db, da);
-                Bitonic_v3::Sort(db, true, 128);
-            }
-            device->Synchronize();
-        }) / kLoop - baseline);
-
-        printf("%-24s=%f\n", "bitonic_3,256", Timing([&]() {
-            for (size_t i = 0; i < kLoop; ++i) {
-                device->Copy(db, da);
-                Bitonic_v3::Sort(db, true, 256);
-            }
-            device->Synchronize();
-        }) / kLoop - baseline);
-
-        printf("%-24s=%f\n", "bitonic_3,512", Timing([&]() {
-            for (size_t i = 0; i < kLoop; ++i) {
-                device->Copy(db, da);
-                Bitonic_v3::Sort(db, true, 512);
+                device->Copy(devTemp, devShuffled);
+                Bitonic_v3::Sort(devTemp, true, 128);
             }
             device->Synchronize();
         }) / kLoop - baseline);
 
         printf("%-24s=%f\n", "bitonic_3,1024", Timing([&]() {
             for (size_t i = 0; i < kLoop; ++i) {
-                device->Copy(db, da);
-                Bitonic_v3::Sort(db, true, 1024);
+                device->Copy(devTemp, devShuffled);
+                Bitonic_v3::Sort(devTemp, true, 1024);
+            }
+            device->Synchronize();
+        }) / kLoop - baseline);
+
+        printf("%-24s=%f\n", "bitonic_4", Timing([&]() {
+            for (size_t i = 0; i < kLoop; ++i) {
+                device->Copy(devTemp, devShuffled);
+                Bitonic_v4::Sort(devTemp, true);
             }
             device->Synchronize();
         }) / kLoop - baseline);
