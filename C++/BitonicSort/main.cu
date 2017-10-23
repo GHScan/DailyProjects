@@ -40,6 +40,17 @@ inline bool IsPowerOf2(size_t i) {
 #define USE(v)  do { volatile auto _v2 = v; } while(0)
 
 
+template<typename T>
+__device__ void Swap(T &a, T& b) {
+    auto c = a; 
+    a = b;
+    b = c;
+}
+
+
+#define MAX_CUDA_THREADS  1024
+
+
 struct Bitonic_v0 {
     template<typename TIter>
     static void Kernel(TIter first, TIter mid, bool ascent) {
@@ -147,7 +158,7 @@ __global__ void Bitonic_v3_Kernel(T *ptr, size_t size, bool ascent) {
             for (auto i = first; i != last; ++i) {
                 if ((i / span) % 2 == 0) {
                     if ((localPtr[i] > localPtr[i + span]) == ((i / dirSpan) % 2 == 0 ? ascent : !ascent)) {
-                        auto v = localPtr[i]; localPtr[i] = localPtr[i + span]; localPtr[i + span] = v;
+                        Swap(localPtr[i], localPtr[i + span]);
                     }
                 }
             }
@@ -182,48 +193,83 @@ struct Bitonic_v3 {
 };
 
 
-template<typename T>
-__global__ void Bitonic_v4_Kernel(T *ptr, size_t size, size_t dirSpan, size_t span, bool ascent) {
-    auto totalThreadCount = gridDim.x * blockDim.x;
-    auto elemCountPerThread = totalThreadCount < size ? size / totalThreadCount : 1;
-    auto tid = blockIdx.x * blockDim.x + threadIdx.x;
-    auto first = tid * elemCountPerThread;
-    auto last = first + elemCountPerThread;
-
-    for (auto i = first; i != last; ++i) {
-        if (i < size && (i / span) % 2 == 0) {
-            if ((ptr[i] > ptr[i + span]) == ((i / dirSpan) % 2 == 0 ? ascent : !ascent)) {
-                auto v = ptr[i]; ptr[i] = ptr[i + span]; ptr[i + span] = v;
-            }
+template<bool ascent, typename T>
+__global__ void Bitonic_v4_Kernel_1(T *ptr, int dirSpan, int span) {
+    auto i = blockIdx.x * blockDim.x + threadIdx.x;
+    if ((i & span) == 0) {
+        auto dir = (i & dirSpan) == 0 ? ascent : !ascent;
+        if ((ptr[i] > ptr[i + span]) == dir) {
+            Swap(ptr[i], ptr[i + span]);
         }
     }
 }
 
-struct Bitonic_v4 {
-    template<typename T>
-    static void Sort(std::shared_ptr<CUDAArray<T>> devPtr, bool ascent) {
-        assert(IsPowerOf2(devPtr->Length));
+template<bool ascent, typename T>
+__global__ void Bitonic_v4_Kernel_2(T *ptr, int dirSpan, int initSpan) {
+    auto i = blockIdx.x * blockDim.x + threadIdx.x;
 
-        size_t threadCount = 1024;
-        size_t blockCount = std::max<size_t>(devPtr->Length / threadCount, 1);
-        for (auto dirSpan = 2; dirSpan <= devPtr->Length; dirSpan *= 2) {
-            for (auto span = devPtr->Length / 2; span >= 1; span /= 2) {
-                Bitonic_v4_Kernel << < blockCount, threadCount >> > (devPtr->Ptr, devPtr->Length, dirSpan, span, ascent);
+    __shared__ T localPtr[MAX_CUDA_THREADS];
+    localPtr[threadIdx.x] = ptr[i];
+    __syncthreads();
+
+    auto dir = (i & dirSpan) == 0 ? ascent : !ascent;
+#pragma unroll
+    for (auto span = initSpan; span >= 1; span >>= 1) {
+        if ((i & span) == 0) {
+            if ((localPtr[threadIdx.x] > localPtr[threadIdx.x + span]) == dir) {
+                Swap(localPtr[threadIdx.x], localPtr[threadIdx.x + span]);
             }
         }
 
-        devPtr->Device->CheckLastError();
+        __syncthreads();
+    }
+
+    ptr[i] = localPtr[threadIdx.x];
+}
+
+struct Bitonic_v4 {
+    template<bool ascent, typename T>
+    static void Sort(std::shared_ptr<CUDAArray<T>> devPtr) {
+        assert(IsPowerOf2(devPtr->Length));
+
+        auto size = int(devPtr->Length);
+        for (auto dirSpan = 2; dirSpan <= size; dirSpan <<= 1) {
+            auto span = size >> 1;
+
+            for (; span >= MAX_CUDA_THREADS; span >>= 1) {
+
+                Bitonic_v4_Kernel_1 
+                    <ascent, T> 
+                    << < devPtr->Length / MAX_CUDA_THREADS, MAX_CUDA_THREADS >> > 
+                    (devPtr->Ptr, dirSpan, span);
+
+                devPtr->Device->CheckLastError();
+            }
+
+            {
+                auto threadCount = std::min(size, MAX_CUDA_THREADS);
+                auto blockCount = size / threadCount;
+
+                Bitonic_v4_Kernel_2 
+                    <ascent, T> 
+                    << <blockCount, threadCount >> >
+                    (devPtr->Ptr, dirSpan, span);
+
+                devPtr->Device->CheckLastError();
+            }
+        }
     }
 
 
-    template<typename T>
-    static void Sort(std::shared_ptr<CUDADevice> device, T *ptr, size_t size, bool ascent) {
+    template<bool ascent, typename T>
+    static void Sort(std::shared_ptr<CUDADevice> device, T *ptr, size_t size) {
         auto devPtr = device->Alloc<T>(size);
         device->Copy(devPtr, ptr);
-        Sort(devPtr, ascent);
+        Sort<ascent>(devPtr);
         device->Copy(ptr, devPtr);
     }
 };
+
 
 
 static void Test(std::shared_ptr<CUDADevice> device) {
@@ -250,7 +296,7 @@ static void Test(std::shared_ptr<CUDADevice> device) {
         assert(std::equal(temp.begin(), temp.end(), range.begin()));
 
         random_shuffle(temp.begin(), temp.end());
-        Bitonic_v4::Sort(device, &temp[0], temp.size(), true);
+        Bitonic_v4::Sort<true>(device, &temp[0], temp.size());
         assert(std::equal(temp.begin(), temp.end(), range.begin()));
     }
 }
@@ -337,7 +383,7 @@ static void Benchmark(std::shared_ptr<CUDADevice> device) {
         printf("%-24s=%f\n", "bitonic_4", Timing([&]() {
             for (size_t i = 0; i < kLoop; ++i) {
                 device->Copy(devTemp, devShuffled);
-                Bitonic_v4::Sort(devTemp, true);
+                Bitonic_v4::Sort<true>(devTemp);
             }
             device->Synchronize();
         }) / kLoop - baseline);
