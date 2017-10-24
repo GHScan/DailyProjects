@@ -25,6 +25,7 @@ inline double Timing(TFunc &&func, int times = 3) {
         auto start = high_resolution_clock::now();
         func();
         auto end = high_resolution_clock::now();
+
         t = std::min(t, duration<double>(end - start).count());
     }
 
@@ -41,7 +42,7 @@ inline bool IsPowerOf2(size_t i) {
 
 
 template<typename T>
-__device__ void Swap(T &a, T& b) {
+__device__ inline void Swap(T &a, T& b) {
     auto c = a; 
     a = b;
     b = c;
@@ -51,7 +52,8 @@ __device__ void Swap(T &a, T& b) {
 #define MAX_CUDA_THREADS  1024
 
 
-struct Bitonic_v0 {
+struct Bitonic_Naive {
+
     template<typename TIter>
     static void Kernel(TIter first, TIter mid, bool ascent) {
         for (auto p = first, q = mid; p != mid; ++p, ++q) {
@@ -76,6 +78,7 @@ struct Bitonic_v0 {
         auto size = last - first;
         assert(IsPowerOf2(size));
         if (size == 1) return;
+
         auto mid = size / 2 + first;
         
         Sort(first, mid, true);
@@ -85,7 +88,8 @@ struct Bitonic_v0 {
 };
 
 
-struct Bitonic_v1 {
+struct Bitonic_Unroll1 {
+
     template<typename TIter>
     static void Kernel(TIter first, TIter last, size_t span, bool ascent) {
         for (auto p = first; p != last; p += span) {
@@ -110,6 +114,7 @@ struct Bitonic_v1 {
         auto size = last - first;
         assert(IsPowerOf2(size));
         if (size == 1) return;
+
         auto mid = size / 2 + first;
 
         Sort(first, mid, true);
@@ -119,7 +124,8 @@ struct Bitonic_v1 {
 };
 
 
-struct Bitonic_v2 {
+struct Bitonic_Unroll2 {
+
     template<typename T>
     static void Sort(T *ptr, size_t size, bool ascent) {
         assert(IsPowerOf2(size));
@@ -128,8 +134,9 @@ struct Bitonic_v2 {
             for (auto span = size / 2; span >= 1; span /= 2) {
                 for (size_t i = 0; i < size; ++i) {
                     if ((i / span) % 2 == 0) {
-                        if ((ptr[i] > ptr[i + span]) == ((i / dirSpan) % 2 == 0 ? ascent : !ascent)) {
-                            auto v = ptr[i]; ptr[i] = ptr[i + span]; ptr[i + span] = v;
+                        auto dir = (i / dirSpan) % 2 == 0 ? ascent : !ascent;
+                        if ((ptr[i] > ptr[i + span]) == dir) {
+                            std::iter_swap(ptr + i, ptr + i + span);
                         }
                     }
                 }
@@ -140,7 +147,7 @@ struct Bitonic_v2 {
 
 
 template<typename T>
-__global__ void Bitonic_v3_Kernel(T *ptr, size_t size, bool ascent) {
+__global__ void Bitonic_GPU1_Kernel(T *ptr, size_t size, bool ascent) {
     auto tid = threadIdx.x;
     auto elemCountPerThread = size / blockDim.x;
     auto first = tid * elemCountPerThread;
@@ -157,7 +164,8 @@ __global__ void Bitonic_v3_Kernel(T *ptr, size_t size, bool ascent) {
 #pragma unroll
             for (auto i = first; i != last; ++i) {
                 if ((i / span) % 2 == 0) {
-                    if ((localPtr[i] > localPtr[i + span]) == ((i / dirSpan) % 2 == 0 ? ascent : !ascent)) {
+                    auto dir = (i / dirSpan) % 2 == 0 ? ascent : !ascent;
+                    if ((localPtr[i] > localPtr[i + span]) == dir) {
                         Swap(localPtr[i], localPtr[i + span]);
                     }
                 }
@@ -171,20 +179,25 @@ __global__ void Bitonic_v3_Kernel(T *ptr, size_t size, bool ascent) {
         ptr[i] = localPtr[i];
 }
 
-struct Bitonic_v3 {
+struct Bitonic_GPU1 {
+
     template<typename T>
-    static void Sort(std::shared_ptr<CUDAArray<T>> devPtr, bool ascent, size_t maxThread) {
+    static void Sort(CUDAArrayPtr<T> devPtr, bool ascent, size_t maxThread) {
+
         assert(IsPowerOf2(devPtr->Length));
 
         auto threadCount = std::min(maxThread, devPtr->Length);
-        Bitonic_v3_Kernel << < 1, threadCount >> > (devPtr->Ptr, devPtr->Length, ascent);
+        Bitonic_GPU1_Kernel << < 1, threadCount >> > (devPtr->Ptr, devPtr->Length, ascent);
 
         devPtr->Device->CheckLastError();
     }
 
 
     template<typename T>
-    static void Sort(std::shared_ptr<CUDADevice> device, T *ptr, size_t size, bool ascent, size_t maxThread = 512) {
+    static void Sort(
+        CUDADevicePtr device, 
+        T *ptr, size_t size, bool ascent, size_t maxThread = 512) {
+
         auto devPtr = device->Alloc<T>(size);
         device->Copy(devPtr, ptr);
         Sort(devPtr, ascent, maxThread);
@@ -194,7 +207,7 @@ struct Bitonic_v3 {
 
 
 template<bool ascent, typename T>
-__global__ void Bitonic_v4_Kernel_1(T *ptr, int dirSpan, int span) {
+__global__ void Bitonic_GPU2_Kernel1(T *ptr, int dirSpan, int span) {
     auto i = blockIdx.x * blockDim.x + threadIdx.x;
     if ((i & span) == 0) {
         auto dir = (i & dirSpan) == 0 ? ascent : !ascent;
@@ -205,7 +218,8 @@ __global__ void Bitonic_v4_Kernel_1(T *ptr, int dirSpan, int span) {
 }
 
 template<bool ascent, typename T>
-__global__ void Bitonic_v4_Kernel_2(T *ptr, int dirSpan, int initSpan) {
+__global__ void Bitonic_GPU2_Kernel2(T *ptr, int dirSpan, int initSpan) {
+
     auto i = blockIdx.x * blockDim.x + threadIdx.x;
 
     __shared__ T localPtr[MAX_CUDA_THREADS];
@@ -227,9 +241,10 @@ __global__ void Bitonic_v4_Kernel_2(T *ptr, int dirSpan, int initSpan) {
     ptr[i] = localPtr[threadIdx.x];
 }
 
-struct Bitonic_v4 {
+struct Bitonic_GPU2 {
+
     template<bool ascent, typename T>
-    static void Sort(std::shared_ptr<CUDAArray<T>> devPtr) {
+    static void Sort(CUDAArrayPtr<T> devPtr) {
         assert(IsPowerOf2(devPtr->Length));
 
         auto size = int(devPtr->Length);
@@ -238,7 +253,7 @@ struct Bitonic_v4 {
 
             for (; span >= MAX_CUDA_THREADS; span >>= 1) {
 
-                Bitonic_v4_Kernel_1 
+                Bitonic_GPU2_Kernel1 
                     <ascent, T> 
                     << < devPtr->Length / MAX_CUDA_THREADS, MAX_CUDA_THREADS >> > 
                     (devPtr->Ptr, dirSpan, span);
@@ -250,7 +265,7 @@ struct Bitonic_v4 {
                 auto threadCount = std::min(size, MAX_CUDA_THREADS);
                 auto blockCount = size / threadCount;
 
-                Bitonic_v4_Kernel_2 
+                Bitonic_GPU2_Kernel2 
                     <ascent, T> 
                     << <blockCount, threadCount >> >
                     (devPtr->Ptr, dirSpan, span);
@@ -262,7 +277,7 @@ struct Bitonic_v4 {
 
 
     template<bool ascent, typename T>
-    static void Sort(std::shared_ptr<CUDADevice> device, T *ptr, size_t size) {
+    static void Sort(CUDADevicePtr device, T *ptr, size_t size) {
         auto devPtr = device->Alloc<T>(size);
         device->Copy(devPtr, ptr);
         Sort<ascent>(devPtr);
@@ -272,37 +287,36 @@ struct Bitonic_v4 {
 
 
 
-static void Test(std::shared_ptr<CUDADevice> device) {
-
+static void Test(CUDADevicePtr device) {
     for (auto i = 0; i < 12; ++i) {
         std::vector<int> range(1 << i);
         iota(range.begin(), range.end(), 0);
         auto temp(range);
 
         random_shuffle(temp.begin(), temp.end());
-        Bitonic_v0::Sort(temp.begin(), temp.end(), true);
+        Bitonic_Naive::Sort(temp.begin(), temp.end(), true);
         assert(std::equal(temp.begin(), temp.end(), range.begin()));
 
         random_shuffle(temp.begin(), temp.end());
-        Bitonic_v1::Sort(temp.begin(), temp.end(), true);
+        Bitonic_Unroll1::Sort(temp.begin(), temp.end(), true);
         assert(std::equal(temp.begin(), temp.end(), range.begin()));
 
         random_shuffle(temp.begin(), temp.end());
-        Bitonic_v2::Sort(&temp[0], temp.size(), true);
+        Bitonic_Unroll2::Sort(&temp[0], temp.size(), true);
         assert(std::equal(temp.begin(), temp.end(), range.begin()));
 
         random_shuffle(temp.begin(), temp.end());
-        Bitonic_v3::Sort(device, &temp[0], temp.size(), true);
+        Bitonic_GPU1::Sort(device, &temp[0], temp.size(), true);
         assert(std::equal(temp.begin(), temp.end(), range.begin()));
 
         random_shuffle(temp.begin(), temp.end());
-        Bitonic_v4::Sort<true>(device, &temp[0], temp.size());
+        Bitonic_GPU2::Sort<true>(device, &temp[0], temp.size());
         assert(std::equal(temp.begin(), temp.end(), range.begin()));
     }
 }
 
 
-static void Benchmark(std::shared_ptr<CUDADevice> device) {
+static void Benchmark(CUDADevicePtr device) {
     constexpr size_t kSize = 1 << 12;
     constexpr size_t kLoop = 100;
 
@@ -320,7 +334,7 @@ static void Benchmark(std::shared_ptr<CUDADevice> device) {
         }) / kLoop;
 
 
-        printf("%-24s=%f\n", "qsort", Timing([&]() {
+        printf("%-24s=%f\n", "std::sort", Timing([&]() {
             for (size_t i = 0; i < kLoop; ++i) {
                 temp.assign(shuffled.begin(), shuffled.end());
                 sort(temp.begin(), temp.end());
@@ -328,26 +342,26 @@ static void Benchmark(std::shared_ptr<CUDADevice> device) {
             }
         }) / kLoop - baseline);
 
-        printf("%-24s=%f\n", "bitonic_0", Timing([&]() {
+        printf("%-24s=%f\n", "bitonic_naive", Timing([&]() {
             for (size_t i = 0; i < kLoop; ++i) {
                 temp.assign(shuffled.begin(), shuffled.end());
-                Bitonic_v0::Sort(temp.begin(), temp.end(), true);
+                Bitonic_Naive::Sort(temp.begin(), temp.end(), true);
                 USE(temp.front());
             }
         }) / kLoop - baseline);
 
-        printf("%-24s=%f\n", "bitonic_1", Timing([&]() {
+        printf("%-24s=%f\n", "bitonic_unroll1", Timing([&]() {
             for (size_t i = 0; i < kLoop; ++i) {
                 temp.assign(shuffled.begin(), shuffled.end());
-                Bitonic_v1::Sort(temp.begin(), temp.end(), true);
+                Bitonic_Unroll1::Sort(temp.begin(), temp.end(), true);
                 USE(temp.front());
             }
         }) / kLoop - baseline);
 
-        printf("%-24s=%f\n", "bitonic_2", Timing([&]() {
+        printf("%-24s=%f\n", "bitonic_unroll2", Timing([&]() {
             for (size_t i = 0; i < kLoop; ++i) {
                 temp.assign(shuffled.begin(), shuffled.end());
-                Bitonic_v2::Sort(&temp[0], temp.size(), true);
+                Bitonic_Unroll2::Sort(&temp[0], temp.size(), true);
                 USE(temp.front());
             }
         }) / kLoop - baseline);
@@ -364,26 +378,26 @@ static void Benchmark(std::shared_ptr<CUDADevice> device) {
             device->Synchronize();
         }) / kLoop;
 
-        printf("%-24s=%f\n", "bitonic_3,128", Timing([&]() {
+        printf("%-24s=%f\n", "bitonic_gpu1,128", Timing([&]() {
             for (size_t i = 0; i < kLoop; ++i) {
                 device->Copy(devTemp, devShuffled);
-                Bitonic_v3::Sort(devTemp, true, 128);
+                Bitonic_GPU1::Sort(devTemp, true, 128);
             }
             device->Synchronize();
         }) / kLoop - baseline);
 
-        printf("%-24s=%f\n", "bitonic_3,1024", Timing([&]() {
+        printf("%-24s=%f\n", "bitonic_gpu1,1024", Timing([&]() {
             for (size_t i = 0; i < kLoop; ++i) {
                 device->Copy(devTemp, devShuffled);
-                Bitonic_v3::Sort(devTemp, true, 1024);
+                Bitonic_GPU1::Sort(devTemp, true, 1024);
             }
             device->Synchronize();
         }) / kLoop - baseline);
 
-        printf("%-24s=%f\n", "bitonic_4", Timing([&]() {
+        printf("%-24s=%f\n", "bitonic_gpu2", Timing([&]() {
             for (size_t i = 0; i < kLoop; ++i) {
                 device->Copy(devTemp, devShuffled);
-                Bitonic_v4::Sort<true>(devTemp);
+                Bitonic_GPU2::Sort<true>(devTemp);
             }
             device->Synchronize();
         }) / kLoop - baseline);

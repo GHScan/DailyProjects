@@ -14,22 +14,31 @@
 
 
 class CUDADevice;
+using CUDADevicePtr = std::shared_ptr<CUDADevice>;
 
 
 
-class CUDAException : public std::exception {
+class CUDAException 
+    : public std::exception {
 public:
-    explicit CUDAException(char const *errorString) : mErrorString(errorString) {
+
+    explicit CUDAException(
+        char const *errStr, 
+        char const *file, int line) {
+
+        char buf[256];
+        sprintf_s(buf, "%s(%d): %s", file, line, errStr);
+        mMessage = buf;
     }
 
 
     char const* what() const override {
-        return mErrorString.c_str();
+        return mMessage.c_str();
     }
 
 
 private:
-    std::string mErrorString;
+    std::string mMessage;
 };
 
 
@@ -37,7 +46,7 @@ private:
 do { \
     auto _err = err; \
     if (_err != cudaSuccess) \
-        throw CUDAException(cudaGetErrorString(_err)); \
+        throw CUDAException(cudaGetErrorString(_err), __FILE__, __LINE__); \
  } while(0) 
 
 
@@ -49,11 +58,16 @@ struct CUDAArray {
     size_t Length;
 };
 
+template<typename T>
+using CUDAArrayPtr = std::shared_ptr<CUDAArray<T>>;
+
 
 
 class CUDADevice {
 public:
-    CUDADevice(): mDeviceId(gDeviceCount++) {
+
+    CUDADevice()
+        : mDeviceId(gDeviceCount++) {
     }
 
 
@@ -68,40 +82,59 @@ public:
 
 
     template<typename T>
-    std::shared_ptr<CUDAArray<T>> Alloc(size_t length) {
+    CUDAArrayPtr<T> Alloc(size_t length) {
         Active();
 
         void *p;
         CUDA_CHECK(cudaMalloc(&p, length * sizeof(T)));
 
-        return std::shared_ptr<CUDAArray<T>>(new CUDAArray<T>{ this, static_cast<T*>(p), length }, [](auto array)
+        return CUDAArrayPtr<T>(
+            new CUDAArray<T>{ this, static_cast<T*>(p), length }, 
+            [](auto array)
         {
             array->Device->Active();
 
             CUDA_CHECK(cudaFree(array->Ptr));
+
+            delete array;
         });
     }
 
 
     template<typename T>
-    void Copy(T *dest, std::shared_ptr<CUDAArray<T>> src) {
+    void Copy(T *dest, CUDAArrayPtr<T> src) {
         Active();
 
-        CUDA_CHECK(cudaMemcpy(dest, src->Ptr, src->Length * sizeof(T), cudaMemcpyDeviceToHost));
+        CUDA_CHECK(
+            cudaMemcpy(
+                dest, 
+                src->Ptr, 
+                src->Length * sizeof(T), 
+                cudaMemcpyDeviceToHost));
     }
 
     template<typename T>
-    void Copy(std::shared_ptr<CUDAArray<T>> dest, T const *src) {
+    void Copy(CUDAArrayPtr<T> dest, T const *src) {
         Active();
 
-        CUDA_CHECK(cudaMemcpy(dest->Ptr, src, dest->Length * sizeof(T), cudaMemcpyHostToDevice));
+        CUDA_CHECK(
+            cudaMemcpy(
+                dest->Ptr,
+                src,
+                dest->Length * sizeof(T),
+                cudaMemcpyHostToDevice));
     }
 
     template<typename T>
-    void Copy(std::shared_ptr<CUDAArray<T>> dest, std::shared_ptr<CUDAArray<T>> src) {
+    void Copy(CUDAArrayPtr<T> dest, CUDAArrayPtr<T> src) {
         Active();
 
-        CUDA_CHECK(cudaMemcpy(dest->Ptr, src->Ptr, src->Length * sizeof(T), cudaMemcpyDeviceToDevice));
+        CUDA_CHECK(
+            cudaMemcpy(
+                dest->Ptr, 
+                src->Ptr, 
+                src->Length * sizeof(T), 
+                cudaMemcpyDeviceToDevice));
     }
 
 
@@ -120,6 +153,7 @@ public:
 
 
 private:
+
     void Active() {
         if (gCurrentDeviceId != mDeviceId) {
             CUDA_CHECK(cudaSetDevice(mDeviceId));
