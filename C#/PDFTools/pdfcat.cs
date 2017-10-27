@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -31,23 +31,20 @@ namespace CSharp2015
                 }
 
                 var contentPage = outputDoc.InsertPage(0);
-                for (var fontSize = 50; fontSize >= 10; fontSize -= 5)
+
+                var fontSize = 50;
+                for (; fontSize >= 10; fontSize -= 5)
                 {
-                    try
-                    {
-                        RenderContentPage(contentPage, title2page, fontSize);
+                    if (RenderContentPage(contentPage, title2page, fontSize))
                         break;
-                    }
-                    catch
-                    {
-                    }
                 }
+                if (fontSize < 10) throw new InvalidDataException("failed to render content page");
 
                 outputDoc.Save(outputPath);
             }
         }
 
-        private static void RenderContentPage(PdfPage page, IDictionary<string, int> title2page, int frontSize)
+        private static bool RenderContentPage(PdfPage page, IDictionary<string, int> title2page, int frontSize)
         {
             var font = new XFont("Monaco", frontSize, XFontStyle.Bold, 
                     new XPdfFontOptions(PdfFontEncoding.Unicode, PdfFontEmbedding.Always));
@@ -70,7 +67,7 @@ namespace CSharp2015
 
                 var x = (page.Width.Point - maxWidth) / 2;
                 var y = (page.Height.Point - totalHeight) / 2;
-                if (x < 0 || y < 0) throw new ArgumentException("invalid font size");
+                if (x < 0 || y < 0) return false;
 
                 foreach (var kv in title2page.OrderBy(kv => kv.Key))
                 {
@@ -83,6 +80,8 @@ namespace CSharp2015
                     y += height + border;
                 }
             }
+
+            return true;
         }
 
         public static void Main(string[] args)
