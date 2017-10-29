@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using PdfSharp.Drawing;
 using PdfSharp.Pdf;
 using PdfSharp.Pdf.IO;
@@ -14,11 +13,14 @@ namespace CSharp2015
         {
             using (var outputDoc = new PdfDocument())
             {
-                var title2page = new Dictionary<string, int>();
+                var title2page = new List<Tuple<string, int>>
+                {
+                    Tuple.Create("Table of Contents", 1)
+                };
 
                 foreach (var path in pdfPaths)
                 {
-                    title2page.Add(Path.GetFileNameWithoutExtension(path), outputDoc.PageCount + 2);
+                    title2page.Add(Tuple.Create(Path.GetFileNameWithoutExtension(path), outputDoc.PageCount + 2));
 
                     using (var fileDoc = PdfReader.Open(path, PdfDocumentOpenMode.Import))
                     {
@@ -40,11 +42,13 @@ namespace CSharp2015
                 }
                 if (fontSize < 10) throw new InvalidDataException("failed to render content page");
 
+                GenerateBookmarks(outputDoc, title2page);
+
                 outputDoc.Save(outputPath);
             }
         }
 
-        private static bool RenderContentPage(PdfPage page, IDictionary<string, int> title2page, int frontSize)
+        private static bool RenderContentPage(PdfPage page, IReadOnlyCollection<Tuple<string, int>> title2page, int frontSize)
         {
             var font = new XFont("Monaco", frontSize, XFontStyle.Bold, 
                     new XPdfFontOptions(PdfFontEncoding.Unicode, PdfFontEmbedding.Always));
@@ -59,7 +63,7 @@ namespace CSharp2015
                 var height = .0;
                 foreach (var kv in title2page)
                 {
-                    var size = g.MeasureString(kv.Key, font);
+                    var size = g.MeasureString(kv.Item1, font);
                     maxWidth = Math.Max(size.Width, maxWidth);
                     height = size.Height;
                     totalHeight += height + border;
@@ -69,19 +73,27 @@ namespace CSharp2015
                 var y = (page.Height.Point - totalHeight) / 2;
                 if (x < 0 || y < 0) return false;
 
-                foreach (var kv in title2page.OrderBy(kv => kv.Key))
+                foreach (var kv in title2page)
                 {
                     var rect = new XRect(new XPoint(x, y), new XSize(maxWidth, height));
 
-                    g.DrawString(kv.Key, font, brush, rect, XStringFormats.TopLeft);
+                    g.DrawString(kv.Item1, font, brush, rect, XStringFormats.TopLeft);
                     g.DrawRectangle(pen, rect);
-                    page.AddDocumentLink(new PdfRectangle(g.Transformer.WorldToDefaultPage(rect)), kv.Value);
+                    page.AddDocumentLink(new PdfRectangle(g.Transformer.WorldToDefaultPage(rect)), kv.Item2);
 
                     y += height + border;
                 }
             }
 
             return true;
+        }
+
+        private static void GenerateBookmarks(PdfDocument doc, IReadOnlyCollection<Tuple<string, int>> title2page)
+        {
+            foreach (var kv in title2page)
+            {
+                doc.Outlines.Add(kv.Item1, doc.Pages[kv.Item2 - 1]);
+            }
         }
 
         public static void Main(string[] args)
