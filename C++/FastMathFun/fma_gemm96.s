@@ -27,6 +27,9 @@ fma_gemm96:
             vbroadcastss 384(%rdi,%rax),%ymm13
             vbroadcastss 768(%rdi,%rax),%ymm14
 
+            prefetcht0 1152(%rbx)
+            prefetcht0 1216(%rbx)
+
             vmovaps 0(%rbx),%ymm15
             vfmadd231ps %ymm15,%ymm12,%ymm0
             vfmadd231ps %ymm15,%ymm13,%ymm4
@@ -82,6 +85,9 @@ fma_gemm96:
             vbroadcastss 384(%rdi,%rax),%ymm13
             vbroadcastss 768(%rdi,%rax),%ymm14
 
+            prefetcht0 1280(%rbx)
+            prefetcht0 1344(%rbx)
+
             vmovaps 128(%rbx),%ymm15
             vfmadd231ps %ymm15,%ymm12,%ymm0
             vfmadd231ps %ymm15,%ymm13,%ymm4
@@ -136,6 +142,9 @@ fma_gemm96:
             vbroadcastss 0(%rdi,%rax),%ymm12
             vbroadcastss 384(%rdi,%rax),%ymm13
             vbroadcastss 768(%rdi,%rax),%ymm14
+
+            prefetcht0 1408(%rbx)
+            prefetcht0 1472(%rbx)
 
             vmovaps 256(%rbx),%ymm15
             vfmadd231ps %ymm15,%ymm12,%ymm0
