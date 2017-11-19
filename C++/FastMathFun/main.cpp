@@ -90,6 +90,8 @@ static void naive_gemm(float const *a, float const *b, float *c, int n) {
 
 extern "C" void fma_gemm48(float const *a, float const *b, float *c);
 extern "C" void fma_gemm96(float const *a, float const *b, float *c);
+extern "C" void gemm48_gen(float const *a, float const *b, float *c);
+extern "C" void gemm96_gen(float const *a, float const *b, float *c);
 
 template<typename TFunc>
 void test_gemm(int n, TFunc &&fgemm) {
@@ -144,12 +146,16 @@ int main(int argc, char *argv[]) {
         }
         if (arg == "gemm48" || arg == "all") {
             test_gemm(48, fma_gemm48);
+            test_gemm(48, gemm48_gen);
             benchmark_gemm("fma_gemm48", 48, fma_gemm48);
+            benchmark_gemm("gemm48_gen", 48, gemm48_gen);
             benchmark_gemm("naive_gemm48", 48, [](auto a, auto b, auto c){ naive_gemm(a, b, c, 48); });
         }
         if (arg == "gemm96" || arg == "all") {
             test_gemm(96, fma_gemm96);
+            test_gemm(96, gemm96_gen);
             benchmark_gemm("fma_gemm96", 96, fma_gemm96);
+            benchmark_gemm("gemm96_gen", 96, gemm96_gen);
             benchmark_gemm("naive_gemm96", 96, [](auto a, auto b, auto c){ naive_gemm(a, b, c, 96); });
         }
     }
