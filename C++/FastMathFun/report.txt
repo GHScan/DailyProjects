@@ -1,4 +1,6 @@
-             fma_dot: Arith=  48.917 GFLOPS, Cache= 195.669 GB/S
-           naive_dot: Arith=   1.456 GFLOPS, Cache=   5.826 GB/S
-          fma_gemm48: Arith=  96.472 GFLOPS, Cache= 200.984 GB/S
-        naive_gemm48: Arith=   1.822 GFLOPS, Cache=   3.796 GB/S
+             fma_dot: Arith=  48.084 GFLOPS, Cache= 192.334 GB/S
+           naive_dot: Arith=   1.472 GFLOPS, Cache=   5.886 GB/S
+          fma_gemm48: Arith=  96.989 GFLOPS, Cache= 202.061 GB/S
+        naive_gemm48: Arith=   1.861 GFLOPS, Cache=   3.876 GB/S
+          fma_gemm96: Arith=  85.474 GFLOPS, Cache= 174.510 GB/S
+        naive_gemm96: Arith=   1.566 GFLOPS, Cache=   3.198 GB/S

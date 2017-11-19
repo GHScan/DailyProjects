@@ -80,27 +80,7 @@ static float naive_dot(float const *a, float const *b, int n) {
 extern "C" float fma_dot(float const *a, float const *b, int n);
 
 //------------------------------
-static void benchmark_gemm48(char const *name, void(*fgemm)(float const*, float const*, float*)) {
-    auto n = 48;
-    alignas(32) float buffer[n * n * 3];
-    std::iota(buffer, buffer + n * n * 3, 0);
-    auto a = buffer;
-    auto b = buffer + n * n;
-    auto c = buffer + n * n * 2;
-
-    auto loop = 1024 * 16;
-    auto time = time_it([&](){
-        for (auto i = 0; i < loop; ++i)
-            fgemm(a, b, c);
-    });
-
-    auto arithPerf = loop * n * n * n * 2.0 * 1E-9 / time;
-    auto memPerf = loop * n * n * (n + 2) * 4.0 * 1E-9 / time;
-    printf("%20s: Arith=%8.3f GFLOPS, Cache=%8.3f GB/S\n", name, arithPerf, memPerf);
-}
-
-static void naive_gemm48(float const *a, float const *b, float *c) {
-    auto n = 48;
+static void naive_gemm(float const *a, float const *b, float *c, int n) {
     for (auto i = 0; i < n; ++i) {
         for (auto j = 0; j < n; ++j) {
             for (auto k = 0; k < n; ++k) {
@@ -111,9 +91,10 @@ static void naive_gemm48(float const *a, float const *b, float *c) {
 }
 
 extern "C" void fma_gemm48(float const *a, float const *b, float *c);
+extern "C" void fma_gemm96(float const *a, float const *b, float *c);
 
-void test_gemm48() {
-    auto n = 48;
+template<typename TFunc>
+void test_gemm(int n, TFunc &&fgemm) {
     alignas(32) float buffer[n * n * 4] = {0};
     std::iota(buffer, buffer + n * n * 2, 0);
     auto a = buffer;
@@ -121,20 +102,39 @@ void test_gemm48() {
     auto c1 = buffer + n * n * 2;
     auto c2 = buffer + n * n * 3;
 
-    naive_gemm48(a, b, c1);
-    fma_gemm48(a, b, c2);
+    naive_gemm(a, b, c1, n);
+    fgemm(a, b, c2);
     assert_array_equal(c1, c2, n * n);
 
-    naive_gemm48(a, b, c1);
-    fma_gemm48(a, b, c2);
+    naive_gemm(a, b, c1, n);
+    fgemm(a, b, c2);
     assert_array_equal(c1, c2, n * n);
+}
+
+template<typename TFunc>
+static void benchmark_gemm(char const *name, int n, TFunc &&fgemm) {
+    alignas(32) float buffer[n * n * 3];
+    std::iota(buffer, buffer + n * n * 3, 0);
+    auto a = buffer;
+    auto b = buffer + n * n;
+    auto c = buffer + n * n * 2;
+
+    auto loop = int(1024 * 8 * pow(48.0 / n, 3));
+    auto time = time_it([&](){
+        for (auto i = 0; i < loop; ++i)
+            fgemm(a, b, c);
+    });
+
+    auto arithPerf = loop * n * n * n * 2.0 * 1E-9 / time;
+    auto memPerf = loop * n * n * (n + 2) * 4.0 * 1E-9 / time;
+    printf("%20s: Arith=%8.3f GFLOPS, Cache=%8.3f GB/S\n", name, arithPerf, memPerf);
 }
 
 //------------------------------
 
 int main(int argc, char *argv[]) {
     if (argc == 1) {
-        printf("%s dot/gemm48/all\n", argv[0]);
+        printf("%s dot/gemm48/gemm96/all\n", argv[0]);
         return 1;
     }
 
@@ -145,9 +145,14 @@ int main(int argc, char *argv[]) {
             benchmark_dot("naive_dot", naive_dot);
         }
         if (arg == "gemm48" || arg == "all") {
-            test_gemm48();
-            benchmark_gemm48("fma_gemm48", fma_gemm48);
-            benchmark_gemm48("naive_gemm48", naive_gemm48);
+            test_gemm(48, fma_gemm48);
+            benchmark_gemm("fma_gemm48", 48, fma_gemm48);
+            benchmark_gemm("naive_gemm48", 48, [](auto a, auto b, auto c){ naive_gemm(a, b, c, 48); });
+        }
+        if (arg == "gemm96" || arg == "all") {
+            test_gemm(96, fma_gemm96);
+            benchmark_gemm("fma_gemm96", 96, fma_gemm96);
+            benchmark_gemm("naive_gemm96", 96, [](auto a, auto b, auto c){ naive_gemm(a, b, c, 96); });
         }
     }
 }
