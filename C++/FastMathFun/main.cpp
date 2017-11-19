@@ -62,8 +62,8 @@ static void benchmark_dot(char const *name, int n, float(*fdot)(float const*, fl
             res[i & 0xff] = fdot(a, b, n);
     });
 
-    auto arith_perf = loop * n * 2.0 * 1E-9 / time;
-    auto mem_perf = loop * n * 8.0 * 1E-9 / time;
+    auto arith_perf = 2.0 * loop * n * 1E-9 / time;
+    auto mem_perf = 8.0 * loop * n * 1E-9 / time;
     printf("%20s: Arith=%8.3f GFLOPS, Cache=%8.3f GB/S\n", name, arith_perf, mem_perf);
 }
 
@@ -125,8 +125,8 @@ static void benchmark_gemm(char const *name, int n, TFunc &&fgemm) {
             fgemm(a, b, c);
     });
 
-    auto arith_perf = loop * n * n * n * 2.0 * 1E-9 / time;
-    auto mem_perf = loop * n * n * (n + 2) * 4.0 * 1E-9 / time;
+    auto arith_perf = 2.0 * loop * n * n * n * 1E-9 / time;
+    auto mem_perf = 4.0 * loop * n * n * (n + 2) * 1E-9 / time;
     printf("%20s: Arith=%8.3f GFLOPS, Cache=%8.3f GB/S\n", name, arith_perf, mem_perf);
 }
 
