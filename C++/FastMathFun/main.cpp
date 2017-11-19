@@ -1,7 +1,6 @@
 #include <cassert>
 #include <cstdio>
 #include <cmath>
-#include <vector>
 #include <string>
 #include <chrono>
 #include <numeric>
@@ -50,23 +49,22 @@ static void assert_array_equal(float const *a, float const *b, int n, float epsi
 }
 
 //------------------------------
-static void benchmark_dot(char const *name, float(*fdot)(float const*, float const*, int)) {
-    auto n = 512;
-    alignas(32) float buffer[n * 2];
-    std::iota(buffer, buffer + n * 2, 0);
-    auto a = buffer;
-    auto b = buffer + n;
+static void benchmark_dot(char const *name, int n, float(*fdot)(float const*, float const*, int)) {
+    alignas(32) float buf[n * 2];
+    std::iota(buf, buf + n * 2, 0);
+    auto a = buf;
+    auto b = buf + n;
 
     auto loop = 1024 * 1024 * 2;
-    std::vector<float> res(256);
+    float volatile res[256] = {0};
     auto time = time_it([&](){
         for (auto i = 0; i < loop; ++i)
             res[i & 0xff] = fdot(a, b, n);
     });
 
-    auto arithPerf = loop * n * 2.0 * 1E-9 / time;
-    auto memPerf = loop * n * 8.0 * 1E-9 / time;
-    printf("%20s: Arith=%8.3f GFLOPS, Cache=%8.3f GB/S\n", name, arithPerf, memPerf);
+    auto arith_perf = loop * n * 2.0 * 1E-9 / time;
+    auto mem_perf = loop * n * 8.0 * 1E-9 / time;
+    printf("%20s: Arith=%8.3f GFLOPS, Cache=%8.3f GB/S\n", name, arith_perf, mem_perf);
 }
 
 static float naive_dot(float const *a, float const *b, int n) {
@@ -95,12 +93,12 @@ extern "C" void fma_gemm96(float const *a, float const *b, float *c);
 
 template<typename TFunc>
 void test_gemm(int n, TFunc &&fgemm) {
-    alignas(32) float buffer[n * n * 4] = {0};
-    std::iota(buffer, buffer + n * n * 2, 0);
-    auto a = buffer;
-    auto b = buffer + n * n;
-    auto c1 = buffer + n * n * 2;
-    auto c2 = buffer + n * n * 3;
+    alignas(32) float buf[n * n * 4] = {0};
+    std::iota(buf, buf + n * n * 2, 0);
+    auto a = buf;
+    auto b = buf + n * n;
+    auto c1 = buf + n * n * 2;
+    auto c2 = buf + n * n * 3;
 
     naive_gemm(a, b, c1, n);
     fgemm(a, b, c2);
@@ -113,11 +111,11 @@ void test_gemm(int n, TFunc &&fgemm) {
 
 template<typename TFunc>
 static void benchmark_gemm(char const *name, int n, TFunc &&fgemm) {
-    alignas(32) float buffer[n * n * 3];
-    std::iota(buffer, buffer + n * n * 3, 0);
-    auto a = buffer;
-    auto b = buffer + n * n;
-    auto c = buffer + n * n * 2;
+    alignas(32) float buf[n * n * 3];
+    std::iota(buf, buf + n * n * 3, 0);
+    auto a = buf;
+    auto b = buf + n * n;
+    auto c = buf + n * n * 2;
 
     auto loop = int(1024 * 8 * pow(48.0 / n, 3));
     auto time = time_it([&](){
@@ -125,9 +123,9 @@ static void benchmark_gemm(char const *name, int n, TFunc &&fgemm) {
             fgemm(a, b, c);
     });
 
-    auto arithPerf = loop * n * n * n * 2.0 * 1E-9 / time;
-    auto memPerf = loop * n * n * (n + 2) * 4.0 * 1E-9 / time;
-    printf("%20s: Arith=%8.3f GFLOPS, Cache=%8.3f GB/S\n", name, arithPerf, memPerf);
+    auto arith_perf = loop * n * n * n * 2.0 * 1E-9 / time;
+    auto mem_perf = loop * n * n * (n + 2) * 4.0 * 1E-9 / time;
+    printf("%20s: Arith=%8.3f GFLOPS, Cache=%8.3f GB/S\n", name, arith_perf, mem_perf);
 }
 
 //------------------------------
@@ -141,8 +139,8 @@ int main(int argc, char *argv[]) {
     for (auto i = 1; i < argc; ++i) {
         std::string arg = argv[i];
         if (arg == "dot" || arg == "all") {
-            benchmark_dot("fma_dot", fma_dot);
-            benchmark_dot("naive_dot", naive_dot);
+            benchmark_dot("fma_dot", 512, fma_dot);
+            benchmark_dot("naive_dot", 512, naive_dot);
         }
         if (arg == "gemm48" || arg == "all") {
             test_gemm(48, fma_gemm48);
