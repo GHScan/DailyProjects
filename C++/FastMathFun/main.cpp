@@ -295,7 +295,7 @@ template<typename TFunc>
 static void benchmark_transform_points(char const *name, TFunc &&ftransform) {
     auto cases = 4;
     int n_list[cases] = { 48 * 7, 48 * 7 * 65, 48 * 7 * 513, 48 * 7 * 9 * 1023 };
-    char const *n_name_list[cases] = {"L1D Cache", "L2D Cache", "L3D Cache", "Memory"};
+    char const *n_name_list[cases] = {"L1D Cache", "L2 Cache", "L3 Cache", "Memory"};
 
     printf("%s:\n", name);
     for (auto i = 0; i < cases; ++i) {
@@ -340,8 +340,8 @@ int main(int argc, char *argv[]) {
     printf("    SSE - %.1f GFLOPS\n", clock_freq * 2 * 8);
     printf("    AVX - %.1f GFLOPS\n", clock_freq * 2 * 16);
     printf("    L1D Cache - %.1f GB/s\n", clock_freq * 1 * 64);
-    printf("    L2D Cache - %.1f GB/s\n", clock_freq * 1 * 32); // per intel's doc, it should be 64
-    printf("    L3D Cache - %.1f GB/s\n", clock_freq * 1 * 32);
+    printf("    L2  Cache - %.1f GB/s\n", clock_freq * 1 * 32); // per intel's doc, it should be 64
+    printf("    L3  Cache - %.1f GB/s\n", clock_freq * 1 * 32);
     printf("    Memory - %.1f GB/s\n", dram_freq * 2 * 8 * 2);
     printf("\n");
 
