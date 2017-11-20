@@ -1,8 +1,36 @@
-             fma_dot: Arith=  48.543 GFLOPS, Cache= 194.173 GB/S
-           naive_dot: Arith=   1.449 GFLOPS, Cache=   5.794 GB/S
-          fma_gemm48: Arith=  96.257 GFLOPS, Cache= 200.535 GB/S
-          gemm48_gen: Arith= 102.923 GFLOPS, Cache= 214.423 GB/S
-        naive_gemm48: Arith=   1.817 GFLOPS, Cache=   3.784 GB/S
-          fma_gemm96: Arith=  94.346 GFLOPS, Cache= 192.623 GB/S
-          gemm96_gen: Arith=  68.211 GFLOPS, Cache= 139.265 GB/S
-        naive_gemm96: Arith=   1.536 GFLOPS, Cache=   3.136 GB/S
+The Peak Performance of Intel Xeon E3 1231 v3(Haswell-WS) + DDR3-1333(x2):
+    SSE - 54.4 GFLOPS
+    AVX - 108.8 GFLOPS
+    L1D Cache - 217.6 GB/s
+    L2D Cache - 108.8 GB/s
+    L3D Cache - 108.8 GB/s
+    Memory - 21.3 GB/s
+
+fma_dot         : Arith=  45.471 GFLOPS, L1D Cache= 181.884 GB/S
+naive_dot       : Arith=   1.441 GFLOPS, L1D Cache=   5.764 GB/S
+fma_gemm48      : Arith=  96.170 GFLOPS, L1D Cache= 200.353 GB/S
+gemm48_gen      : Arith=  99.024 GFLOPS, L1D Cache= 206.300 GB/S
+naive_gemm48    : Arith=   1.821 GFLOPS, L1D Cache=   3.795 GB/S
+fma_gemm96      : Arith=  94.165 GFLOPS, L1D Cache= 192.254 GB/S
+gemm96_gen      : Arith=  71.887 GFLOPS, L1D Cache= 146.768 GB/S
+naive_gemm96    : Arith=   1.545 GFLOPS, L1D Cache=   3.155 GB/S
+fma_transform_rows:
+	Arith=  40.506 GFLOPS,  L1D Cache= 101.265 GB/S
+	Arith=  33.454 GFLOPS,  L2D Cache=  83.636 GB/S
+	Arith=  31.958 GFLOPS,  L3D Cache=  79.894 GB/S
+	Arith=  17.128 GFLOPS,     Memory=  17.128 GB/S
+transform_cols_gen:
+	Arith=  81.076 GFLOPS,  L1D Cache= 202.690 GB/S
+	Arith=  36.307 GFLOPS,  L2D Cache=  90.767 GB/S
+	Arith=  34.588 GFLOPS,  L3D Cache=  86.470 GB/S
+	Arith=  16.428 GFLOPS,     Memory=  16.428 GB/S
+naive_transform_rows:
+	Arith=   5.123 GFLOPS,  L1D Cache=  12.807 GB/S
+	Arith=   2.999 GFLOPS,  L2D Cache=   7.497 GB/S
+	Arith=   2.872 GFLOPS,  L3D Cache=   7.179 GB/S
+	Arith=   2.542 GFLOPS,     Memory=   2.542 GB/S
+naive_transform_cols:
+	Arith=  16.324 GFLOPS,  L1D Cache=  40.810 GB/S
+	Arith=  11.751 GFLOPS,  L2D Cache=  29.377 GB/S
+	Arith=  11.019 GFLOPS,  L3D Cache=  27.549 GB/S
+	Arith=   3.908 GFLOPS,     Memory=   3.908 GB/S

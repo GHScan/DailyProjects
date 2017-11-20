@@ -73,6 +73,74 @@ def gen_gemm96():
 
     print('.data')
 
+def gen_transform_cols(working_set):
+    print('.text')
+    print('    .global _transform_cols_{0}_gen'.format(working_set))
+
+    print('_transform_cols_{0}_gen:'.format(working_set))
+    print('    push %rbx')
+
+    print('    shl $2,%rcx')
+    print('    lea (%rsi,%rcx),%rbx')
+    print('    loop_col:')
+
+    for i in range(2):
+        for j in range(6):
+            print('        vxorps %ymm{0},%ymm{0},%ymm{0}'.format(j * 2))
+            print('        vxorps %ymm{0},%ymm{0},%ymm{0}'.format(j * 2 + 1))
+
+        for j in range(4):
+            if j == 0:
+                print('        mov %rsi,%rax')
+            else:
+                print('        lea (%rax,%rcx,1),%rax')
+
+            if i == 0:
+                for k in range(3):
+                    if working_set == "L2":
+                        print('        prefetcht0 {0}(%rax)'.format(192 * 1 + k * 64))
+                    if working_set == "L3":
+                        print('        prefetcht0 {0}(%rax)'.format(192 * 2 + k * 64))
+                    if working_set == "Memory":
+                        print('        prefetchnta {0}(%rax)'.format(192 * 4 + k * 64))
+            
+            print('        vbroadcastss {0}(%rdi),%ymm12'.format((i * 8 + j) * 4))
+            print('        vbroadcastss {0}(%rdi),%ymm13'.format((i * 8 + 4 + j) * 4))
+            for k in range(6):
+                print('        vmovaps {0}(%rax),%ymm14'.format(k * 32))
+                print('        vfmadd231ps %ymm14,%ymm12,%ymm{0}'.format(k * 2))
+                print('        vfmadd231ps %ymm14,%ymm13,%ymm{0}'.format(k * 2 + 1))
+
+        store_ins = 'vmovaps' if working_set == 'L1' else 'vmovntps'
+        if i == 0:
+            print('        mov %rdx,%rax')
+        else:
+            print('        lea (%rdx,%rcx,2),%rax')
+        for j in range(6):
+            print('        {0} %ymm{1},{2}(%rax)'.format(store_ins, j * 2, j * 32))
+        print('        lea (%rax,%rcx,1),%rax')
+        for j in range(6):
+            print('        {0} %ymm{1},{2}(%rax)'.format(store_ins, j * 2 + 1, j * 32))
+
+    print('        lea 192(%rsi),%rsi')
+    print('        lea 192(%rdx),%rdx')
+    print('        cmp %rsi,%rbx')
+    print('        jnz loop_col')
+
+    print('    pop %rbx')
+    print('    retq')
+
+    print('.data')
+
+def gen_transform_cols_L1():
+    gen_transform_cols('L1')
+def gen_transform_cols_L2():
+    gen_transform_cols('L2')
+def gen_transform_cols_L3():
+    gen_transform_cols('L3')
+def gen_transform_cols_Memory():
+    gen_transform_cols('Memory')
+
 if __name__ == '__main__':
     import sys
     globals()[sys.argv[1]]()
