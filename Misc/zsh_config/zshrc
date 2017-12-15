@@ -11,6 +11,10 @@ ZSH_THEME="robbyrussell"
 # alias zshconfig="mate ~/.zshrc"
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 alias ipython="ipython --colors Linux"
+alias Projects="cd ~/Programming/Projects"
+alias Libraries="cd ~/Programming/Libraries"
+alias DailyProjects="cd ~/Programming/Github/DailyProjects"
+alias perf_common="perf stat -e branches,branch-misses,cache-references,cache-misses,cpu-migrations,context-switches,page-faults,stalled-cycles-frontend,stalled-cycles-backend,instructions,cycles"
 
 # Set to this to use case-sensitive completion
 CASE_SENSITIVE="true"
