@@ -28,6 +28,7 @@ def gen_gemm48():
     print('        dec %rcx')
     print('        jnz loop_row')
 
+    print('    vzeroupper')
     print('    retq')
 
     print('.data')
@@ -69,6 +70,7 @@ def gen_gemm96():
     print('        dec %rcx')
     print('        jnz loop_row')
 
+    print('    vzeroupper')
     print('    retq')
 
     print('.data')
@@ -129,6 +131,7 @@ def gen_transform_cols(working_set):
 
     if working_set != 'L1':
         print('    sfence')
+    print('    vzeroupper')
     print('    pop %rbx')
     print('    retq')
 

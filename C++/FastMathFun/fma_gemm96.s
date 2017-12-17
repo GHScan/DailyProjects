@@ -186,6 +186,7 @@ fma_gemm96:
         dec %rcx
         jnz loop_row
 
+    vzeroupper
     pop %rbx
     retq
 

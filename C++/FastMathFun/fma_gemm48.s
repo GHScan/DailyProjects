@@ -68,6 +68,7 @@ fma_gemm48:
         dec %rcx
         jnz loop_row
 
+    vzeroupper
     pop %rbx
     retq
 

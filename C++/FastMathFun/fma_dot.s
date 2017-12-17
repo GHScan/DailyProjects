@@ -45,7 +45,7 @@ fma_dot:
     vaddps %ymm0,%ymm8,%ymm0
 
     /* TODO: horizontally sum ymm0 */
-
+    vzeroupper
     retq
 
 .data
