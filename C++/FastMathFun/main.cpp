@@ -247,6 +247,10 @@ static void _fma_transform_rows(float const *points, int n, float const *trans_m
             _mm_stream_ps(&output_points[i + 7 * 4], output7);
         }
     }
+
+    if (working_set != WorkingSetScale::L1) {
+        _mm_sfence();
+    }
 }
 static void fma_transform_rows(float const *points, int n, float const *trans_mat, float *output_points) {
     if (n < L1_Threshold) 
@@ -340,8 +344,8 @@ int main(int argc, char *argv[]) {
     printf("    SSE - %.1f GFLOPS\n", clock_freq * 2 * 8);
     printf("    AVX - %.1f GFLOPS\n", clock_freq * 2 * 16);
     printf("    L1D Cache - %.1f GB/s\n", clock_freq * 1 * 64);
-    printf("    L2  Cache - %.1f GB/s\n", clock_freq * 1 * 32); // per intel's doc, it should be 64
-    printf("    L3  Cache - %.1f GB/s\n", clock_freq * 1 * 32);
+    printf("    L2  Cache - %.1f GB/s\n", clock_freq * 1 * 29);
+    printf("    L3  Cache - %.1f GB/s\n", clock_freq * 1 * 18);
     printf("    Memory - %.1f GB/s\n", dram_freq * 2 * 8 * 2);
     printf("\n");
 

@@ -127,6 +127,8 @@ def gen_transform_cols(working_set):
     print('        cmp %rsi,%rbx')
     print('        jnz loop_col')
 
+    if working_set != 'L1':
+        print('    sfence')
     print('    pop %rbx')
     print('    retq')
 
