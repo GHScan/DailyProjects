@@ -11,7 +11,7 @@
 constexpr int alignment = 32;
 
 template <typename TFunc>
-inline double time_it(TFunc&& f, int loop = 3) {
+inline double time_it(TFunc const &f, int loop = 3) {
     using namespace std::chrono;
 
     if (loop > 1)
@@ -98,7 +98,7 @@ extern "C" void gemm48_gen(float const *a, float const *b, float *c);
 extern "C" void gemm96_gen(float const *a, float const *b, float *c);
 
 template<typename TFunc>
-void test_gemm(int n, TFunc &&fgemm) {
+void test_gemm(int n, TFunc const &fgemm) {
     for (auto i = 0; i < 4; ++i) {
         alignas(alignment) float buf[n * n * 4] = {0};
         std::iota(buf, buf + n * n * 2, i);
@@ -118,7 +118,7 @@ void test_gemm(int n, TFunc &&fgemm) {
 }
 
 template<typename TFunc>
-static void benchmark_gemm(char const *name, int n, TFunc &&fgemm) {
+static void benchmark_gemm(char const *name, int n, TFunc const &fgemm) {
     alignas(alignment) float buf[n * n * 3];
     std::iota(buf, buf + n * n * 3, 0);
     auto a = buf;
@@ -279,7 +279,7 @@ static void transform_cols_gen(float const *points, int n, float const *trans_ma
 }
 
 template<typename TFunc>
-static void test_transform_points(TFunc &&ftransform, bool rows) {
+static void test_transform_points(TFunc const &ftransform, bool rows) {
     for (auto i = 0; i < 4; ++i) {
         auto n = 96;
         alignas(alignment) float trans_mat[4 * 4];
@@ -296,7 +296,7 @@ static void test_transform_points(TFunc &&ftransform, bool rows) {
 }
 
 template<typename TFunc>
-static void benchmark_transform_points(char const *name, TFunc &&ftransform) {
+static void benchmark_transform_points(char const *name, TFunc const &ftransform) {
     auto cases = 4;
     int n_list[cases] = { 48 * 7, 48 * 7 * 65, 48 * 7 * 513, 48 * 7 * 9 * 1023 };
     char const *n_name_list[cases] = {"L1D Cache", "L2 Cache", "L3 Cache", "Memory"};

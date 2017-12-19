@@ -14,7 +14,7 @@
 
 
 template <typename TFunc>
-inline double Timing(TFunc &&func, int times = 3) {
+inline double Timing(TFunc const &func, int times = 3) {
     using namespace std::chrono;
 
     if (times > 1)
