@@ -1,6 +1,9 @@
 #include <cassert>
+#include <cstring>
+#include <cstdio>
 #include <chrono>
 #include <numeric>
+#include <algorithm>
 
 #include <immintrin.h>
 
@@ -77,9 +80,9 @@ static void add2(float* a, float* b, int len) {
 
 int main() {
     auto len = 1 << 23;
-    auto a = static_cast<float*>(_aligned_malloc(len * sizeof(float), 64));
-    auto a2 = static_cast<float*>(_aligned_malloc(len * sizeof(float), 64));
-    auto b = static_cast<float*>(_aligned_malloc(len * sizeof(float), 64));
+    auto a = static_cast<float*>(_mm_malloc(len * sizeof(float), 64));
+    auto a2 = static_cast<float*>(_mm_malloc(len * sizeof(float), 64));
+    auto b = static_cast<float*>(_mm_malloc(len * sizeof(float), 64));
     memset(a, 0, len * sizeof(float));
     memset(a2, 0, len * sizeof(float));
     std::iota(b, b + len, 0);
