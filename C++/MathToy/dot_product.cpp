@@ -40,10 +40,19 @@ static float sum8(__m256 x) {
 }
 
 static float dot_naive(float const * __restrict a, float const * __restrict b, size_t len) {
-    float sum = 0;
-    for (auto i = 0; i < len; ++i)
-        sum += a[i] * b[i];
-    return sum;
+    float sum0 = 0, sum1 = 0, sum2 = 0, sum3 = 0;
+    float sum4 = 0, sum5 = 0, sum6 = 0, sum7 = 0;
+    for (auto i = 0; i < len; i += 8) {
+        sum0 += a[i + 0] * b[i + 0];
+        sum1 += a[i + 1] * b[i + 1];
+        sum2 += a[i + 2] * b[i + 2];
+        sum3 += a[i + 3] * b[i + 3];
+        sum4 += a[i + 4] * b[i + 4];
+        sum5 += a[i + 5] * b[i + 5];
+        sum6 += a[i + 6] * b[i + 6];
+        sum7 += a[i + 7] * b[i + 7];
+    }
+    return sum0 + sum1 + sum2 + sum3 + sum4 + sum5 + sum6 + sum7;
 }
 
 static float dot_fma(float const * __restrict a, float const * __restrict b, size_t len) {
