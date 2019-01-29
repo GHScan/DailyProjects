@@ -1,5 +1,3 @@
-#include "pch.h"
-
 #include <cstdio>
 #include <cassert>
 
@@ -69,8 +67,8 @@ void RadixSort(T *begin, T* end) {
         std::swap(src, dst);
     }
 
-    if (dst != begin)
-        std::memcpy(begin, dst, size * sizeof(T));
+    if (src != begin)
+        std::memcpy(begin, src, size * sizeof(T));
 }
 
 int main() {
