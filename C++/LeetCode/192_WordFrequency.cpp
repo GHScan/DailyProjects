@@ -1,0 +1,1 @@
+grep -o '[[:alpha:]]*' words.txt | sort | uniq -c | sort -n -r | awk '{print $2, $1}'
