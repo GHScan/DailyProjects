@@ -16,9 +16,9 @@ static void Timing(char const* name, TFunc func, int times = 3) {
 
     double t = 0;
     for (auto i = 0; i < times; ++i) {
-        auto start = high_resolution_clock::now();
+        auto start = steady_clock::now();
         func();
-        auto end = high_resolution_clock::now();
+        auto end = steady_clock::now();
         t = std::max(t, duration<double>(end - start).count());
     }
 

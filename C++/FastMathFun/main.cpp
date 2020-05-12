@@ -19,9 +19,9 @@ inline double time_it(TFunc const &f, int loop = 3) {
 
     auto t = 0.0;
     for (auto i = 0; i < loop; ++i) {
-        auto start = high_resolution_clock::now();
+        auto start = steady_clock::now();
         f();
-        auto end = high_resolution_clock::now();
+        auto end = steady_clock::now();
         t = t + duration<double>(end - start).count();
     }
 

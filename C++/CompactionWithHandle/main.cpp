@@ -237,7 +237,7 @@ public:
         cleanup();
     }
     void generate(int size) {
-        auto start = chrono::high_resolution_clock::now();
+        auto start = chrono::steady_clock::now();
 
         while (mData.size() < size) {
             switch (rand() % 7) {
@@ -257,28 +257,28 @@ public:
             }
         }
 
-        printf("\tgenerate:%.3fs\n", chrono::duration<double>(chrono::high_resolution_clock::now() - start).count());
+        printf("\tgenerate:%.3fs\n", chrono::duration<double>(chrono::steady_clock::now() - start).count());
     }
     void benchmark() {
-        auto start = chrono::high_resolution_clock::now();
+        auto start = chrono::steady_clock::now();
         preparing();
-        printf("\tpreparing:%.3fs\n", chrono::duration<double>(chrono::high_resolution_clock::now() - start).count());
+        printf("\tpreparing:%.3fs\n", chrono::duration<double>(chrono::steady_clock::now() - start).count());
 
         double vm, pm;
         getMemUsage(vm, pm);
         printf("\tmemory usage: %.3fMB, %.3fMB\n", vm, pm);
 
-        start = chrono::high_resolution_clock::now();
+        start = chrono::steady_clock::now();
         sort(mData.begin(), mData.end(), [](const PtrT &a, const PtrT &b){ return *a < *b; });
-        printf("\tsort:%.3fs\n", chrono::duration<double>(chrono::high_resolution_clock::now() - start).count());
+        printf("\tsort:%.3fs\n", chrono::duration<double>(chrono::steady_clock::now() - start).count());
     }
     void cleanup() {
-        auto start = chrono::high_resolution_clock::now();
+        auto start = chrono::steady_clock::now();
         while (!mData.empty()) {
             freePtr(mData.back());
             mData.pop_back();
         }
-        printf("\tcleanup:%.3fs\n", chrono::duration<double>(chrono::high_resolution_clock::now() - start).count());
+        printf("\tcleanup:%.3fs\n", chrono::duration<double>(chrono::steady_clock::now() - start).count());
     }
     virtual const char* getName() = 0;
     virtual PtrT allocPtr() = 0;

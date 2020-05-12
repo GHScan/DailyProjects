@@ -63,14 +63,14 @@ RangeObj<T> range(T end) {
 
 class Timer {
 public:
-    Timer(const char *name): mName(name), mStart(chrono::high_resolution_clock::now()) {
+    Timer(const char *name): mName(name), mStart(chrono::steady_clock::now()) {
     }
     ~Timer() {
-        printf("%s: %.3f\n", mName, chrono::duration<double>(chrono::high_resolution_clock::now() - mStart).count());
+        printf("%s: %.3f\n", mName, chrono::duration<double>(chrono::steady_clock::now() - mStart).count());
     }
 private:
     const char *mName;
-    chrono::high_resolution_clock::time_point mStart;
+    chrono::steady_clock::time_point mStart;
 };
 
 int main() {

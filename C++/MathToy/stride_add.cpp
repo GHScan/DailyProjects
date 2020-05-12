@@ -17,9 +17,9 @@ inline double timing(TFunc&& func, int loop = 3) {
 
     double t = 0;
     for (auto i = 0; i < loop; ++i) {
-        auto start = high_resolution_clock::now();
+        auto start = steady_clock::now();
         func();
-        auto end = high_resolution_clock::now();
+        auto end = steady_clock::now();
         t += duration<double>(end - start).count();
     }
 

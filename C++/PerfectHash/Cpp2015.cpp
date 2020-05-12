@@ -26,10 +26,10 @@ static double TimeIt(int times, TFunc func) {
     if (times > 1)
         func();
 
-    auto start = chrono::high_resolution_clock::now();
+    auto start = chrono::steady_clock::now();
     for (auto i = 0; i < times; ++i)
         func();
-    auto end = chrono::high_resolution_clock::now();
+    auto end = chrono::steady_clock::now();
 
     return chrono::duration<double>(end - start).count() / times;
 }

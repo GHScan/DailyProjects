@@ -90,9 +90,9 @@ static double Timing(TFunc func, int times = 3) {
 
     auto t = std::numeric_limits<double>::max();
     for (auto i = 0; i < times; ++i) {
-        auto start = high_resolution_clock::now();
+        auto start = steady_clock::now();
         func();
-        auto end = high_resolution_clock::now();
+        auto end = steady_clock::now();
         t = std::min(t, duration<double>(end - start).count());
     }
 

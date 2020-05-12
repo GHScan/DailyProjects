@@ -303,13 +303,13 @@ public:
 
 template<typename SetT>
 static void go(const char *name) {
-    auto start = chrono::high_resolution_clock::now();
+    auto start = chrono::steady_clock::now();
 
     SetT set;
     for (string line; getline(cin, line); ) set.insert(line.c_str());
 
     printf("%-60s:", name);
-    printf("(%s=%.3fs)", "time", chrono::duration<double>(chrono::high_resolution_clock::now() - start).count());
+    printf("(%s=%.3fs)", "time", chrono::duration<double>(chrono::steady_clock::now() - start).count());
 
     double vm, pm;
     getMemUsage(vm, pm);
@@ -321,7 +321,7 @@ static void go(const char *name) {
 
 template<typename Allocator>
 static void benchmarkAllocator(const char *name) {
-    auto start = chrono::high_resolution_clock::now();
+    auto start = chrono::steady_clock::now();
 
     Allocator a;
 
@@ -351,7 +351,7 @@ static void benchmarkAllocator(const char *name) {
         }
     }
 
-    printf("%s=%.3fs\n", name, chrono::duration<double>(chrono::high_resolution_clock::now() - start).count());
+    printf("%s=%.3fs\n", name, chrono::duration<double>(chrono::steady_clock::now() - start).count());
 }
 static void benchmark() {
     benchmarkAllocator<EmptyAllocator<int>>("EmptyAllocator");

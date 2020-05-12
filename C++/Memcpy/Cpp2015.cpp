@@ -1,4 +1,4 @@
-// Cpp2015.cpp : ¶¨Òå¿ØÖÆÌ¨Ó¦ÓÃ³ÌÐòµÄÈë¿Úµã¡£
+// Cpp2015.cpp : ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì¨Ó¦ï¿½Ã³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Úµã¡£
 //
 #include "stdafx.h"
 
@@ -47,11 +47,11 @@ template <typename TFunc>
 static void timing(char const* name, int times, TFunc func) {
     if (times > 1) func();
 
-    auto start = std::chrono::high_resolution_clock::now();
+    auto start = std::chrono::steady_clock::now();
     for (auto i = 0; i < times; ++i) {
         func();
     }
-    auto end = std::chrono::high_resolution_clock::now();
+    auto end = std::chrono::steady_clock::now();
 
     std::cout << name << " : " << std::chrono::duration<double>(end - start).count() / times << " s" << std::endl;
 }
