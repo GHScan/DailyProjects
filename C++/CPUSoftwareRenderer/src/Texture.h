@@ -3,49 +3,16 @@
 
 
 #include <cstdint>
+#include <cmath>
 
 #include <vector>
 #include <memory>
+#include <algorithm>
 
-#include "Vector.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb/stb_image.h>
 
-
-
-inline int32_t EncodeRGBA32(Vector4 const &clr)
-{
-    auto ivRgba = _mm_cvtps_epi32(_mm_mul_ps(clr.SIMD, _mm_set1_ps(255.f)));
-    ivRgba = _mm_shuffle_epi32(ivRgba, _MM_SHUFFLE(0, 1, 2, 3));
-    ivRgba = _mm_packs_epi32(ivRgba, ivRgba);
-    ivRgba = _mm_packus_epi16(ivRgba, ivRgba);
-    return _mm_cvtsi128_si32(ivRgba);
-}
-
-inline Vector4 DecodeRGBA32(uint32_t rgba)
-{
-    auto fvRgba = _mm_cvtepi32_ps(_mm_cvtepu8_epi32(_mm_cvtsi32_si128(rgba)));
-    fvRgba = _mm_shuffle_ps(fvRgba, fvRgba, _MM_SHUFFLE(0, 1, 2, 3));
-    return Vector4(_mm_mul_ps(fvRgba, _mm_set1_ps(1 / 255.f)));
-}
-
-#define COMMON_GAMMA    2.2f
-
-inline Vector4 GammaEncode(Vector4 const &clr, float gamma)
-{
-    return Vector4(Pow(clr.SIMD, _mm_set1_ps(1 / gamma)));
-}
-
-inline Vector4 GammaDecode(Vector4 const &clr, float gamma)
-{
-    Vector4 res;
-    for (int i = 0; i < 4; ++i)
-        res.Val[i] = Pow(clr.Val[i], gamma);
-    return res;
-}
-
-inline Vector4 ExposureToneMapping(Vector4 const &clr, float exposure)
-{
-    return Vector4(1) - Vector4(Exp(((Vector4(0) - clr) * exposure).SIMD));
-}
+#include "Color.h"
 
 
 struct Texture
@@ -68,7 +35,7 @@ struct Texture
         }
     }
 
-    Vector4 Sample(Vector2 const &uv)
+    Vector4 Sample(Vector2 const &uv) const
     {
         // WARP mode : REPEAT
         float u = uv.Val[0] - std::floor(uv.Val[0]);
@@ -92,6 +59,7 @@ struct Texture
             DecodeRGBA32(p[y0 * w + x0]),
             DecodeRGBA32(p[y0 * w + x1]),
             weightX);
+
         Vector4 clrY1 = Lerp(
             DecodeRGBA32(p[y1 * w + x0]),
             DecodeRGBA32(p[y1 * w + x1]),
@@ -102,6 +70,71 @@ struct Texture
 };
 
 using TexturePtr = std::shared_ptr<Texture>;
+
+
+
+
+struct Cubemap
+{
+    TexturePtr Maps[6];
+
+    bool Load(std::string const &dir, float gamma)
+    {
+        for (int i = 0; i < 6; ++i)
+        {
+            auto path = dir + "/" + std::to_string(i) + ".jpg";
+
+            int w, h;
+            uint8_t *data = stbi_load(path.c_str(), &w, &h, nullptr, 4);
+            if (data != nullptr)
+            {
+                Maps[i] = std::make_shared<Texture>(w, h, (uint32_t*)data, gamma);
+                stbi_image_free(data);
+            }
+            else
+            {
+                fprintf(stderr, "failed to load : %s\n", path.c_str());
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+
+    float kScale = std::sqrtf(2.f) / 2.f;
+
+    Vector4 Sample(Vector4 const &dir) const
+    {
+        float xI = std::abs(dir.Val[0]);
+        float yI = std::abs(dir.Val[1]);
+        float zI = std::abs(dir.Val[2]);
+        if (xI > std::max(yI, zI))
+        {
+            Vector2 uv(dir.Val[2], dir.Val[1]);
+            if (dir.Val[0] < 0)
+                return Maps[0]->Sample(uv * Vector2(-kScale, -kScale) + 0.5f);
+            else
+                return Maps[1]->Sample(uv * Vector2(kScale, -kScale) + 0.5f);
+        }
+        else if (yI > zI)
+        {
+            Vector2 uv(dir.Val[0], dir.Val[2]);
+            if (dir.Val[1] < 0)
+                return Maps[2]->Sample(uv * Vector2(kScale, kScale) + 0.5f);
+            else
+                return Maps[3]->Sample(uv * Vector2(kScale, -kScale) + 0.5f);
+        }
+        else
+        {
+            Vector2 uv(dir.Val[0], dir.Val[1]);
+            if (dir.Val[2] < 0)
+                return Maps[4]->Sample(uv * Vector2(kScale, -kScale) + 0.5f);
+            else
+                return Maps[5]->Sample(uv * Vector2(-kScale, -kScale) + 0.5f);
+        }
+    }
+};
 
 
 

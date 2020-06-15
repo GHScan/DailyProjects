@@ -4,7 +4,10 @@
 
 #include <iostream>
 
-#include "Util.h"
+#include <immintrin.h>
+
+#include "Utils.h"
+#include "Math.h"
 #include "Vector.h"
 
 
@@ -49,7 +52,7 @@ struct Matrix
     }
     Vector<4> Row_(int m0, Detail::Integer<4>) const
     {
-        return Vector<4>(_mm_load_ps(Val[m0]));
+        return Vector<4>(_mm_loadu_ps(Val[m0]));
     }
 
 
@@ -239,7 +242,7 @@ struct Matrix<4, 4>
 
     Vector<4> Row(int m0) const
     {
-        return Vector4(_mm_load_ps(Val[m0]));
+        return Vector4(_mm_loadu_ps(Val[m0]));
     }
 
     static Matrix Translate(Vector3 const &off)
@@ -407,12 +410,12 @@ template<int m>
 inline Vector<4> operator * (Vector<m> const &vec, Matrix<m, 4> const &mat)
 {
     Vector<4> res;
-    res.SIMD = _mm_mul_ps(_mm_set1_ps(vec.Val[0]), _mm_load_ps(mat.Val[0]));
+    res.SIMD = _mm_mul_ps(_mm_set1_ps(vec.Val[0]), _mm_loadu_ps(mat.Val[0]));
     For<m - 1>([&](auto m0)
     {
         res.SIMD = _mm_fmadd_ps(
             _mm_set1_ps(vec.Val[m0.Val + 1]),
-            _mm_load_ps(mat.Val[m0.Val + 1]), res.SIMD);
+            _mm_loadu_ps(mat.Val[m0.Val + 1]), res.SIMD);
     });
     return res;
 }

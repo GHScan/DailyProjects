@@ -4,17 +4,9 @@
 #include <chrono>
 #include <fstream>
 
-#if _WIN32
-#include <Windows.h>
-#undef min
-#undef max
-#endif
-
-#include "Matrix.h"
-#include "Rasterizer.h"
-#include "Texture.h"
 #include "Model.h"
-#include "MainLoop.h"
+#include "Renderer.h"
+#include "Platform.h"
 
 
 struct Config
@@ -114,7 +106,7 @@ static int TestColoredTriangle()
             Matrix4::Translate(Vector3{ 0, 0, -5 }) *
             Matrix4::Orthographic(-1, 1, 1, -1, 1, 10);
         
-        DrawMesh(
+        DrawMeshBatch(
             1, 
             1, false, 
             false,
@@ -185,7 +177,7 @@ static int TestPerspectiveInterpolation()
             Matrix4::Translate(Vector3{ 0, 0, -2 }) *
             Matrix4::Perspective(Degree{ 60.f }, float(gCfg.WindowW) / gCfg.WindowH, 0.1f, 5.f);
 
-        DrawMesh(
+        DrawMeshBatch(
             1,
             1, false,
             false,
@@ -308,7 +300,7 @@ static int TestSimpleModel()
 
             ClearBuffer(gCfg.ThreadCount, shadowMap.data(), (int)shadowMap.size(), 0.f);
 
-            DrawMesh(
+            DrawMeshBatch(
                 gCfg.ThreadCount,
                 1, false,
                 true,
@@ -338,7 +330,7 @@ static int TestSimpleModel()
             auto mvpMat = mvMat * pMat;
             auto v2LightPMat = mvMat.Inverse() * lightMvpMat;
 
-            DrawMesh(
+            DrawMeshBatch(
                 gCfg.ThreadCount,
                 gCfg.SampleCount, gCfg.PerSampleShading,
                 true,
@@ -519,7 +511,7 @@ static int TestTexturedModel()
 
             ClearBuffer(gCfg.ThreadCount, shadowMap.data(), (int)shadowMap.size(), 0.f);
 
-            DrawMesh(
+            DrawMeshBatch(
                 gCfg.ThreadCount,
                 1, false,
                 true,
@@ -549,7 +541,7 @@ static int TestTexturedModel()
             auto mvpMat = mvMat * pMat;
             auto v2LightPMat = mvMat.Inverse() * lightMvpMat;
 
-            DrawMesh(
+            DrawMeshBatch(
                 gCfg.ThreadCount,
                 gCfg.SampleCount, gCfg.PerSampleShading,
                 true,
@@ -702,6 +694,6 @@ int main()
 
     // return TestColoredTriangle();
     // return TestPerspectiveInterpolation();
-    return TestSimpleModel();
-    // return TestTexturedModel();
+    // return TestSimpleModel();
+    return TestTexturedModel();
 }

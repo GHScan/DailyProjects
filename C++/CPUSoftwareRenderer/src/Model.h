@@ -8,11 +8,10 @@
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
-#define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 
 #include "Vector.h"
-#include "Geometry.h"
+#include "BoundingBox.h"
 #include "Texture.h"
 
 
@@ -56,7 +55,7 @@ struct Model
         ProcessNode(
             normGamma,
             Meshes,
-            scene->mRootNode, scene, 
+            scene->mRootNode, scene,
             dir, textureCache);
 
         Bounds = AABB3();
@@ -243,69 +242,6 @@ private:
             uint32_t rgb = rgbMap->Data[i];
             uint32_t alpha = aMap == nullptr ? defAlpha : ((aMap->Data[i] >> 24) & 0xff);
             rgbMap->Data[i] = (rgb & 0xffffff00) | alpha;
-        }
-    }
-};
-
-
-struct Cubemap
-{
-    TexturePtr Maps[6];
-
-    bool Load(std::string const &dir, float gamma)
-    {
-        for (int i = 0; i < 6; ++i)
-        {
-            auto path = dir + "/" + std::to_string(i) + ".jpg";
-
-            int w, h;
-            uint8_t *data = stbi_load(path.c_str(), &w, &h, nullptr, 4);
-            if (data != nullptr)
-            {
-                Maps[i] = std::make_shared<Texture>(w, h, (uint32_t*)data, gamma);
-                stbi_image_free(data);
-            }
-            else
-            {
-                fprintf(stderr, "failed to load : %s\n", path.c_str());
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-
-    float kScale = std::sqrtf(2.f) / 2.f;
-
-    Vector4 Sample(Vector4 const &dir)
-    {
-        float xI = std::abs(dir.Val[0]);
-        float yI = std::abs(dir.Val[1]);
-        float zI = std::abs(dir.Val[2]);
-        if (xI > std::max(yI, zI))
-        {
-            Vector2 uv(dir.Val[2], dir.Val[1]);
-            if (dir.Val[0] < 0)
-                return Maps[0]->Sample(uv * Vector2(-kScale, -kScale) + 0.5f);
-            else
-                return Maps[1]->Sample(uv * Vector2(kScale, -kScale) + 0.5f);
-        }
-        else if (yI > zI)
-        { 
-            Vector2 uv(dir.Val[0], dir.Val[2]);
-            if (dir.Val[1] < 0)
-                return Maps[2]->Sample(uv * Vector2(kScale, kScale) + 0.5f);
-            else
-                return Maps[3]->Sample(uv * Vector2(kScale, -kScale) + 0.5f);
-        }
-        else
-        {
-            Vector2 uv(dir.Val[0], dir.Val[1]);
-            if (dir.Val[2] < 0)
-                return Maps[4]->Sample(uv * Vector2(kScale, -kScale) + 0.5f);
-            else
-                return Maps[5]->Sample(uv * Vector2(-kScale, -kScale) + 0.5f);
         }
     }
 };

@@ -8,7 +8,9 @@
 #include <iostream>
 #include <initializer_list>
 
-#include "Util.h"
+#include <immintrin.h>
+
+#include "Utils.h"
 
 
 template<int dim>
