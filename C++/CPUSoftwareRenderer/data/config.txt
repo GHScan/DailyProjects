@@ -1,0 +1,7 @@
+ThreadCount 1
+WindowWidth 800
+WindowHeight 800
+SampleCount 1
+PerSampleShading 0
+ShadowMapScale 1
+AssetRoot D:/Assets
