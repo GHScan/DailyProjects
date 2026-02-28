@@ -1,0 +1,147 @@
+:root {
+  --bg-color: #f4f4f4;
+  --text-color: #333;
+  --card-bg: #fff;
+  --header-bg: #fff;
+  --primary-color: #007bff;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  margin: 0;
+  padding-top: 60px; /* Header height */
+}
+
+header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background-color: var(--header-bg);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  z-index: 1000;
+  justify-content: space-between;
+}
+
+.breadcrumb {
+  font-size: 1.1em;
+}
+
+.breadcrumb a {
+  text-decoration: none;
+  color: var(--primary-color);
+}
+
+.breadcrumb a::after {
+  content: ' / ';
+  color: #ccc;
+  margin: 0 5px;
+}
+
+.breadcrumb a:last-child::after {
+  content: '';
+}
+
+.dir-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 20px;
+  padding: 20px;
+  list-style: none;
+}
+
+.dir-card {
+  background-color: var(--card-bg);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  text-align: center;
+}
+
+.dir-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.preview-container {
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  background: #eee;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.folder-icon {
+  font-size: 3em;
+  color: #888;
+}
+
+.dir-name {
+  padding: 10px;
+  font-size: 0.9em;
+  word-break: break-all;
+}
+
+.view.hidden {
+  display: none;
+}
+
+/* Reader Mode */
+.image-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 10px;
+}
+
+.image-list img {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  margin-bottom: 20px;
+  background: #eee;
+  min-height: 200px; /* Placeholder */
+}
+
+.reader-footer {
+  padding: 40px;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+button {
+  padding: 10px 20px;
+  font-size: 1em;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  background: #fff;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #eee;
+}
+
+@media (max-width: 600px) {
+  .dir-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+}

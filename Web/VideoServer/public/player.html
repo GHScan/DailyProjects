@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenVideo - 播放器</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="player-body">
+    <div class="player-container">
+        <div class="back-link">
+            <a href="index.html">&larr; 返回列表</a>
+        </div>
+        <h2 id="video-title">正在播放...</h2>
+        <div class="video-wrapper">
+            <video id="video-player" controls autoplay playsinline>
+                您的浏览器不支持 HTML5 视频播放。
+            </video>
+        </div>
+        <div class="info">
+            <p>提示：如果无法播放，可能是浏览器不支持该视频编码（如某些浏览器的 H.265 支持需要硬件加速）。</p>
+        </div>
+    </div>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const videoPath = urlParams.get('path');
+        const videoName = urlParams.get('name');
+
+        if (videoPath) {
+            document.getElementById('video-title').textContent = videoName || '视频播放';
+            const player = document.getElementById('video-player');
+            player.src = `/video?path=${encodeURIComponent(videoPath)}`;
+
+            player.addEventListener('error', (e) => {
+                console.error('Playback error:', e);
+                const error = player.error;
+                let message = '视频加载出错。';
+                if (error) {
+                    switch (error.code) {
+                        case 1: message = '播放被终止。'; break;
+                        case 2: message = '网络错误。'; break;
+                        case 3: message = '视频解码失败。如果是 H.265 编码，可能您的浏览器不支持。'; break;
+                        case 4: message = '不支持该格式。'; break;
+                    }
+                }
+                document.querySelector('.info p').innerHTML = `<strong>错误: ${message}</strong>`;
+                document.querySelector('.info p').style.color = '#e74c3c';
+            });
+        } else {
+            alert('未指定视频路径');
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>

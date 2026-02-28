@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Node Comic Server</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header id="header">
+        <div class="breadcrumb" id="breadcrumb">
+            <a href="#" data-path="">Root</a>
+        </div>
+        <div class="nav-controls" id="nav-controls">
+            <button id="btn-prev" hidden>上一话</button>
+            <button id="btn-next" hidden>下一话</button>
+        </div>
+    </header>
+
+    <main id="app">
+        <!-- Navigation Mode -->
+        <div id="nav-view" class="view">
+            <ul id="dir-list" class="dir-grid"></ul>
+        </div>
+
+        <!-- Reader Mode -->
+        <div id="reader-view" class="view hidden">
+            <div id="image-list" class="image-list"></div>
+            <div class="reader-footer">
+                <button id="btn-prev-footer" hidden>上一话</button>
+                <button id="btn-next-footer" hidden>下一话</button>
+            </div>
+        </div>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
