@@ -59,10 +59,14 @@ async function scanDirectory(dirPath, rootPath) {
   }
 }
 
-async function findFirstImage(dirPath) {
+async function findFirstImage(dirPath, currentDepth = 0) {
+  const MAX_DEPTH = 5; // Limit recursion depth to avoid excessive traversal
+  if (currentDepth > MAX_DEPTH) return null;
+
   try {
     const entries = await fs.readdir(dirPath, { withFileTypes: true });
-    // Sort to be consistent
+    
+    // 1. Check files in current directory first
     const files = entries
       .filter(e => e.isFile() && isImage(e.name))
       .map(e => e.name)
@@ -70,8 +74,21 @@ async function findFirstImage(dirPath) {
     
     if (files.length > 0) return files[0];
     
-    // If no images directly, don't recurse too deep to keep it lazy
-    // But maybe check one level for preview? Let's keep it simple for now.
+    // 2. If no images, check subdirectories (recursively)
+    const subDirs = entries
+      .filter(e => e.isDirectory())
+      .map(e => e.name)
+      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+
+    for (const subDir of subDirs) {
+      const fullSubPath = path.join(dirPath, subDir);
+      const imageInSubDir = await findFirstImage(fullSubPath, currentDepth + 1);
+      if (imageInSubDir) {
+        // Return path relative to current dirPath
+        return path.join(subDir, imageInSubDir);
+      }
+    }
+    
     return null;
   } catch (err) {
     return null;
